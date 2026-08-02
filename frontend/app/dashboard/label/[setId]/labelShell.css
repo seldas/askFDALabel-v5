@@ -1,0 +1,176 @@
+/*
+ * Label workspace shell. Tokens only — this replaces roughly 340 lines of
+ * inline-styled identity header markup with a compact, scannable summary.
+ */
+
+.afl-label-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--afl-bg-page);
+}
+
+.afl-label-shell__scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding-top: var(--afl-header-height);
+}
+
+.afl-label-shell__inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  padding: var(--afl-space-5);
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+/* ---- Breadcrumb --------------------------------------------------------- */
+
+.afl-label-crumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--afl-space-2);
+  margin-bottom: var(--afl-space-3);
+  font-size: var(--afl-text-xs);
+  color: var(--afl-text-muted);
+}
+
+.afl-label-crumbs a {
+  color: var(--afl-text-secondary);
+  font-weight: var(--afl-weight-medium);
+  text-decoration: none;
+}
+
+.afl-label-crumbs a:hover { color: var(--afl-text-link); }
+
+.afl-label-crumbs__current {
+  color: var(--afl-text-primary);
+  font-weight: var(--afl-weight-bold);
+  max-width: 520px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Identity ----------------------------------------------------------- */
+
+.afl-label-identity {
+  background: var(--afl-bg-surface);
+  border: 1px solid var(--afl-border);
+  border-radius: var(--afl-radius-xl);
+  box-shadow: var(--afl-shadow-sm);
+  padding: var(--afl-space-5);
+  margin-bottom: var(--afl-space-4);
+}
+
+/* Superseded or archived versions read as a distinct, warmer surface. */
+.afl-label-identity--stale {
+  background: #fdfbf7;
+  border-color: #dcd3bf;
+}
+
+.afl-label-identity__title-row {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--afl-space-3);
+}
+
+.afl-label-identity__title {
+  margin: 0;
+  font-size: var(--afl-text-3xl);
+  font-weight: var(--afl-weight-heavy);
+  letter-spacing: -0.03em;
+  line-height: var(--afl-leading-tight);
+  color: var(--afl-text-primary);
+  text-transform: capitalize;
+  word-break: break-word;
+  min-width: 0;
+}
+
+.afl-label-identity__badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--afl-space-2);
+  padding-top: var(--afl-space-2);
+}
+
+.afl-label-identity__generic {
+  margin: var(--afl-space-2) 0 0;
+  font-size: var(--afl-text-md);
+  color: var(--afl-text-secondary);
+}
+
+.afl-label-identity__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--afl-space-4);
+  margin-top: var(--afl-space-4);
+  padding-top: var(--afl-space-4);
+  border-top: 1px solid var(--afl-border);
+}
+
+.afl-label-fact__label {
+  display: block;
+  font-size: var(--afl-text-xs);
+  font-weight: var(--afl-weight-heavy);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--afl-text-muted);
+  margin-bottom: var(--afl-space-1);
+}
+
+.afl-label-fact__value {
+  font-size: var(--afl-text-sm);
+  color: var(--afl-text-primary);
+  font-weight: var(--afl-weight-medium);
+  word-break: break-word;
+}
+
+.afl-label-fact__value--mono {
+  font-family: var(--afl-font-mono);
+  font-size: var(--afl-text-xs);
+}
+
+/* ---- Boxed-warning callout ---------------------------------------------- */
+
+.afl-label-alert {
+  display: flex;
+  align-items: center;
+  gap: var(--afl-space-2);
+  margin-top: var(--afl-space-4);
+  padding: var(--afl-space-3) var(--afl-space-4);
+  border-radius: var(--afl-radius-md);
+  background: var(--afl-danger-50);
+  border: 1px solid var(--afl-danger-100);
+  color: var(--afl-danger-700);
+  font-size: var(--afl-text-sm);
+  font-weight: var(--afl-weight-bold);
+}
+
+/* ---- Tool strip --------------------------------------------------------- */
+
+.afl-label-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--afl-space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--afl-space-4);
+}
+
+.afl-label-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+@media (max-width: 640px) {
+  .afl-label-shell__inner { padding: var(--afl-space-4); }
+  .afl-label-identity__title { font-size: var(--afl-text-2xl); }
+}

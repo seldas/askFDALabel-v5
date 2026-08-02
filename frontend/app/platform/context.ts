@@ -81,9 +81,14 @@ export function primarySetId(ctx: LaunchContext): string | undefined {
 
 /**
  * The label workspace. `tool` selects a child route; omit it for the reader.
- * splId pins a specific version, matching the existing ?spl_id= convention on
- * /dashboard/label/[setId].
+ * splId pins a specific version, matching the existing ?spl_id= convention.
+ *
+ * /dashboard/label/[setId] is the canonical path. It is linked from search
+ * results, localquery, the dashboard, AE reports, and both history views, so
+ * the workspace shell is built here rather than at a new URL.
  */
+export const LABEL_BASE = '/dashboard/label';
+
 export function labelRoute(
   setId: string,
   tool?: string,
@@ -91,7 +96,10 @@ export function labelRoute(
 ): string {
   const params = new URLSearchParams();
   if (opts?.splId) params.set('spl_id', opts.splId);
-  return withQuery(`/label/${encodeURIComponent(setId)}${tool ? `/${tool}` : ''}`, params);
+  return withQuery(
+    `${LABEL_BASE}/${encodeURIComponent(setId)}${tool ? `/${tool}` : ''}`,
+    params,
+  );
 }
 
 /** Label comparison, which takes up to four labels. */

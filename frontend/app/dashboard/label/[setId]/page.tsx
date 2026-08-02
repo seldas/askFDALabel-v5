@@ -2,8 +2,8 @@
 
 import { useEffect, useState, Suspense, use, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Script from 'next/script';
 import Link from 'next/link';
+import LegacyBridge from './LegacyBridge';
 import { useUser } from '../../../context/UserContext';
 import { withAppBase, withApiBase } from '../../../utils/appPaths';
 
@@ -173,54 +173,18 @@ function LabelContent({ params }: { params: Promise<{ setId: string }> }) {
   const [projects, setProjects] = useState<any[]>([]);
   const [isTogglingProject, setIsTogglingProject] = useState<number | null>(null);
 
-  // Reset global legacy caches when setId changes to prevent stale data
-  useEffect(() => {
+  /*
+   * Legacy script loading is handled by <LegacyBridge> in the render below.
+   * It replaces a 100ms setInterval that polled for five window.init* globals
+   * and gave up after 50 attempts, plus the manual reset of the window caches
+   * those scripts leak between labels.
+   */
+  const handleLegacyReady = useCallback(() => {
     const win = window as any;
-    win.meddraScanData = null;
-    win.faersDataLoaded = false;
-    win.trendCache = {};
-    win.selectedTerms = new Set();
-    console.log("Global legacy caches reset for setId:", setId);
-  }, [setId]);
-
-  // Robust initialization: wait for scripts to be ready
-  useEffect(() => {
-    if (!loading && data) {
-      let attempts = 0;
-      const interval = setInterval(() => {
-        const win = window as any;
-        attempts++;
-        
-        const scriptsReady = win.initUI && win.initFaers && win.initToxAgents && 
-                           win.initChat && win.initAnnotations; // Removed initFavorites
-
-        if (scriptsReady) {
-          console.log("Initializing legacy scripts...");
-          win.initUI();
-          win.initFaers();
-          win.initToxAgents();
-          win.initChat();
-          win.initAnnotations();
-          // win.initFavorites(); // Disabled legacy favorites
-          clearInterval(interval);
-
-          // Trigger MedDRA Scan with a slight delay AFTER UI init
-          setTimeout(() => {
-            if (win.loadMeddraScan) {
-              console.log("Triggering MedDRA Scan for setId:", setId);
-              win.loadMeddraScan(setId);
-            }
-          }, 200);
-
-        } else if (attempts > 50) {
-          console.warn("Legacy scripts failed to load in time.");
-          clearInterval(interval);
-        }
-      }, 100);
-      
-      return () => clearInterval(interval);
+    if (win.loadMeddraScan) {
+      win.loadMeddraScan(setId);
     }
-  }, [loading, data, setId]);
+  }, [setId]);
 
   useEffect(() => {
     if (activeTab === 'faers-view') {
@@ -989,28 +953,34 @@ function LabelContent({ params }: { params: Promise<{ setId: string }> }) {
 
       {/* Hidden Data for JS */}
       <div id="xml-content" style={{ display: 'none' }}>{data.label_xml_raw}</div>
-      <Script id="label-data-init" strategy="afterInteractive">
-        {`
-          window.currentSetId = ${JSON.stringify(data.set_id)};
-          window.currentDrugName = ${JSON.stringify(data.faers_drug_name)};
-          window.currentGenericName = ${JSON.stringify(data.generic_name)};
-          window.currentManufacturer = ${JSON.stringify(data.manufacturer_name)};
-          window.currentEffectiveTime = ${JSON.stringify(data.effective_time)};
-          window.toxSummary = ${JSON.stringify(data.tox_summary)};
-          window.currentUserId = ${data.user_id || 'null'};
-          window.savedAnnotations = ${JSON.stringify(data.saved_annotations)};
-        `}
-      </Script>
 
-      <Script src={withAppBase("/dashboard/js/chart.js")} strategy="afterInteractive" />
-      <Script src={withAppBase("/dashboard/js/marked.min.js")} strategy="afterInteractive" />
-      <Script src={withAppBase("/dashboard/js/utils.js")} strategy="afterInteractive" />
-      <Script src={withAppBase("/dashboard/js/ui.js")} strategy="afterInteractive" />
-      <Script src={withAppBase("/dashboard/js/favorites.js")} strategy="afterInteractive" />
-      <Script src={withAppBase("/dashboard/js/session_manager.js")} strategy="afterInteractive" />
-      <Script src={withAppBase("/dashboard/js/chat.js?v=20260218_1")} strategy="afterInteractive" />
-      <Script src={withAppBase("/dashboard/js/annotations.js")} strategy="afterInteractive" />
-      <Script src={withAppBase("/dashboard/js/faers.js?v=20260413_1")} strategy="afterInteractive" />
+      {/*
+        Ordered, promise-based loading of the legacy bundles. The per-label
+        globals below were previously written by an inline <Script>, which
+        raced the bundles that read them; LegacyBridge assigns them before the
+        first script executes.
+
+        Note the absent 'initToxAgents': no bundle defines it, since DrugTox
+        lives on its own page. The previous polling loop required it as part of
+        its readiness check, so that check could never pass — meaning none of
+        these initializers, nor the MedDRA scan, ever actually ran.
+      */}
+      <LegacyBridge
+        resetKey={setId}
+        scripts={['chart', 'marked', 'utils', 'ui', 'favorites', 'session', 'chat', 'annotations', 'faers']}
+        globals={{
+          currentSetId: data.set_id,
+          currentDrugName: data.faers_drug_name,
+          currentGenericName: data.generic_name,
+          currentManufacturer: data.manufacturer_name,
+          currentEffectiveTime: data.effective_time,
+          toxSummary: data.tox_summary,
+          currentUserId: data.user_id ?? null,
+          savedAnnotations: data.saved_annotations,
+        }}
+        init={['initUI', 'initFaers', 'initChat', 'initAnnotations']}
+        onReady={handleLegacyReady}
+      />
 
 
       {/* Modals placeholders */}
