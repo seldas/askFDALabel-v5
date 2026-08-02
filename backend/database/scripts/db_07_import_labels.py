@@ -184,7 +184,10 @@ def extract_approvals(root, doc_title=""):
         if m:
             add_appr(m.group(1), m.group(2))
 
-    return appr_nums, "; ".join(categories)
+    # Sorted, not document order: a label covering several products yields
+    # several categories, and two labels with the same set must produce the
+    # same string or they fragment a GROUP BY exactly like casing variants do.
+    return appr_nums, "; ".join(sorted(categories, key=str.casefold))
 
 
 def parse_spl_zip(zip_path):
