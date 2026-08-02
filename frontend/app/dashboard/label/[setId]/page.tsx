@@ -1,25 +1,20 @@
 'use client';
 
-import { useEffect, useState, Suspense, use, useCallback } from 'react';
+import { useEffect, useState, Suspense, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import LegacyBridge from './LegacyBridge';
+import { TOOL_LABEL, useLabel } from './LabelContext';
+import { labelRoute } from '../../../platform/context';
 import { useUser } from '../../../context/UserContext';
-import { withAppBase, withApiBase } from '../../../utils/appPaths';
+import { withApiBase } from '../../../utils/appPaths';
 
-// Shared Header
-import Header from '../../../components/Header';
-
-// Modular Components
+// The reader body. FAERS, Deep Dive and Examine are sibling routes now, and
+// the Header / identity chrome belongs to ../layout.tsx.
 import LabelView from './label';
-import FaersView from './faers';
-import DeepDiveView from './deepdive';
-import ExamineView from './examine';
-import './label.css';
-import '../../dashboard.css';
 
 // Shared Types
-import { TOCItem, LabelData } from './types';
+import { TOCItem } from './types';
 
 function TOCItemComponent({
   item,
@@ -140,24 +135,33 @@ function ExportSectionItem({
   );
 }
 
-function LabelContent({ params }: { params: Promise<{ setId: string }> }) {
-  const { setId } = use(params);
+function LabelContent() {
   const router = useRouter();
   const { session, loading: userLoading, openAuthModal } = useUser();
-  const [data, setData] = useState<LabelData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('label-view');
+
+  // Supplied by the workspace shell; see ./LabelContext.
+  const { setId, data, loading, error } = useLabel();
+
+  /*
+   * The reader is always the label view. Tool selection used to be local state
+   * seeded from ?tab=, which meant the four tools shared one URL; each is now
+   * its own route. Legacy ?tab= links are redirected below.
+   */
+  const activeTab = TOOL_LABEL;
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const tabParam = params.get('tab');
-      if (tabParam && ['label-view', 'faers-view', 'examine-view', 'tox-view'].includes(tabParam)) {
-        setActiveTab(tabParam);
-      }
-    }
-  }, []);
+    if (typeof window === 'undefined') return;
+    const tabParam = new URLSearchParams(window.location.search).get('tab');
+    const legacyTabRoutes: Record<string, string> = {
+      'faers-view': 'faers',
+      'examine-view': 'examine',
+      'deep-dive-view': 'deepdive',
+      'tox-view': 'tox',
+    };
+    const target = tabParam ? legacyTabRoutes[tabParam] : undefined;
+    if (target) router.replace(labelRoute(setId, target));
+  }, [router, setId]);
+
   const [tocCollapsed, setTocCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -186,29 +190,18 @@ function LabelContent({ params }: { params: Promise<{ setId: string }> }) {
     }
   }, [setId]);
 
+  /*
+   * The reader is the only view here now, so the branches that switched
+   * behaviour per tab are gone. FAERS owns its own data load in its route.
+   */
   useEffect(() => {
-    if (activeTab === 'faers-view') {
-      const win = window as any;
-      if (win.loadFaersData) {
-        win.loadFaersData();
-      }
+    const win = window as any;
+    if (win.initTableExtractor) {
+      // Give the label body a tick to render before wiring table extraction.
+      setTimeout(() => win.initTableExtractor(), 100);
     }
+  }, []);
 
-    // Auto-hide TOC sidebar for non-label views to give more space
-    if (activeTab === 'label-view') {
-      const win = window as any;
-      if (win.initTableExtractor) {
-        // Give it a tiny bit of time for the 'display: block' to take effect
-        setTimeout(() => win.initTableExtractor(), 100);
-      }
-    }
-
-    if (activeTab !== 'label-view') {
-      setTocCollapsed(true);
-    } else {
-      setTocCollapsed(false);
-    }
-  }, [activeTab]);
 
   useEffect(() => {
     if (data) {
@@ -394,28 +387,8 @@ function LabelContent({ params }: { params: Promise<{ setId: string }> }) {
   }, [ndcModalOpen]);
 
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const searchParams = new URLSearchParams(window.location.search);
-        const spl_id = searchParams.get('spl_id');
-        let url = `/api/dashboard/label/${setId}?json=1`;
-        if (spl_id) url += `&spl_id=${spl_id}`;
-
-        const response = await fetch(url, {
-          headers: { 'Accept': 'application/json' }
-        });
-        if (!response.ok) throw new Error('Failed to fetch label data');
-        const json = await response.json();
-        setData(json);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [setId]);
+  /* Label data comes from the shell (../layout.tsx) via LabelContext, so the
+   * reader and every tool route share one fetch. */
 
   const ndcRaw = (data?.ndc || '').trim();
   const ndcTooLong = ndcRaw.length > 40;
@@ -460,42 +433,15 @@ function LabelContent({ params }: { params: Promise<{ setId: string }> }) {
   if (!data) return null;
 
   return (
-    <div className="results-container" style={{ height: '100vh', backgroundColor: '#f9fafb', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      
-      {/* Shared Header */}
-      <Header activeApp="dashboard" />
-      
-      <div style={{ display: 'flex', flex: 1, paddingTop: '60px', overflow: 'hidden' }}>
-        {/* Main Content Area */}
-        <div id="main-content" className="main-content expanded" style={{ 
-            transition: 'margin-left 0.3s ease', 
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            padding: 0
-        }}>
-          <div className="content-scroll-container" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', padding: '0' }}>
-            
-            <div className="container" style={{ maxWidth: '1400px', margin: '0 auto', width: '100%', padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-            
-            {/* BREADCRUMB */}
-            <nav style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', fontSize: '0.8rem', color: '#94a3b8' }}>
-              <Link href="/dashboard" style={{ color: '#64748b', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
-                onMouseOver={e => (e.currentTarget.style.color = '#1e40af')}
-                onMouseOut={e => (e.currentTarget.style.color = '#64748b')}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                Dashboard
-              </Link>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-              <span style={{ color: '#0f172a', fontWeight: 700, maxWidth: '500px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {data?.brand_name || data?.drug_name || setId}
-              </span>
-            </nav>
+    <>
+      {/*
+        The page-level chrome — Header, breadcrumb, and the drug title/badges —
+        now lives in ../layout.tsx, which wraps every tool route. What remains
+        here is reader-specific: the label actions, the metadata grid, the
+        table of contents, and the label body.
+      */}
 
-            {/* DRUG METADATA */}
+            {/* DRUG ACTIONS + METADATA */}
             <div className="label-header" style={{ 
                 marginBottom: '20px', 
                 background: (data?.openfda_status === 'Archived' || data?.is_latest === false) ? '#fdfbf7' : 'white', 
@@ -505,145 +451,8 @@ function LabelContent({ params }: { params: Promise<{ setId: string }> }) {
                 border: (data?.openfda_status === 'Archived' || data?.is_latest === false) ? '1px solid #dcd3bf' : '1px solid #f1f5f9' 
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '40px' }}>
-                        <div style={{ flex: '0 1 60%', minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '4px' }}>
-                                <h1 className="DocumentTitle" style={{ 
-                                  margin: 0, 
-                                  fontSize: '2.25rem', 
-                                  fontWeight: 800, 
-                                  letterSpacing: '-0.04em', 
-                                  color: '#0f172a',
-                                  lineHeight: 1.1,
-                                  wordBreak: 'break-word',
-                                  fontFamily: 'var(--font-inter), sans-serif',
-                                  textShadow: '0 1px 2px rgba(0,0,0,0.02)',
-                                  textTransform: 'capitalize'
-                                }}>
-                                  {([data.brand_name || data.drug_name, data.effective_time]
-                                          .filter(Boolean)
-                                          .join(' - ')
-                                          .toLowerCase())}
-                                </h1>
-                                <span style={{ 
-                                    backgroundColor: data.label_format === 'PLR' ? '#dcfce7' : '#f1f5f9',
-                                    color: data.label_format === 'PLR' ? '#166534' : '#64748b',
-                                    padding: '6px 14px',
-                                    borderRadius: '30px',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 800,
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.05em',
-                                    flexShrink: 0,
-                                    marginTop: '8px',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-                                }}>
-                                    {data.label_format}
-                                </span>
-                                {data.is_rld && (
-                                  <span style={{ 
-                                      backgroundColor: '#fef2f2',
-                                      color: '#ef4444',
-                                      padding: '6px 14px',
-                                      borderRadius: '30px',
-                                      fontSize: '0.75rem',
-                                      fontWeight: 900,
-                                      textTransform: 'uppercase',
-                                      letterSpacing: '0.05em',
-                                      flexShrink: 0,
-                                      marginTop: '8px',
-                                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                                      border: '1px solid #fee2e2'
-                                  }}>
-                                      RLD
-                                  </span>
-                                )}
-                                {data.is_rs && (
-                                  <span style={{ 
-                                      backgroundColor: '#f0fdf4',
-                                      color: '#16a34a',
-                                      padding: '6px 14px',
-                                      borderRadius: '30px',
-                                      fontSize: '0.75rem',
-                                      fontWeight: 900,
-                                      textTransform: 'uppercase',
-                                      letterSpacing: '0.05em',
-                                      flexShrink: 0,
-                                      marginTop: '8px',
-                                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                                      border: '1px solid #dcfce7'
-                                  }}>
-                                      RS
-                                  </span>
-                                )}
-                                {data.openfda_status === 'Current' && (
-                                  <span style={{ 
-                                      backgroundColor: '#eff6ff',
-                                      color: '#1d4ed8',
-                                      padding: '6px 14px',
-                                      borderRadius: '30px',
-                                      fontSize: '0.75rem',
-                                      fontWeight: 800,
-                                      textTransform: 'uppercase',
-                                      letterSpacing: '0.05em',
-                                      flexShrink: 0,
-                                      marginTop: '8px',
-                                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                                      border: '1px solid #dbeafe'
-                                  }}>
-                                      Current
-                                  </span>
-                                )}
-                                {data.openfda_status === 'Archived' && (
-                                  <span style={{ 
-                                      backgroundColor: '#fff7ed',
-                                      color: '#c2410c',
-                                      padding: '6px 14px',
-                                      borderRadius: '30px',
-                                      fontSize: '0.75rem',
-                                      fontWeight: 800,
-                                      textTransform: 'uppercase',
-                                      letterSpacing: '0.05em',
-                                      flexShrink: 0,
-                                      marginTop: '8px',
-                                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                                      border: '1px solid #ffedd5'
-                                  }}>
-                                      Archived
-                                  </span>
-                                )}
-                                {data.is_latest === false && (
-                                  <span style={{ 
-                                      backgroundColor: '#fff7ed',
-                                      color: '#c2410c',
-                                      padding: '6px 14px',
-                                      borderRadius: '30px',
-                                      fontSize: '0.75rem',
-                                      fontWeight: 800,
-                                      textTransform: 'uppercase',
-                                      letterSpacing: '0.05em',
-                                      flexShrink: 0,
-                                      marginTop: '8px',
-                                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                                      border: '1px solid #ffedd5'
-                                  }}>
-                                      Earlier Version
-                                  </span>
-                                )}
-                            </div>
-                            {data.generic_name && (
-                                <div style={{ 
-                                    fontSize: '1rem', 
-                                    fontWeight: 600, 
-                                    color: '#64748b', 
-                                    marginTop: '2px',
-                                    fontStyle: 'italic',
-                                    maxWidth: '100%',
-                                    wordBreak: 'break-word'
-                                }}>
-                                    {data.generic_name}
-                                </div>
-                            )}
-                        </div>
+                        {/* Title, badges and generic name are rendered by the
+                            workspace shell (../layout.tsx) for every tool route. */}
                     
                       <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexShrink: 0 }}>
                         {session?.is_authenticated && (
@@ -808,76 +617,31 @@ function LabelContent({ params }: { params: Promise<{ setId: string }> }) {
                          <span style={{ fontSize: '1.2rem', color: '#64748b' }}>ℹ️</span>
                          <span style={{ lineHeight: '1.5' }}>
                            Detailed technical product specifications, registration data, and inactive ingredients are available. Check the{' '}
-                           <button 
-                             onClick={() => setActiveTab('examine-view')}
-                             style={{ 
-                               background: 'none', 
-                               border: 'none', 
-                               padding: 0, 
-                               color: '#1e40af', 
-                               textDecoration: 'underline', 
-                               fontWeight: 700, 
-                               cursor: 'pointer', 
-                               fontFamily: 'inherit', 
-                               fontSize: 'inherit',
+                           <Link
+                             href={labelRoute(setId, 'examine')}
+                             style={{
+                               color: '#1e40af',
+                               textDecoration: 'underline',
+                               fontWeight: 700,
                                transition: 'color 0.2s ease'
                              }}
-                             onMouseOver={e => e.currentTarget.style.color = '#1d4ed8'}
-                             onMouseOut={e => e.currentTarget.style.color = '#1e40af'}
                            >
                              Examine page
-                           </button>{' '}
+                           </Link>{' '}
                            for more product information.
                          </span>
                       </div>
                    </div>
                 )}
             </div>
-            
-            {/* FUNCTION PANELS — Tab bar + contextual tool toolbar on same row */}
-            <div className="function-tabs-bar" style={{ width: '100%', padding: '0 0 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                {/* Navigation tabs */}
-                <div style={{ display: 'flex', gap: '8px', backgroundColor: '#f1f5f9', padding: '6px', borderRadius: '14px' }}>
-                  {tabs.map((tab) => {
-                    const isActive = activeTab === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => {
-                          if (tab.id === 'tox-view') {
-                            window.location.href = withAppBase(`/drugtox/${setId}`);
-                          } else {
-                            setActiveTab(tab.id);
-                          }
-                        }}
-                        className={`tab-btn ${tab.isAI ? 'tab-btn-ai' : ''} ${isActive ? 'active' : ''}`}
-                      >
-                        {tab.label}
-                        {tab.isAI && (
-                          <span className="ai-badge-pulse" style={{ 
-                            background: 'linear-gradient(135deg, #a855f7 0%, #3b82f6 100%)', 
-                            color: '#ffffff', 
-                            fontSize: '0.62rem', 
-                            fontWeight: 800, 
-                            padding: '1.5px 6px', 
-                            borderRadius: '4px', 
-                            letterSpacing: '0.04em',
-                            textTransform: 'uppercase',
-                            lineHeight: '1.2',
-                            display: 'inline-block',
-                            marginLeft: '4px',
-                            verticalAlign: 'middle',
-                            boxShadow: '0 2px 4px rgba(168, 85, 247, 0.2)'
-                          }}>
-                            AI
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
 
-                {/* Contextual tool buttons — right side */}
+            {/*
+              The tool tab list moved to the shell's registry-driven tool strip
+              (platform/ToolLauncher). These contextual buttons stay with the
+              reader — they act on the label body, and the legacy scripts bind
+              to them by id.
+            */}
+            <div className="function-tabs-bar" style={{ width: '100%', padding: '0 0 20px 0', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px' }}>
                 <div className="label-toolbar">
                   {/* Chat — always available */}
                   <button
@@ -938,18 +702,15 @@ function LabelContent({ params }: { params: Promise<{ setId: string }> }) {
 
             <div className="function-content-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 <div id="top-annotations-container" className="top-annotations-container"></div>
+                {/*
+                  FAERS, Deep Dive and Examine are their own routes now. They
+                  used to be mounted here alongside the reader and hidden with
+                  an activeTab check, so every tool's scripts and effects ran on
+                  every view.
+                */}
                 <LabelView data={data} activeTab={activeTab} tocCollapsed={tocCollapsed} setTocCollapsed={setTocCollapsed} expandedSections={expandedSections} toggleSection={toggleSection} TOCItemComponent={TOCItemComponent} />
-                <DeepDiveView activeTab={activeTab} setId={setId} />
-                <FaersView activeTab={activeTab} drugName={data?.faers_drug_name ?? data?.generic_name ?? undefined} setId={setId} />
-                <ExamineView activeTab={activeTab} setId={setId} productData={data?.product_data ?? []} />
 
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-
 
       {/* Hidden Data for JS */}
       <div id="xml-content" style={{ display: 'none' }}>{data.label_xml_raw}</div>
@@ -1206,14 +967,14 @@ function LabelContent({ params }: { params: Promise<{ setId: string }> }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
-export default function LabelPage({ params }: { params: Promise<{ setId: string }> }) {
+export default function LabelPage() {
   return (
     <Suspense fallback={<div>Loading Label Page...</div>}>
-      <LabelContent params={params} />
+      <LabelContent />
     </Suspense>
   );
 }

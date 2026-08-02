@@ -214,7 +214,22 @@ export function ToolLauncher({
   );
 }
 
-/** Convenience wrapper for the label workspace tab bar. */
+/**
+ * The label workspace tool strip.
+ *
+ * Restricted to the label-scoped tools by explicit id. Filtering on context
+ * alone is not enough: a label context also satisfies 'global', so every
+ * platform-wide tool (Web-test, Local Database Search, …) would appear in the
+ * strip alongside them.
+ */
+export const LABEL_TOOL_IDS = [
+  'label-reader',
+  'label-faers',
+  'label-tox',
+  'label-examine',
+  'label-deepdive',
+] as const;
+
 export function LabelToolStrip({
   setId,
   activeToolId,
@@ -223,13 +238,14 @@ export function LabelToolStrip({
   activeToolId?: string;
 }) {
   const context = useMemo<LaunchContext>(() => ({ setIds: [setId] }), [setId]);
+  const include = useMemo(() => [...LABEL_TOOL_IDS], []);
   return (
     <ToolLauncher
       context={context}
       variant="strip"
       activeToolId={activeToolId}
       aria-label="Label tools"
-      exclude={['labelcomp']}
+      include={include}
     />
   );
 }

@@ -33,18 +33,6 @@ const SEGMENT_TO_TOOL: Record<string, string> = {
   deepdive: 'label-deepdive',
 };
 
-function Fact({ label, value, mono = false }: { label: string; value?: string | null; mono?: boolean }) {
-  if (!value) return null;
-  return (
-    <div>
-      <span className="afl-label-fact__label">{label}</span>
-      <span className={`afl-label-fact__value${mono ? ' afl-label-fact__value--mono' : ''}`}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
 export default function LabelLayout({
   children,
   params,
@@ -160,19 +148,12 @@ export default function LabelLayout({
                 <p className="afl-label-identity__generic">{data.generic_name}</p>
               ) : null}
 
-              {data.has_boxed_warning ? (
-                <div className="afl-label-alert">
-                  <span aria-hidden="true">⚠</span>
-                  Boxed warning present on this label
-                </div>
-              ) : null}
-
-              <div className="afl-label-identity__facts">
-                <Fact label="Manufacturer" value={data.manufacturer_name} />
-                <Fact label="Market category" value={data.document_type} />
-                <Fact label="Application no." value={data.application_number} />
-                <Fact label="Set ID" value={data.set_id} mono />
-              </div>
+              {/*
+                Facts (manufacturer, market category, application no., set id)
+                and the boxed-warning callout stay on the reader page. Its copy
+                carries the company DETAILS control, whose modal is page state —
+                rendering them here too would duplicate both.
+              */}
             </section>
           ) : null}
 
