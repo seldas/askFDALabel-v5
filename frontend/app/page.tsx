@@ -19,9 +19,6 @@ interface Project {
 export default function HomePage() {
   const router = useRouter();
   const { session, loading, updateAiProvider, refreshSession, openAuthModal } = useUser();
-  const [isInternal, setIsInternal] = useState(false);
-  const [fdaAccessible, setFdaAccessible] = useState(false);
-  const [cderAccessible, setCderAccessible] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<'user' | 'nav' | 'more' | 'ai' | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -196,23 +193,6 @@ export default function HomePage() {
     const handleClickOutside = () => setActiveDropdown(null);
     window.addEventListener('click', handleClickOutside);
     return () => window.removeEventListener('click', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    const checkInternalStatus = async () => {
-      try {
-        const response = await fetch("/api/check-fdalabel", { method: 'POST' });
-        const data = await response.json();
-        setIsInternal(data.isInternal);
-        setFdaAccessible(data.fdaAccessible);
-        setCderAccessible(data.cderAccessible);
-      } catch (error) {
-        setIsInternal(false);
-        setFdaAccessible(false);
-        setCderAccessible(false);
-      }
-    };
-    checkInternalStatus();
   }, []);
 
   useEffect(() => {

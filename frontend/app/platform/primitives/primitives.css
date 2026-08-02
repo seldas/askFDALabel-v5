@@ -1,0 +1,297 @@
+/*
+ * askFDALabel v5 — primitive styles.
+ *
+ * Every value here comes from tokens.css. If you need a literal that isn't a
+ * token, add the token first. These classes are scoped with an `afl-` prefix
+ * so they can coexist with globals.css and Bootstrap/DataTables styles.
+ */
+
+/* ---- Page ------------------------------------------------------------- */
+.afl-page {
+  min-height: 100vh;
+  background: var(--afl-bg-page);
+  font-family: var(--afl-font-sans);
+  color: var(--afl-text-primary);
+}
+
+.afl-page-body {
+  max-width: var(--afl-container-max);
+  margin: 0 auto;
+  padding: var(--afl-space-6) var(--afl-space-6) var(--afl-space-8);
+}
+
+.afl-page-body--wide { max-width: none; }
+.afl-page-body--flush { padding-left: 0; padding-right: 0; }
+
+/* ---- Section header ---------------------------------------------------- */
+.afl-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--afl-space-4);
+  margin-bottom: var(--afl-space-5);
+}
+
+.afl-section-header__text { min-width: 0; }
+
+.afl-section-header__title {
+  margin: 0;
+  font-size: var(--afl-text-2xl);
+  font-weight: var(--afl-weight-heavy);
+  color: var(--afl-text-primary);
+  letter-spacing: -0.02em;
+}
+
+.afl-section-header__desc {
+  margin: var(--afl-space-1) 0 0;
+  font-size: var(--afl-text-sm);
+  color: var(--afl-text-secondary);
+}
+
+/* ---- Card -------------------------------------------------------------- */
+.afl-card {
+  background: var(--afl-bg-surface);
+  border: 1px solid var(--afl-border);
+  border-radius: var(--afl-radius-xl);
+  box-shadow: var(--afl-shadow-sm);
+  padding: var(--afl-space-5);
+}
+
+.afl-card--flush { padding: 0; }
+.afl-card--quiet { box-shadow: none; }
+
+.afl-card--interactive {
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: transform var(--afl-transition), box-shadow var(--afl-transition),
+              border-color var(--afl-transition);
+}
+
+.afl-card--interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--afl-shadow-lg);
+  border-color: var(--afl-border-strong);
+}
+
+.afl-card--interactive:focus-visible {
+  outline: 2px solid var(--afl-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ---- Grid -------------------------------------------------------------- */
+.afl-grid {
+  display: grid;
+  gap: var(--afl-space-5);
+  grid-template-columns: repeat(auto-fill, minmax(var(--afl-grid-min, 240px), 1fr));
+}
+
+/* ---- Toolbar ----------------------------------------------------------- */
+.afl-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--afl-space-3);
+  flex-wrap: wrap;
+}
+
+.afl-toolbar__group {
+  display: flex;
+  align-items: center;
+  gap: var(--afl-space-2);
+  min-width: 0;
+}
+
+/* ---- Button ------------------------------------------------------------ */
+.afl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--afl-space-2);
+  border-radius: var(--afl-radius-md);
+  border: 1px solid transparent;
+  padding: var(--afl-space-2) var(--afl-space-4);
+  font-family: inherit;
+  font-size: var(--afl-text-sm);
+  font-weight: var(--afl-weight-bold);
+  line-height: 1;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--afl-transition), border-color var(--afl-transition),
+              color var(--afl-transition);
+}
+
+.afl-btn:focus-visible {
+  outline: 2px solid var(--afl-focus-ring);
+  outline-offset: 2px;
+}
+
+.afl-btn[disabled],
+.afl-btn[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.afl-btn--primary {
+  background: var(--afl-a-500);
+  color: var(--afl-text-inverse);
+}
+.afl-btn--primary:hover:not([disabled]) { background: var(--afl-a-600); }
+
+.afl-btn--secondary {
+  background: var(--afl-bg-surface);
+  border-color: var(--afl-border);
+  color: var(--afl-text-secondary);
+}
+.afl-btn--secondary:hover:not([disabled]) {
+  background: var(--afl-bg-hover);
+  border-color: var(--afl-border-strong);
+  color: var(--afl-text-primary);
+}
+
+.afl-btn--ghost {
+  background: transparent;
+  color: var(--afl-text-secondary);
+}
+.afl-btn--ghost:hover:not([disabled]) {
+  background: var(--afl-bg-sunken);
+  color: var(--afl-text-primary);
+}
+
+.afl-btn--danger {
+  background: var(--afl-danger-500);
+  color: var(--afl-text-inverse);
+}
+.afl-btn--danger:hover:not([disabled]) { background: var(--afl-danger-700); }
+
+.afl-btn--sm { padding: var(--afl-space-1) var(--afl-space-3); font-size: var(--afl-text-xs); }
+.afl-btn--lg { padding: var(--afl-space-3) var(--afl-space-5); font-size: var(--afl-text-md); }
+
+/* ---- Tabs -------------------------------------------------------------- */
+.afl-tabs {
+  display: inline-flex;
+  gap: var(--afl-space-2);
+  background: var(--afl-bg-sunken);
+  padding: var(--afl-space-1);
+  border-radius: var(--afl-radius-lg);
+}
+
+.afl-tab {
+  border: none;
+  background: transparent;
+  border-radius: var(--afl-radius-sm);
+  padding: var(--afl-space-2) var(--afl-space-4);
+  font-family: inherit;
+  font-size: var(--afl-text-sm);
+  font-weight: var(--afl-weight-heavy);
+  color: var(--afl-text-secondary);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--afl-space-2);
+  transition: background var(--afl-transition), color var(--afl-transition);
+}
+
+.afl-tab:hover { color: var(--afl-text-primary); }
+
+.afl-tab[aria-selected='true'] {
+  background: var(--afl-bg-surface);
+  color: var(--afl-text-primary);
+  box-shadow: var(--afl-shadow-xs);
+}
+
+.afl-tab:focus-visible {
+  outline: 2px solid var(--afl-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ---- Field ------------------------------------------------------------- */
+.afl-field { display: flex; flex-direction: column; gap: var(--afl-space-2); }
+
+.afl-field__label {
+  font-size: var(--afl-text-sm);
+  font-weight: var(--afl-weight-bold);
+  color: var(--afl-text-primary);
+}
+
+.afl-field__hint { font-size: var(--afl-text-xs); color: var(--afl-text-secondary); }
+.afl-field__error { font-size: var(--afl-text-xs); color: var(--afl-danger-700); }
+
+.afl-input {
+  width: 100%;
+  padding: var(--afl-space-3) var(--afl-space-4);
+  border: 1px solid var(--afl-border);
+  border-radius: var(--afl-radius-md);
+  background: var(--afl-bg-surface);
+  font-family: inherit;
+  font-size: var(--afl-text-md);
+  color: var(--afl-text-primary);
+  transition: border-color var(--afl-transition), box-shadow var(--afl-transition);
+}
+
+.afl-input::placeholder { color: var(--afl-text-muted); }
+
+.afl-input:focus {
+  outline: none;
+  border-color: var(--afl-focus-ring);
+  box-shadow: 0 0 0 3px var(--afl-a-100);
+}
+
+.afl-input[aria-invalid='true'] { border-color: var(--afl-danger-500); }
+
+/* ---- Badge ------------------------------------------------------------- */
+.afl-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--afl-space-1);
+  border-radius: var(--afl-radius-sm);
+  padding: 2px var(--afl-space-2);
+  font-size: var(--afl-text-xs);
+  font-weight: var(--afl-weight-heavy);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.afl-badge--neutral  { background: var(--afl-bg-sunken); color: var(--afl-text-secondary); }
+.afl-badge--accent   { background: var(--afl-a-50); color: var(--afl-a-700); }
+.afl-badge--info     { background: var(--afl-info-50); color: var(--afl-info-700); }
+.afl-badge--success  { background: var(--afl-success-50); color: var(--afl-success-700); }
+.afl-badge--warn     { background: var(--afl-warn-50); color: var(--afl-warn-700); }
+.afl-badge--danger   { background: var(--afl-danger-50); color: var(--afl-danger-700); }
+.afl-badge--ai       { background: var(--afl-ai-grad); color: var(--afl-text-inverse); }
+
+/* ---- Empty state ------------------------------------------------------- */
+.afl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--afl-space-4);
+  text-align: center;
+  padding: var(--afl-space-7);
+  background: var(--afl-bg-surface);
+  border: 1px dashed var(--afl-border);
+  border-radius: var(--afl-radius-xl);
+}
+
+.afl-empty__title {
+  margin: 0;
+  font-size: var(--afl-text-lg);
+  font-weight: var(--afl-weight-heavy);
+  color: var(--afl-text-primary);
+}
+
+.afl-empty__desc {
+  margin: 0;
+  max-width: 46ch;
+  font-size: var(--afl-text-sm);
+  color: var(--afl-text-secondary);
+  line-height: var(--afl-leading-normal);
+}
+
+/* ---- Responsive -------------------------------------------------------- */
+@media (max-width: 640px) {
+  .afl-page-body { padding: var(--afl-space-4) var(--afl-space-4) var(--afl-space-6); }
+  .afl-section-header { flex-direction: column; align-items: flex-start; }
+}

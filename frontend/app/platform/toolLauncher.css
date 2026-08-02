@@ -1,0 +1,93 @@
+/* Tool launcher — card and strip presentations. Tokens only, no literals. */
+
+.afl-tool-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--afl-space-3);
+  padding: var(--afl-space-4);
+  background: var(--afl-bg-surface);
+  border: 1px solid var(--afl-border);
+  border-radius: var(--afl-radius-lg);
+  box-shadow: var(--afl-shadow-sm);
+  text-decoration: none;
+  color: inherit;
+  transition: transform var(--afl-transition), box-shadow var(--afl-transition),
+              border-color var(--afl-transition);
+}
+
+.afl-tool-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--afl-shadow-lg);
+  border-color: var(--afl-border-strong);
+}
+
+.afl-tool-card:focus-visible {
+  outline: 2px solid var(--afl-focus-ring);
+  outline-offset: 2px;
+}
+
+.afl-tool-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: var(--afl-radius-md);
+  background: var(--afl-a-50);
+  color: var(--afl-a-700);
+}
+
+.afl-tool-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--afl-space-1);
+  min-width: 0;
+}
+
+.afl-tool-card__title {
+  display: flex;
+  align-items: center;
+  gap: var(--afl-space-2);
+  font-size: var(--afl-text-md);
+  font-weight: var(--afl-weight-heavy);
+  color: var(--afl-text-primary);
+}
+
+.afl-tool-card__blurb {
+  font-size: var(--afl-text-sm);
+  color: var(--afl-text-secondary);
+  line-height: var(--afl-leading-normal);
+}
+
+.afl-tool-card__external {
+  display: inline-flex;
+  color: var(--afl-text-muted);
+}
+
+/* ---- Groups ------------------------------------------------------------- */
+
+.afl-tool-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--afl-space-6);
+}
+
+.afl-tool-groups__heading {
+  margin: 0 0 var(--afl-space-3);
+  font-size: var(--afl-text-xs);
+  font-weight: var(--afl-weight-heavy);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--afl-text-muted);
+}
+
+/* ---- Strip -------------------------------------------------------------- */
+
+.afl-tool-strip {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.afl-tool-strip .afl-tab { white-space: nowrap; }

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { useUser } from '../context/UserContext';
+import { useCapabilities } from '../platform/capabilities';
 import { withAppBase } from '../utils/appPaths';
 
 type DropdownKey = 'user' | 'nav' | 'more' | 'ai' | 'updates' | null;
@@ -48,10 +49,11 @@ export default function Header({
     [activeApp, pathname]
   );
 
-  const [isInternal, setIsInternal] = useState(false);
-  const [fdaAccessible, setFdaAccessible] = useState(false);
-  const [cderAccessible, setCderAccessible] = useState(false);
-  const [allowLocalQuery, setAllowLocalQuery] = useState(true);
+  // Deployment capabilities come from the shared provider — this component and
+  // the home page used to probe /api/check-fdalabel independently.
+  const { capabilities } = useCapabilities();
+  const { isInternal, fdaAccessible, cderAccessible, allowLocalQuery } = capabilities;
+
   const [activeDropdown, setActiveDropdown] = useState<DropdownKey | 'tasks'>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
@@ -69,25 +71,6 @@ export default function Header({
     const handleClickOutside = () => setActiveDropdown(null);
     window.addEventListener('click', handleClickOutside);
     return () => window.removeEventListener('click', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    const checkInternalStatus = async () => {
-      try {
-        const response = await fetch('/api/check-fdalabel', { method: 'POST' });
-        const data = await response.json();
-        setIsInternal(Boolean(data.isInternal));
-        setFdaAccessible(Boolean(data.fdaAccessible));
-        setCderAccessible(Boolean(data.cderAccessible));
-        setAllowLocalQuery(Boolean(data.allowLocalQuery));
-      } catch {
-        setIsInternal(false);
-        setFdaAccessible(false);
-        setCderAccessible(false);
-        setAllowLocalQuery(true);
-      }
-    };
-    checkInternalStatus();
   }, []);
 
   const getTaskLabel = (task: any) => {

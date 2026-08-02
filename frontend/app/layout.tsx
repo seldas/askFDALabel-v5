@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "./platform/tokens.css";
 import { UserProvider } from "./context/UserContext";
+import { CapabilitiesProvider } from "./platform/capabilities";
 import AuthModals from "./components/AuthModals";
 import FetchPrefix from "./FetchPrefix";
 import { withAppBase } from "./utils/appPaths";
@@ -38,9 +40,11 @@ export default function RootLayout({
         fontFamily: 'var(--font-inter), system-ui, sans-serif'
       }}>
         <UserProvider>
-          <FetchPrefix />
-          {children}
-          <AuthModals />
+          <CapabilitiesProvider>
+            <FetchPrefix />
+            {children}
+            <AuthModals />
+          </CapabilitiesProvider>
         </UserProvider>
       </body>
     </html>
