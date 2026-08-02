@@ -38,6 +38,72 @@ NS = {'ns': 'urn:hl7-org:v3'}
 
 _ob_dict = {}
 
+# ---------------------------------------------------------------------------
+# Marketing category normalization
+#
+# SPL carries the marketing category twice: a stable NCI Thesaurus concept code
+# and a free-text displayName whose CASING VARIES BETWEEN PUBLISHERS. The same
+# concept arrives as "NDA authorized generic", "NDA AUTHORIZED GENERIC", and so
+# on, which would otherwise fragment any GROUP BY on this column.
+#
+# Normalizing on the code rather than the text means future imports collapse to
+# the same canonical values no matter how a publisher cased them.
+# ---------------------------------------------------------------------------
+MARKETING_CATEGORY_BY_CODE = {
+    'C73584':  'ANDA',
+    'C73594':  'NDA',
+    'C73585':  'BLA',
+    'C73605':  'NDA authorized generic',
+    'C200263': 'OTC monograph drug',
+    'C73621':  'OTC monograph final',      # superseded by C200263
+    'C73620':  'OTC monograph not final',  # superseded by C200263
+    'C73614':  'unapproved homeopathic',
+    'C73627':  'unapproved drug other',
+    'C73613':  'unapproved medical gas',
+    'C101533': 'unapproved drug for use in drug shortage',
+    'C73626':  'bulk ingredient',
+    'C98252':  'bulk ingredient for animal drug compounding',
+    'C86952':  'dietary supplement',
+    'C86964':  'medical food',
+    'C86965':  'cosmetic',
+    'C73590':  'export only',
+    'C80438':  'exempt device',
+    'C96966':  'Emergency Use Authorization',
+}
+
+# Uppercased in the fallback below so acronyms survive lowercasing.
+_CATEGORY_ACRONYMS = {'OTC', 'NDA', 'ANDA', 'BLA', 'EUA', 'NADA', 'ANADA', 'US'}
+
+
+def normalize_market_category(code, display_name):
+    """
+    Canonical marketing category for one <approval><code> element.
+
+    Known concept codes map to a fixed label. Anything unrecognized falls back
+    to an acronym-aware lowercasing of the displayName — that cannot know FDA's
+    preferred casing for a concept we have never seen, but it does guarantee
+    that every casing variant of the SAME concept collapses to one value.
+    """
+    code = (code or "").strip().upper()
+    if code in MARKETING_CATEGORY_BY_CODE:
+        return MARKETING_CATEGORY_BY_CODE[code]
+
+    display = " ".join((display_name or "").split())
+    if not display:
+        return ""
+    return " ".join(
+        tok.upper() if tok.upper() in _CATEGORY_ACRONYMS else tok.lower()
+        for tok in display.split()
+    )
+
+
+# Application-number prefixes accepted from <approval><id extension>. Ordered
+# longest-first so alternation cannot match a prefix of a longer type.
+# Deliberately excludes the non-application identifiers that share this slot:
+# OTC monograph orders ("M020"), statutory citations ("505G(a)(3)"), and CFR
+# part references ("part348").
+_APP_ID_RE = re.compile(r'^(ANADA|ANDA|NADA|NDA|BLA)\s*[-#]?\s*0*(\d[\d-]*)$', re.IGNORECASE)
+
 
 def get_el_text(el):
     return "".join(el.itertext()).strip() if el is not None else ""
@@ -58,6 +124,67 @@ def normalize_effective_date(eff_val):
     if len(eff_val) >= 8 and eff_val[:8].isdigit():
         return f"{eff_val[:4]}-{eff_val[4:6]}-{eff_val[6:8]}", eff_val
     return None, eff_val
+
+
+def extract_approvals(root, doc_title=""):
+    """
+    Pull application numbers and marketing categories out of the SPL approval
+    block. Both live in ATTRIBUTES, not element text:
+
+        <subjectOf><approval>
+          <id extension="ANDA212571" root="2.16.840.1.113883.3.150"/>
+          <code code="C73584" displayName="ANDA"/>
+
+    Application numbers are normalized to the Orange Book key format built by
+    load_orange_book(): type, single space, number zero-padded to six digits
+    ("ANDA 212571"). Without that padding a five-digit number would never match.
+
+    Returns (appr_nums, market_categories) — a de-duplicated list preserving
+    document order, and a "; "-joined category string.
+    """
+    appr_nums = []
+    categories = []
+
+    def add_appr(kind, number):
+        # Orange Book keys pad the human-drug number to six digits, so an
+        # unpadded five-digit number would never match without this. Animal
+        # drug numbers use a NNN-NNN form and are left alone.
+        number = number.zfill(6) if number.isdigit() else number
+        normalized = f"{kind.upper()} {number}"
+        if normalized not in appr_nums:
+            appr_nums.append(normalized)
+
+    for approval in root.findall('.//ns:subjectOf/ns:approval', NS):
+        code_el = approval.find('ns:code', NS)
+        if code_el is not None:
+            category = normalize_market_category(
+                code_el.get('code'), code_el.get('displayName')
+            )
+            if category and category not in categories:
+                categories.append(category)
+
+        id_el = approval.find('ns:id', NS)
+        extension = (id_el.get('extension') or "").strip() if id_el is not None else ""
+        if not extension:
+            continue
+        # e.g. "ANDA212571", occasionally "NDA 020500"
+        m = _APP_ID_RE.match(extension)
+        if m:
+            add_appr(m.group(1), m.group(2))
+
+    # Fall back to prose for labels that state the number in the title or body
+    # rather than the approval block.
+    if not appr_nums:
+        m = re.search(r'(NDA|ANDA|BLA)\s*(\d{5,6})', doc_title, re.IGNORECASE)
+        if not m:
+            for text in root.itertext():
+                m = re.search(r'(NDA|ANDA|BLA)\s*(\d{5,6})', text or "", re.IGNORECASE)
+                if m:
+                    break
+        if m:
+            add_appr(m.group(1), m.group(2))
+
+    return appr_nums, "; ".join(categories)
 
 
 def parse_spl_zip(zip_path):
@@ -176,27 +303,26 @@ def parse_spl_zip(zip_path):
             if route_el is not None:
                 routes.add(route_el.get('displayName') or "")
 
-        # Determine NDA/ANDA type & App Number from the document title or represented organization metadata
-        appr_num = ""
-        # Search title first (e.g. "NDA 020500")
-        app_match = re.search(r'(NDA|ANDA|BLA)\s*(\d{5,6})', doc_title, re.IGNORECASE)
-        if app_match:
-            appr_num = f"{app_match.group(1).upper()} {app_match.group(2)}"
-        else:
-            # Fallback to searching sections
-            for sec_text in root.itertext():
-                app_match = re.search(r'(NDA|ANDA|BLA)\s*(\d{5,6})', sec_text, re.IGNORECASE)
-                if app_match:
-                    appr_num = f"{app_match.group(1).upper()} {app_match.group(2)}"
-                    break
+        # Application number(s) and marketing category from the approval block
+        appr_nums, market_categories = extract_approvals(root, doc_title)
+        appr_num = appr_nums[0] if appr_nums else ""
 
-        # Check if RLD / RS based on Orange Book dictionary
+        # Check if RLD / RS based on Orange Book dictionary. A label can cover
+        # several products, so check every application number it declares and
+        # remember which one matched for the approval-year lookup below.
         is_rld = 0
         is_rs = 0
-        if appr_num and appr_num in _ob_dict:
-            ob_data = _ob_dict[appr_num]
-            is_rld = 1 if ob_data.get('rld') == 'YES' else 0
-            is_rs = 1 if ob_data.get('rs') == 'YES' else 0
+        ob_key = ""
+        for candidate in appr_nums:
+            ob_data = _ob_dict.get(candidate)
+            if not ob_data:
+                continue
+            if not ob_key:
+                ob_key = candidate
+            if ob_data.get('rld') == 'YES':
+                is_rld = 1
+            if ob_data.get('rs') == 'YES':
+                is_rs = 1
 
         # Parse sections (LOINC, Title, Content XML)
         sections = []
@@ -225,7 +351,7 @@ def parse_spl_zip(zip_path):
             'manufacturer': manuf_name,
             'appr_num': appr_num,
             'active_ingredients': "; ".join(active_ingredients),
-            'market_categories': "",
+            'market_categories': market_categories,
             'doc_type': doc_type,
             'routes': "; ".join(routes),
             'dosage_forms': "; ".join(dosage_forms),
@@ -240,14 +366,12 @@ def parse_spl_zip(zip_path):
             'version_number': version_number
         }
 
-        # Resolve initial approval year if NDA/ANDA and year matches
-        if revised_date and appr_num:
-            # Use approval year from orange book if available
-            if appr_num in _ob_dict and _ob_dict[appr_num].get('approval_date'):
-                appr_date = _ob_dict[appr_num]['approval_date']
-                year_match = re.search(r'\d{4}', appr_date)
-                if year_match:
-                    metadata['initial_approval_year'] = int(year_match.group(0))
+        # Resolve initial approval year from the Orange Book entry that matched
+        if ob_key and _ob_dict[ob_key].get('approval_date'):
+            appr_date = _ob_dict[ob_key]['approval_date']
+            year_match = re.search(r'\d{4}', appr_date)
+            if year_match:
+                metadata['initial_approval_year'] = int(year_match.group(0))
 
         return {
             'spl_id': spl_id,
