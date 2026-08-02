@@ -1,0 +1,268 @@
+/* Dashboard Grid and Cards (Ported from dashboard.css) */
+.dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+.chart-card { background: white; border: 1px solid #dee2e6; border-radius: 12px; padding: 20px; }
+.chart-card.full-width { grid-column: 1 / -1; }
+
+/* Global Button Style (Ported from dashboard.css) */
+.button {
+    border-radius: 25px;
+    padding: 8px 20px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none !important;
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+
+/* Loader Animation */
+.loader {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #007bff;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Assessment Prompt (AI Analysis Trigger) */
+.assessment-prompt {
+    text-align: center;
+    padding: 30px;
+    background-color: #f8fafc;
+    border-radius: 8px;
+    border: 1px dashed #e2e8f0;
+}
+
+.assessment-prompt p {
+    color: #64748b;
+    margin-bottom: 15px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* Assessment Button Variants */
+.btn-assess-dili { background-color: #17a2b8 !important; color: white !important; }
+.btn-assess-dict { background-color: #dc3545 !important; color: white !important; }
+.btn-assess-diri { background-color: #ffc107 !important; color: black !important; }
+
+/* Agent Card Index Styles (Toxicological Overview) */
+.agent-card {
+    width: 200px;
+    padding: 30px;
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    background: #f8f9fa;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s, background-color 0.2s;
+    text-align: center;
+}
+
+#btn-agent-dili { border-color: #17a2b8; background: #f0f7ff; }
+#btn-agent-dict { border-color: #dc3545; background: #fff5f5; }
+#btn-agent-diri { border-color: #ffc107; background: #fffdf0; }
+#btn-agent-pgx { border-color: #6610f2; background: #f3e5f5; }
+
+.agent-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+.agent-card.disabled:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+.agent-card.disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* Agent Analysis Cards Active States */
+.active-agent {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important;
+    background-color: #ffffff !important;
+}
+
+#btn-agent-dili.active-agent { border-color: #17a2b8; background-color: #e0f7fa !important; }
+#btn-agent-dict.active-agent { border-color: #dc3545; background-color: #ffeef0 !important; }
+#btn-agent-diri.active-agent { border-color: #ffc107; background-color: #fffbf0 !important; }
+#btn-agent-pgx.active-agent { border-color: #6610f2; background-color: #f3e5f5 !important; }
+
+/* Toxicity Results Container Styles (Markdown content) */
+.dili-results, .dict-results, .diri-results {
+    line-height: 1.6;
+}
+
+.dili-results h3, .dili-results h4,
+.dict-results h3, .dict-results h4,
+.diri-results h3, .diri-results h4 {
+    color: #17a2b8;
+    border-bottom: 2px solid #f0f2f5;
+    padding-bottom: 5px;
+    margin-top: 1.5em;
+}
+
+/* Official Label Analysis Evidence Spans */
+.dili-evidence, .dict-evidence, .diri-evidence {
+    font-style: italic;
+    color: #495057;
+    background-color: #f8f9fa;
+    padding: 0 4px;
+    border-radius: 3px;
+    border-bottom: 1px dashed #adb5bd;
+    font-size: 0.95em;
+}
+
+/* Score Badges */
+.badge-score {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 16px;
+    font-size: 0.7em;
+    font-weight: 800;
+    margin-left: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    border: 1px solid;
+    vertical-align: middle;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background-clip: padding-box;
+    transition: all 0.2s ease;
+    cursor: default;
+}
+
+.badge-score:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Pre-existing (Green) */
+.badge-score-0 { 
+    background-color: #d1e7dd; 
+    color: #0f5132; 
+    border-color: #badbcc; 
+} 
+
+/* Mild (Blue) */
+.badge-score-1, .badge-score-2 { 
+    background-color: #cff4fc; 
+    color: #055160; 
+    border-color: #b6effb; 
+} 
+
+/* Moderate (Yellow/Orange) */
+.badge-score-3, .badge-score-4, .badge-score-5 { 
+    background-color: #fff3cd; 
+    color: #664d03; 
+    border-color: #ffecb5; 
+} 
+
+/* Severe (Red) */
+.badge-score-6, .badge-score-7, .badge-score-8 { 
+    background-color: #f8d7da; 
+    color: #842029; 
+    border-color: #f5c6cb; 
+}
+
+/* Additional Badge Styles for DICT/DIRI specific text levels if needed */
+.badge-score-severe, .badge-score-certain {
+    background-color: #f8d7da; 
+    color: #842029; 
+    border-color: #f5c6cb; 
+}
+.badge-score-moderate, .badge-score-possible {
+    background-color: #fff3cd; 
+    color: #664d03; 
+    border-color: #ffecb5; 
+}
+.badge-score-mild {
+    background-color: #cff4fc; 
+    color: #055160; 
+    border-color: #b6effb; 
+}
+
+/* --- DILI Risk Panel --- */
+#dili-risk-panel, #dict-risk-panel, #diri-risk-panel {
+    padding: 15px 20px;
+    border-radius: 8px;
+    border-left: 6px solid #ccc;
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    animation: fadeIn 0.5s ease;
+}
+
+#dili-risk-panel h4, #dict-risk-panel h4, #diri-risk-panel h4 {
+    margin-top: 0;
+    margin-bottom: 5px;
+    font-size: 1.2em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#dili-risk-panel p, #dict-risk-panel p, #diri-risk-panel p {
+    margin: 0;
+    font-size: 0.95em;
+    color: #555;
+}
+
+/* Specific Risk Classes */
+
+/* Most Concern - Red */
+.dili-risk-most, .dict-risk-most, .diri-risk-most {
+    border-left-color: #dc3545 !important;
+    background-color: #fff5f5 !important;
+}
+.dili-risk-most h4, .dict-risk-most h4, .diri-risk-most h4 {
+    color: #dc3545;
+}
+
+/* Less Concern - Orange/Yellow */
+.dili-risk-less, .dict-risk-less, .diri-risk-less {
+    border-left-color: #fd7e14 !important;
+    background-color: #fff9f2 !important;
+}
+.dili-risk-less h4, .dict-risk-less h4, .diri-risk-less h4 {
+    color: #fd7e14;
+}
+
+/* No Concern - Green */
+.dili-risk-no, .dict-risk-no, .diri-risk-no {
+    border-left-color: #28a745 !important;
+    background-color: #f0fff4 !important;
+}
+.dili-risk-no h4, .dict-risk-no h4, .diri-risk-no h4 {
+    color: #28a745;
+}
+
+/* Under Assessment / Pending - Gray */
+.dili-risk-pending, .dict-risk-pending, .diri-risk-pending {
+    border-left-color: #6c757d !important;
+    background-color: #f8f9fa !important;
+}
+.dili-risk-pending h4, .dict-risk-pending h4, .diri-risk-pending h4 {
+    color: #6c757d;
+}
+
+/* Loading/Placeholder */
+.dili-risk-loading, .dict-risk-loading, .diri-risk-loading {
+    border-left-color: #17a2b8 !important;
+    background-color: #f0f7ff !important;
+}
+.dili-risk-loading h4, .dict-risk-loading h4, .diri-risk-loading h4 {
+    color: #17a2b8;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

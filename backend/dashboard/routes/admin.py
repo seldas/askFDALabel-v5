@@ -1,0 +1,371 @@
+import os
+import subprocess
+import sys
+from flask import Blueprint, request, jsonify
+from flask_login import login_required, current_user
+from database import db, User, SystemTask
+from dashboard.services.task_service import TaskService
+from functools import wraps
+
+admin_bp = Blueprint('admin', __name__)
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            return jsonify({'success': False, 'error': 'Admin privileges required'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+# --- User Management ---
+
+@admin_bp.route('/users', methods=['GET'])
+@login_required
+@admin_required
+def get_users():
+    users = User.query.all()
+    return jsonify({
+        'success': True,
+        'users': [{
+            'id': u.id,
+            'username': u.username,
+            'is_admin': u.is_admin,
+            'ai_provider': u.ai_provider,
+            'is_active': getattr(u, 'is_active', True)
+        } for u in users]
+    })
+
+@admin_bp.route('/users', methods=['POST'])
+@login_required
+@admin_required
+def create_user():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    is_admin = data.get('is_admin', False)
+
+    if not username or not password:
+        return jsonify({'success': False, 'error': 'Username and password required'}), 400
+
+    if User.query.filter_by(username=username).first():
+        return jsonify({'success': False, 'error': 'Username already exists'}), 400
+
+    new_user = User(username=username, is_admin=is_admin)
+    new_user.set_password(password)
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify({'success': True, 'user_id': new_user.id})
+
+@admin_bp.route('/users/<int:user_id>', methods=['PUT'])
+@login_required
+@admin_required
+def update_user(user_id):
+    user = User.query.get_or_404(user_id)
+    data = request.get_json()
+
+    if 'is_admin' in data:
+        user.is_admin = data['is_admin']
+    if 'is_active' in data:
+        user.is_active = data['is_active']
+    if 'password' in data and data['password']:
+        user.set_password(data['password'])
+    if 'username' in data:
+        user.username = data['username']
+    if 'ai_provider' in data:
+        user.ai_provider = data['ai_provider']
+
+    db.session.commit()
+    return jsonify({'success': True})
+
+@admin_bp.route('/users/<int:user_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_user(user_id):
+    if user_id == current_user.id:
+        return jsonify({'success': False, 'error': 'Cannot delete yourself'}), 400
+    
+    try:
+        user = User.query.get_or_404(user_id)
+        
+        if getattr(user, 'is_active', True):
+            return jsonify({'success': False, 'error': 'Cannot permanently delete an active account. Please deactivate it first.'}), 400
+
+        # Clean up related records that don't cascade automatically
+        from database.models import TokenUsage, Project, Favorite, FavoriteComparison, LabelAnnotation, SystemTask
+        
+        TokenUsage.query.filter_by(user_id=user_id).delete()
+        SystemTask.query.filter_by(user_id=user_id).delete()
+        LabelAnnotation.query.filter_by(user_id=user_id).delete()
+        FavoriteComparison.query.filter_by(user_id=user_id).delete()
+        Favorite.query.filter_by(user_id=user_id).delete()
+        
+        # Safely delete owned projects via ORM so it cascades to project-children (e.g. project_ae_report)
+        projects = Project.query.filter_by(owner_id=user_id).all()
+        for p in projects:
+            db.session.delete(p)
+            
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': f"Database constraint error: {str(e)}. User likely has associated data."}), 500
+
+# --- Database Updates ---
+
+@admin_bp.route('/update_db', methods=['POST'])
+@login_required
+@admin_required
+def trigger_db_update():
+    data = request.get_json()
+    db_type = data.get('type') # 'labeling', 'orangebook', 'drugtox', 'meddra'
+    
+    scripts = {
+        'labeling': 'admin/tasks/import_labels.py',
+        'orangebook': 'admin/tasks/import_orangebook.py',
+        'drugtox': 'admin/tasks/import_drugtox.py',
+        'generate_drugtox': 'admin/tasks/generate_drugtox.py',
+        'meddra': 'admin/tasks/import_meddra.py'
+    }
+
+    if db_type not in scripts:
+        return jsonify({'success': False, 'error': 'Invalid database type'}), 400
+
+    # Create a new SystemTask
+    new_task = TaskService.create_task(
+        task_type=db_type,
+        user_id=current_user.id,
+        message=f'Starting {db_type} update...'
+    )
+    new_task.status = 'processing'
+    db.session.commit()
+
+    script_path = scripts[db_type]
+    venv_python = os.path.join(os.getcwd(), 'venv', 'bin', 'python3')
+    if not os.path.exists(venv_python):
+        venv_python = sys.executable
+
+    # Ensure log directory exists
+    from flask import current_app
+    log_dir = os.path.join(current_app.config['DATA_DIR'], 'logs', 'tasks')
+    os.makedirs(log_dir, exist_ok=True)
+    log_file_path = os.path.join(log_dir, f'task_{new_task.id}.log')
+
+    try:
+        # Pass --task-id to the script
+        cmd = [venv_python, script_path, '--task-id', str(new_task.id)]
+        
+        if db_type == 'labeling':
+            if data.get('skip_unpack', False):
+                cmd.append('--skip-unpack')
+            if data.get('archived', False):
+                cmd.append('--archived')
+            if data.get('force', False):
+                cmd.append('--force')
+            if 'workers' in data:
+                cmd.extend(['--workers', str(data['workers'])])
+        elif db_type == 'generate_drugtox':
+            cmd.append('--force')
+            if data.get('local', False):
+                cmd.append('--local')
+        else:
+            cmd.append('--force')
+        
+        # Redirect stdout and stderr to a log file
+        log_file = open(log_file_path, 'w')
+        process = subprocess.Popen(
+            cmd,
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            text=True,
+            close_fds=True # Ensure file stays open for child but closed in parent after fork
+        )
+        
+        return jsonify({
+            'success': True, 
+            'task_id': new_task.id,
+            'message': f'Started update for {db_type}. Log: {log_file_path}'
+        })
+    except Exception as e:
+        new_task.status = 'failed'
+        new_task.error_details = str(e)
+        db.session.commit()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@admin_bp.route('/tasks/<int:task_id>/logs', methods=['GET'])
+@login_required
+@admin_required
+def get_task_logs(task_id):
+    from flask import current_app
+    log_file_path = os.path.join(current_app.config['DATA_DIR'], 'logs', 'tasks', f'task_{task_id}.log')
+    
+    if not os.path.exists(log_file_path):
+        return jsonify({'success': False, 'error': 'Log file not found'}), 404
+        
+    try:
+        with open(log_file_path, 'r') as f:
+            logs = f.read()
+        return jsonify({
+            'success': True,
+            'logs': logs
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@admin_bp.route('/tasks/<int:task_id>', methods=['GET'])
+@login_required
+@admin_required
+def get_task_status(task_id):
+    task = SystemTask.query.get_or_404(task_id)
+    return jsonify({
+        'success': True,
+        'task': {
+            'id': task.id,
+            'type': task.task_type,
+            'status': task.status,
+            'progress': task.progress,
+            'message': task.message,
+            'error_details': task.error_details,
+            'updated_at': task.updated_at.isoformat() + 'Z' if task.updated_at else None
+        }
+    })
+
+@admin_bp.route('/tasks/<int:task_id>/cancel', methods=['POST'])
+@login_required
+@admin_required
+def cancel_task(task_id):
+    task = SystemTask.query.get_or_404(task_id)
+    if task.status in ['pending', 'processing']:
+        task.status = 'cancelled'
+        task.message = 'Cancelled by user.'
+        db.session.commit()
+        return jsonify({'success': True})
+    return jsonify({'success': False, 'error': 'Task is not running'}), 400
+
+@admin_bp.route('/token_usage', methods=['GET'])
+@login_required
+@admin_required
+def get_token_usage():
+    from datetime import datetime, timedelta
+    from database.models import TokenUsage
+    try:
+        now = datetime.utcnow()
+        time_windows = {
+            '1_day': now - timedelta(days=1),
+            '7_days': now - timedelta(days=7),
+            '30_days': now - timedelta(days=30),
+        }
+        
+        users = User.query.all()
+        user_usage = []
+        
+        for u in users:
+            usages = TokenUsage.query.filter_by(user_id=u.id).all()
+            
+            stats = {
+                'total_all_time': sum(us.total_tokens for us in usages),
+                'total_1_day': sum(us.total_tokens for us in usages if us.created_at >= time_windows['1_day']),
+                'total_7_days': sum(us.total_tokens for us in usages if us.created_at >= time_windows['7_days']),
+                'total_30_days': sum(us.total_tokens for us in usages if us.created_at >= time_windows['30_days']),
+                'input_all_time': sum(us.input_tokens for us in usages),
+                'output_all_time': sum(us.output_tokens for us in usages),
+                'models': list(set(us.model_name for us in usages))
+            }
+            
+            user_usage.append({
+                'user_id': u.id,
+                'username': u.username,
+                'stats': stats
+            })
+            
+        return jsonify({
+            'success': True,
+            'usage': user_usage
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@admin_bp.route('/token_usage/<int:user_id>', methods=['GET'])
+@login_required
+def get_user_token_usage_details(user_id):
+    from flask_login import current_user
+    if not current_user.is_admin and current_user.id != user_id:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+    from database.models import TokenUsage
+    try:
+        usages = TokenUsage.query.filter_by(user_id=user_id).order_by(TokenUsage.created_at.desc()).all()
+        return jsonify({
+            'success': True,
+            'details': [{
+                'id': us.id,
+                'model_name': us.model_name,
+                'input_tokens': us.input_tokens,
+                'output_tokens': us.output_tokens,
+                'total_tokens': us.total_tokens,
+                'created_at': us.created_at.isoformat() + 'Z' if us.created_at else None
+            } for us in usages]
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@admin_bp.route('/token_usage/all', methods=['GET'])
+@login_required
+@admin_required
+def get_all_token_usage_details():
+    from database.models import TokenUsage, User
+    try:
+        usages = db.session.query(TokenUsage, User.username).join(User, TokenUsage.user_id == User.id).order_by(TokenUsage.created_at.desc()).all()
+        return jsonify({
+            'success': True,
+            'details': [{
+                'id': us.id,
+                'username': username,
+                'model_name': us.model_name,
+                'input_tokens': us.input_tokens,
+                'output_tokens': us.output_tokens,
+                'total_tokens': us.total_tokens,
+                'created_at': us.created_at.isoformat() + 'Z' if us.created_at else None
+            } for us, username in usages]
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@admin_bp.route('/db_stats/<db_type>', methods=['GET'])
+@login_required
+@admin_required
+def get_db_stats(db_type):
+    from database.models import DrugLabel, OrangeBook, DrugToxicity, MeddraSOC, MeddraPT, MeddraHLT, MeddraHLGT
+    from sqlalchemy import func
+    
+    try:
+        stats = {}
+        if db_type == 'labeling':
+            count = db.session.query(func.count(DrugLabel.spl_id)).scalar()
+            latest_date = db.session.query(func.max(DrugLabel.revised_date)).scalar()
+            stats = {'count': count, 'last_date': latest_date}
+        elif db_type == 'orangebook':
+            count = db.session.query(func.count(OrangeBook.id)).scalar()
+            latest_date = db.session.query(func.max(OrangeBook.approval_date)).scalar()
+            stats = {'count': count, 'last_date': latest_date}
+        elif db_type == 'drugtox' or db_type == 'generate_drugtox':
+            count = db.session.query(func.count(DrugToxicity.id)).scalar()
+            latest_date = "N/A"
+            stats = {'count': count, 'last_date': latest_date}
+        elif db_type == 'meddra':
+            soc_count = db.session.query(func.count(MeddraSOC.soc_code)).scalar()
+            hlgt_count = db.session.query(func.count(MeddraHLGT.hlgt_code)).scalar()
+            hlt_count = db.session.query(func.count(MeddraHLT.hlt_code)).scalar()
+            pt_count = db.session.query(func.count(MeddraPT.pt_code)).scalar()
+            stats = {
+                'soc_count': soc_count,
+                'hlgt_count': hlgt_count,
+                'hlt_count': hlt_count,
+                'pt_count': pt_count,
+                'total_count': soc_count + hlgt_count + hlt_count + pt_count
+            }
+        else:
+            return jsonify({'success': False, 'error': 'Invalid db_type'}), 400
+            
+        return jsonify({'success': True, 'stats': stats})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500

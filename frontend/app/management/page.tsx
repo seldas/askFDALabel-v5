@@ -1,0 +1,2169 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { useUser } from '../context/UserContext';
+import Header from '../components/Header';
+import { useRouter } from 'next/navigation';
+
+interface User {
+  id: number;
+  username: string;
+  is_admin: boolean;
+  ai_provider: string;
+  is_active?: boolean;
+  created_at?: string;
+}
+
+export default function ManagementPage() {
+  const { session, loading: sessionLoading, updateAiProvider, refreshSession } = useUser();
+  const router = useRouter();
+
+  const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [activeTasks, setActiveTasks] = useState<Record<number, any>>({});
+  const [dbStatus, setDbStatus] = useState<Record<string, any>>({});
+  const [envConfig, setEnvConfig] = useState<any>({
+    labeling_source: 'local',
+    postgres_db: 'local',
+    external_pg_host: '',
+    external_pg_user: '',
+    external_pg_password: '',
+    external_pg_database: '',
+    oracle_db_env: 'tst',
+    ai_model_provider: 'elsa',
+    custom_llm_url: '',
+    custom_llm_key: ''
+  });
+  const [pendingEnvConfig, setPendingEnvConfig] = useState<any>({
+    labeling_source: 'local',
+    postgres_db: 'local',
+    external_pg_host: '',
+    external_pg_user: '',
+    external_pg_password: '',
+    external_pg_database: '',
+    oracle_db_env: 'tst',
+    ai_model_provider: 'elsa',
+    custom_llm_url: '',
+    custom_llm_key: ''
+  });
+  const [savingEnv, setSavingEnv] = useState(false);
+
+  const [selectedProvider, setSelectedProvider] = useState<string>('elsa');
+  const [customSettings, setCustomSettings] = useState({
+    gemini: { api_key: '' },
+    vllm: { url: '', api_key: '', model_name: '' },
+    elsa: { url: '', user: '', key: '', model_id: '', model_name: '' },
+    ollama: { url: '', model_name: '' }
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [editingUserModelId, setEditingUserModelId] = useState<number | null>(null);
+  const [selectedUserModelProvider, setSelectedUserModelProvider] = useState<string>('elsa');
+  const [savingUserModel, setSavingUserModel] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (session) {
+      if (session.ai_provider) {
+        setSelectedProvider(session.ai_provider);
+      }
+      try {
+        const parsed = session.ai_settings ? JSON.parse(session.ai_settings) : {};
+        setCustomSettings({
+          gemini: {
+            api_key: parsed.gemini?.api_key || session.custom_gemini_key || ''
+          },
+          vllm: {
+            url: parsed.vllm?.url || session.openai_base_url || '',
+            api_key: parsed.vllm?.api_key || session.openai_api_key || '',
+            model_name: parsed.vllm?.model_name || session.openai_model_name || ''
+          },
+          elsa: {
+            url: parsed.elsa?.url || '',
+            user: parsed.elsa?.user || '',
+            key: parsed.elsa?.key || '',
+            model_id: parsed.elsa?.model_id || '',
+            model_name: parsed.elsa?.model_name || ''
+          },
+          ollama: {
+            url: parsed.ollama?.url || '',
+            model_name: parsed.ollama?.model_name || ''
+          }
+        });
+      } catch (e) {
+        console.error("Failed to parse session ai_settings", e);
+      }
+    }
+  }, [session]);
+
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const res = await fetch('/api/dashboard/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ai_provider: selectedProvider,
+          ai_settings: customSettings,
+          custom_gemini_key: customSettings.gemini.api_key,
+          openai_api_key: customSettings.vllm.api_key,
+          openai_base_url: customSettings.vllm.url,
+          openai_model_name: customSettings.vllm.model_name
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (typeof refreshSession === 'function') {
+          await refreshSession();
+        }
+        alert('AI settings saved successfully!');
+      } else {
+        alert(data.error || 'Failed to save settings');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error saving settings');
+    }
+    setSavingSettings(false);
+  };
+
+  // Modals state
+  const [activeTab, setActiveTab] = useState<string>('ai');
+  const [initialTabSet, setInitialTabSet] = useState(false);
+
+  useEffect(() => {
+    if (session && !initialTabSet) {
+      if (session.is_admin) {
+        setActiveTab('system');
+        fetchEnvironment();
+      } else if (session.username === 'guest') {
+        setActiveTab('tokens');
+      } else {
+        setActiveTab('ai');
+      }
+      setInitialTabSet(true);
+    }
+  }, [session, initialTabSet]);
+
+  const fetchEnvironment = async () => {
+    try {
+      const res = await fetch('/api/dashboard/admin/system-settings');
+      const data = await res.json();
+      if (data.success && data.config) {
+        setEnvConfig(data.config);
+        setPendingEnvConfig(data.config);
+      }
+    } catch (e) {
+      console.error('Failed to fetch environment:', e);
+    }
+  };
+
+  const handleEnvChange = (field: string, value: string) => {
+    setPendingEnvConfig((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  const handleApplyEnvSettings = async () => {
+    setSavingEnv(true);
+    try {
+      const res = await fetch('/api/dashboard/admin/system-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pendingEnvConfig)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEnvConfig(pendingEnvConfig);
+        alert('System settings applied successfully! Database connection is reloading...');
+        if (typeof refreshSession === 'function') {
+          await refreshSession();
+        }
+      } else {
+        alert(data.error || 'Failed to apply settings');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Network error applying settings');
+    }
+    setSavingEnv(false);
+  };
+
+  const [pendingUpdateType, setPendingUpdateType] = useState<string | null>(null);
+  const [pendingUpdateStats, setPendingUpdateStats] = useState<any>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [completedUpdateTask, setCompletedUpdateTask] = useState<any>(null);
+  const [selectedLogs, setSelectedLogs] = useState<string | null>(null);
+  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const logScrollRef = useRef<HTMLDivElement | null>(null);
+
+  // New user form
+  const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newIsAdmin, setNewIsAdmin] = useState(false);
+
+  // Edit user state
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [editPassword, setEditPassword] = useState('');
+
+  // Database Update Options
+  const [skipUnpack, setSkipUnpack] = useState(false);
+  const [workers, setWorkers] = useState(4);
+  const [archived, setArchived] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(false);
+  const [useLocalDB, setUseLocalDB] = useState(false);
+
+  // Token Usage state
+  const [tokenUsage, setTokenUsage] = useState<any[]>([]);
+  const [loadingTokenUsage, setLoadingTokenUsage] = useState(false);
+  const [selectedUserTokens, setSelectedUserTokens] = useState<any[] | null>(null);
+  const [selectedUserTokensName, setSelectedUserTokensName] = useState('');
+  const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
+  const [loadingUserTokens, setLoadingUserTokens] = useState(false);
+
+  // AI Action History filter & pagination state
+  const [historyDateFilter, setHistoryDateFilter] = useState<'7d'|'1m'|'all'|'custom'>('7d');
+  const [historyCustomStart, setHistoryCustomStart] = useState('');
+  const [historyCustomEnd, setHistoryCustomEnd] = useState('');
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyModelFilter, setHistoryModelFilter] = useState<string>('all');
+
+  // Poll for active tasks
+  useEffect(() => {
+    const taskIds = Object.keys(activeTasks).map(Number);
+    if (taskIds.length === 0) return;
+
+    const interval = setInterval(async () => {
+      for (const id of taskIds) {
+        try {
+          const res = await fetch(`/api/dashboard/admin/tasks/${id}`);
+          const data = await res.json();
+          if (data.success) {
+            const task = data.task;
+
+            if (task.status === 'completed' && activeTasks[id]?.status !== 'completed') {
+              setCompletedUpdateTask(task);
+            }
+
+            setActiveTasks(prev => ({ ...prev, [id]: task }));
+            setDbStatus(prev => ({ ...prev, [task.type]: task }));
+
+            if (task.status === 'completed' || task.status === 'failed') {
+              setActiveTasks(prev => {
+                const next = { ...prev };
+                delete next[id];
+                return next;
+              });
+            }
+          }
+        } catch (err) {
+          console.error(`Poll error for task ${id}`, err);
+        }
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [activeTasks]);
+
+  // Poll for logs if the selected task is active
+  useEffect(() => {
+    if (!isLogModalOpen || !selectedTaskId) return;
+
+    const task = activeTasks[selectedTaskId];
+    const isTaskActive = task && (task.status === 'processing' || task.status === 'pending');
+    if (!isTaskActive) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/dashboard/admin/tasks/${selectedTaskId}/logs`);
+        const data = await res.json();
+        if (data.success) {
+          setSelectedLogs(data.logs);
+        }
+      } catch (err) {
+        console.error('Error polling logs', err);
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isLogModalOpen, selectedTaskId, activeTasks]);
+
+  // Scroll to bottom when logs update or modal opens (if auto-scroll is enabled)
+  useEffect(() => {
+    if (isLogModalOpen && logScrollRef.current) {
+      if (shouldAutoScroll) {
+        logScrollRef.current.scrollTop = logScrollRef.current.scrollHeight;
+      }
+    }
+  }, [selectedLogs, isLogModalOpen, shouldAutoScroll]);
+
+  const handleLogScroll = () => {
+    const container = logScrollRef.current;
+    if (!container) return;
+
+    const threshold = 50; // pixels from the bottom
+    const isAtBottom = container.scrollHeight - container.clientHeight - container.scrollTop <= threshold;
+    setShouldAutoScroll(isAtBottom);
+  };
+
+  useEffect(() => {
+    if (!sessionLoading && !session?.is_authenticated) {
+      router.push('/');
+    }
+  }, [session, sessionLoading, router]);
+
+  useEffect(() => {
+    if (session?.is_authenticated) {
+      if (session.is_admin) {
+        fetchUsers();
+        fetchTokenUsage();
+        fetchAllTokenDetails();
+      } else {
+        setUsers([{
+          id: session.id || 0,
+          username: session.username || 'Unknown',
+          is_admin: false,
+          ai_provider: session.ai_provider || 'elsa',
+          is_active: true,
+          created_at: new Date().toISOString()
+        }]);
+        setActiveTab((prev) => (prev === 'users' ? 'tokens' : prev));
+        fetchUserTokenDetails(session.id || 0, session.username || '');
+      }
+    }
+  }, [session]);
+
+  const fetchTokenUsage = async () => {
+    setLoadingTokenUsage(true);
+    try {
+      const res = await fetch('/api/dashboard/admin/token_usage');
+      const data = await res.json();
+      if (data.success) {
+        setTokenUsage(data.usage);
+      }
+    } catch (err) {
+      console.error('Failed to fetch token usage', err);
+    } finally {
+      setLoadingTokenUsage(false);
+    }
+  };
+
+  const fetchAllTokenDetails = async () => {
+    setLoadingUserTokens(true);
+    setHistoryDateFilter('7d');
+    setHistoryPage(1);
+    try {
+      const res = await fetch(`/api/dashboard/admin/token_usage/all`);
+      const data = await res.json();
+      if (data.success) {
+        setSelectedUserTokens(data.details);
+      } else {
+        alert(data.error || 'Failed to fetch all token details');
+      }
+    } catch (err) {
+      console.error('Fetch all token details error', err);
+    } finally {
+      setLoadingUserTokens(false);
+    }
+  };
+
+  const fetchUserTokenDetails = async (userId: number, username: string) => {
+    setLoadingUserTokens(true);
+    setSelectedUserTokensName(username);
+    setIsTokenModalOpen(true);
+    setHistoryDateFilter('7d');
+    setHistoryPage(1);
+    try {
+      const res = await fetch(`/api/dashboard/admin/token_usage/${userId}`);
+      const data = await res.json();
+      if (data.success) {
+        setSelectedUserTokens(data.details);
+      } else {
+        alert(data.error || 'Failed to fetch details');
+      }
+    } catch (err) {
+      console.error('Fetch user token details error', err);
+    } finally {
+      setLoadingUserTokens(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const res = await fetch('/api/dashboard/admin/users');
+      const data = await res.json();
+      if (data.success) {
+        setUsers(data.users);
+      }
+    } catch (err) {
+      console.error('Failed to fetch users', err);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/dashboard/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: newUsername,
+          password: newPassword,
+          is_admin: newIsAdmin
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNewUsername('');
+        setNewPassword('');
+        setNewIsAdmin(false);
+        fetchUsers();
+      } else {
+        alert(data.error || 'Failed to create user');
+      }
+    } catch (err) {
+      console.error('Create user error', err);
+    }
+  };
+
+  const handleUpdateRole = async (userId: number, isAdmin: boolean) => {
+    try {
+      const res = await fetch(`/api/dashboard/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_admin: isAdmin })
+      });
+      if (res.ok) fetchUsers();
+    } catch (err) {
+      console.error('Update role error', err);
+    }
+  };
+
+  const handleToggleActive = async (userId: number, isActive: boolean) => {
+    if (!confirm(`Are you sure you want to ${isActive ? 'reactivate' : 'deactivate'} this user?`)) return;
+    try {
+      const res = await fetch(`/api/dashboard/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: isActive })
+      });
+      if (res.ok) fetchUsers();
+    } catch (err) {
+      console.error('Toggle active error', err);
+    }
+  };
+
+  const handleChangePassword = async (userId: number) => {
+    if (!editPassword) return;
+    try {
+      const res = await fetch(`/api/dashboard/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: editPassword })
+      });
+      if (res.ok) {
+        setEditingUserId(null);
+        setEditPassword('');
+        alert('Password updated successfully');
+      }
+    } catch (err) {
+      console.error('Change password error', err);
+    }
+  };
+
+  const handleDeleteUser = async (userId: number) => {
+    if (!confirm('Are you sure you want to delete this user?')) return;
+    try {
+      const res = await fetch(`/api/dashboard/admin/users/${userId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) fetchUsers();
+      else {
+        const data = await res.json();
+        alert(data.error || 'Failed to delete user');
+      }
+    } catch (err) {
+      console.error('Delete user error', err);
+    }
+  };
+
+  const handleSaveUserModel = async (userId: number, provider: string) => {
+    setSavingUserModel(true);
+    try {
+      const res = await fetch(`/api/dashboard/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ai_provider: provider })
+      });
+      if (res.ok) {
+        setEditingUserModelId(null);
+        fetchUsers();
+        alert('User default AI model updated successfully.');
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to update user AI model');
+      }
+    } catch (err) {
+      console.error('Update user AI model error', err);
+      alert('Error updating user AI model');
+    } finally {
+      setSavingUserModel(false);
+    }
+  };
+
+
+  const handleUpdateClick = async (type: string) => {
+    setLoadingStats(true);
+    setPendingUpdateType(type);
+    try {
+      const res = await fetch(`/api/dashboard/admin/db_stats/${type}`);
+      const data = await res.json();
+      if (data.success) {
+        setPendingUpdateStats(data.stats);
+      } else {
+        alert('Failed to load stats: ' + data.error);
+        setPendingUpdateType(null);
+      }
+    } catch (err) {
+      console.error('Fetch stats error', err);
+      setPendingUpdateType(null);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  const triggerUpdate = async (type: string) => {
+    setPendingUpdateType(null);
+    setPendingUpdateStats(null);
+    try {
+      const bodyPayload: any = { type };
+      if (type === 'labeling') {
+        bodyPayload.skip_unpack = skipUnpack;
+        bodyPayload.workers = workers;
+        bodyPayload.archived = archived;
+        bodyPayload.force = forceUpdate;
+      } else if (type === 'generate_drugtox') {
+        bodyPayload.local = useLocalDB;
+      }
+      const res = await fetch('/api/dashboard/admin/update_db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bodyPayload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        const taskId = data.task_id;
+        setActiveTasks(prev => ({ ...prev, [taskId]: { id: taskId, type, status: 'processing', progress: 0 } }));
+        setDbStatus(prev => ({ ...prev, [type]: { id: taskId, type, status: 'processing', progress: 0 } }));
+      } else {
+        alert(data.error || 'Failed to trigger update');
+      }
+    } catch (err) {
+      console.error('Trigger update error', err);
+    }
+  };
+
+  const ProgressBar = ({ progress, status, message, taskId }: { progress: number, status: string, message?: string, taskId?: number }) => {
+    const isError = status === 'failed';
+    const isComplete = status === 'completed';
+
+    const fetchLogs = async () => {
+      if (!taskId) return;
+      try {
+        const res = await fetch(`/api/dashboard/admin/tasks/${taskId}/logs`);
+        const data = await res.json();
+        if (data.success) {
+          setSelectedLogs(data.logs);
+          setSelectedTaskId(taskId);
+          setShouldAutoScroll(true);
+          setIsLogModalOpen(true);
+        } else {
+          alert(data.error || 'Failed to fetch logs');
+        }
+      } catch (err) {
+        alert('Error fetching logs');
+      }
+    };
+
+    const cancelTask = async () => {
+      if (!taskId) return;
+      if (!window.confirm("Are you sure you want to cancel this task?")) return;
+      try {
+        const res = await fetch(`/api/dashboard/admin/tasks/${taskId}/cancel`, { method: 'POST' });
+        const data = await res.json();
+        if (!data.success) alert(data.error || 'Failed to cancel task');
+      } catch (err) {
+        alert('Error cancelling task');
+      }
+    };
+
+    return (
+      <div style={{ marginTop: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: '4px' }}>
+          <span style={{ fontWeight: 700, color: isError ? '#ef4444' : (isComplete ? '#22c55e' : '#6366f1'), display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {status.toUpperCase()}: {message || ''}
+            {taskId && (
+              <button
+                onClick={(e) => { e.stopPropagation(); fetchLogs(); }}
+                style={{
+                  background: '#f1f5f9',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '4px',
+                  padding: '1px 6px',
+                  fontSize: '0.6rem',
+                  cursor: 'pointer',
+                  fontWeight: 800
+                }}
+              >
+                VIEW LOGS
+              </button>
+            )}
+            {taskId && (status === 'processing' || status === 'pending') && (
+              <button
+                onClick={(e) => { e.stopPropagation(); cancelTask(); }}
+                style={{
+                  background: '#fef2f2',
+                  color: '#ef4444',
+                  border: '1px solid #fca5a5',
+                  borderRadius: '4px',
+                  padding: '1px 6px',
+                  fontSize: '0.6rem',
+                  cursor: 'pointer',
+                  fontWeight: 800
+                }}
+              >
+                CANCEL
+              </button>
+            )}
+          </span>
+          <span style={{ fontWeight: 800 }}>{progress}%</span>
+        </div>
+        <div style={{ width: '100%', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+          <div
+            style={{
+              width: `${progress}%`,
+              height: '100%',
+              background: isError ? '#ef4444' : (isComplete ? '#22c55e' : '#6366f1'),
+              transition: 'width 0.4s ease'
+            }}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  if (sessionLoading || !session?.is_authenticated) {
+    return <div style={{ padding: '2rem', textAlign: 'center' }}>Verifying access...</div>;
+  }
+
+  // AI Action History Filtering & Pagination logic
+  const tokensToFilter = selectedUserTokens || [];
+  const uniqueModels = Array.from(new Set(tokensToFilter.map((t: any) => t.model_name))).filter(Boolean) as string[];
+  
+  const historyFilteredTokens = tokensToFilter.filter((t: any) => {
+    // Model Filter
+    if (historyModelFilter !== 'all' && t.model_name !== historyModelFilter) {
+      return false;
+    }
+    // Date Filter
+    if (historyDateFilter === 'all') return true;
+    const tDate = new Date(t.created_at);
+    const now = new Date();
+    if (historyDateFilter === '7d') {
+      return (now.getTime() - tDate.getTime()) <= 7 * 24 * 60 * 60 * 1000;
+    }
+    if (historyDateFilter === '1m') {
+      return (now.getTime() - tDate.getTime()) <= 30 * 24 * 60 * 60 * 1000;
+    }
+    if (historyDateFilter === 'custom') {
+      const start = historyCustomStart ? new Date(historyCustomStart) : new Date(0);
+      const end = historyCustomEnd ? new Date(historyCustomEnd) : new Date();
+      // add 1 day to end to include the entire end day
+      end.setHours(23, 59, 59, 999);
+      return tDate >= start && tDate <= end;
+    }
+    return true;
+  });
+
+  const totalInputTokens = historyFilteredTokens.reduce((acc: number, t: any) => acc + (t.input_tokens || 0), 0);
+  const totalOutputTokens = historyFilteredTokens.reduce((acc: number, t: any) => acc + (t.output_tokens || 0), 0);
+  const totalOverallTokens = historyFilteredTokens.reduce((acc: number, t: any) => acc + (t.total_tokens || 0), 0);
+
+  const historyTotalItems = historyFilteredTokens.length;
+  const historyTotalPages = Math.ceil(historyTotalItems / 100) || 1;
+  const historyPagedTokens = historyFilteredTokens.slice((historyPage - 1) * 100, historyPage * 100);
+
+  return (
+    <div className="management-container">
+      <Header />
+
+      {/* Log Modal */}
+      {isLogModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '40px'
+          }}
+          onClick={() => {
+            setIsLogModalOpen(false);
+            setSelectedTaskId(null);
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '900px',
+              maxHeight: '80vh',
+              background: '#1e293b',
+              borderRadius: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ padding: '1.25rem', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, color: '#f8fafc', fontWeight: 800 }}>
+                Task Execution Logs {selectedTaskId ? `(ID: ${selectedTaskId})` : ''}
+              </h3>
+              <button
+                onClick={() => {
+                  setIsLogModalOpen(false);
+                  setSelectedTaskId(null);
+                }}
+                style={{ background: '#334155', border: 'none', borderRadius: '4px', color: '#94a3b8', padding: '4px 12px', cursor: 'pointer', fontWeight: 700 }}
+              >
+                CLOSE
+              </button>
+            </div>
+            <div
+              ref={logScrollRef}
+              onScroll={handleLogScroll}
+              style={{
+                flex: 1,
+                padding: '1.5rem',
+                overflowY: 'auto',
+                fontFamily: 'monospace',
+                fontSize: '0.85rem',
+                lineHeight: 1.6,
+                color: '#cbd5e1',
+                whiteSpace: 'pre-wrap',
+                background: '#0f172a'
+              }}
+            >
+              {selectedLogs || 'No logs available for this task.'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+        <h1 style={{ marginBottom: '2rem', fontSize: '2rem', fontWeight: 900, color: '#0f172a', borderBottom: '2px solid #e2e8f0', paddingBottom: '1rem' }}>
+          System Management
+        </h1>
+
+        <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+
+          {/* SIDEBAR NAVIGATION */}
+          <div style={{ width: '250px', display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
+            {session?.is_admin && (
+              <button
+                className={`sidebar-tab ${activeTab === 'system' ? 'active' : ''}`}
+                onClick={() => setActiveTab('system')}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
+                  <path d="M21.18 8.02c-1-2.3-2.85-4.17-5.16-5.18"></path>
+                </svg>
+                System Settings
+              </button>
+            )}
+            <button
+              className={`sidebar-tab ${activeTab === 'ai' ? 'active' : ''}`}
+              onClick={() => setActiveTab('ai')}
+              disabled={session?.username === 'guest'}
+              style={{ opacity: session?.username === 'guest' ? 0.5 : 1, cursor: session?.username === 'guest' ? 'not-allowed' : 'pointer' }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+              </svg>
+              AI Settings
+            </button>
+            <button
+              className={`sidebar-tab ${activeTab === 'users' ? 'active' : ''}`}
+              onClick={() => setActiveTab('users')}
+              disabled={session?.username === 'guest'}
+              style={{ opacity: session?.username === 'guest' ? 0.5 : 1, cursor: session?.username === 'guest' ? 'not-allowed' : 'pointer' }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              {session?.is_admin ? 'User Management' : 'My Account'}
+            </button>
+            <button
+              className={`sidebar-tab ${activeTab === 'tokens' ? 'active' : ''}`}
+              onClick={() => setActiveTab('tokens')}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              {session?.is_admin ? 'Token Usage' : 'My Token Usage'}
+            </button>
+            {session?.is_admin && (
+              <button
+                className={`sidebar-tab ${activeTab === 'database' ? 'active' : ''}`}
+                onClick={() => setActiveTab('database')}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                Database Maintenance
+              </button>
+            )}
+          </div>
+
+          {/* MAIN CONTENT AREA */}
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            {activeTab === 'system' && session?.is_admin && (
+              <section className="mgmt-card">
+                <h2 className="section-title">System Settings</h2>
+                <p style={{ color: '#64748b', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.5 }}>
+                  Configure the global environment, database endpoints, and active LLM models. Changes here apply to all users immediately.
+                </p>
+
+                <div style={{ marginBottom: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  
+                  {/* Labeling Source */}
+                  <div>
+                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#1e293b' }}>Labeling Source</h3>
+                    <select 
+                      value={pendingEnvConfig.labeling_source || 'local'} 
+                      onChange={(e) => handleEnvChange('labeling_source', e.target.value)}
+                      disabled={savingEnv}
+                      style={{ padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem', minWidth: '300px', background: 'white' }}
+                    >
+                      <option value="local">Local Database (SQLite/Postgres)</option>
+                      <option value="fdalabel">FDALabel (Oracle Database)</option>
+                    </select>
+                  </div>
+
+                  {/* Oracle Database Environment selection (dev vs tst) */}
+                  {pendingEnvConfig.labeling_source === 'fdalabel' && (
+                    <div style={{ padding: '1.25rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '500px' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Oracle Database Environment</label>
+                      <select 
+                        value={pendingEnvConfig.oracle_db_env || 'tst'} 
+                        onChange={(e) => handleEnvChange('oracle_db_env', e.target.value)}
+                        disabled={savingEnv}
+                        style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.9rem', background: 'white' }}
+                      >
+                        <option value="tst">Testing (TST) - lbltst2</option>
+                        <option value="dev">Development (DEV)</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {/* PostgreSQL Database */}
+                  <div>
+                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#1e293b' }}>PostgreSQL Database</h3>
+                    <select 
+                      value={pendingEnvConfig.postgres_db || 'local'} 
+                      onChange={(e) => handleEnvChange('postgres_db', e.target.value)}
+                      disabled={savingEnv}
+                      style={{ padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem', minWidth: '300px', background: 'white' }}
+                    >
+                      <option value="local">Local PostgreSQL</option>
+                      <option value="external">External / Remote PostgreSQL</option>
+                    </select>
+                  </div>
+
+                  {/* External PostgreSQL Configuration */}
+                  {pendingEnvConfig.postgres_db === 'external' && (
+                    <div style={{ padding: '1.25rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '500px' }}>
+                      <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#475569' }}>External PostgreSQL Configuration</h4>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>PG Host / URL</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. localhost:5432 or postgresql://..."
+                          value={pendingEnvConfig.external_pg_host || ''}
+                          onChange={(e) => handleEnvChange('external_pg_host', e.target.value)}
+                          disabled={savingEnv}
+                          style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>PG Username</label>
+                        <input
+                          type="text"
+                          placeholder="Username"
+                          value={pendingEnvConfig.external_pg_user || ''}
+                          onChange={(e) => handleEnvChange('external_pg_user', e.target.value)}
+                          disabled={savingEnv}
+                          style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>PG Password</label>
+                        <input
+                          type="password"
+                          placeholder="Password"
+                          value={pendingEnvConfig.external_pg_password || ''}
+                          onChange={(e) => handleEnvChange('external_pg_password', e.target.value)}
+                          disabled={savingEnv}
+                          style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>PG Database Name</label>
+                        <input
+                          type="text"
+                          placeholder="Database Name"
+                          value={pendingEnvConfig.external_pg_database || ''}
+                          onChange={(e) => handleEnvChange('external_pg_database', e.target.value)}
+                          disabled={savingEnv}
+                          style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: '1rem' }}>
+                    <button
+                      onClick={handleApplyEnvSettings}
+                      disabled={savingEnv}
+                      className="btn-primary"
+                      style={{ padding: '0.75rem 2rem', fontSize: '0.95rem' }}
+                    >
+                      {savingEnv ? 'Applying Settings...' : 'Apply Settings'}
+                    </button>
+                  </div>
+
+                  {savingEnv && <span style={{ color: '#64748b', fontSize: '0.9rem' }}>Saving settings...</span>}
+                </div>
+
+              </section>
+            )}
+
+            {activeTab === 'ai' && session?.username !== 'guest' && (
+              <section className="mgmt-card" style={{ maxWidth: '800px' }}>
+                <h2 className="section-title">AI Model Preferences</h2>
+                <p style={{ color: '#64748b', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.5 }}>
+                  Select your active AI provider and customize the connection settings for toxicity analysis.
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  
+                  {/* Gemini Card */}
+                  <div 
+                    onClick={() => setSelectedProvider('gemini')}
+                    style={{
+                      padding: '1.5rem',
+                      borderRadius: '16px',
+                      border: selectedProvider === 'gemini' ? '2px solid #6366f1' : '1px solid #e2e8f0',
+                      background: selectedProvider === 'gemini' ? '#f5f3ff' : 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: selectedProvider === 'gemini' ? '0 10px 15px -3px rgba(99, 102, 241, 0.1)' : 'none',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
+                        background: selectedProvider === 'gemini' ? '#818cf8' : '#e2e8f0',
+                        color: selectedProvider === 'gemini' ? 'white' : '#64748b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold',
+                        transition: 'all 0.3s',
+                      }}>
+                        G
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#1e293b' }}>Google Gemini</span>
+                          {selectedProvider === 'gemini' && (
+                            <span style={{ background: '#6366f1', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '12px', fontWeight: 800 }}>ACTIVE</span>
+                          )}
+                        </div>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b', lineHeight: 1.4 }}>
+                          High-performance multimodal model from Google. Recommended for standard toxicity analysis.
+                        </p>
+                      </div>
+                    </div>
+
+                    {selectedProvider === 'gemini' && (
+                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed #e2e8f0' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Gemini API Key</label>
+                          <input
+                            type="password"
+                            placeholder={session?.has_gemini_key ? "Gemini API Key configured in backend .env (Leave blank to use default)" : "Enter your Gemini API Key"}
+                            value={customSettings.gemini.api_key}
+                            onChange={(e) => setCustomSettings({
+                              ...customSettings,
+                              gemini: { ...customSettings.gemini, api_key: e.target.value }
+                            })}
+                            style={{
+                              padding: '0.6rem 0.8rem',
+                              borderRadius: '8px',
+                              border: '1px solid #cbd5e1',
+                              fontSize: '0.9rem',
+                              width: '100%',
+                              maxWidth: '500px',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ELSA Card */}
+                  <div 
+                    onClick={() => setSelectedProvider('elsa')}
+                    style={{
+                      padding: '1.5rem',
+                      borderRadius: '16px',
+                      border: selectedProvider === 'elsa' ? '2px solid #6366f1' : '1px solid #e2e8f0',
+                      background: selectedProvider === 'elsa' ? '#f5f3ff' : 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: selectedProvider === 'elsa' ? '0 10px 15px -3px rgba(99, 102, 241, 0.1)' : 'none',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
+                        background: selectedProvider === 'elsa' ? '#818cf8' : '#e2e8f0',
+                        color: selectedProvider === 'elsa' ? 'white' : '#64748b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold',
+                        transition: 'all 0.3s',
+                      }}>
+                        E
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#1e293b' }}>ELSA</span>
+                          {selectedProvider === 'elsa' && (
+                            <span style={{ background: '#6366f1', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '12px', fontWeight: 800 }}>ACTIVE</span>
+                          )}
+                        </div>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b', lineHeight: 1.4 }}>
+                          FDA Enterprise AI model. Optimized for compliance and institutional toxicity classification.
+                        </p>
+                      </div>
+                    </div>
+
+                    {selectedProvider === 'elsa' && (
+                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed #e2e8f0' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', maxWidth: '600px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Elsa URL</label>
+                            <input
+                              type="text"
+                              placeholder={session?.env_elsa_url || "https://elsa.fda.gov/api"}
+                              value={customSettings.elsa.url}
+                              onChange={(e) => setCustomSettings({
+                                ...customSettings,
+                                elsa: { ...customSettings.elsa, url: e.target.value }
+                              })}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Elsa User</label>
+                            <input
+                              type="text"
+                              placeholder={session?.env_elsa_user || "Username"}
+                              value={customSettings.elsa.user}
+                              onChange={(e) => setCustomSettings({
+                                ...customSettings,
+                                elsa: { ...customSettings.elsa, user: e.target.value }
+                              })}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Elsa Key</label>
+                            <input
+                              type="password"
+                              placeholder={session?.has_elsa_key ? "Elsa Key configured in backend .env (Leave blank to use default)" : "API Key"}
+                              value={customSettings.elsa.key}
+                              onChange={(e) => setCustomSettings({
+                                ...customSettings,
+                                elsa: { ...customSettings.elsa, key: e.target.value }
+                              })}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Elsa Model ID</label>
+                            <input
+                              type="text"
+                              placeholder={session?.env_elsa_model_id || "e.g. claude-3-5-sonnet"}
+                              value={customSettings.elsa.model_id}
+                              onChange={(e) => setCustomSettings({
+                                ...customSettings,
+                                elsa: { ...customSettings.elsa, model_id: e.target.value }
+                              })}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Elsa Model Name</label>
+                            <input
+                              type="text"
+                              placeholder={session?.env_elsa_model_name || "e.g. CLAUDE_4_SONNET"}
+                              value={customSettings.elsa.model_name}
+                              onChange={(e) => setCustomSettings({
+                                ...customSettings,
+                                elsa: { ...customSettings.elsa, model_name: e.target.value }
+                              })}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* vLLM Card */}
+                  <div 
+                    onClick={() => setSelectedProvider('vllm')}
+                    style={{
+                      padding: '1.5rem',
+                      borderRadius: '16px',
+                      border: selectedProvider === 'vllm' ? '2px solid #6366f1' : '1px solid #e2e8f0',
+                      background: selectedProvider === 'vllm' ? '#f5f3ff' : 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: selectedProvider === 'vllm' ? '0 10px 15px -3px rgba(99, 102, 241, 0.1)' : 'none',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
+                        background: selectedProvider === 'vllm' ? '#818cf8' : '#e2e8f0',
+                        color: selectedProvider === 'vllm' ? 'white' : '#64748b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold',
+                        transition: 'all 0.3s',
+                      }}>
+                        V
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#1e293b' }}>vLLM / Llama</span>
+                          {selectedProvider === 'vllm' && (
+                            <span style={{ background: '#6366f1', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '12px', fontWeight: 800 }}>ACTIVE</span>
+                          )}
+                        </div>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b', lineHeight: 1.4 }}>
+                          Self-hosted LLMs running on vLLM or similar OpenAI-compatible servers.
+                        </p>
+                      </div>
+                    </div>
+
+                    {selectedProvider === 'vllm' && (
+                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed #e2e8f0' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', maxWidth: '500px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>vLLM Base URL</label>
+                            <input
+                              type="text"
+                              placeholder={session?.env_vllm_url || "http://localhost:8000/v1"}
+                              value={customSettings.vllm.url}
+                              onChange={(e) => setCustomSettings({
+                                ...customSettings,
+                                vllm: { ...customSettings.vllm, url: e.target.value }
+                              })}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>API Key</label>
+                            <input
+                              type="password"
+                              placeholder={session?.has_vllm_key ? "vLLM API Key configured in backend .env (Leave blank to use default)" : "API Key (if required)"}
+                              value={customSettings.vllm.api_key}
+                              onChange={(e) => setCustomSettings({
+                                ...customSettings,
+                                vllm: { ...customSettings.vllm, api_key: e.target.value }
+                              })}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Model Name</label>
+                            <input
+                              type="text"
+                              placeholder={session?.env_vllm_model || "e.g. meta-llama/Llama-4-Maverick-17B-Instruct"}
+                              value={customSettings.vllm.model_name}
+                              onChange={(e) => setCustomSettings({
+                                ...customSettings,
+                                vllm: { ...customSettings.vllm, model_name: e.target.value }
+                              })}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Ollama Card */}
+                  <div 
+                    onClick={() => setSelectedProvider('ollama')}
+                    style={{
+                      padding: '1.5rem',
+                      borderRadius: '16px',
+                      border: selectedProvider === 'ollama' ? '2px solid #6366f1' : '1px solid #e2e8f0',
+                      background: selectedProvider === 'ollama' ? '#f5f3ff' : 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: selectedProvider === 'ollama' ? '0 10px 15px -3px rgba(99, 102, 241, 0.1)' : 'none',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
+                        background: selectedProvider === 'ollama' ? '#818cf8' : '#e2e8f0',
+                        color: selectedProvider === 'ollama' ? 'white' : '#64748b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold',
+                        transition: 'all 0.3s',
+                      }}>
+                        O
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#1e293b' }}>Ollama</span>
+                          {selectedProvider === 'ollama' && (
+                            <span style={{ background: '#6366f1', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '12px', fontWeight: 800 }}>ACTIVE</span>
+                          )}
+                        </div>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b', lineHeight: 1.4 }}>
+                          Locally running LLMs using Ollama. Run private, offline model inferences on your local device.
+                        </p>
+                      </div>
+                    </div>
+
+                    {selectedProvider === 'ollama' && (
+                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed #e2e8f0' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', maxWidth: '500px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Ollama URL</label>
+                            <input
+                              type="text"
+                              placeholder={session?.env_ollama_url || "http://localhost:11434"}
+                              value={customSettings.ollama.url}
+                              onChange={(e) => setCustomSettings({
+                                ...customSettings,
+                                ollama: { ...customSettings.ollama, url: e.target.value }
+                              })}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Model Name</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. llama3, gemma2"
+                              value={customSettings.ollama.model_name}
+                              onChange={(e) => setCustomSettings({
+                                ...customSettings,
+                                ollama: { ...customSettings.ollama, model_name: e.target.value }
+                              })}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+
+                </div>
+
+                <div style={{ marginTop: '2.5rem', borderTop: '1px solid #e2e8f0', paddingTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={handleSaveSettings}
+                    disabled={savingSettings}
+                    className="btn-primary"
+                    style={{
+                      padding: '0.75rem 2.0rem',
+                      borderRadius: '8px',
+                      fontSize: '1rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.2)',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    {savingSettings ? 'Saving Settings...' : 'Save AI Settings'}
+                  </button>
+                </div>
+              </section>
+            )}
+
+            {activeTab === 'users' && session?.username !== 'guest' && (
+              <section className="mgmt-card">
+                <h2 className="section-title">User Management</h2>
+
+                {/* Create User Form */}
+                {session?.is_admin && (
+                  <form onSubmit={handleCreateUser} className="mgmt-form">
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '1rem' }}>
+                    <input
+                      type="text"
+                      placeholder="Username"
+                      value={newUsername}
+                      onChange={e => setNewUsername(e.target.value)}
+                      className="mgmt-input"
+                      required
+                    />
+                    <input
+                      type="password"
+                      placeholder="Password"
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      className="mgmt-input"
+                      required
+                    />
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', fontWeight: 700 }}>
+                      <input
+                        type="checkbox"
+                        checked={newIsAdmin}
+                        onChange={e => setNewIsAdmin(e.target.checked)}
+                      /> Admin
+                    </label>
+                    <button type="submit" className="btn-primary">Add</button>
+                  </div>
+                </form>
+                )}
+
+                <div className="user-table-wrapper">
+                  <table className="user-table">
+                    <thead>
+                      <tr>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.filter(u => session?.is_admin || u.id === session?.id).map(user => (
+                        <tr key={user.id} style={{ opacity: user.is_active === false ? 0.6 : 1 }}>
+                          <td>
+                            <div style={{ fontWeight: 700, color: '#1e293b' }}>{user.username}</div>
+                            {user.is_active === false && (
+                              <span style={{ fontSize: '0.65rem', background: '#fee2e2', color: '#ef4444', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>DEACTIVATED</span>
+                            )}
+                          </td>
+                          <td>
+                            <select
+                              value={user.is_admin ? 'admin' : 'user'}
+                              onChange={e => handleUpdateRole(user.id, e.target.value === 'admin')}
+                              className="mgmt-select"
+                              disabled={user.is_active === false || !session?.is_admin}
+                            >
+                              <option value="user">User</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                onClick={() => { setEditingUserId(user.id); setEditPassword(''); }}
+                                className="btn-ghost"
+                                disabled={user.is_active === false}
+                              >
+                                Password
+                              </button>
+                              {session?.is_admin && (
+                                <button
+                                  onClick={() => {
+                                    if (editingUserModelId === user.id) {
+                                      setEditingUserModelId(null);
+                                    } else {
+                                      setEditingUserModelId(user.id);
+                                      setSelectedUserModelProvider(user.ai_provider || 'elsa');
+                                    }
+                                  }}
+                                  className="btn-ghost"
+                                  disabled={user.is_active === false}
+                                >
+                                  AI Model ({user.ai_provider?.toUpperCase() || 'ELSA'})
+                                </button>
+                              )}
+                              {session?.is_admin && (
+                                <>
+                                  {user.is_active !== false ? (
+                                    <button
+                                      onClick={() => handleToggleActive(user.id, false)}
+                                      className="btn-ghost"
+                                      style={{ color: '#b45309', borderColor: '#fcd34d', backgroundColor: '#fffbeb' }}
+                                    >
+                                      Deactivate
+                                    </button>
+                                  ) : (
+                                    <>
+                                      <button
+                                        onClick={() => handleToggleActive(user.id, true)}
+                                        className="btn-ghost"
+                                        style={{ color: '#047857', borderColor: '#6ee7b7', backgroundColor: '#ecfdf5' }}
+                                      >
+                                        Reactivate
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteUser(user.id)}
+                                        className="btn-danger-ghost"
+                                      >
+                                        Delete
+                                      </button>
+                                    </>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                            {editingUserId === user.id && (
+                              <div style={{ marginTop: '8px', display: 'flex', gap: '5px' }}>
+                                <input
+                                  type="password"
+                                  placeholder="New password"
+                                  value={editPassword}
+                                  onChange={e => setEditPassword(e.target.value)}
+                                  className="mgmt-input-sm"
+                                />
+                                <button onClick={() => handleChangePassword(user.id)} className="btn-primary-sm">Save</button>
+                              </div>
+                            )}
+                            {editingUserModelId === user.id && (
+                              <div style={{ 
+                                  marginTop: '8px', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: '8px',
+                                  background: '#f8fafc',
+                                  padding: '8px 12px',
+                                  borderRadius: '8px',
+                                  border: '1px solid #e2e8f0',
+                                  maxWidth: 'fit-content'
+                              }}>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>
+                                  Set Model:
+                                </span>
+                                <select
+                                  value={selectedUserModelProvider}
+                                  onChange={e => setSelectedUserModelProvider(e.target.value)}
+                                  className="mgmt-select-sm"
+                                  style={{ 
+                                      padding: '2px 6px', 
+                                      borderRadius: '4px', 
+                                      border: '1px solid #cbd5e1',
+                                      fontSize: '0.75rem',
+                                      fontWeight: 600,
+                                      background: 'white'
+                                  }}
+                                >
+                                  <option value="elsa">ELSA</option>
+                                  <option value="gemini">Gemini</option>
+                                  <option value="vllm">vLLM</option>
+                                  <option value="ollama">Ollama</option>
+                                </select>
+                                <button 
+                                  onClick={() => handleSaveUserModel(user.id, selectedUserModelProvider)} 
+                                  className="btn-primary-sm"
+                                  style={{ fontSize: '0.7rem', padding: '4px 10px', minHeight: 'auto' }}
+                                  disabled={savingUserModel}
+                                >
+                                  {savingUserModel ? 'Saving...' : 'Save'}
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+
+            {activeTab === 'tokens' && (
+              <section className="mgmt-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                  <h2 className="section-title" style={{ margin: 0 }}>{session?.is_admin ? 'Global AI Action History' : 'My AI Action History'}</h2>
+                  {session?.is_admin && (
+                    <button 
+                      className="btn-primary" 
+                      onClick={() => setIsTokenModalOpen(true)}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                      </svg>
+                      Show Top 10 Users Summary
+                    </button>
+                  )}
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem', padding: '0.5rem', background: '#f8fafc', borderRadius: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Filter Date:</div>
+                      <select 
+                        value={historyDateFilter} 
+                        onChange={(e) => { setHistoryDateFilter(e.target.value as any); setHistoryPage(1); }}
+                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                      >
+                        <option value="7d">Last 7 Days</option>
+                        <option value="1m">Last 1 Month</option>
+                        <option value="all">All Time</option>
+                        <option value="custom">Custom Range</option>
+                      </select>
+                    </div>
+                    
+                    {historyDateFilter === 'custom' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input type="date" value={historyCustomStart} onChange={e => { setHistoryCustomStart(e.target.value); setHistoryPage(1); }} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                        <span style={{ fontSize: '0.8rem', color: '#64748b' }}>to</span>
+                        <input type="date" value={historyCustomEnd} onChange={e => { setHistoryCustomEnd(e.target.value); setHistoryPage(1); }} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Filter Model:</div>
+                      <select 
+                        value={historyModelFilter} 
+                        onChange={(e) => { setHistoryModelFilter(e.target.value); setHistoryPage(1); }}
+                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                      >
+                        <option value="all">All Models</option>
+                        {uniqueModels.map(model => (
+                          <option key={model} value={model}>{model}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div style={{ marginLeft: 'auto', fontSize: '0.85rem', color: '#64748b' }}>
+                      {historyTotalItems} record{historyTotalItems !== 1 ? 's' : ''} found
+                    </div>
+                  </div>
+
+                  {/* Aggregated Token Counts Summary */}
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(3, 1fr)', 
+                    gap: '1rem', 
+                    marginBottom: '1.5rem',
+                    background: '#f8fafc',
+                    padding: '1.25rem',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    <div style={{ background: 'white', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Input Tokens</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
+                        {totalInputTokens.toLocaleString()}
+                      </div>
+                    </div>
+                    <div style={{ background: 'white', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Output Tokens</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
+                        {totalOutputTokens.toLocaleString()}
+                      </div>
+                    </div>
+                    <div style={{ background: 'white', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Overall Tokens</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#6366f1', marginTop: '4px' }}>
+                        {totalOverallTokens.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="user-table-wrapper">
+                    <table className="user-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ padding: '0 12px 8px', borderBottom: 'none' }}>Timestamp</th>
+                          {session?.is_admin && <th style={{ padding: '0 12px 8px', borderBottom: 'none' }}>Username</th>}
+                          <th style={{ padding: '0 12px 8px', borderBottom: 'none' }}>Model</th>
+                          <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Input</th>
+                          <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Output</th>
+                          <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {loadingUserTokens ? (
+                          <tr><td colSpan={session?.is_admin ? 6 : 5} style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>Loading detailed usage...</td></tr>
+                        ) : historyFilteredTokens.length === 0 ? (
+                          <tr><td colSpan={session?.is_admin ? 6 : 5} style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>No records found for the selected date range.</td></tr>
+                        ) : (
+                          historyPagedTokens.map((record: any) => (
+                            <tr key={record.id} style={{ background: '#f8fafc', borderRadius: '8px' }}>
+                              <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '8px 0 0 8px', fontSize: '0.85rem', color: '#475569' }}>
+                                {new Date(record.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'medium' })}
+                              </td>
+                              {session?.is_admin && (
+                                <td style={{ padding: '12px', borderBottom: 'none', fontSize: '0.85rem', color: '#334155', fontWeight: 600 }}>
+                                  {record.username}
+                                </td>
+                              )}
+                              <td style={{ padding: '12px', borderBottom: 'none', fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>
+                                <span style={{ background: '#e2e8f0', padding: '4px 8px', borderRadius: '6px' }}>{record.model_name}</span>
+                              </td>
+                              <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontSize: '0.9rem', color: '#64748b' }}>
+                                {record.input_tokens.toLocaleString()}
+                              </td>
+                              <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontSize: '0.9rem', color: '#64748b' }}>
+                                {record.output_tokens.toLocaleString()}
+                              </td>
+                              <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '0 8px 8px 0', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>
+                                {record.total_tokens.toLocaleString()}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  {!loadingUserTokens && historyTotalPages > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
+                      <button 
+                        disabled={historyPage === 1}
+                        onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
+                        style={{ padding: '6px 12px', background: historyPage === 1 ? '#f1f5f9' : '#e2e8f0', color: historyPage === 1 ? '#94a3b8' : '#334155', border: 'none', borderRadius: '6px', cursor: historyPage === 1 ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}
+                      >
+                        Previous
+                      </button>
+                      <span style={{ fontSize: '0.85rem', color: '#475569' }}>
+                        Page {historyPage} of {historyTotalPages}
+                      </span>
+                      <button 
+                        disabled={historyPage === historyTotalPages}
+                        onClick={() => setHistoryPage(p => Math.min(historyTotalPages, p + 1))}
+                        style={{ padding: '6px 12px', background: historyPage === historyTotalPages ? '#f1f5f9' : '#e2e8f0', color: historyPage === historyTotalPages ? '#94a3b8' : '#334155', border: 'none', borderRadius: '6px', cursor: historyPage === historyTotalPages ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {activeTab === 'database' && session?.is_admin && (
+              <section className="mgmt-card">
+                <h2 className="section-title">Database Maintenance</h2>
+                <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                  Manually trigger background synchronization with local source files (data/downloads).
+                </p>
+
+                <div className="update-grid">
+                  {[
+                    { id: 'labeling', name: 'Drug Labeling', desc: 'Full SPL import from local disk' },
+                    { id: 'orangebook', name: 'Orange Book', desc: 'Approved Drug Products with Therapeutic Equivalence Evaluations' },
+                    { id: 'generate_drugtox', name: 'Generate DrugTox (AI)', desc: 'Dynamically generate DILI/DICT/DIRI for recently updated single-ingredient human Rx labels' },
+                    { id: 'meddra', name: 'MedDRA', desc: 'Dictionary (SOC, HLT, etc.)' }
+                  ].map(item => (
+                    <div key={item.id} className="update-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 800, color: '#1e293b' }}>{item.name}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{item.desc}</div>
+                        </div>
+                        <button
+                          onClick={() => handleUpdateClick(item.id)}
+                          className="btn-update"
+                          disabled={dbStatus[item.id]?.status === 'processing'}
+                        >
+                          {dbStatus[item.id]?.status === 'processing' ? 'Running...' : 'Update'}
+                        </button>
+                      </div>
+
+                      {item.id === 'labeling' && (
+                        <div style={{ marginTop: '12px', padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#475569', marginBottom: '4px' }}>Configuration Options</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#334155', cursor: 'pointer', userSelect: 'none' }}>
+                              <input type="checkbox" checked={skipUnpack} onChange={(e) => setSkipUnpack(e.target.checked)} style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#3b82f6' }} />
+                              Skip Unpacking
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#334155', cursor: 'pointer', userSelect: 'none' }}>
+                              <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#3b82f6' }} />
+                              Process Archived (XMLs)
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#334155', cursor: 'pointer', userSelect: 'none' }}>
+                              <input type="checkbox" checked={forceUpdate} onChange={(e) => setForceUpdate(e.target.checked)} style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#ef4444' }} />
+                              <span style={{ color: forceUpdate ? '#ef4444' : 'inherit', fontWeight: forceUpdate ? 700 : 400 }}>Force Overwrite</span>
+                            </label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#334155' }}>
+                              <span>Workers:</span>
+                              <select value={workers} onChange={(e) => setWorkers(Number(e.target.value))} style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem', cursor: 'pointer' }}>
+                                <option value={1}>1</option>
+                                <option value={4}>4</option>
+                                <option value={10}>10</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {item.id === 'generate_drugtox' && (
+                        <div style={{ marginTop: '12px', padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#475569', marginBottom: '4px' }}>Configuration Options</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#334155', cursor: 'pointer', userSelect: 'none' }}>
+                              <input type="checkbox" checked={useLocalDB} onChange={(e) => setUseLocalDB(e.target.checked)} style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#3b82f6' }} />
+                              Use Local DB (Postgres)
+                            </label>
+                          </div>
+                        </div>
+                      )}
+
+                      {dbStatus[item.id] && (
+                        <ProgressBar
+                          progress={dbStatus[item.id].progress}
+                          status={dbStatus[item.id].status}
+                          message={dbStatus[item.id].message}
+                          taskId={dbStatus[item.id].id}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ marginTop: '2rem', padding: '1rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontWeight: 800, fontSize: '0.8rem', color: '#475569', marginBottom: '8px' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ marginRight: '6px', verticalAlign: 'middle' }}>
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="16" x2="12" y2="12"></line>
+                      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    Processing Note
+                  </div>
+                  <p style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.4, margin: 0 }}>
+                    Updates run as background processes. Larger datasets (Labeling, MedDRA) may take 5-10 minutes.
+                    Existing data will be replaced using the <code>--force</code> flag.
+                  </p>
+                </div>
+              </section>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* Modals and Overlays */}
+      {/* Confirmation Modal */}
+      {pendingUpdateType && (
+        <div className="modal-overlay" onClick={() => !loadingStats && setPendingUpdateType(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px', width: '90%', padding: '2rem', borderRadius: '24px', background: 'white' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>Confirm Database Update</h3>
+            </div>
+
+            {loadingStats ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                Fetching current database statistics...
+              </div>
+            ) : pendingUpdateStats ? (
+              <div>
+                <p style={{ color: '#475569', marginBottom: '1.5rem' }}>
+                  You are about to run the update script for <strong>{pendingUpdateType}</strong>.
+                  Existing data will be overwritten or updated.
+                </p>
+                <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#1e293b', fontSize: '0.9rem' }}>Current Database Stats</h4>
+                  {pendingUpdateStats.total_count ? (
+                    <>
+                      <div style={{ fontSize: '0.85rem', color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Total MedDRA Records:</span>
+                        <span style={{ fontWeight: 600 }}>{pendingUpdateStats.total_count.toLocaleString()}</span>
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>SOC Terms:</span>
+                        <span style={{ fontWeight: 600 }}>{pendingUpdateStats.soc_count.toLocaleString()}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: '0.85rem', color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Total Records:</span>
+                        <span style={{ fontWeight: 600 }}>{pendingUpdateStats.count?.toLocaleString() || 0}</span>
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#475569', display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem' }}>
+                        <span>Last Revised/Approved Date:</span>
+                        <span style={{ fontWeight: 600 }}>{pendingUpdateStats.last_date || 'N/A'}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                  <button onClick={() => setPendingUpdateType(null)} className="btn-ghost">Cancel</button>
+                  <button onClick={() => triggerUpdate(pendingUpdateType)} className="btn-primary">Confirm Update</button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* Completion Summary Modal */}
+      {completedUpdateTask && (
+        <div className="modal-overlay" onClick={() => setCompletedUpdateTask(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px', width: '90%', padding: '2rem', borderRadius: '24px', background: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+              <div style={{ color: '#10b981' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+              </div>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>Update Completed</h3>
+            </div>
+
+            <p style={{ color: '#475569', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+              The database update task for <strong>{completedUpdateTask.type}</strong> has finished successfully.
+            </p>
+
+            {completedUpdateTask.message && (
+              <div style={{ background: '#f0fdf4', padding: '1rem', borderRadius: '8px', border: '1px solid #bbf7d0', marginBottom: '1.5rem' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: '#166534', fontSize: '0.9rem' }}>Summary</h4>
+                <div style={{ fontSize: '0.85rem', color: '#166534' }}>
+                  {completedUpdateTask.message}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setCompletedUpdateTask(null)} className="btn-primary">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        .sidebar-tab {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 16px;
+          background: transparent;
+          border: none;
+          border-radius: 8px;
+          font-size: 0.95rem;
+          font-weight: 600;
+          color: #64748b;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          text-align: left;
+          width: 100%;
+        }
+        
+        .sidebar-tab:hover {
+          background: #f1f5f9;
+          color: #334155;
+        }
+        
+        .sidebar-tab.active {
+          background: #e0e7ff;
+          color: #4f46e5;
+        }
+
+        .sidebar-tab svg {
+          opacity: 0.7;
+        }
+        
+        .sidebar-tab.active svg {
+          opacity: 1;
+        }
+
+        .mgmt-card {
+          background: white;
+          border-radius: 8px;
+          padding: 1.5rem;
+          box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+          border: 1px solid #cbd5e1;
+        }
+
+        .section-title {
+          font-weight: 600;
+          font-size: 1.25rem;
+          color: #1e293b;
+          margin-bottom: 1.25rem;
+          border-bottom: 1px solid #e2e8f0;
+          padding-bottom: 0.75rem;
+        }
+        
+        .mgmt-form {
+          background: #f8fafc;
+          padding: 1rem;
+          border-radius: 6px;
+          border: 1px solid #e2e8f0;
+          margin-bottom: 1.5rem;
+        }
+
+        .mgmt-input {
+          padding: 8px 12px;
+          border-radius: 4px;
+          border: 1px solid #cbd5e1;
+          font-size: 0.85rem;
+          background: white;
+          flex: 1;
+        }
+        
+        .mgmt-input:focus {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+
+        .mgmt-input-sm {
+          padding: 4px 8px;
+          border-radius: 4px;
+          border: 1px solid #cbd5e1;
+          font-size: 0.8rem;
+          flex: 1;
+        }
+
+        .mgmt-select {
+          padding: 6px 12px;
+          border-radius: 4px;
+          border: 1px solid #cbd5e1;
+          font-size: 0.85rem;
+          color: #334155;
+          background: white;
+        }
+
+        .btn-primary {
+          background: #2563eb;
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 4px;
+          font-weight: 500;
+          font-size: 0.85rem;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        
+        .btn-primary:hover {
+          background: #1d4ed8;
+        }
+
+        .btn-primary-sm {
+          background: #2563eb;
+          color: white;
+          border: none;
+          padding: 4px 10px;
+          border-radius: 4px;
+          font-weight: 500;
+          font-size: 0.8rem;
+          cursor: pointer;
+        }
+
+        .btn-ghost {
+          background: white;
+          color: #475569;
+          border: 1px solid #cbd5e1;
+          padding: 6px 12px;
+          border-radius: 4px;
+          font-weight: 500;
+          font-size: 0.8rem;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        
+        .btn-ghost:hover {
+          background: #f8fafc;
+          color: #1e293b;
+        }
+
+        .btn-danger-ghost {
+          background: white;
+          color: #dc2626;
+          border: 1px solid #fca5a5;
+          padding: 6px 12px;
+          border-radius: 4px;
+          font-weight: 500;
+          font-size: 0.8rem;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        
+        .btn-danger-ghost:hover {
+          background: #fef2f2;
+        }
+
+        .user-table-wrapper {
+          overflow-x: auto;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+        }
+
+        .user-table {
+          width: 100%;
+          border-collapse: collapse;
+          text-align: left;
+          font-size: 0.85rem;
+        }
+
+        .user-table th {
+          font-size: 0.75rem;
+          text-transform: uppercase;
+          color: #64748b;
+          font-weight: 600;
+          padding: 10px 12px;
+          background: #f8fafc;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .user-table td {
+          padding: 12px;
+          border-bottom: 1px solid #f1f5f9;
+          color: #334155;
+          vertical-align: middle;
+        }
+        
+        .user-table tr:last-child td {
+          border-bottom: none;
+        }
+        
+        .user-table tr:hover {
+          background-color: #f8fafc;
+        }
+
+        .update-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .update-item {
+          display: flex;
+          align-items: center;
+          padding: 1rem;
+          background: #f8fafc;
+          border-radius: 16px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .btn-update {
+          background: white;
+          color: #0f172a;
+          border: 1px solid #e2e8f0;
+          padding: 8px 16px;
+          border-radius: 8px;
+          font-weight: 800;
+          font-size: 0.8rem;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .btn-update:hover {
+          background: #0f172a;
+          color: white;
+          border-color: #0f172a;
+        }
+      `}</style>
+
+      {/* Top 10 Users Summary Modal */}
+      {isTokenModalOpen && session?.is_admin && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white', borderRadius: '16px', width: '90%', maxWidth: '800px',
+            maxHeight: '90vh', display: 'flex', flexDirection: 'column',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
+          }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Top 10 Users Summary</h3>
+              <button onClick={() => setIsTokenModalOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px', color: '#64748b' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            <div style={{ padding: '24px', overflowY: 'auto' }}>
+              <table className="user-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
+                <thead>
+                  <tr>
+                    <th style={{ padding: '0 12px 8px', borderBottom: 'none' }}>Username</th>
+                    <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>All Time</th>
+                    <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Past 30 Days</th>
+                    <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Past 7 Days</th>
+                    <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Past 24 Hrs</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tokenUsage.length === 0 ? (
+                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>No token usage data</td></tr>
+                  ) : (
+                    [...tokenUsage]
+                      .sort((a: any, b: any) => b.stats.total_all_time - a.stats.total_all_time)
+                      .slice(0, 10)
+                      .map((u: any) => (
+                        <tr key={u.user_id} style={{ background: '#f8fafc', borderRadius: '8px' }}>
+                          <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '8px 0 0 8px', fontWeight: 600, color: '#334155' }}>
+                            {u.username}
+                          </td>
+                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>
+                            {u.stats.total_all_time.toLocaleString()}
+                          </td>
+                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 600, color: '#334155' }}>
+                            {u.stats.total_30_days.toLocaleString()}
+                          </td>
+                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 600, color: '#334155' }}>
+                            {u.stats.total_7_days.toLocaleString()}
+                          </td>
+                          <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '0 8px 8px 0', textAlign: 'right', fontWeight: 600, color: '#334155' }}>
+                            {u.stats.total_1_day.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ padding: '16px 24px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', background: '#f8fafc', borderRadius: '0 0 16px 16px' }}>
+              <button onClick={() => setIsTokenModalOpen(false)} className="btn-primary">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+
+  );
+}

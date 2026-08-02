@@ -1,0 +1,44 @@
+# dependencies
+node_modules
+.pnp
+.pnp.js
+
+# next.js build output
+.next
+out
+build
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# env files (handle separately if needed)
+.env*
+!.env.production
+
+# git
+.git
+.gitignore
+
+# docker
+Dockerfile
+.dockerignore
+
+# misc
+.DS_Store
+*.pem
+
+# IDE
+.vscode
+.idea
+
+# testing / coverage
+coverage
+
+# typescript
+*.tsbuildinfo
+
+# 
+public

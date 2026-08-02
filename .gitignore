@@ -1,0 +1,64 @@
+# Credentials and SSL
+cert.pem
+key.pem
+*.key
+*.crt
+*.pem
+
+
+# Python
+venv/
+__pycache__/
+.ipynb_checkpoints/
+*.py[cod]
+*$py.class
+.env
+
+# Node/Frontend
+node_modules/
+dist/
+.env.local
+.next/
+
+# System
+.DS_Store
+Thumbs.db
+nohup.out
+nohup.out.log
+sync_embeddings_multigpu.log
+
+# archive_folder
+OLD_VER_2025/
+tmp/
+dashboard_old/
+
+# Database
+logs/
+GEMINI.md
+/database/
+
+# FDALabel web testing log and result files
+frontend/public/webtest/results/
+frontend/public/webtest/history/
+backend/webtest/results/
+backend/webtest/history/
+
+data/*
+!data/sync_schema.py
+backend/data/uploads/
+*.db
+
+deepdive_outputs/
+scripts/evaluation/emerging_ae/cache/
+scripts/evaluation/emerging_ae/archived/
+scripts/evaluation/emerging_ae/*.csv
+scripts/evaluation/
+scripts/askdrugtox_eval/
+data.tar.gz
+data.tar
+backend/webtest/history/History_Testing_Template_11152022.xlsx
+deploy/*.tar.gz
+docker-compose.yml
+
+./archive/
+backups/
