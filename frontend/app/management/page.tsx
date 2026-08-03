@@ -601,14 +601,14 @@ export default function ManagementPage() {
     return (
       <div style={{ marginTop: '10px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: '4px' }}>
-          <span style={{ fontWeight: 700, color: isError ? '#ef4444' : (isComplete ? '#22c55e' : '#6366f1'), display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontWeight: 700, color: isError ? 'var(--afl-danger-500)' : (isComplete ? 'var(--afl-success-500)' : 'var(--afl-a-500)'), display: 'flex', alignItems: 'center', gap: '8px' }}>
             {status.toUpperCase()}: {message || ''}
             {taskId && (
               <button
                 onClick={(e) => { e.stopPropagation(); fetchLogs(); }}
                 style={{
-                  background: '#f1f5f9',
-                  border: '1px solid #e2e8f0',
+                  background: 'var(--afl-n-100)',
+                  border: '1px solid var(--afl-n-200)',
                   borderRadius: '4px',
                   padding: '1px 6px',
                   fontSize: '0.6rem',
@@ -623,9 +623,9 @@ export default function ManagementPage() {
               <button
                 onClick={(e) => { e.stopPropagation(); cancelTask(); }}
                 style={{
-                  background: '#fef2f2',
-                  color: '#ef4444',
-                  border: '1px solid #fca5a5',
+                  background: 'var(--afl-danger-50)',
+                  color: 'var(--afl-danger-500)',
+                  border: '1px solid var(--afl-danger-100)',
                   borderRadius: '4px',
                   padding: '1px 6px',
                   fontSize: '0.6rem',
@@ -639,12 +639,12 @@ export default function ManagementPage() {
           </span>
           <span style={{ fontWeight: 800 }}>{progress}%</span>
         </div>
-        <div style={{ width: '100%', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+        <div style={{ width: '100%', height: '6px', background: 'var(--afl-n-200)', borderRadius: '3px', overflow: 'hidden' }}>
           <div
             style={{
               width: `${progress}%`,
               height: '100%',
-              background: isError ? '#ef4444' : (isComplete ? '#22c55e' : '#6366f1'),
+              background: isError ? 'var(--afl-danger-500)' : (isComplete ? 'var(--afl-success-500)' : 'var(--afl-a-500)'),
               transition: 'width 0.4s ease'
             }}
           />
@@ -722,7 +722,7 @@ export default function ManagementPage() {
               width: '100%',
               maxWidth: '900px',
               maxHeight: '80vh',
-              background: '#1e293b',
+              background: 'var(--afl-n-800)',
               borderRadius: '16px',
               display: 'flex',
               flexDirection: 'column',
@@ -730,8 +730,8 @@ export default function ManagementPage() {
             }}
             onClick={e => e.stopPropagation()}
           >
-            <div style={{ padding: '1.25rem', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, color: '#f8fafc', fontWeight: 800 }}>
+            <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--afl-n-700)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, color: 'var(--afl-n-50)', fontWeight: 800 }}>
                 Task Execution Logs {selectedTaskId ? `(ID: ${selectedTaskId})` : ''}
               </h3>
               <button
@@ -739,7 +739,7 @@ export default function ManagementPage() {
                   setIsLogModalOpen(false);
                   setSelectedTaskId(null);
                 }}
-                style={{ background: '#334155', border: 'none', borderRadius: '4px', color: '#94a3b8', padding: '4px 12px', cursor: 'pointer', fontWeight: 700 }}
+                style={{ background: 'var(--afl-n-700)', border: 'none', borderRadius: '4px', color: 'var(--afl-n-400)', padding: '4px 12px', cursor: 'pointer', fontWeight: 700 }}
               >
                 CLOSE
               </button>
@@ -754,9 +754,9 @@ export default function ManagementPage() {
                 fontFamily: 'monospace',
                 fontSize: '0.85rem',
                 lineHeight: 1.6,
-                color: '#cbd5e1',
+                color: 'var(--afl-n-300)',
                 whiteSpace: 'pre-wrap',
-                background: '#0f172a'
+                background: 'var(--afl-n-900)'
               }}
             >
               {selectedLogs || 'No logs available for this task.'}
@@ -766,7 +766,7 @@ export default function ManagementPage() {
       )}
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
-        <h1 style={{ marginBottom: '2rem', fontSize: '2rem', fontWeight: 900, color: '#0f172a', borderBottom: '2px solid #e2e8f0', paddingBottom: '1rem' }}>
+        <h1 style={{ marginBottom: '2rem', fontSize: '2rem', fontWeight: 900, color: 'var(--afl-n-900)', borderBottom: '2px solid var(--afl-n-200)', paddingBottom: '1rem' }}>
           System Management
         </h1>
 
@@ -831,7 +831,7 @@ export default function ManagementPage() {
             {activeTab === 'system' && session?.is_admin && (
               <section className="mgmt-card">
                 <h2 className="section-title">System Settings</h2>
-                <p style={{ color: '#64748b', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.5 }}>
+                <p style={{ color: 'var(--afl-n-500)', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.5 }}>
                   Configure the global environment, database endpoints, and active LLM models. Changes here apply to all users immediately.
                 </p>
 
@@ -839,12 +839,12 @@ export default function ManagementPage() {
                   
                   {/* Labeling Source */}
                   <div>
-                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#1e293b' }}>Labeling Source</h3>
+                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: 'var(--afl-n-800)' }}>Labeling Source</h3>
                     <select 
                       value={pendingEnvConfig.labeling_source || 'local'} 
                       onChange={(e) => handleEnvChange('labeling_source', e.target.value)}
                       disabled={savingEnv}
-                      style={{ padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem', minWidth: '300px', background: 'white' }}
+                      style={{ padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--afl-n-300)', fontSize: '1rem', minWidth: '300px', background: 'white' }}
                     >
                       <option value="local">Local Database (SQLite/Postgres)</option>
                       <option value="fdalabel">FDALabel (Oracle Database)</option>
@@ -853,13 +853,13 @@ export default function ManagementPage() {
 
                   {/* Oracle Database Environment selection (dev vs tst) */}
                   {pendingEnvConfig.labeling_source === 'fdalabel' && (
-                    <div style={{ padding: '1.25rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '500px' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Oracle Database Environment</label>
+                    <div style={{ padding: '1.25rem', background: 'var(--afl-n-50)', borderRadius: '8px', border: '1px solid var(--afl-n-200)', display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '500px' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Oracle Database Environment</label>
                       <select 
                         value={pendingEnvConfig.oracle_db_env || 'tst'} 
                         onChange={(e) => handleEnvChange('oracle_db_env', e.target.value)}
                         disabled={savingEnv}
-                        style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.9rem', background: 'white' }}
+                        style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.9rem', background: 'white' }}
                       >
                         <option value="tst">Testing (TST) - lbltst2</option>
                         <option value="dev">Development (DEV)</option>
@@ -869,12 +869,12 @@ export default function ManagementPage() {
 
                   {/* PostgreSQL Database */}
                   <div>
-                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#1e293b' }}>PostgreSQL Database</h3>
+                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: 'var(--afl-n-800)' }}>PostgreSQL Database</h3>
                     <select 
                       value={pendingEnvConfig.postgres_db || 'local'} 
                       onChange={(e) => handleEnvChange('postgres_db', e.target.value)}
                       disabled={savingEnv}
-                      style={{ padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '1rem', minWidth: '300px', background: 'white' }}
+                      style={{ padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--afl-n-300)', fontSize: '1rem', minWidth: '300px', background: 'white' }}
                     >
                       <option value="local">Local PostgreSQL</option>
                       <option value="external">External / Remote PostgreSQL</option>
@@ -883,54 +883,54 @@ export default function ManagementPage() {
 
                   {/* External PostgreSQL Configuration */}
                   {pendingEnvConfig.postgres_db === 'external' && (
-                    <div style={{ padding: '1.25rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '500px' }}>
-                      <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#475569' }}>External PostgreSQL Configuration</h4>
+                    <div style={{ padding: '1.25rem', background: 'var(--afl-n-50)', borderRadius: '8px', border: '1px solid var(--afl-n-200)', display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '500px' }}>
+                      <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--afl-n-600)' }}>External PostgreSQL Configuration</h4>
                       
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>PG Host / URL</label>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>PG Host / URL</label>
                         <input
                           type="text"
                           placeholder="e.g. localhost:5432 or postgresql://..."
                           value={pendingEnvConfig.external_pg_host || ''}
                           onChange={(e) => handleEnvChange('external_pg_host', e.target.value)}
                           disabled={savingEnv}
-                          style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                          style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
                         />
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>PG Username</label>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>PG Username</label>
                         <input
                           type="text"
                           placeholder="Username"
                           value={pendingEnvConfig.external_pg_user || ''}
                           onChange={(e) => handleEnvChange('external_pg_user', e.target.value)}
                           disabled={savingEnv}
-                          style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                          style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
                         />
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>PG Password</label>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>PG Password</label>
                         <input
                           type="password"
                           placeholder="Password"
                           value={pendingEnvConfig.external_pg_password || ''}
                           onChange={(e) => handleEnvChange('external_pg_password', e.target.value)}
                           disabled={savingEnv}
-                          style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                          style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
                         />
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>PG Database Name</label>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>PG Database Name</label>
                         <input
                           type="text"
                           placeholder="Database Name"
                           value={pendingEnvConfig.external_pg_database || ''}
                           onChange={(e) => handleEnvChange('external_pg_database', e.target.value)}
                           disabled={savingEnv}
-                          style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                          style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
                         />
                       </div>
                     </div>
@@ -947,7 +947,7 @@ export default function ManagementPage() {
                     </button>
                   </div>
 
-                  {savingEnv && <span style={{ color: '#64748b', fontSize: '0.9rem' }}>Saving settings...</span>}
+                  {savingEnv && <span style={{ color: 'var(--afl-n-500)', fontSize: '0.9rem' }}>Saving settings...</span>}
                 </div>
 
               </section>
@@ -956,7 +956,7 @@ export default function ManagementPage() {
             {activeTab === 'ai' && session?.username !== 'guest' && (
               <section className="mgmt-card" style={{ maxWidth: '800px' }}>
                 <h2 className="section-title">AI Model Preferences</h2>
-                <p style={{ color: '#64748b', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.5 }}>
+                <p style={{ color: 'var(--afl-n-500)', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.5 }}>
                   Select your active AI provider and customize the connection settings for toxicity analysis.
                 </p>
 
@@ -968,8 +968,8 @@ export default function ManagementPage() {
                     style={{
                       padding: '1.5rem',
                       borderRadius: '16px',
-                      border: selectedProvider === 'gemini' ? '2px solid #6366f1' : '1px solid #e2e8f0',
-                      background: selectedProvider === 'gemini' ? '#f5f3ff' : 'white',
+                      border: selectedProvider === 'gemini' ? '2px solid var(--afl-a-500)' : '1px solid var(--afl-n-200)',
+                      background: selectedProvider === 'gemini' ? 'var(--afl-a-50)' : 'white',
                       cursor: 'pointer',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                       boxShadow: selectedProvider === 'gemini' ? '0 10px 15px -3px rgba(99, 102, 241, 0.1)' : 'none',
@@ -980,8 +980,8 @@ export default function ManagementPage() {
                         width: '40px',
                         height: '40px',
                         borderRadius: '10px',
-                        background: selectedProvider === 'gemini' ? '#818cf8' : '#e2e8f0',
-                        color: selectedProvider === 'gemini' ? 'white' : '#64748b',
+                        background: selectedProvider === 'gemini' ? 'var(--afl-a-500)' : 'var(--afl-n-200)',
+                        color: selectedProvider === 'gemini' ? 'white' : 'var(--afl-n-500)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -992,21 +992,21 @@ export default function ManagementPage() {
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#1e293b' }}>Google Gemini</span>
+                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--afl-n-800)' }}>Google Gemini</span>
                           {selectedProvider === 'gemini' && (
-                            <span style={{ background: '#6366f1', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '12px', fontWeight: 800 }}>ACTIVE</span>
+                            <span style={{ background: 'var(--afl-a-500)', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '12px', fontWeight: 800 }}>ACTIVE</span>
                           )}
                         </div>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b', lineHeight: 1.4 }}>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--afl-n-500)', lineHeight: 1.4 }}>
                           High-performance multimodal model from Google. Recommended for standard toxicity analysis.
                         </p>
                       </div>
                     </div>
 
                     {selectedProvider === 'gemini' && (
-                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed #e2e8f0' }}>
+                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--afl-n-200)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Gemini API Key</label>
+                          <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Gemini API Key</label>
                           <input
                             type="password"
                             placeholder={session?.has_gemini_key ? "Gemini API Key configured in backend .env (Leave blank to use default)" : "Enter your Gemini API Key"}
@@ -1018,7 +1018,7 @@ export default function ManagementPage() {
                             style={{
                               padding: '0.6rem 0.8rem',
                               borderRadius: '8px',
-                              border: '1px solid #cbd5e1',
+                              border: '1px solid var(--afl-n-300)',
                               fontSize: '0.9rem',
                               width: '100%',
                               maxWidth: '500px',
@@ -1035,8 +1035,8 @@ export default function ManagementPage() {
                     style={{
                       padding: '1.5rem',
                       borderRadius: '16px',
-                      border: selectedProvider === 'elsa' ? '2px solid #6366f1' : '1px solid #e2e8f0',
-                      background: selectedProvider === 'elsa' ? '#f5f3ff' : 'white',
+                      border: selectedProvider === 'elsa' ? '2px solid var(--afl-a-500)' : '1px solid var(--afl-n-200)',
+                      background: selectedProvider === 'elsa' ? 'var(--afl-a-50)' : 'white',
                       cursor: 'pointer',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                       boxShadow: selectedProvider === 'elsa' ? '0 10px 15px -3px rgba(99, 102, 241, 0.1)' : 'none',
@@ -1047,8 +1047,8 @@ export default function ManagementPage() {
                         width: '40px',
                         height: '40px',
                         borderRadius: '10px',
-                        background: selectedProvider === 'elsa' ? '#818cf8' : '#e2e8f0',
-                        color: selectedProvider === 'elsa' ? 'white' : '#64748b',
+                        background: selectedProvider === 'elsa' ? 'var(--afl-a-500)' : 'var(--afl-n-200)',
+                        color: selectedProvider === 'elsa' ? 'white' : 'var(--afl-n-500)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1059,22 +1059,22 @@ export default function ManagementPage() {
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#1e293b' }}>ELSA</span>
+                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--afl-n-800)' }}>ELSA</span>
                           {selectedProvider === 'elsa' && (
-                            <span style={{ background: '#6366f1', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '12px', fontWeight: 800 }}>ACTIVE</span>
+                            <span style={{ background: 'var(--afl-a-500)', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '12px', fontWeight: 800 }}>ACTIVE</span>
                           )}
                         </div>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b', lineHeight: 1.4 }}>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--afl-n-500)', lineHeight: 1.4 }}>
                           FDA Enterprise AI model. Optimized for compliance and institutional toxicity classification.
                         </p>
                       </div>
                     </div>
 
                     {selectedProvider === 'elsa' && (
-                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed #e2e8f0' }}>
+                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--afl-n-200)' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', maxWidth: '600px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Elsa URL</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Elsa URL</label>
                             <input
                               type="text"
                               placeholder={session?.env_elsa_url || "https://elsa.fda.gov/api"}
@@ -1083,11 +1083,11 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 elsa: { ...customSettings.elsa, url: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
                             />
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Elsa User</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Elsa User</label>
                             <input
                               type="text"
                               placeholder={session?.env_elsa_user || "Username"}
@@ -1096,11 +1096,11 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 elsa: { ...customSettings.elsa, user: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
                             />
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Elsa Key</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Elsa Key</label>
                             <input
                               type="password"
                               placeholder={session?.has_elsa_key ? "Elsa Key configured in backend .env (Leave blank to use default)" : "API Key"}
@@ -1109,11 +1109,11 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 elsa: { ...customSettings.elsa, key: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
                             />
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Elsa Model ID</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Elsa Model ID</label>
                             <input
                               type="text"
                               placeholder={session?.env_elsa_model_id || "e.g. claude-3-5-sonnet"}
@@ -1122,11 +1122,11 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 elsa: { ...customSettings.elsa, model_id: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
                             />
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Elsa Model Name</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Elsa Model Name</label>
                             <input
                               type="text"
                               placeholder={session?.env_elsa_model_name || "e.g. CLAUDE_4_SONNET"}
@@ -1135,7 +1135,7 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 elsa: { ...customSettings.elsa, model_name: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
                             />
                           </div>
                         </div>
@@ -1149,8 +1149,8 @@ export default function ManagementPage() {
                     style={{
                       padding: '1.5rem',
                       borderRadius: '16px',
-                      border: selectedProvider === 'vllm' ? '2px solid #6366f1' : '1px solid #e2e8f0',
-                      background: selectedProvider === 'vllm' ? '#f5f3ff' : 'white',
+                      border: selectedProvider === 'vllm' ? '2px solid var(--afl-a-500)' : '1px solid var(--afl-n-200)',
+                      background: selectedProvider === 'vllm' ? 'var(--afl-a-50)' : 'white',
                       cursor: 'pointer',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                       boxShadow: selectedProvider === 'vllm' ? '0 10px 15px -3px rgba(99, 102, 241, 0.1)' : 'none',
@@ -1161,8 +1161,8 @@ export default function ManagementPage() {
                         width: '40px',
                         height: '40px',
                         borderRadius: '10px',
-                        background: selectedProvider === 'vllm' ? '#818cf8' : '#e2e8f0',
-                        color: selectedProvider === 'vllm' ? 'white' : '#64748b',
+                        background: selectedProvider === 'vllm' ? 'var(--afl-a-500)' : 'var(--afl-n-200)',
+                        color: selectedProvider === 'vllm' ? 'white' : 'var(--afl-n-500)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1173,22 +1173,22 @@ export default function ManagementPage() {
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#1e293b' }}>vLLM / Llama</span>
+                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--afl-n-800)' }}>vLLM / Llama</span>
                           {selectedProvider === 'vllm' && (
-                            <span style={{ background: '#6366f1', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '12px', fontWeight: 800 }}>ACTIVE</span>
+                            <span style={{ background: 'var(--afl-a-500)', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '12px', fontWeight: 800 }}>ACTIVE</span>
                           )}
                         </div>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b', lineHeight: 1.4 }}>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--afl-n-500)', lineHeight: 1.4 }}>
                           Self-hosted LLMs running on vLLM or similar OpenAI-compatible servers.
                         </p>
                       </div>
                     </div>
 
                     {selectedProvider === 'vllm' && (
-                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed #e2e8f0' }}>
+                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--afl-n-200)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', maxWidth: '500px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>vLLM Base URL</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>vLLM Base URL</label>
                             <input
                               type="text"
                               placeholder={session?.env_vllm_url || "http://localhost:8000/v1"}
@@ -1197,11 +1197,11 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 vllm: { ...customSettings.vllm, url: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
                             />
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>API Key</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>API Key</label>
                             <input
                               type="password"
                               placeholder={session?.has_vllm_key ? "vLLM API Key configured in backend .env (Leave blank to use default)" : "API Key (if required)"}
@@ -1210,11 +1210,11 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 vllm: { ...customSettings.vllm, api_key: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
                             />
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Model Name</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Model Name</label>
                             <input
                               type="text"
                               placeholder={session?.env_vllm_model || "e.g. meta-llama/Llama-4-Maverick-17B-Instruct"}
@@ -1223,7 +1223,7 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 vllm: { ...customSettings.vllm, model_name: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
                             />
                           </div>
                         </div>
@@ -1237,8 +1237,8 @@ export default function ManagementPage() {
                     style={{
                       padding: '1.5rem',
                       borderRadius: '16px',
-                      border: selectedProvider === 'ollama' ? '2px solid #6366f1' : '1px solid #e2e8f0',
-                      background: selectedProvider === 'ollama' ? '#f5f3ff' : 'white',
+                      border: selectedProvider === 'ollama' ? '2px solid var(--afl-a-500)' : '1px solid var(--afl-n-200)',
+                      background: selectedProvider === 'ollama' ? 'var(--afl-a-50)' : 'white',
                       cursor: 'pointer',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                       boxShadow: selectedProvider === 'ollama' ? '0 10px 15px -3px rgba(99, 102, 241, 0.1)' : 'none',
@@ -1249,8 +1249,8 @@ export default function ManagementPage() {
                         width: '40px',
                         height: '40px',
                         borderRadius: '10px',
-                        background: selectedProvider === 'ollama' ? '#818cf8' : '#e2e8f0',
-                        color: selectedProvider === 'ollama' ? 'white' : '#64748b',
+                        background: selectedProvider === 'ollama' ? 'var(--afl-a-500)' : 'var(--afl-n-200)',
+                        color: selectedProvider === 'ollama' ? 'white' : 'var(--afl-n-500)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1261,22 +1261,22 @@ export default function ManagementPage() {
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: '#1e293b' }}>Ollama</span>
+                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--afl-n-800)' }}>Ollama</span>
                           {selectedProvider === 'ollama' && (
-                            <span style={{ background: '#6366f1', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '12px', fontWeight: 800 }}>ACTIVE</span>
+                            <span style={{ background: 'var(--afl-a-500)', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '12px', fontWeight: 800 }}>ACTIVE</span>
                           )}
                         </div>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b', lineHeight: 1.4 }}>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--afl-n-500)', lineHeight: 1.4 }}>
                           Locally running LLMs using Ollama. Run private, offline model inferences on your local device.
                         </p>
                       </div>
                     </div>
 
                     {selectedProvider === 'ollama' && (
-                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed #e2e8f0' }}>
+                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--afl-n-200)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', maxWidth: '500px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Ollama URL</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Ollama URL</label>
                             <input
                               type="text"
                               placeholder={session?.env_ollama_url || "http://localhost:11434"}
@@ -1285,11 +1285,11 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 ollama: { ...customSettings.ollama, url: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
                             />
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Model Name</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Model Name</label>
                             <input
                               type="text"
                               placeholder="e.g. llama3, gemma2"
@@ -1298,7 +1298,7 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 ollama: { ...customSettings.ollama, model_name: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
                             />
                           </div>
                         </div>
@@ -1309,7 +1309,7 @@ export default function ManagementPage() {
 
                 </div>
 
-                <div style={{ marginTop: '2.5rem', borderTop: '1px solid #e2e8f0', paddingTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+                <div style={{ marginTop: '2.5rem', borderTop: '1px solid var(--afl-n-200)', paddingTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
                   <button
                     onClick={handleSaveSettings}
                     disabled={savingSettings}
@@ -1379,9 +1379,9 @@ export default function ManagementPage() {
                       {users.filter(u => session?.is_admin || u.id === session?.id).map(user => (
                         <tr key={user.id} style={{ opacity: user.is_active === false ? 0.6 : 1 }}>
                           <td>
-                            <div style={{ fontWeight: 700, color: '#1e293b' }}>{user.username}</div>
+                            <div style={{ fontWeight: 700, color: 'var(--afl-n-800)' }}>{user.username}</div>
                             {user.is_active === false && (
-                              <span style={{ fontSize: '0.65rem', background: '#fee2e2', color: '#ef4444', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>DEACTIVATED</span>
+                              <span style={{ fontSize: '0.65rem', background: 'var(--afl-danger-100)', color: 'var(--afl-danger-500)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>DEACTIVATED</span>
                             )}
                           </td>
                           <td>
@@ -1426,7 +1426,7 @@ export default function ManagementPage() {
                                     <button
                                       onClick={() => handleToggleActive(user.id, false)}
                                       className="btn-ghost"
-                                      style={{ color: '#b45309', borderColor: '#fcd34d', backgroundColor: '#fffbeb' }}
+                                      style={{ color: 'var(--afl-warn-700)', borderColor: 'var(--afl-warn-500)', backgroundColor: 'var(--afl-warn-50)' }}
                                     >
                                       Deactivate
                                     </button>
@@ -1435,7 +1435,7 @@ export default function ManagementPage() {
                                       <button
                                         onClick={() => handleToggleActive(user.id, true)}
                                         className="btn-ghost"
-                                        style={{ color: '#047857', borderColor: '#6ee7b7', backgroundColor: '#ecfdf5' }}
+                                        style={{ color: 'var(--afl-success-700)', borderColor: 'var(--afl-success-500)', backgroundColor: 'var(--afl-success-50)' }}
                                       >
                                         Reactivate
                                       </button>
@@ -1468,13 +1468,13 @@ export default function ManagementPage() {
                                   display: 'flex', 
                                   alignItems: 'center', 
                                   gap: '8px',
-                                  background: '#f8fafc',
+                                  background: 'var(--afl-n-50)',
                                   padding: '8px 12px',
                                   borderRadius: '8px',
-                                  border: '1px solid #e2e8f0',
+                                  border: '1px solid var(--afl-n-200)',
                                   maxWidth: 'fit-content'
                               }}>
-                                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>
                                   Set Model:
                                 </span>
                                 <select
@@ -1484,7 +1484,7 @@ export default function ManagementPage() {
                                   style={{ 
                                       padding: '2px 6px', 
                                       borderRadius: '4px', 
-                                      border: '1px solid #cbd5e1',
+                                      border: '1px solid var(--afl-n-300)',
                                       fontSize: '0.75rem',
                                       fontWeight: 600,
                                       background: 'white'
@@ -1534,13 +1534,13 @@ export default function ManagementPage() {
                 </div>
 
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem', padding: '0.5rem', background: '#f8fafc', borderRadius: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem', padding: '0.5rem', background: 'var(--afl-n-50)', borderRadius: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Filter Date:</div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--afl-n-600)' }}>Filter Date:</div>
                       <select 
                         value={historyDateFilter} 
                         onChange={(e) => { setHistoryDateFilter(e.target.value as any); setHistoryPage(1); }}
-                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
                       >
                         <option value="7d">Last 7 Days</option>
                         <option value="1m">Last 1 Month</option>
@@ -1551,18 +1551,18 @@ export default function ManagementPage() {
                     
                     {historyDateFilter === 'custom' && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <input type="date" value={historyCustomStart} onChange={e => { setHistoryCustomStart(e.target.value); setHistoryPage(1); }} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
-                        <span style={{ fontSize: '0.8rem', color: '#64748b' }}>to</span>
-                        <input type="date" value={historyCustomEnd} onChange={e => { setHistoryCustomEnd(e.target.value); setHistoryPage(1); }} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                        <input type="date" value={historyCustomStart} onChange={e => { setHistoryCustomStart(e.target.value); setHistoryPage(1); }} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid var(--afl-n-300)' }} />
+                        <span style={{ fontSize: '0.8rem', color: 'var(--afl-n-500)' }}>to</span>
+                        <input type="date" value={historyCustomEnd} onChange={e => { setHistoryCustomEnd(e.target.value); setHistoryPage(1); }} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid var(--afl-n-300)' }} />
                       </div>
                     )}
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Filter Model:</div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--afl-n-600)' }}>Filter Model:</div>
                       <select 
                         value={historyModelFilter} 
                         onChange={(e) => { setHistoryModelFilter(e.target.value); setHistoryPage(1); }}
-                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
                       >
                         <option value="all">All Models</option>
                         {uniqueModels.map(model => (
@@ -1571,7 +1571,7 @@ export default function ManagementPage() {
                       </select>
                     </div>
                     
-                    <div style={{ marginLeft: 'auto', fontSize: '0.85rem', color: '#64748b' }}>
+                    <div style={{ marginLeft: 'auto', fontSize: '0.85rem', color: 'var(--afl-n-500)' }}>
                       {historyTotalItems} record{historyTotalItems !== 1 ? 's' : ''} found
                     </div>
                   </div>
@@ -1582,26 +1582,26 @@ export default function ManagementPage() {
                     gridTemplateColumns: 'repeat(3, 1fr)', 
                     gap: '1rem', 
                     marginBottom: '1.5rem',
-                    background: '#f8fafc',
+                    background: 'var(--afl-n-50)',
                     padding: '1.25rem',
                     borderRadius: '12px',
-                    border: '1px solid #e2e8f0'
+                    border: '1px solid var(--afl-n-200)'
                   }}>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Input Tokens</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
+                    <div style={{ background: 'white', padding: '1rem', borderRadius: '8px', border: '1px solid var(--afl-n-200)', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Input Tokens</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--afl-n-900)', marginTop: '4px' }}>
                         {totalInputTokens.toLocaleString()}
                       </div>
                     </div>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Output Tokens</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
+                    <div style={{ background: 'white', padding: '1rem', borderRadius: '8px', border: '1px solid var(--afl-n-200)', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Output Tokens</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--afl-n-900)', marginTop: '4px' }}>
                         {totalOutputTokens.toLocaleString()}
                       </div>
                     </div>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Overall Tokens</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#6366f1', marginTop: '4px' }}>
+                    <div style={{ background: 'white', padding: '1rem', borderRadius: '8px', border: '1px solid var(--afl-n-200)', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Overall Tokens</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--afl-a-500)', marginTop: '4px' }}>
                         {totalOverallTokens.toLocaleString()}
                       </div>
                     </div>
@@ -1621,30 +1621,30 @@ export default function ManagementPage() {
                       </thead>
                       <tbody>
                         {loadingUserTokens ? (
-                          <tr><td colSpan={session?.is_admin ? 6 : 5} style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>Loading detailed usage...</td></tr>
+                          <tr><td colSpan={session?.is_admin ? 6 : 5} style={{ textAlign: 'center', padding: '24px', color: 'var(--afl-n-400)' }}>Loading detailed usage...</td></tr>
                         ) : historyFilteredTokens.length === 0 ? (
-                          <tr><td colSpan={session?.is_admin ? 6 : 5} style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>No records found for the selected date range.</td></tr>
+                          <tr><td colSpan={session?.is_admin ? 6 : 5} style={{ textAlign: 'center', padding: '24px', color: 'var(--afl-n-400)' }}>No records found for the selected date range.</td></tr>
                         ) : (
                           historyPagedTokens.map((record: any) => (
-                            <tr key={record.id} style={{ background: '#f8fafc', borderRadius: '8px' }}>
-                              <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '8px 0 0 8px', fontSize: '0.85rem', color: '#475569' }}>
+                            <tr key={record.id} style={{ background: 'var(--afl-n-50)', borderRadius: '8px' }}>
+                              <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '8px 0 0 8px', fontSize: '0.85rem', color: 'var(--afl-n-600)' }}>
                                 {new Date(record.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'medium' })}
                               </td>
                               {session?.is_admin && (
-                                <td style={{ padding: '12px', borderBottom: 'none', fontSize: '0.85rem', color: '#334155', fontWeight: 600 }}>
+                                <td style={{ padding: '12px', borderBottom: 'none', fontSize: '0.85rem', color: 'var(--afl-n-700)', fontWeight: 600 }}>
                                   {record.username}
                                 </td>
                               )}
-                              <td style={{ padding: '12px', borderBottom: 'none', fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>
-                                <span style={{ background: '#e2e8f0', padding: '4px 8px', borderRadius: '6px' }}>{record.model_name}</span>
+                              <td style={{ padding: '12px', borderBottom: 'none', fontSize: '0.85rem', fontWeight: 600, color: 'var(--afl-n-700)' }}>
+                                <span style={{ background: 'var(--afl-n-200)', padding: '4px 8px', borderRadius: '6px' }}>{record.model_name}</span>
                               </td>
-                              <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontSize: '0.9rem', color: '#64748b' }}>
+                              <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontSize: '0.9rem', color: 'var(--afl-n-500)' }}>
                                 {record.input_tokens.toLocaleString()}
                               </td>
-                              <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontSize: '0.9rem', color: '#64748b' }}>
+                              <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontSize: '0.9rem', color: 'var(--afl-n-500)' }}>
                                 {record.output_tokens.toLocaleString()}
                               </td>
-                              <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '0 8px 8px 0', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>
+                              <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '0 8px 8px 0', textAlign: 'right', fontWeight: 800, color: 'var(--afl-n-900)' }}>
                                 {record.total_tokens.toLocaleString()}
                               </td>
                             </tr>
@@ -1659,17 +1659,17 @@ export default function ManagementPage() {
                       <button 
                         disabled={historyPage === 1}
                         onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
-                        style={{ padding: '6px 12px', background: historyPage === 1 ? '#f1f5f9' : '#e2e8f0', color: historyPage === 1 ? '#94a3b8' : '#334155', border: 'none', borderRadius: '6px', cursor: historyPage === 1 ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}
+                        style={{ padding: '6px 12px', background: historyPage === 1 ? 'var(--afl-n-100)' : 'var(--afl-n-200)', color: historyPage === 1 ? 'var(--afl-n-400)' : 'var(--afl-n-700)', border: 'none', borderRadius: '6px', cursor: historyPage === 1 ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}
                       >
                         Previous
                       </button>
-                      <span style={{ fontSize: '0.85rem', color: '#475569' }}>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--afl-n-600)' }}>
                         Page {historyPage} of {historyTotalPages}
                       </span>
                       <button 
                         disabled={historyPage === historyTotalPages}
                         onClick={() => setHistoryPage(p => Math.min(historyTotalPages, p + 1))}
-                        style={{ padding: '6px 12px', background: historyPage === historyTotalPages ? '#f1f5f9' : '#e2e8f0', color: historyPage === historyTotalPages ? '#94a3b8' : '#334155', border: 'none', borderRadius: '6px', cursor: historyPage === historyTotalPages ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}
+                        style={{ padding: '6px 12px', background: historyPage === historyTotalPages ? 'var(--afl-n-100)' : 'var(--afl-n-200)', color: historyPage === historyTotalPages ? 'var(--afl-n-400)' : 'var(--afl-n-700)', border: 'none', borderRadius: '6px', cursor: historyPage === historyTotalPages ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}
                       >
                         Next
                       </button>
@@ -1682,7 +1682,7 @@ export default function ManagementPage() {
             {activeTab === 'database' && session?.is_admin && (
               <section className="mgmt-card">
                 <h2 className="section-title">Database Maintenance</h2>
-                <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                <p style={{ color: 'var(--afl-n-500)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
                   Manually trigger background synchronization with local source files (data/downloads).
                 </p>
 
@@ -1696,8 +1696,8 @@ export default function ManagementPage() {
                     <div key={item.id} className="update-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
                       <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 800, color: '#1e293b' }}>{item.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{item.desc}</div>
+                          <div style={{ fontWeight: 800, color: 'var(--afl-n-800)' }}>{item.name}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)' }}>{item.desc}</div>
                         </div>
                         <button
                           onClick={() => handleUpdateClick(item.id)}
@@ -1709,24 +1709,24 @@ export default function ManagementPage() {
                       </div>
 
                       {item.id === 'labeling' && (
-                        <div style={{ marginTop: '12px', padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#475569', marginBottom: '4px' }}>Configuration Options</div>
+                        <div style={{ marginTop: '12px', padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid var(--afl-n-200)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--afl-n-600)', marginBottom: '4px' }}>Configuration Options</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#334155', cursor: 'pointer', userSelect: 'none' }}>
-                              <input type="checkbox" checked={skipUnpack} onChange={(e) => setSkipUnpack(e.target.checked)} style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#3b82f6' }} />
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--afl-n-700)', cursor: 'pointer', userSelect: 'none' }}>
+                              <input type="checkbox" checked={skipUnpack} onChange={(e) => setSkipUnpack(e.target.checked)} style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: 'var(--afl-info-500)' }} />
                               Skip Unpacking
                             </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#334155', cursor: 'pointer', userSelect: 'none' }}>
-                              <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#3b82f6' }} />
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--afl-n-700)', cursor: 'pointer', userSelect: 'none' }}>
+                              <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: 'var(--afl-info-500)' }} />
                               Process Archived (XMLs)
                             </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#334155', cursor: 'pointer', userSelect: 'none' }}>
-                              <input type="checkbox" checked={forceUpdate} onChange={(e) => setForceUpdate(e.target.checked)} style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#ef4444' }} />
-                              <span style={{ color: forceUpdate ? '#ef4444' : 'inherit', fontWeight: forceUpdate ? 700 : 400 }}>Force Overwrite</span>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--afl-n-700)', cursor: 'pointer', userSelect: 'none' }}>
+                              <input type="checkbox" checked={forceUpdate} onChange={(e) => setForceUpdate(e.target.checked)} style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: 'var(--afl-danger-500)' }} />
+                              <span style={{ color: forceUpdate ? 'var(--afl-danger-500)' : 'inherit', fontWeight: forceUpdate ? 700 : 400 }}>Force Overwrite</span>
                             </label>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#334155' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--afl-n-700)' }}>
                               <span>Workers:</span>
-                              <select value={workers} onChange={(e) => setWorkers(Number(e.target.value))} style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem', cursor: 'pointer' }}>
+                              <select value={workers} onChange={(e) => setWorkers(Number(e.target.value))} style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--afl-n-300)', fontSize: '0.8rem', cursor: 'pointer' }}>
                                 <option value={1}>1</option>
                                 <option value={4}>4</option>
                                 <option value={10}>10</option>
@@ -1737,11 +1737,11 @@ export default function ManagementPage() {
                       )}
 
                       {item.id === 'generate_drugtox' && (
-                        <div style={{ marginTop: '12px', padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#475569', marginBottom: '4px' }}>Configuration Options</div>
+                        <div style={{ marginTop: '12px', padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid var(--afl-n-200)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--afl-n-600)', marginBottom: '4px' }}>Configuration Options</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#334155', cursor: 'pointer', userSelect: 'none' }}>
-                              <input type="checkbox" checked={useLocalDB} onChange={(e) => setUseLocalDB(e.target.checked)} style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#3b82f6' }} />
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--afl-n-700)', cursor: 'pointer', userSelect: 'none' }}>
+                              <input type="checkbox" checked={useLocalDB} onChange={(e) => setUseLocalDB(e.target.checked)} style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: 'var(--afl-info-500)' }} />
                               Use Local DB (Postgres)
                             </label>
                           </div>
@@ -1760,8 +1760,8 @@ export default function ManagementPage() {
                   ))}
                 </div>
 
-                <div style={{ marginTop: '2rem', padding: '1rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontWeight: 800, fontSize: '0.8rem', color: '#475569', marginBottom: '8px' }}>
+                <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--afl-n-50)', borderRadius: '12px', border: '1px solid var(--afl-n-200)' }}>
+                  <div style={{ fontWeight: 800, fontSize: '0.8rem', color: 'var(--afl-n-600)', marginBottom: '8px' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ marginRight: '6px', verticalAlign: 'middle' }}>
                       <circle cx="12" cy="12" r="10"></circle>
                       <line x1="12" y1="16" x2="12" y2="12"></line>
@@ -1769,7 +1769,7 @@ export default function ManagementPage() {
                     </svg>
                     Processing Note
                   </div>
-                  <p style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.4, margin: 0 }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)', lineHeight: 1.4, margin: 0 }}>
                     Updates run as background processes. Larger datasets (Labeling, MedDRA) may take 5-10 minutes.
                     Existing data will be replaced using the <code>--force</code> flag.
                   </p>
@@ -1786,39 +1786,39 @@ export default function ManagementPage() {
         <div className="modal-overlay" onClick={() => !loadingStats && setPendingUpdateType(null)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px', width: '90%', padding: '2rem', borderRadius: '24px', background: 'white' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>Confirm Database Update</h3>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--afl-n-900)' }}>Confirm Database Update</h3>
             </div>
 
             {loadingStats ? (
-              <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--afl-n-500)' }}>
                 Fetching current database statistics...
               </div>
             ) : pendingUpdateStats ? (
               <div>
-                <p style={{ color: '#475569', marginBottom: '1.5rem' }}>
+                <p style={{ color: 'var(--afl-n-600)', marginBottom: '1.5rem' }}>
                   You are about to run the update script for <strong>{pendingUpdateType}</strong>.
                   Existing data will be overwritten or updated.
                 </p>
-                <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
-                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#1e293b', fontSize: '0.9rem' }}>Current Database Stats</h4>
+                <div style={{ background: 'var(--afl-n-50)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--afl-n-200)', marginBottom: '1.5rem' }}>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--afl-n-800)', fontSize: '0.9rem' }}>Current Database Stats</h4>
                   {pendingUpdateStats.total_count ? (
                     <>
-                      <div style={{ fontSize: '0.85rem', color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--afl-n-600)', display: 'flex', justifyContent: 'space-between' }}>
                         <span>Total MedDRA Records:</span>
                         <span style={{ fontWeight: 600 }}>{pendingUpdateStats.total_count.toLocaleString()}</span>
                       </div>
-                      <div style={{ fontSize: '0.85rem', color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--afl-n-600)', display: 'flex', justifyContent: 'space-between' }}>
                         <span>SOC Terms:</span>
                         <span style={{ fontWeight: 600 }}>{pendingUpdateStats.soc_count.toLocaleString()}</span>
                       </div>
                     </>
                   ) : (
                     <>
-                      <div style={{ fontSize: '0.85rem', color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--afl-n-600)', display: 'flex', justifyContent: 'space-between' }}>
                         <span>Total Records:</span>
                         <span style={{ fontWeight: 600 }}>{pendingUpdateStats.count?.toLocaleString() || 0}</span>
                       </div>
-                      <div style={{ fontSize: '0.85rem', color: '#475569', display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--afl-n-600)', display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem' }}>
                         <span>Last Revised/Approved Date:</span>
                         <span style={{ fontWeight: 600 }}>{pendingUpdateStats.last_date || 'N/A'}</span>
                       </div>
@@ -1840,23 +1840,23 @@ export default function ManagementPage() {
         <div className="modal-overlay" onClick={() => setCompletedUpdateTask(null)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px', width: '90%', padding: '2rem', borderRadius: '24px', background: 'white' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-              <div style={{ color: '#10b981' }}>
+              <div style={{ color: 'var(--afl-success-500)' }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                   <polyline points="22 4 12 14.01 9 11.01"></polyline>
                 </svg>
               </div>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>Update Completed</h3>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--afl-n-900)' }}>Update Completed</h3>
             </div>
 
-            <p style={{ color: '#475569', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+            <p style={{ color: 'var(--afl-n-600)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
               The database update task for <strong>{completedUpdateTask.type}</strong> has finished successfully.
             </p>
 
             {completedUpdateTask.message && (
-              <div style={{ background: '#f0fdf4', padding: '1rem', borderRadius: '8px', border: '1px solid #bbf7d0', marginBottom: '1.5rem' }}>
-                <h4 style={{ margin: '0 0 0.5rem 0', color: '#166534', fontSize: '0.9rem' }}>Summary</h4>
-                <div style={{ fontSize: '0.85rem', color: '#166534' }}>
+              <div style={{ background: 'var(--afl-success-50)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--afl-success-500)', marginBottom: '1.5rem' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--afl-success-700)', fontSize: '0.9rem' }}>Summary</h4>
+                <div style={{ fontSize: '0.85rem', color: 'var(--afl-success-700)' }}>
                   {completedUpdateTask.message}
                 </div>
               </div>
@@ -1880,7 +1880,7 @@ export default function ManagementPage() {
           border-radius: 8px;
           font-size: 0.95rem;
           font-weight: 600;
-          color: #64748b;
+          color: var(--afl-n-500);
           cursor: pointer;
           transition: all 0.2s ease;
           text-align: left;
@@ -1888,13 +1888,13 @@ export default function ManagementPage() {
         }
         
         .sidebar-tab:hover {
-          background: #f1f5f9;
-          color: #334155;
+          background: var(--afl-n-100);
+          color: var(--afl-n-700);
         }
         
         .sidebar-tab.active {
-          background: #e0e7ff;
-          color: #4f46e5;
+          background: var(--afl-a-100);
+          color: var(--afl-a-600);
         }
 
         .sidebar-tab svg {
@@ -1909,31 +1909,31 @@ export default function ManagementPage() {
           background: white;
           border-radius: 8px;
           padding: 1.5rem;
-          box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-          border: 1px solid #cbd5e1;
+          box-shadow: var(--afl-shadow-xs);
+          border: 1px solid var(--afl-n-300);
         }
 
         .section-title {
           font-weight: 600;
           font-size: 1.25rem;
-          color: #1e293b;
+          color: var(--afl-n-800);
           margin-bottom: 1.25rem;
-          border-bottom: 1px solid #e2e8f0;
+          border-bottom: 1px solid var(--afl-n-200);
           padding-bottom: 0.75rem;
         }
         
         .mgmt-form {
-          background: #f8fafc;
+          background: var(--afl-n-50);
           padding: 1rem;
           border-radius: 6px;
-          border: 1px solid #e2e8f0;
+          border: 1px solid var(--afl-n-200);
           margin-bottom: 1.5rem;
         }
 
         .mgmt-input {
           padding: 8px 12px;
           border-radius: 4px;
-          border: 1px solid #cbd5e1;
+          border: 1px solid var(--afl-n-300);
           font-size: 0.85rem;
           background: white;
           flex: 1;
@@ -1941,14 +1941,14 @@ export default function ManagementPage() {
         
         .mgmt-input:focus {
           outline: none;
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+          border-color: var(--afl-info-500);
+          box-shadow: 0 0 0 2px var(--afl-info-50);
         }
 
         .mgmt-input-sm {
           padding: 4px 8px;
           border-radius: 4px;
-          border: 1px solid #cbd5e1;
+          border: 1px solid var(--afl-n-300);
           font-size: 0.8rem;
           flex: 1;
         }
@@ -1956,14 +1956,14 @@ export default function ManagementPage() {
         .mgmt-select {
           padding: 6px 12px;
           border-radius: 4px;
-          border: 1px solid #cbd5e1;
+          border: 1px solid var(--afl-n-300);
           font-size: 0.85rem;
-          color: #334155;
+          color: var(--afl-n-700);
           background: white;
         }
 
         .btn-primary {
-          background: #2563eb;
+          background: var(--afl-info-700);
           color: white;
           border: none;
           padding: 8px 16px;
@@ -1975,11 +1975,11 @@ export default function ManagementPage() {
         }
         
         .btn-primary:hover {
-          background: #1d4ed8;
+          background: var(--afl-info-700);
         }
 
         .btn-primary-sm {
-          background: #2563eb;
+          background: var(--afl-info-700);
           color: white;
           border: none;
           padding: 4px 10px;
@@ -1991,8 +1991,8 @@ export default function ManagementPage() {
 
         .btn-ghost {
           background: white;
-          color: #475569;
-          border: 1px solid #cbd5e1;
+          color: var(--afl-n-600);
+          border: 1px solid var(--afl-n-300);
           padding: 6px 12px;
           border-radius: 4px;
           font-weight: 500;
@@ -2002,14 +2002,14 @@ export default function ManagementPage() {
         }
         
         .btn-ghost:hover {
-          background: #f8fafc;
-          color: #1e293b;
+          background: var(--afl-n-50);
+          color: var(--afl-n-800);
         }
 
         .btn-danger-ghost {
           background: white;
-          color: #dc2626;
-          border: 1px solid #fca5a5;
+          color: var(--afl-danger-500);
+          border: 1px solid var(--afl-danger-100);
           padding: 6px 12px;
           border-radius: 4px;
           font-weight: 500;
@@ -2019,12 +2019,12 @@ export default function ManagementPage() {
         }
         
         .btn-danger-ghost:hover {
-          background: #fef2f2;
+          background: var(--afl-danger-50);
         }
 
         .user-table-wrapper {
           overflow-x: auto;
-          border: 1px solid #e2e8f0;
+          border: 1px solid var(--afl-n-200);
           border-radius: 6px;
         }
 
@@ -2038,17 +2038,17 @@ export default function ManagementPage() {
         .user-table th {
           font-size: 0.75rem;
           text-transform: uppercase;
-          color: #64748b;
+          color: var(--afl-n-500);
           font-weight: 600;
           padding: 10px 12px;
-          background: #f8fafc;
-          border-bottom: 1px solid #e2e8f0;
+          background: var(--afl-n-50);
+          border-bottom: 1px solid var(--afl-n-200);
         }
 
         .user-table td {
           padding: 12px;
-          border-bottom: 1px solid #f1f5f9;
-          color: #334155;
+          border-bottom: 1px solid var(--afl-n-100);
+          color: var(--afl-n-700);
           vertical-align: middle;
         }
         
@@ -2057,7 +2057,7 @@ export default function ManagementPage() {
         }
         
         .user-table tr:hover {
-          background-color: #f8fafc;
+          background-color: var(--afl-n-50);
         }
 
         .update-grid {
@@ -2070,15 +2070,15 @@ export default function ManagementPage() {
           display: flex;
           align-items: center;
           padding: 1rem;
-          background: #f8fafc;
+          background: var(--afl-n-50);
           border-radius: 16px;
-          border: 1px solid #e2e8f0;
+          border: 1px solid var(--afl-n-200);
         }
 
         .btn-update {
           background: white;
-          color: #0f172a;
-          border: 1px solid #e2e8f0;
+          color: var(--afl-n-900);
+          border: 1px solid var(--afl-n-200);
           padding: 8px 16px;
           border-radius: 8px;
           font-weight: 800;
@@ -2089,9 +2089,9 @@ export default function ManagementPage() {
         }
 
         .btn-update:hover {
-          background: #0f172a;
+          background: var(--afl-n-900);
           color: white;
-          border-color: #0f172a;
+          border-color: var(--afl-n-900);
         }
       `}</style>
 
@@ -2107,9 +2107,9 @@ export default function ManagementPage() {
             maxHeight: '90vh', display: 'flex', flexDirection: 'column',
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
           }}>
-            <div style={{ padding: '24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Top 10 Users Summary</h3>
-              <button onClick={() => setIsTokenModalOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px', color: '#64748b' }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid var(--afl-n-200)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--afl-n-900)' }}>Top 10 Users Summary</h3>
+              <button onClick={() => setIsTokenModalOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px', color: 'var(--afl-n-500)' }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -2129,26 +2129,26 @@ export default function ManagementPage() {
                 </thead>
                 <tbody>
                   {tokenUsage.length === 0 ? (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>No token usage data</td></tr>
+                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--afl-n-400)' }}>No token usage data</td></tr>
                   ) : (
                     [...tokenUsage]
                       .sort((a: any, b: any) => b.stats.total_all_time - a.stats.total_all_time)
                       .slice(0, 10)
                       .map((u: any) => (
-                        <tr key={u.user_id} style={{ background: '#f8fafc', borderRadius: '8px' }}>
-                          <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '8px 0 0 8px', fontWeight: 600, color: '#334155' }}>
+                        <tr key={u.user_id} style={{ background: 'var(--afl-n-50)', borderRadius: '8px' }}>
+                          <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '8px 0 0 8px', fontWeight: 600, color: 'var(--afl-n-700)' }}>
                             {u.username}
                           </td>
-                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>
+                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 800, color: 'var(--afl-n-900)' }}>
                             {u.stats.total_all_time.toLocaleString()}
                           </td>
-                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 600, color: '#334155' }}>
+                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 600, color: 'var(--afl-n-700)' }}>
                             {u.stats.total_30_days.toLocaleString()}
                           </td>
-                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 600, color: '#334155' }}>
+                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 600, color: 'var(--afl-n-700)' }}>
                             {u.stats.total_7_days.toLocaleString()}
                           </td>
-                          <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '0 8px 8px 0', textAlign: 'right', fontWeight: 600, color: '#334155' }}>
+                          <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '0 8px 8px 0', textAlign: 'right', fontWeight: 600, color: 'var(--afl-n-700)' }}>
                             {u.stats.total_1_day.toLocaleString()}
                           </td>
                         </tr>
@@ -2157,7 +2157,7 @@ export default function ManagementPage() {
                 </tbody>
               </table>
             </div>
-            <div style={{ padding: '16px 24px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', background: '#f8fafc', borderRadius: '0 0 16px 16px' }}>
+            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--afl-n-200)', display: 'flex', justifyContent: 'flex-end', background: 'var(--afl-n-50)', borderRadius: '0 0 16px 16px' }}>
               <button onClick={() => setIsTokenModalOpen(false)} className="btn-primary">Close</button>
             </div>
           </div>
