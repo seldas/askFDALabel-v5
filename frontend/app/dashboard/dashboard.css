@@ -2,13 +2,13 @@
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
-  background-color: #f9fafb;
+  background-color: var(--afl-n-50);
 }
 
 .dashboard-sidebar {
   width: 340px;
   background: white;
-  border-right: 1px solid #e2e8f0;
+  border-right: 1px solid var(--afl-n-200);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -26,7 +26,7 @@
 
 .workspace-header {
   padding: 1.5rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--afl-n-100);
 }
 
 .workspace-list {
@@ -40,14 +40,14 @@
 
 .sidebar-footer-actions {
   padding: 1.25rem;
-  border-top: 1px solid #f1f5f9;
-  background: #f8fafc;
+  border-top: 1px solid var(--afl-n-100);
+  background: var(--afl-n-50);
 }
 
 .active-workspace-hero {
   padding: 2.5rem;
   background: white;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--afl-n-200);
 }
 
 /* Dashboard Consolidated Styles */
@@ -55,30 +55,30 @@
 .project-selection-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
-  border-color: #6366f1 !important;
+  border-color: var(--afl-a-500) !important;
 }
 .dashboard-action-panel:hover {
   transform: translateY(-8px);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1) !important;
-  border-color: #6366f1 !important;
+  border-color: var(--afl-a-500) !important;
 }
 .dashboard-action-panel.dragging:hover {
   transform: translateY(-2px);
 }
 .project-name-input:focus {
-  border-color: #6366f1 !important;
+  border-color: var(--afl-a-500) !important;
   background: white !important;
   box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
 }
 .project-name-input:focus + label {
   top: 0.3rem !important;
   font-size: 0.65rem !important;
-  color: #6366f1 !important;
+  color: var(--afl-a-500) !important;
 }
 .loader {
   border: 4px solid #f3f3f3;
   border-radius: 50%;
-  border-top: 4px solid #6366f1;
+  border-top: 4px solid var(--afl-a-500);
   width: 40px;
   height: 40px;
   animation: spin 1s linear infinite;
@@ -98,12 +98,12 @@
 
 /* modern.css content */
 .hp-main-layout {
-    background: radial-gradient(circle at 0% 0%, #ffffff 0%, #f8faff 100%);
+    background: radial-gradient(circle at 0% 0%, var(--afl-n-0) 0%, #f8faff 100%);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     font-family: 'Inter', -apple-system, system-ui, sans-serif;
-    color: #334155;
+    color: var(--afl-n-700);
     margin: 0;
     padding: 0;
 }
@@ -131,23 +131,23 @@
     align-items: center;
     gap: 10px;
     padding: 5px 16px 5px 5px;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--afl-n-0);
+    border: 1px solid var(--afl-n-200);
     border-radius: 50px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.03);
     transition: all 0.3s ease;
 }
 
 .hp-user-badge:hover {
-    border-color: #4f46e5;
+    border-color: var(--afl-a-600);
     box-shadow: 0 4px 15px rgba(79, 70, 229, 0.1);
 }
 
 .hp-user-avatar {
     width: 32px;
     height: 32px;
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-    color: #ffffff;
+    background: linear-gradient(135deg, var(--afl-a-500) 0%, var(--afl-a-600) 100%);
+    color: var(--afl-n-0);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -160,11 +160,11 @@
 .hp-welcome-text {
     font-size: 0.88em;
     font-weight: 500;
-    color: #64748b;
+    color: var(--afl-n-500);
 }
 
 .hp-welcome-text strong {
-    color: #1e293b;
+    color: var(--afl-n-800);
 }
 
 .hp-nav-btn {
@@ -184,7 +184,7 @@
 }
 
 .hp-btn-projects {
-    background: #fffbeb;
+    background: var(--afl-warn-50);
     color: #d97706;
     border: 1px solid #fcd34d;
     box-shadow: 0 2px 4px rgba(217, 119, 6, 0.05);
@@ -193,21 +193,21 @@
 .hp-btn-projects:hover {
     background: #fbbf24;
     color: white;
-    border-color: #f59e0b;
+    border-color: var(--afl-warn-500);
     transform: translateY(-2px) scale(1.02);
     box-shadow: 0 8px 20px rgba(217, 119, 6, 0.2);
 }
 
 .hp-btn-outline {
-    color: #64748b;
-    border: 1px solid #e2e8f0;
+    color: var(--afl-n-500);
+    border: 1px solid var(--afl-n-200);
     background: white;
 }
 
 .hp-btn-outline:hover {
-    color: #ef4444;
-    border-color: #fee2e2;
-    background: #fef2f2;
+    color: var(--afl-danger-500);
+    border-color: var(--afl-danger-100);
+    background: var(--afl-danger-50);
     transform: translateY(-1px);
 }
 
@@ -223,7 +223,7 @@
     letter-spacing: -0.07em;
     margin: 0 0 10px;
     line-height: 1.1;
-    background: linear-gradient(120deg, #0f172a 0%, #0f172a 30%, #4f46e5 45%, #0ea5e9 50%, #4f46e5 55%, #0f172a 70%, #0f172a 100%);
+    background: linear-gradient(120deg, var(--afl-n-900) 0%, var(--afl-n-900) 30%, var(--afl-a-600) 45%, #0ea5e9 50%, var(--afl-a-600) 55%, var(--afl-n-900) 70%, var(--afl-n-900) 100%);
     background-size: 300% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -233,7 +233,7 @@
 .hp-hero-subtitle {
     font-size: 1.35em;
     text-align: center;
-    color: #64748b;
+    color: var(--afl-n-500);
     font-weight: 400;
     letter-spacing: -0.01em;
     opacity: 0;
@@ -279,8 +279,8 @@
 
 .hp-upload-box {
     flex: 1;
-    background: #ffffff;
-    border: 2px dashed #e2e8f0;
+    background: var(--afl-n-0);
+    border: 2px dashed var(--afl-n-200);
     border-radius: 32px;
     padding: 60px 40px;
     text-align: center;
@@ -291,7 +291,7 @@
 }
 
 .hp-upload-box:hover, .hp-upload-box.drag-over {
-    border-color: #6366f1;
+    border-color: var(--afl-a-500);
     background: #fcfdfe;
     transform: translateY(-6px);
     box-shadow: 0 30px 60px -12px rgba(99, 102, 241, 0.15);
@@ -314,7 +314,7 @@
 }
 
 .hp-pill-indigo {
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    background: linear-gradient(135deg, var(--afl-a-500) 0%, var(--afl-a-600) 100%);
 }
 
 .hp-pill-sky {
@@ -355,7 +355,7 @@
 .hp-ad-text {
     font-size: 1.05em;
     font-weight: 500;
-    color: #475569;
+    color: var(--afl-n-600);
     margin: 0;
 }
 
@@ -368,18 +368,18 @@
 .hp-import-links a {
     font-size: 0.9em;
     font-weight: 700;
-    color: #6366f1;
+    color: var(--afl-a-500);
     text-decoration: none;
     padding: 10px 24px;
-    background: #ffffff;
-    border: 1px solid #eef2ff;
+    background: var(--afl-n-0);
+    border: 1px solid var(--afl-a-50);
     border-radius: 50px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.02);
     transition: all 0.3s;
 }
 
 .hp-import-links a:hover {
-    background: #6366f1;
+    background: var(--afl-a-500);
     color: white;
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(99, 102, 241, 0.2);
@@ -390,7 +390,7 @@
     width: 100%;
     max-width: 550px;
     padding-top: 50px;
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid var(--afl-n-100);
 }
 
 .hp-search-label {
@@ -400,14 +400,14 @@
     text-transform: uppercase;
     font-weight: 800;
     letter-spacing: 0.15em;
-    color: #cbd5e1;
+    color: var(--afl-n-300);
     margin-bottom: 20px;
 }
 
 .hp-search-wrapper {
     display: flex;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--afl-n-0);
+    border: 1px solid var(--afl-n-200);
     border-radius: 50px;
     padding: 6px;
     box-shadow: 0 10px 20px rgba(0,0,0,0.02);
@@ -415,7 +415,7 @@
 }
 
 .hp-search-wrapper:focus-within {
-    border-color: #6366f1;
+    border-color: var(--afl-a-500);
     box-shadow: 0 15px 30px rgba(99, 102, 241, 0.08);
     transform: scale(1.01);
 }
@@ -431,7 +431,7 @@
 }
 
 .hp-search-btn {
-    background: #0f172a;
+    background: var(--afl-n-900);
     color: white;
     border: none;
     padding: 12px 30px;
@@ -452,13 +452,13 @@
     text-align: center;
     margin-top: 15px;
     font-size: 0.8em;
-    color: #94a3b8;
+    color: var(--afl-n-400);
     text-decoration: none;
     font-weight: 500;
 }
 
 .hp-batch-link:hover {
-    color: #6366f1;
+    color: var(--afl-a-500);
     text-decoration: underline;
 }
 
@@ -472,7 +472,7 @@
 }
 
 .hp-feature-card {
-    background: #ffffff;
+    background: var(--afl-n-0);
     padding: 30px;
     border-radius: 24px;
     border: 1px solid #f8faff;
@@ -484,7 +484,7 @@
 .hp-feature-card:hover {
     transform: translateY(-10px);
     box-shadow: 0 20px 40px rgba(0,0,0,0.05);
-    border-color: #eef2ff;
+    border-color: var(--afl-a-50);
 }
 
 .hp-feature-icon {
@@ -502,12 +502,12 @@
     font-size: 1.05em;
     font-weight: 800;
     margin: 0 0 10px;
-    color: #1e293b;
+    color: var(--afl-n-800);
 }
 
 .hp-feature-card p {
     font-size: 0.88em;
-    color: #64748b;
+    color: var(--afl-n-500);
     line-height: 1.6;
     margin: 0;
 }
@@ -523,7 +523,7 @@
 .hp-feature-card:nth-child(4) { animation-delay: 0.4s; }
 
 .hp-ai-btn {
-    background: linear-gradient(135deg, #4f46e5 0%, #0f172a 100%);
+    background: linear-gradient(135deg, var(--afl-a-600) 0%, var(--afl-n-900) 100%);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 12px;
     box-shadow: 0 4px 15px rgba(79, 70, 229, 0.25);
@@ -539,7 +539,7 @@
 }
 
 .ai-search-content .custom-modal-header {
-    background: linear-gradient(135deg, #0f172a 0%, #4f46e5 100%);
+    background: linear-gradient(135deg, var(--afl-n-900) 0%, var(--afl-a-600) 100%);
     color: white;
 }
 .ai-search-content {
@@ -547,14 +547,14 @@
     box-shadow: 0 20px 50px rgba(0,0,0,0.15);
 }
 .message-ai .message-content {
-    background-color: #ffffff;
-    color: #334155;
+    background-color: var(--afl-n-0);
+    color: var(--afl-n-700);
     box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--afl-n-200);
     border-radius: 16px 16px 16px 2px;
 }
 .message-user .message-content {
-    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+    background: linear-gradient(135deg, var(--afl-a-600) 0%, var(--afl-a-500) 100%);
     color: white;
     box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
     border-radius: 16px 16px 2px 16px;
@@ -562,16 +562,16 @@
 #ai-search-input {
     border-radius: 50px;
     padding: 12px 20px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: var(--afl-n-50);
+    border: 1px solid var(--afl-n-200);
 }
 #ai-search-input:focus {
-    background: #fff;
-    border-color: #4f46e5;
+    background: var(--afl-n-0);
+    border-color: var(--afl-a-600);
     box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
 }
 #ai-search-send {
-    background-color: #0f172a;
+    background-color: var(--afl-n-900);
     border-radius: 50px;
     padding: 0 24px;
 }
@@ -581,17 +581,17 @@
 }
 
 .hp-ai-switcher { margin-right: 15px; display: flex; align-items: center; gap: 8px; }
-#quick-ai-switcher { padding: 8px 16px; border-radius: 50px; border: 1px solid #e2e8f0; font-size: 0.85em; background: #ffffff; cursor: pointer; color: #334155; font-weight: 600; outline: none; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s; }
-#quick-ai-switcher:hover { border-color: #6366f1; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-#ai-config-btn { background: white; border: 1px solid #e2e8f0; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1em; color: #64748b; transition: all 0.2s; }
-#ai-config-btn:hover { color: #6366f1; border-color: #6366f1; transform: rotate(30deg); }
+#quick-ai-switcher { padding: 8px 16px; border-radius: 50px; border: 1px solid var(--afl-n-200); font-size: 0.85em; background: var(--afl-n-0); cursor: pointer; color: var(--afl-n-700); font-weight: 600; outline: none; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s; }
+#quick-ai-switcher:hover { border-color: var(--afl-a-500); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+#ai-config-btn { background: white; border: 1px solid var(--afl-n-200); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1em; color: var(--afl-n-500); transition: all 0.2s; }
+#ai-config-btn:hover { color: var(--afl-a-500); border-color: var(--afl-a-500); transform: rotate(30deg); }
 :root {
-    --primary-color: #0056b3;
-    --primary-light: #e7f5ff;
+    --primary-color: var(--afl-info-700);
+    --primary-light: var(--afl-info-50);
     --background-bg: #f4f7f6;
-    --border-color: #dee2e6;
-    --text-main: #2c3e50;
-    --text-muted: #6c757d;
+    --border-color: var(--afl-n-200);
+    --text-main: var(--afl-n-800);
+    --text-muted: var(--afl-n-500);
     --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
     --radius-sm: 6px;
     --radius-md: 12px;
@@ -621,7 +621,7 @@
 
 .welcome-msg {
     font-weight: 600;
-    color: #555;
+    color: var(--afl-n-600);
     margin-right: 15px;
     font-size: 0.95em;
 }
@@ -633,8 +633,8 @@
     height: 100vh;
     overflow-y: auto;
     position: relative;
-    background-color: #ffffff;
-    border-right: 1px solid #e2e8f0;
+    background-color: var(--afl-n-0);
+    border-right: 1px solid var(--afl-n-200);
     padding: 0; /* Remove internal padding to allow full-width hover states */
     transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 100;
@@ -655,14 +655,14 @@
 .toc-header {
     position: sticky;
     top: 0;
-    background-color: #ffffff;
+    background-color: var(--afl-n-0);
     z-index: 10;
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 1rem 0;
     margin-bottom: 1rem;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--afl-n-100);
 }
 
 .toc-header h2 {
@@ -671,11 +671,11 @@
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: #94a3b8;
+    color: var(--afl-n-400);
 }
 
 #toc-close-internal {
-    color: #94a3b8;
+    color: var(--afl-n-400);
     transition: all 0.2s ease;
     width: 32px;
     height: 32px;
@@ -686,8 +686,8 @@
 }
 
 #toc-close-internal:hover {
-    background-color: #f1f5f9;
-    color: #1e293b;
+    background-color: var(--afl-n-100);
+    color: var(--afl-n-800);
 }
 
 .toc-box ol { 
@@ -704,7 +704,7 @@
 .toc-box a { 
     text-decoration: none; 
     font-weight: 600; 
-    color: #475569;
+    color: var(--afl-n-600);
     font-size: 0.85rem;
     padding: 8px 12px;
     border-radius: 8px;
@@ -714,20 +714,20 @@
 }
 
 .toc-box a:hover {
-    background-color: #f1f5f9;
-    color: #002e5d;
+    background-color: var(--afl-n-100);
+    color: var(--afl-gov-navy);
 }
 
 .toc-box a:active {
-    background-color: #e2e8f0;
+    background-color: var(--afl-n-200);
 }
 
 /* Sidebar Footer */
 .sidebar-footer {
     margin-top: auto;
     padding: 1.5rem;
-    border-top: 1px solid #f1f5f9;
-    background-color: #f8fafc;
+    border-top: 1px solid var(--afl-n-100);
+    background-color: var(--afl-n-50);
 }
 
 .btn-sidebar-home {
@@ -736,9 +736,9 @@
     alignItems: center;
     justify-content: center;
     gap: 8px;
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    color: #475569;
+    background-color: var(--afl-n-0);
+    border: 1px solid var(--afl-n-200);
+    color: var(--afl-n-600);
     font-weight: 700;
     padding: 10px;
     border-radius: 10px;
@@ -747,9 +747,9 @@
 }
 
 .btn-sidebar-home:hover {
-    background-color: #f1f5f9;
-    color: #1e293b;
-    border-color: #cbd5e1;
+    background-color: var(--afl-n-100);
+    color: var(--afl-n-800);
+    border-color: var(--afl-n-300);
     transform: translateY(-1px);
 }
 
@@ -771,7 +771,7 @@
     right: -30px; /* Sits on the edge of the panel */
     width: 30px;
     height: 40px;
-    background: #007bff;
+    background: var(--afl-info-500);
     color: white;
     border: none;
     border-radius: 0 8px 8px 0;
@@ -794,7 +794,7 @@
     width: 100%;
     position: sticky;
     top: -20px; /* Offset the main-content padding to stick to the very top */
-    background-color: #ffffff;
+    background-color: var(--afl-n-0);
     padding: 10px 0;
     z-index: 10;
     border-bottom: 1px solid #f0f2f5;
@@ -806,9 +806,9 @@
 
 .compare-section {
     scroll-margin-top: 80px;
-    border: 1px solid #ccc; border-radius: 5px; margin-bottom: 1.5em;
+    border: 1px solid var(--afl-n-300); border-radius: 5px; margin-bottom: 1.5em;
     margin-right: auto;
-    color: #6c757d;
+    color: var(--afl-n-500);
     font-size: 0.9em;
     font-weight: 500;
 }
@@ -831,7 +831,7 @@
 
     color: #d97706; 
 
-    background: #fffbeb; 
+    background: var(--afl-warn-50); 
 
     border: 1px solid #fcd34d;
 
@@ -847,7 +847,7 @@
 
     color: white; 
 
-    border-color: #f59e0b;
+    border-color: var(--afl-warn-500);
 
     transform: translateY(-1px) scale(1.02);
 
@@ -897,9 +897,9 @@
 
 /* User Header in Dropdown */
 .dropdown-user-header {
-    background-color: #f8f9fa;
+    background-color: var(--afl-n-50);
     padding: 15px 20px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--afl-n-100);
     display: flex;
     align-items: center;
     gap: 12px;
@@ -908,7 +908,7 @@
 .user-avatar-circle {
     width: 36px;
     height: 36px;
-    background: linear-gradient(135deg, #007bff 0%, #6610f2 100%);
+    background: linear-gradient(135deg, var(--afl-info-500) 0%, #6610f2 100%);
     color: white;
     border-radius: 50%;
     display: flex;
@@ -926,7 +926,7 @@
 
 .user-info .greeting {
     font-size: 0.75em;
-    color: #6c757d;
+    color: var(--afl-n-500);
     text-transform: uppercase;
     font-weight: 600;
     letter-spacing: 0.5px;
@@ -935,7 +935,7 @@
 .user-info .username {
     font-size: 0.95em;
     font-weight: 700;
-    color: #212529;
+    color: var(--afl-n-900);
 }
 
 #favorites-dropdown-content {
@@ -962,7 +962,7 @@
 
     text-align: center;
 
-    color: #64748b;
+    color: var(--afl-n-500);
 
 }
 
@@ -1000,7 +1000,7 @@
 
     text-align: center;
 
-    color: #94a3b8;
+    color: var(--afl-n-400);
 
     font-style: italic;
 
@@ -1011,14 +1011,14 @@
 .favorites-dropdown-item {
     display: block;
     padding: 12px 15px;
-    color: #333;
+    color: var(--afl-n-700);
     text-decoration: none;
-    border-bottom: 1px solid #f8f9fa;
+    border-bottom: 1px solid var(--afl-n-50);
     transition: all 0.2s;
 }
 .favorites-dropdown-item:hover {
     background-color: #f0f7ff;
-    color: #007bff;
+    color: var(--afl-info-500);
     text-decoration: none;
 }
 .favorites-dropdown-item strong { display: block; font-size: 0.95em; margin-bottom: 3px; }
@@ -1029,24 +1029,24 @@
     font-size: 0.7em;
     font-weight: 800;
     text-transform: uppercase;
-    color: #adb5bd;
+    color: var(--afl-n-400);
     background-color: #fafbfc;
     letter-spacing: 1px;
 }
 
-.auth-nav .btn-logout { color: #6c757d; border-color: #dee2e6; }
-.auth-nav .btn-logout:hover { background: #6c757d; color: white; }
-.auth-nav .btn-login { color: #007bff; border-color: #b6d4fe; }
-.auth-nav .btn-login:hover { background: #007bff; color: white; }
-.auth-nav .btn-register { color: #28a745; border-color: #c3e6cb; }
-.auth-nav .btn-register:hover { background: #28a745; color: white; }
+.auth-nav .btn-logout { color: var(--afl-n-500); border-color: var(--afl-n-200); }
+.auth-nav .btn-logout:hover { background: var(--afl-n-500); color: white; }
+.auth-nav .btn-login { color: var(--afl-info-500); border-color: #b6d4fe; }
+.auth-nav .btn-login:hover { background: var(--afl-info-500); color: white; }
+.auth-nav .btn-register { color: var(--afl-success-500); border-color: #c3e6cb; }
+.auth-nav .btn-register:hover { background: var(--afl-success-500); color: white; }
 
 /* Internal close button in TOC panel */
 #toc-close-internal {
     transition: all 0.2s;
 }
 #toc-close-internal:hover {
-    color: #007bff !important;
+    color: var(--afl-info-500) !important;
     transform: scale(1.2);
 }
 
@@ -1056,21 +1056,21 @@ body {
     margin: 0;
     padding: 0; /* Removed padding to allow results-container to span full height */
     background-color: #f0f2f5;
-    color: #333;
+    color: var(--afl-n-700);
     line-height: 1.6;
 }
 
 .container {
     max-width: 1000px;
     margin: 0 auto;
-    background-color: #ffffff;
+    background-color: var(--afl-n-0);
     padding: 2em;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     position: relative;
 }
 
-a { color: #007bff; text-decoration: none; }
+a { color: var(--afl-info-500); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 /* Index Page Modern Redesign */
@@ -1087,7 +1087,7 @@ a:hover { text-decoration: underline; }
 .index-container {
     max-width: 900px;
     width: 100%;
-    background-color: #ffffff;
+    background-color: var(--afl-n-0);
     padding: 3em;
     border-radius: 24px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.08);
@@ -1099,19 +1099,19 @@ a:hover { text-decoration: underline; }
 @keyframes floating { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
 .hero-subtitle { font-size: 1.2em; color: #627d98; margin-bottom: 2em; }
 .hero-search-form { max-width: 650px; margin: 0 auto 3em; }
-.search-input-wrapper { display: flex; background: #f8f9fa; padding: 6px; border-radius: 50px; border: 1px solid #e9ecef; transition: all 0.2s; }
+.search-input-wrapper { display: flex; background: var(--afl-n-50); padding: 6px; border-radius: 50px; border: 1px solid var(--afl-n-100); transition: all 0.2s; }
 .search-input-wrapper.drag-over {
-    border-color: #007bff;
-    background-color: #e7f5ff;
+    border-color: var(--afl-info-500);
+    background-color: var(--afl-info-50);
     box-shadow: 0 0 15px rgba(0,123,255,0.2);
     transform: scale(1.02);
 }
 .search-input-wrapper input { flex-grow: 1; border: none; background: transparent; padding: 12px 25px; font-size: 1.1em; outline: none; }
-.hero-search-btn { background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; border: none; padding: 12px 30px; font-weight: 700; border-radius: 50px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.hero-search-btn { background: linear-gradient(135deg, var(--afl-info-500) 0%, var(--afl-info-700) 100%); color: white; border: none; padding: 12px 30px; font-weight: 700; border-radius: 50px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
 .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5em; margin-top: 1em; }
-.feature-card { padding: 1.5em; background: #f8f9fa; border-radius: 16px; text-align: center; transition: all 0.3s; }
+.feature-card { padding: 1.5em; background: var(--afl-n-50); border-radius: 16px; text-align: center; transition: all 0.3s; }
 .feature-card:hover { transform: translateY(-5px); background: white; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-.feature-icon { font-size: 2em; margin-bottom: 0.5em; color: #007bff; }
+.feature-icon { font-size: 2em; margin-bottom: 0.5em; color: var(--afl-info-500); }
 
 /* Selection and Info styles */
 .selection-panels { margin-top: 2em; }
@@ -1126,7 +1126,7 @@ a:hover { text-decoration: underline; }
     margin-bottom: 1.5em;
     position: sticky;
     top: 0;
-    background-color: #f8f9fa;
+    background-color: var(--afl-n-50);
     padding-top: 5px;
     padding-bottom: 10px;
     z-index: 10;
@@ -1148,7 +1148,7 @@ a:hover { text-decoration: underline; }
 }
 
 .nav-btn-search {
-    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    background: linear-gradient(135deg, var(--afl-info-500) 0%, var(--afl-info-700) 100%);
     color: white !important;
     border: none;
 }
@@ -1160,7 +1160,7 @@ a:hover { text-decoration: underline; }
 }
 
 .nav-btn-primary {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #2563eb 0%, var(--afl-info-700) 100%);
     color: white !important;
     border: none;
     padding: 10px 22px;
@@ -1175,7 +1175,7 @@ a:hover { text-decoration: underline; }
 .nav-btn-primary:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 15px rgba(37, 99, 235, 0.35);
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: linear-gradient(135deg, var(--afl-info-500) 0%, #2563eb 100%);
     text-decoration: none !important;
 }
 
@@ -1196,12 +1196,12 @@ a:hover { text-decoration: underline; }
 .toc-header {
     position: sticky;
     top: -20px; /* Slight offset to ensure no overlap with top padding */
-    background-color: #f8f9fa;
+    background-color: var(--afl-n-50);
     z-index: 10;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 2px solid #dee2e6;
+    border-bottom: 2px solid var(--afl-n-200);
     margin-bottom: 20px; /* More space before the list starts */
     padding: 15px 0;
 }
@@ -1214,7 +1214,7 @@ a:hover { text-decoration: underline; }
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: #495057;
+    color: var(--afl-n-600);
 }
 
 .toc-box ol { 
@@ -1224,19 +1224,19 @@ a:hover { text-decoration: underline; }
 
 .toc-box li { 
     padding: 0.6em 0; 
-    border-bottom: 1px solid #f1f3f5; 
+    border-bottom: 1px solid var(--afl-n-100); 
 }
 
 .toc-box a { 
     text-decoration: none; 
     font-weight: 500; 
-    color: #495057;
+    color: var(--afl-n-600);
     font-size: 0.9em;
     transition: color 0.2s;
 }
 
 .toc-box a:hover {
-    color: #007bff;
+    color: var(--afl-info-500);
     text-decoration: none;
 }
 
@@ -1247,7 +1247,7 @@ a:hover { text-decoration: underline; }
 .sidebar-footer {
     margin-top: auto; /* Push to bottom if flex container */
     padding-top: 20px;
-    border-top: 1px solid #dee2e6;
+    border-top: 1px solid var(--afl-n-200);
     padding-bottom: 20px;
 }
 
@@ -1255,18 +1255,18 @@ a:hover { text-decoration: underline; }
     width: 100%;
     box-sizing: border-box;
     justify-content: center;
-    background-color: #ffffff;
-    color: #495057;
-    border: 1px solid #ced4da;
+    background-color: var(--afl-n-0);
+    color: var(--afl-n-600);
+    border: 1px solid var(--afl-n-300);
     font-weight: 600;
     transition: all 0.2s ease;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .btn-sidebar-home:hover {
-    background-color: #f8f9fa;
-    color: #007bff;
-    border-color: #007bff;
+    background-color: var(--afl-n-50);
+    color: var(--afl-info-500);
+    border-color: var(--afl-info-500);
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
@@ -1329,8 +1329,8 @@ a:hover { text-decoration: underline; }
 
 .note-summary-item {
     padding: 15px;
-    background: #ffffff;
-    border: 1px solid #e9ecef;
+    background: var(--afl-n-0);
+    border: 1px solid var(--afl-n-100);
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -1356,20 +1356,20 @@ a:hover { text-decoration: underline; }
     width: fit-content;
 }
 
-.tag-qa { background: #e0e7ff; color: #4338ca; }
+.tag-qa { background: var(--afl-a-100); color: var(--afl-a-700); }
 .tag-highlight { background: #fef3c7; color: #92400e; }
 .tag-comment { background: #d1fae5; color: #065f46; }
 
 .note-summary-text {
     font-size: 0.95em;
     font-weight: 600;
-    color: #334155;
+    color: var(--afl-n-700);
     line-height: 1.4;
 }
 
 .note-summary-meta {
     font-size: 0.8em;
-    color: #94a3b8;
+    color: var(--afl-n-400);
 }
 
 /* Custom Modal (Generic) */
@@ -1401,15 +1401,15 @@ a:hover { text-decoration: underline; }
 
 .custom-modal-header {
     padding: 15px 20px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
+    background: var(--afl-n-50);
+    border-bottom: 1px solid var(--afl-n-200);
     border-radius: 12px 12px 0 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.custom-modal-header h3 { margin: 0; color: #333; }
+.custom-modal-header h3 { margin: 0; color: var(--afl-n-700); }
 
 .close-modal {
     color: #aaa;
@@ -1439,7 +1439,7 @@ a:hover { text-decoration: underline; }
     overflow: hidden; 
     z-index: 1001; 
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    border-left: 1px solid #e2e8f0;
+    border-left: 1px solid var(--afl-n-200);
     box-shadow: -4px 0 15px rgba(0,0,0,0.05);
     animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-sizing: border-box;
@@ -1451,7 +1451,7 @@ a:hover { text-decoration: underline; }
 }
 
 .chat-header { 
-    background-color: #002e5d; 
+    background-color: var(--afl-gov-navy); 
     color: white; 
     padding: 1rem 1.5rem; 
     display: flex; 
@@ -1470,7 +1470,7 @@ a:hover { text-decoration: underline; }
     flex-grow: 1; 
     padding: 1.5rem; 
     overflow-y: auto; 
-    background-color: #f8fafc; 
+    background-color: var(--afl-n-50); 
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
@@ -1490,14 +1490,14 @@ a:hover { text-decoration: underline; }
 }
 
 .message-ai .message-content { 
-    background-color: #ffffff; 
-    color: #1e293b;
-    border: 1px solid #e2e8f0;
+    background-color: var(--afl-n-0); 
+    color: var(--afl-n-800);
+    border: 1px solid var(--afl-n-200);
     border-bottom-left-radius: 2px;
 }
 
 .message-user .message-content { 
-    background-color: #0071bc; 
+    background-color: var(--afl-gov-blue); 
     color: white; 
     border-bottom-right-radius: 2px;
 }
@@ -1505,24 +1505,24 @@ a:hover { text-decoration: underline; }
 .chat-input-form {
     padding: 1.5rem;
     background-color: white;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid var(--afl-n-200);
     display: flex;
 }
 
 .chat-input-form input {
     flex-grow: 1;
     padding: 10px 16px;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--afl-n-300);
     border-radius: 8px;
     outline: none;
     font-size: 0.9rem;
-    background-color: #f8fafc;
+    background-color: var(--afl-n-50);
 }
 
 .chat-input-form button {
     margin-left: 10px;
     padding: 0 20px;
-    background-color: #002e5d;
+    background-color: var(--afl-gov-navy);
     color: white;
     border: none;
     border-radius: 8px;
@@ -1533,7 +1533,7 @@ a:hover { text-decoration: underline; }
 
 /* AI Bubble */
 .chat-bubble {
-    background-color: #002e5d !important;
+    background-color: var(--afl-gov-navy) !important;
     box-shadow: 0 4px 12px rgba(0, 46, 93, 0.3) !important;
     border: 2px solid white !important;
 }
@@ -1549,8 +1549,8 @@ a:hover { text-decoration: underline; }
 
 /* FAERS Dashboard */
 .view-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-.tab-btn { padding: 10px 20px; border: none; background-color: #f1f3f5; cursor: pointer; border-radius: 25px; }
-.tab-btn.active { background-color: #007bff; color: white; }
+.tab-btn { padding: 10px 20px; border: none; background-color: var(--afl-n-100); cursor: pointer; border-radius: 25px; }
+.tab-btn.active { background-color: var(--afl-info-500); color: white; }
 /* Beautified Coverage Table Styles */
 #coverageTable {
     width: 100%;
@@ -1558,14 +1558,14 @@ a:hover { text-decoration: underline; }
     border-spacing: 0; /* Remove default spacing */
     border: none; /* Remove inherited table borders */
     margin-top: 20px;
-    background-color: #ffffff;
+    background-color: var(--afl-n-0);
     border-radius: var(--radius-md); /* Apply rounded corners to the table */
     overflow: hidden; /* Ensure content respects border-radius */
     box-shadow: 0 4px 20px rgba(0,0,0,0.05); /* Softer, more subtle shadow */
 }
 
 #coverageTable thead {
-    background-color: #f8f9fa; /* Lighter header background */
+    background-color: var(--afl-n-50); /* Lighter header background */
     color: var(--text-main);
 }
 
@@ -1601,7 +1601,7 @@ a:hover { text-decoration: underline; }
 
 /* Add a very subtle top border to each row EXCEPT the first one for minimal separation */
 #coverageTable tbody tr:not(:first-child) {
-    border-top: 1px solid #f8f9fa;
+    border-top: 1px solid var(--afl-n-50);
 }
 
 /* Ensure consistent border-radius on corners */
@@ -1641,7 +1641,7 @@ td.status-cell {
 .pagination-controls button {
     padding: 8px 15px;
     border: 1px solid var(--border-color);
-    background-color: #f8f9fa;
+    background-color: var(--afl-n-50);
     border-radius: var(--radius-sm);
     cursor: pointer;
     font-size: 0.9em;
@@ -1650,15 +1650,15 @@ td.status-cell {
 }
 
 .pagination-controls button:hover:not(:disabled) {
-    background-color: #e9ecef;
-    border-color: #ced4da;
-    color: #0056b3;
+    background-color: var(--afl-n-100);
+    border-color: var(--afl-n-300);
+    color: var(--afl-info-700);
 }
 
 .pagination-controls button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-    background-color: #f1f3f5;
+    background-color: var(--afl-n-100);
 }
 
 .pagination-controls input[type="number"] {
@@ -1689,7 +1689,7 @@ td.status-cell {
     justify-content: space-between;
     margin-bottom: 15px;
     padding: 10px;
-    background-color: #f8f9fa;
+    background-color: var(--afl-n-50);
     border-radius: var(--radius-sm);
     border: 1px solid var(--border-color);
 }
@@ -1711,9 +1711,9 @@ td.status-cell {
 .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
 .status-badge.found { background-color: #d1e7dd; color: #0f5132; }
 .status-badge.not-found { background-color: #f8d7da; color: #842029; }
-.status-badge.plr-badge { background-color: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; }
+.status-badge.plr-badge { background-color: var(--afl-a-100); color: var(--afl-a-700); border: 1px solid #c7d2fe; }
 .status-badge.non-plr-badge { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-.status-badge.generic-badge { background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+.status-badge.generic-badge { background-color: var(--afl-n-100); color: var(--afl-n-600); border: 1px solid var(--afl-n-200); }
 
 /* --- Restored Complex Styles --- */
 
@@ -1738,7 +1738,7 @@ table.diff {
 
 table.diff td, table.diff th {
     padding: 0.6em 1em;
-    border: 1px solid #eee;
+    border: 1px solid var(--afl-n-100);
     vertical-align: top;
     line-height: 1.6;
     position: relative;
@@ -1752,7 +1752,7 @@ table.diff th:nth-child(4), table.diff td:nth-child(4) {
 
 table.diff th:nth-child(2), table.diff td:nth-child(2),
 table.diff th:nth-child(5), table.diff td:nth-child(5) {
-    width: 50px; background-color: #fafafa; text-align: right; color: #6c757d;
+    width: 50px; background-color: var(--afl-n-50); text-align: right; color: var(--afl-n-500);
 }
 
 table.diff th:nth-child(3), table.diff td:nth-child(3),
@@ -1761,13 +1761,13 @@ table.diff th:nth-child(6), table.diff td:nth-child(6) {
 }
 
 table.diff thead th {
-    background-color: #eef2f7; font-weight: bold; text-align: left; border-bottom: 2px solid #dee2e6;
+    background-color: #eef2f7; font-weight: bold; text-align: left; border-bottom: 2px solid var(--afl-n-200);
 }
 
 .resizer {
     position: absolute; top: 0; right: 0; width: 4px; cursor: col-resize; user-select: none; height: 100%; z-index: 10;
 }
-.resizer:hover, .resizer.resizing { background: #007bff; width: 6px; }
+.resizer:hover, .resizer.resizing { background: var(--afl-info-500); width: 6px; }
 
 table.diff .diff_add { background-color: #e6ffed; color: #155724; }
 table.diff .diff_sub { background-color: #ffeef0; color: #721c24; }
@@ -1775,13 +1775,13 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 
 /* Compare Section & Grid */
 .compare-section {
-    border: 1px solid #ccc; border-radius: 5px; margin-bottom: 1.5em;
+    border: 1px solid var(--afl-n-300); border-radius: 5px; margin-bottom: 1.5em;
 }
 .compare-section-title {
-    background-color: #f8f9fa; padding: 1em; cursor: pointer; border-bottom: 1px solid #ccc;
+    background-color: var(--afl-n-50); padding: 1em; cursor: pointer; border-bottom: 1px solid var(--afl-n-300);
     position: sticky; top: -1px; z-index: 3; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
-.compare-section-title:hover { background-color: #e9ecef; }
+.compare-section-title:hover { background-color: var(--afl-n-100); }
 
 .status-same {
     display: inline-block;
@@ -1812,11 +1812,11 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 }
 
 .compare-grid { display: grid; grid-template-columns: repeat(var(--num-columns, 2), 1fr); gap: 1em; }
-.compare-cell { border-left: 1px solid #eee; padding-left: 1em; }
+.compare-cell { border-left: 1px solid var(--afl-n-100); padding-left: 1em; }
 .compare-cell:first-child { border-left: none; padding-left: 0; }
 .compare-section-content { display: none; padding: 1em; }
 .compare-section.expanded .compare-section-content { display: block; }
-.compare-same-content { padding: 1em; background-color: #f9f9f9; border: 1px solid #eee; border-radius: 4px; }
+.compare-same-content { padding: 1em; background-color: #f9f9f9; border: 1px solid var(--afl-n-100); border-radius: 4px; }
 
 /* AI Summary Panel Styles */
 .ai-summary-panel {
@@ -1827,8 +1827,8 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
     padding: 10px 22px !important;
     font-weight: 700 !important;
 }
-.ai-summary-section-title { color: #007bff; margin-top: 1.5em; margin-bottom: 0.5em; border-bottom: 1px dashed #cfe2ff; }
-.ai-summary-overall-title { color: #dc3545; margin-top: 2em; margin-bottom: 0.8em; border-bottom: 2px solid #f8d7da; text-transform: uppercase; }
+.ai-summary-section-title { color: var(--afl-info-500); margin-top: 1.5em; margin-bottom: 0.5em; border-bottom: 1px dashed #cfe2ff; }
+.ai-summary-overall-title { color: var(--afl-danger-500); margin-top: 2em; margin-bottom: 0.8em; border-bottom: 2px solid #f8d7da; text-transform: uppercase; }
 
 /* Highlights and ToC Boxes */
 .highlights-box {
@@ -1841,7 +1841,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 
 .highlights-box h2 {
     margin-top: 0;
-    border-bottom: 1px solid #dee2e6;
+    border-bottom: 1px solid var(--afl-n-200);
     padding-bottom: 0.5em;
 }
 
@@ -1879,7 +1879,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 .source-title {
     font-size: 0.85em;
     font-weight: 700;
-    color: #495057;
+    color: var(--afl-n-600);
     text-decoration: underline;
     text-decoration-color: rgba(111, 66, 193, 0.3);
     text-underline-offset: 4px;
@@ -1888,7 +1888,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 .highlight-body {
     font-size: 0.95em;
     line-height: 1.6;
-    color: #333;
+    color: var(--afl-n-700);
 }
 
 /* Black Boxed Warning */
@@ -1902,7 +1902,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 /* Loader Animation */
 .loader {
     border: 5px solid #f3f3f3;
-    border-top: 5px solid #007bff;
+    border-top: 5px solid var(--afl-info-500);
     border-radius: 50%;
     width: 40px;
     height: 40px;
@@ -1928,7 +1928,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
         position: relative; 
         margin-left: 0 !important; 
         border-right: none; 
-        border-bottom: 1px solid #dee2e6;
+        border-bottom: 1px solid var(--afl-n-200);
         overflow-y: visible;
     }
     .main-content { 
@@ -1973,10 +1973,10 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
     align-items: center;
     gap: 8px;
     padding: 10px 18px;
-    background-color: #fff;
-    border: 1px solid #ced4da;
+    background-color: var(--afl-n-0);
+    border: 1px solid var(--afl-n-300);
     border-radius: 25px;
-    color: #495057;
+    color: var(--afl-n-600);
     font-weight: 600;
     font-size: 0.95em;
     cursor: pointer;
@@ -1987,14 +1987,14 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 }
 
 .compare-controls .button:hover {
-    background-color: #f8f9fa;
-    border-color: #adb5bd;
-    color: #212529;
+    background-color: var(--afl-n-50);
+    border-color: var(--afl-n-400);
+    color: var(--afl-n-900);
     transform: translateY(-2px) scale(1.02);
 }
 
 .compare-controls .button:active {
-    background-color: #e9ecef;
+    background-color: var(--afl-n-100);
     transform: translateY(0);
 }
 
@@ -2022,7 +2022,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
     gap: 5px;
     padding: 8px 15px;
     background-color: #e7f1ff;
-    color: #007bff;
+    color: var(--afl-info-500);
     border-radius: 25px;
     font-weight: 600;
     font-size: 0.9em;
@@ -2036,7 +2036,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 
 .back-to-list-btn:hover {
     background-color: #d0e4ff;
-    color: #0056b3;
+    color: var(--afl-info-700);
     text-decoration: none;
 }
 
@@ -2044,7 +2044,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 .panel .button {
     display: inline-block;
     padding: 10px 20px;
-    background-color: #007bff;
+    background-color: var(--afl-info-500);
     color: white;
     border-radius: 25px;
     text-decoration: none;
@@ -2056,7 +2056,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 }
 
 .panel .button:hover {
-    background-color: #0056b3;
+    background-color: var(--afl-info-700);
     transform: translateY(-1px) scale(1.02);
     text-decoration: none;
 }
@@ -2077,28 +2077,28 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 }
 
 .back-to-search-btn {
-    background-color: #f1f3f5;
-    color: #495057;
-    border-color: #dee2e6;
+    background-color: var(--afl-n-100);
+    color: var(--afl-n-600);
+    border-color: var(--afl-n-200);
 }
 .back-to-search-btn:hover {
-    background-color: #e9ecef;
-    border-color: #adb5bd;
+    background-color: var(--afl-n-100);
+    border-color: var(--afl-n-400);
 }
 
 .view-switch-btn {
-    background-color: #e7f5ff;
-    color: #007bff;
+    background-color: var(--afl-info-50);
+    color: var(--afl-info-500);
     border-color: #b6d4fe;
 }
 .view-switch-btn:hover {
     background-color: #d0e4ff;
-    color: #0056b3;
+    color: var(--afl-info-700);
 }
 #favorite-all-btn:hover {
     background-color: #fbbf24 !important;
     color: white !important;
-    border-color: #f59e0b !important;
+    border-color: var(--afl-warn-500) !important;
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(217, 119, 6, 0.2);
 }
@@ -2108,16 +2108,16 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 }
 
 .compare-btn {
-    background-color: #28a745; /* Green for go/action */
+    background-color: var(--afl-success-500); /* Green for go/action */
     color: white;
-    border-color: #28a745;
+    border-color: var(--afl-success-500);
 }
 .compare-btn:hover:not(:disabled) {
-    background-color: #218838;
+    background-color: var(--afl-success-700);
 }
 .compare-btn:disabled {
-    background-color: #6c757d;
-    border-color: #6c757d;
+    background-color: var(--afl-n-500);
+    border-color: var(--afl-n-500);
     opacity: 0.65;
     cursor: not-allowed;
 }
@@ -2134,7 +2134,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 /* --- FAERS In-Text Annotation --- */
 .faers-signal {
     position: relative;
-    border-bottom: 2px dashed #dc3545; /* Red dashed line */
+    border-bottom: 2px dashed var(--afl-danger-500); /* Red dashed line */
     cursor: help;
     transition: all 0.2s;
     font-weight: 500;
@@ -2148,7 +2148,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 /* Intensity Colors for FAERS Signals */
 .faers-signal.intensity-high {
     background-color: #ffcccc; /* Soft Red */
-    border-bottom-color: #dc3545;
+    border-bottom-color: var(--afl-danger-500);
 }
 .faers-signal.intensity-med {
     background-color: #ffe5cc; /* Soft Orange */
@@ -2162,7 +2162,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 /* Beautiful HTML Tooltip for FAERS signals */
 .faers-signal-tooltip {
     position: absolute; /* Controlled by JS but needs absolute for placement */
-    background: #ffffff;
+    background: var(--afl-n-0);
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.15), 0 4px 10px rgba(0,0,0,0.05);
     z-index: 10000;
@@ -2184,9 +2184,9 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 }
 
 .faers-tooltip-header {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    background: linear-gradient(135deg, var(--afl-n-50) 0%, var(--afl-n-100) 100%);
     padding: 12px 16px;
-    border-bottom: 1px solid #dee2e6;
+    border-bottom: 1px solid var(--afl-n-200);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -2194,7 +2194,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 
 .faers-tooltip-term {
     font-weight: 700;
-    color: #212529;
+    color: var(--afl-n-900);
     font-size: 1.05em;
 }
 
@@ -2207,11 +2207,11 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
     white-space: nowrap;
 }
 
-.faers-tooltip-count.intensity-high { background-color: #dc3545; }
+.faers-tooltip-count.intensity-high { background-color: var(--afl-danger-500); }
 .faers-tooltip-count.intensity-med { background-color: #fd7e14; }
 .faers-signal.intensity-low { 
     background-color: #ffc107; 
-    color: #212529; /* Darker text for contrast on yellow */
+    color: var(--afl-n-900); /* Darker text for contrast on yellow */
 }
 
 .faers-tooltip-body {
@@ -2232,7 +2232,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 .faers-tooltip-label {
     font-size: 0.7em;
     text-transform: uppercase;
-    color: #6c757d;
+    color: var(--afl-n-500);
     font-weight: 700;
     letter-spacing: 0.5px;
     margin-bottom: 2px;
@@ -2240,7 +2240,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 
 .faers-tooltip-value {
     font-size: 0.9em;
-    color: #495057;
+    color: var(--afl-n-600);
     line-height: 1.4;
 }
 
@@ -2248,9 +2248,9 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
     background: #fcfdfe;
     padding: 8px 16px;
     font-size: 0.75em;
-    color: #adb5bd;
+    color: var(--afl-n-400);
     font-style: italic;
-    border-top: 1px solid #f1f3f5;
+    border-top: 1px solid var(--afl-n-100);
     text-align: right;
 }
 
@@ -2304,7 +2304,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 }
 
 .excel-style-table th, .excel-style-table td {
-    border: 1px solid #ced4da !important; /* Force grid lines */
+    border: 1px solid var(--afl-n-300) !important; /* Force grid lines */
     padding: 8px 12px !important;
     min-width: 80px;
     white-space: normal;
@@ -2316,20 +2316,20 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 .excel-style-table td.selected-cell, 
 .excel-style-table th.selected-cell {
     background-color: rgba(0, 123, 255, 0.15) !important;
-    outline: 2px solid #007bff;
+    outline: 2px solid var(--afl-info-500);
     outline-offset: -2px;
     z-index: 2;
 }
 
 .excel-style-table th {
-    background-color: #e9ecef !important;
-    color: #495057 !important;
+    background-color: var(--afl-n-100) !important;
+    color: var(--afl-n-600) !important;
     font-weight: 700;
     text-align: center;
 }
 
 .excel-style-table tr:hover {
-    background-color: #f1f3f5;
+    background-color: var(--afl-n-100);
 }
 
 /* Back to Top Button */
@@ -2344,7 +2344,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
     height: 45px;
     border-radius: 50%;
     border: none;
-    background-color: #007bff;
+    background-color: var(--afl-info-500);
     color: white;
     font-size: 20px;
     cursor: pointer;
@@ -2362,7 +2362,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 }
 
 #back-to-top:hover {
-    background-color: #0056b3;
+    background-color: var(--afl-info-700);
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
 }
 
@@ -2377,13 +2377,13 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
     align-items: center;
     margin-right: 15px;
     animation: bounceHorizontal 1.5s infinite ease-in-out;
-    color: #28a745;
+    color: var(--afl-success-500);
 }
 
 .guide-bubble {
-    background: #fff;
-    border: 2px solid #28a745;
-    color: #28a745;
+    background: var(--afl-n-0);
+    border: 2px solid var(--afl-success-500);
+    color: var(--afl-success-500);
     padding: 8px 15px;
     border-radius: 20px; /* Bubble shape */
     font-size: 0.95em;
@@ -2402,7 +2402,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
     transform: translateY(-50%);
     border-top: 6px solid transparent;
     border-bottom: 6px solid transparent;
-    border-left: 6px solid #28a745;
+    border-left: 6px solid var(--afl-success-500);
 }
 
 .guide-arrow {
@@ -2424,7 +2424,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
     border: 2px dashed #cbd5e0;
     border-radius: 12px;
     padding: 30px 20px;
-    background-color: #f8fafc;
+    background-color: var(--afl-n-50);
     transition: all 0.2s ease;
     cursor: pointer;
     position: relative;
@@ -2433,34 +2433,34 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 }
 
 .upload-drop-zone:hover {
-    border-color: #007bff;
-    background-color: #f1f5f9;
+    border-color: var(--afl-info-500);
+    background-color: var(--afl-n-100);
 }
 
 .upload-drop-zone.drag-over {
-    border-color: #007bff;
-    background-color: #e7f5ff;
+    border-color: var(--afl-info-500);
+    background-color: var(--afl-info-50);
     transform: scale(1.01);
     box-shadow: 0 0 15px rgba(0,123,255,0.1);
 }
 
 .upload-instructions-icon {
     font-size: 2.5em;
-    color: #94a3b8;
+    color: var(--afl-n-400);
     margin-bottom: 10px;
     display: block;
 }
 
 .upload-drop-zone p {
     margin: 5px 0;
-    color: #64748b;
+    color: var(--afl-n-500);
 }
 
 .file-info-box {
     margin-top: 15px;
     padding: 10px 15px;
-    background-color: #fff;
-    border: 1px solid #e2e8f0;
+    background-color: var(--afl-n-0);
+    border: 1px solid var(--afl-n-200);
     border-radius: 8px;
     display: none; /* Hidden until file selected */
     align-items: center;
@@ -2470,7 +2470,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 
 .file-info-name {
     font-weight: 600;
-    color: #1e293b;
+    color: var(--afl-n-800);
     flex-grow: 1;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2479,7 +2479,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 }
 
 .file-info-remove {
-    color: #ef4444;
+    color: var(--afl-danger-500);
     cursor: pointer;
     font-size: 1.2em;
     padding: 0 5px;
@@ -2493,21 +2493,21 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background-color: #e9ecef;
-    color: #495057;
+    background-color: var(--afl-n-100);
+    color: var(--afl-n-600);
     font-size: 12px;
     font-weight: bold;
     cursor: pointer;
     margin-left: 8px;
-    border: 1px solid #ced4da;
+    border: 1px solid var(--afl-n-300);
     transition: all 0.2s ease;
     vertical-align: middle;
 }
 
 .ask-ai-btn:hover {
-    background-color: #007bff;
+    background-color: var(--afl-info-500);
     color: white;
-    border-color: #007bff;
+    border-color: var(--afl-info-500);
     transform: scale(1.1);
     box-shadow: 0 2px 5px rgba(0,123,255,0.3);
 }
@@ -2537,7 +2537,7 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 
 .status-badge.ai-found-yes {
     background-color: #198754;
-    color: #ffffff;
+    color: var(--afl-n-0);
     border: 1px solid #146c43;
 }
 
@@ -2550,12 +2550,12 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 
 /* --- AI Answer Icon States --- */
 .ai-answer-icon.match {
-    background-color: #28a745 !important;
+    background-color: var(--afl-success-500) !important;
     border-color: #1e7e34 !important;
 }
 
 .ai-answer-icon.no-match {
-    background-color: #dc3545 !important;
+    background-color: var(--afl-danger-500) !important;
     border-color: #bd2130 !important;
 }
 
@@ -2569,11 +2569,11 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 .import-input {
     width: 100%;
     padding: 12px 15px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--afl-n-200);
     border-radius: 10px;
     font-size: 0.95em;
-    color: #1e293b;
-    background-color: #f8fafc;
+    color: var(--afl-n-800);
+    background-color: var(--afl-n-50);
     transition: all 0.2s ease;
     box-sizing: border-box;
     outline: none;
@@ -2581,8 +2581,8 @@ table.diff .diff_chg { background-color: #fff8dc; color: #856404; }
 }
 
 .import-input:focus {
-    border-color: #007bff;
-    background-color: #fff;
+    border-color: var(--afl-info-500);
+    background-color: var(--afl-n-0);
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
@@ -2633,7 +2633,7 @@ textarea.import-input {
 /* Updated Toolbar Style */
 .selection-toolbar {
     position: absolute;
-    background: #1e293b; /* Dark Slate */
+    background: var(--afl-n-800); /* Dark Slate */
     border-radius: 8px;
     padding: 6px 10px;
     display: flex;
@@ -2652,7 +2652,7 @@ textarea.import-input {
 .selection-toolbar button {
     background: transparent;
     border: none;
-    color: #e2e8f0;
+    color: var(--afl-n-200);
     cursor: pointer;
     font-size: 1.2em;
     padding: 6px;
@@ -2665,7 +2665,7 @@ textarea.import-input {
 
 .selection-toolbar button:hover {
     background: rgba(255,255,255,0.15);
-    color: #fff;
+    color: var(--afl-n-0);
     transform: translateY(-1px);
 }
 
@@ -2675,7 +2675,7 @@ textarea.import-input {
     top: 100%;
     left: 0;
     background: white;
-    border: 1px solid #ccc;
+    border: 1px solid var(--afl-n-300);
     border-radius: 5px;
     padding: 8px;
     display: flex;
@@ -2688,7 +2688,7 @@ textarea.import-input {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    border: 1px solid #ddd;
+    border: 1px solid var(--afl-n-200);
     cursor: pointer;
 }
 .color-btn:hover {
@@ -2704,7 +2704,7 @@ textarea.import-input {
     position: absolute;
     top: calc(100% + 8px);
     left: 0;
-    background: #ffffff;
+    background: var(--afl-n-0);
     border: 1px solid rgba(0,0,0,0.08);
     border-radius: 16px;
     padding: 15px;
@@ -2727,25 +2727,25 @@ textarea.import-input {
     margin-bottom: 12px;
     resize: none;
     padding: 12px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--afl-n-200);
     border-radius: 8px;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 0.95em;
     line-height: 1.4;
     outline: none;
-    background-color: #f8fafc;
+    background-color: var(--afl-n-50);
     transition: all 0.2s ease;
     box-sizing: border-box;
-    color: #334155;
+    color: var(--afl-n-700);
 }
 
 .comment-input-box textarea::placeholder {
-    color: #94a3b8;
+    color: var(--afl-n-400);
 }
 
 .comment-input-box textarea:focus {
-    background-color: #ffffff;
-    border-color: #3b82f6;
+    background-color: var(--afl-n-0);
+    border-color: var(--afl-info-500);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
@@ -2768,7 +2768,7 @@ textarea.import-input {
 }
 
 .comment-input-actions .btn-save-comment { 
-    background: #e0e7ff; 
+    background: var(--afl-a-100); 
     color: #1e40af; 
     box-shadow: 0 2px 4px rgba(30, 64, 175, 0.1);
     font-weight: 700;
@@ -2787,19 +2787,19 @@ textarea.import-input {
 
 .comment-input-actions .btn-cancel-comment { 
     background: transparent; 
-    color: #0f172a; 
+    color: var(--afl-n-900); 
     font-weight: 600;
 }
 
 .comment-input-actions .btn-cancel-comment:hover { 
-    background: #f1f5f9; 
+    background: var(--afl-n-100); 
     color: #020617; 
 }
 
 /* Annotation Popover (Read Mode) */
 .annotation-read-popover {
     position: absolute;
-    background: #ffffff;
+    background: var(--afl-n-0);
     border: 1px solid rgba(0,0,0,0.06);
     border-radius: 12px;
     padding: 16px;
@@ -2813,7 +2813,7 @@ textarea.import-input {
 
 .ann-meta {
     font-size: 0.75em;
-    color: #94a3b8;
+    color: var(--afl-n-400);
     margin-bottom: 8px;
     display: flex;
     justify-content: space-between;
@@ -2823,17 +2823,17 @@ textarea.import-input {
 }
 
 .ann-content {
-    color: #334155;
+    color: var(--afl-n-700);
     margin-bottom: 12px;
     font-style: italic;
-    background: #f8fafc;
+    background: var(--afl-n-50);
     padding: 10px;
     border-radius: 8px;
-    border-left: 3px solid #e2e8f0;
+    border-left: 3px solid var(--afl-n-200);
 }
 
 .ann-actions {
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid var(--afl-n-100);
     padding-top: 10px;
     text-align: right;
 }
@@ -2864,8 +2864,8 @@ textarea.import-input {
 /* Comparison Export Button */
 .compare-section-title .button:hover {
     background-color: #e2e6ea !important;
-    color: #495057 !important;
-    border-color: #adb5bd !important;
+    color: var(--afl-n-600) !important;
+    border-color: var(--afl-n-400) !important;
     transform: scale(1.05);
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
@@ -2883,10 +2883,10 @@ textarea.import-input {
     transform: translateY(-1px);
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
-.btn-drugsfda { border-color: #0056b3; color: #0056b3; }
+.btn-drugsfda { border-color: var(--afl-info-700); color: var(--afl-info-700); }
 .btn-drugsfda:hover { background-color: #f0f7ff; }
 
-.btn-drugscom { border-color: #2c3e50; color: #2c3e50; }
+.btn-drugscom { border-color: var(--afl-n-800); color: var(--afl-n-800); }
 .btn-drugscom:hover { background-color: #f4f6f8; }
 
 .btn-fdalabel { border-color: #00796b; color: #00796b; }
@@ -2899,7 +2899,7 @@ textarea.import-input {
 .index-body {
     /* Sophisticated gradient: Soft Blue-Gray with a hint of Clinical Teal */
     background: radial-gradient(circle at 10% 20%, rgb(240, 244, 248) 0%, rgb(220, 230, 240) 90%);
-    color: #2c3e50; /* Deep Slate Blue for text */
+    color: var(--afl-n-800); /* Deep Slate Blue for text */
 }
 
 /* 2. Main Container - Floating Glass Effect */
@@ -2919,7 +2919,7 @@ textarea.import-input {
 .index-body .index-hero-container h1 {
     font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; /* Clean Sans */
     font-weight: 800;
-    color: #0056b3; /* Medical Blue */
+    color: var(--afl-info-700); /* Medical Blue */
     letter-spacing: -1px;
     margin-top: 10px;
     text-shadow: 0 2px 10px rgba(0, 86, 179, 0.1);
@@ -2933,7 +2933,7 @@ textarea.import-input {
 
 /* 4. Search Bar - The Centerpiece */
 .index-body .search-input-wrapper {
-    background: #ffffff;
+    background: var(--afl-n-0);
     border: 2px solid #e0e6ed;
     border-radius: 60px; /* Fully rounded pill */
     padding: 8px 8px 8px 30px;
@@ -2943,18 +2943,18 @@ textarea.import-input {
 
 .index-body .search-input-wrapper:hover,
 .index-body .search-input-wrapper:focus-within {
-    border-color: #007bff;
+    border-color: var(--afl-info-500);
     box-shadow: 0 10px 40px rgba(0, 123, 255, 0.15);
     transform: translateY(-2px);
 }
 
 .index-body .search-input-wrapper input {
     font-size: 1.15em;
-    color: #333;
+    color: var(--afl-n-700);
 }
 
 .index-body .hero-search-btn {
-    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    background: linear-gradient(135deg, var(--afl-info-500) 0%, var(--afl-info-700) 100%);
     border-radius: 50px;
     padding: 14px 35px;
     font-size: 1.1em;
@@ -2974,7 +2974,7 @@ textarea.import-input {
 }
 
 .index-body .feature-card {
-    background: #ffffff;
+    background: var(--afl-n-0);
     border: 1px solid rgba(0,0,0,0.04);
     border-radius: 20px;
     padding: 2.5em 1.5em;
@@ -2996,12 +2996,12 @@ textarea.import-input {
     line-height: 80px;
     border-radius: 50%;
     margin: 0 auto 1.5em;
-    color: #007bff;
+    color: var(--afl-info-500);
 }
 
 .index-body .feature-card h3 {
     font-size: 1.2em;
-    color: #2c3e50;
+    color: var(--afl-n-800);
     margin-bottom: 0.8em;
 }
 
@@ -3013,7 +3013,7 @@ textarea.import-input {
 
 /* 6. Upload Link - Subtle */
 .index-body #upload-link {
-    color: #007bff;
+    color: var(--afl-info-500);
     font-weight: 600;
     opacity: 0.8;
     text-decoration: none;
@@ -3023,7 +3023,7 @@ textarea.import-input {
 
 .index-body #upload-link:hover {
     opacity: 1;
-    border-bottom-color: #007bff;
+    border-bottom-color: var(--afl-info-500);
 }
 
 
@@ -3049,21 +3049,21 @@ textarea.import-input {
 
 /* Header Area */
 .search-results-page h1 {
-    color: #0056b3;
+    color: var(--afl-info-700);
     font-weight: 700;
     margin-bottom: 5px;
 }
 
 .search-results-page p {
-    color: #6c757d;
+    color: var(--afl-n-500);
 }
 
 /* Toolbar Area */
 .button-group-container {
-    background: #f8f9fa;
+    background: var(--afl-n-50);
     padding: 10px 15px;
     border-radius: 12px;
-    border: 1px solid #e9ecef;
+    border: 1px solid var(--afl-n-100);
     margin-top: 20px;
     display: flex;
     justify-content: space-between;
@@ -3072,7 +3072,7 @@ textarea.import-input {
 
 /* Result Cards (Panel View) */
 .search-results-page .selection-panels .panel {
-    background: #ffffff;
+    background: var(--afl-n-0);
     border: 1px solid #eef2f6;
     border-radius: 16px;
     padding: 25px;
@@ -3089,7 +3089,7 @@ textarea.import-input {
 }
 
 .search-results-page .panel h3 {
-    color: #2c3e50;
+    color: var(--afl-n-800);
     margin-top: 0;
     font-size: 1.3em;
 }
@@ -3101,7 +3101,7 @@ textarea.import-input {
 }
 
 .search-results-page .panel strong {
-    color: #0056b3;
+    color: var(--afl-info-700);
     font-weight: 600;
 }
 
@@ -3109,7 +3109,7 @@ textarea.import-input {
 .search-results-page .checkbox-wrapper {
     display: inline-flex;
     align-items: center;
-    background: #f1f5f9;
+    background: var(--afl-n-100);
     padding: 6px 12px;
     border-radius: 20px;
     cursor: pointer;
@@ -3117,12 +3117,12 @@ textarea.import-input {
 }
 
 .search-results-page .checkbox-wrapper:hover {
-    background: #e2e8f0;
+    background: var(--afl-n-200);
 }
 
 .search-results-page .compare-checkbox {
     margin-right: 8px;
-    accent-color: #0056b3;
+    accent-color: var(--afl-info-700);
     width: 16px;
     height: 16px;
 }
@@ -3134,27 +3134,27 @@ textarea.import-input {
 }
 
 .search-results-page .selection-table thead th {
-    background-color: #f1f5f9;
-    color: #334155;
+    background-color: var(--afl-n-100);
+    color: var(--afl-n-700);
     text-transform: uppercase;
     font-size: 0.75em;
     letter-spacing: 0.5px;
-    border-bottom: 2px solid #e2e8f0;
+    border-bottom: 2px solid var(--afl-n-200);
     padding: 10px 12px;
 }
 
 .search-results-page .selection-table tbody tr {
     transition: background-color 0.2s;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--afl-n-100);
 }
 
 .search-results-page .selection-table tbody tr:hover {
-    background-color: #f8fafc;
+    background-color: var(--afl-n-50);
 }
 
 .search-results-page .selection-table td {
     padding: 8px 12px;
-    color: #334155;
+    color: var(--afl-n-700);
     vertical-align: middle;
     font-size: 0.85em;
 }
@@ -3170,15 +3170,15 @@ textarea.import-input {
 
 .search-results-page .pagination-btn {
     background: white;
-    border: 1px solid #e2e8f0;
-    color: #0056b3;
+    border: 1px solid var(--afl-n-200);
+    color: var(--afl-info-700);
     margin: 0;
 }
 
 .search-results-page .pagination-btn:hover {
-    background: #0056b3;
+    background: var(--afl-info-700);
     color: white;
-    border-color: #0056b3;
+    border-color: var(--afl-info-700);
 }
 
 
@@ -3210,7 +3210,7 @@ textarea.import-input {
     align-items: center;
     justify-content: center;
     border-radius: 8px;
-    color: #0056b3;
+    color: var(--afl-info-700);
     border: 1px solid #eef2f6;
 }
 
@@ -3218,14 +3218,14 @@ textarea.import-input {
     display: block;
     font-size: 0.7em;
     text-transform: uppercase;
-    color: #94a3b8;
+    color: var(--afl-n-400);
     font-weight: 700;
     letter-spacing: 0.5px;
 }
 
 .meta-item span {
     font-size: 0.9em;
-    color: #334155;
+    color: var(--afl-n-700);
     font-weight: 500;
 }
 
@@ -3236,13 +3236,13 @@ textarea.import-input {
 }
 
 .non-plr-badge {
-    background-color: #f1f5f9;
-    color: #475569;
-    border: 1px solid #e2e8f0;
+    background-color: var(--afl-n-100);
+    color: var(--afl-n-600);
+    border: 1px solid var(--afl-n-200);
 }
 
 .primary-action-btn {
-    background-color: #0056b3;
+    background-color: var(--afl-info-700);
     color: white !important;
     padding: 8px 20px;
     font-weight: 700;
@@ -3267,7 +3267,7 @@ textarea.import-input {
 /* Sidebar */
 .my-projects-page .project-sidebar {
     width: 300px;
-    background: #ffffff;
+    background: var(--afl-n-0);
     border-right: 1px solid var(--border-color);
     padding: 25px;
     box-shadow: var(--shadow-sm);
@@ -3314,7 +3314,7 @@ textarea.import-input {
 }
 
 .my-projects-page .project-item:hover {
-    background-color: #f8f9fa;
+    background-color: var(--afl-n-50);
 }
 
 .my-projects-page .project-item.active {
@@ -3370,8 +3370,8 @@ textarea.import-input {
 }
 
 .my-projects-page .workspace-tab span {
-    background: #f1f5f9;
-    color: #64748b;
+    background: var(--afl-n-100);
+    color: var(--afl-n-500);
     padding: 2px 8px;
     border-radius: 10px;
     font-size: 0.85em;
@@ -3395,11 +3395,11 @@ textarea.import-input {
 }
 
 .my-projects-page .data-table th {
-    background-color: #f1f5f9;
+    background-color: var(--afl-n-100);
     text-transform: uppercase;
     font-size: 0.8em;
     letter-spacing: 0.5px;
-    color: #475569;
+    color: var(--afl-n-600);
     padding: 15px;
     border-bottom: 1px solid var(--border-color);
 }
@@ -3423,7 +3423,7 @@ textarea.import-input {
 
 /* Import Section */
 .my-projects-page .import-section {
-    background: #f8fafc;
+    background: var(--afl-n-50);
     padding: 20px;
     border-radius: var(--radius-sm);
     border: 1px dashed var(--border-color);
@@ -3496,14 +3496,14 @@ textarea.import-input {
 .my-projects-page .project-action-btn {
     background: none;
     border: none;
-    color: #adb5bd;
+    color: var(--afl-n-400);
     cursor: pointer;
     font-size: 0.9em;
     padding: 4px;
     transition: color 0.2s;
 }
-.my-projects-page .project-action-btn:hover { color: #495057; }
-.my-projects-page .project-action-btn.delete:hover { color: #dc3545; }
+.my-projects-page .project-action-btn:hover { color: var(--afl-n-600); }
+.my-projects-page .project-action-btn.delete:hover { color: var(--afl-danger-500); }
 
 /* Info Tooltip */
 .my-projects-page .info-icon-tooltip {
@@ -3515,7 +3515,7 @@ textarea.import-input {
 
 /* Workspace Meta */
 .my-projects-page .workspace-meta {
-    color: #6c757d;
+    color: var(--afl-n-500);
     font-size: 0.95em;
     margin-top: 5px;
 }
@@ -3524,14 +3524,14 @@ textarea.import-input {
 .my-projects-page .empty-project {
     text-align: center;
     padding: 60px;
-    color: #adb5bd;
-    background: #f8fafc;
+    color: var(--afl-n-400);
+    background: var(--afl-n-50);
     border-radius: var(--radius-md);
     border: 1px dashed var(--border-color);
     margin-top: 20px;
 }
 .my-projects-page .empty-project h3 {
-    color: #94a3b8;
+    color: var(--afl-n-400);
     font-weight: 500;
     margin-bottom: 10px;
 }
@@ -3559,13 +3559,13 @@ textarea.import-input {
 
 .my-projects-page .btn-outline {
     background: white;
-    border: 1px solid #dee2e6;
-    color: #495057;
+    border: 1px solid var(--afl-n-200);
+    color: var(--afl-n-600);
 }
 .my-projects-page .btn-outline:hover {
-    background: #f8f9fa;
-    border-color: #ced4da;
-    color: #212529;
+    background: var(--afl-n-50);
+    border-color: var(--afl-n-300);
+    color: var(--afl-n-900);
     transform: translateY(-1px);
 }
 
@@ -3579,7 +3579,7 @@ textarea.import-input {
     left: 10px;
     right: 10px;
     background: white;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--afl-n-200);
     border-radius: 16px;
     box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15), 0 0 20px rgba(0,0,0,0.05);
     max-height: 350px;
@@ -3598,7 +3598,7 @@ textarea.import-input {
     padding: 12px 24px;
     cursor: pointer;
     font-size: 0.95em;
-    color: #334155;
+    color: var(--afl-n-700);
     font-weight: 500;
     transition: all 0.15s ease;
     display: flex;
@@ -3614,8 +3614,8 @@ textarea.import-input {
 
 .suggestion-item:hover,
 .suggestion-item.selected {
-    background-color: #f1f5f9;
-    color: #0f172a;
+    background-color: var(--afl-n-100);
+    color: var(--afl-n-900);
     padding-left: 28px; /* Subtle shift effect */
 }
 
@@ -3630,7 +3630,7 @@ textarea.import-input {
 
 /* Import Label Explanation Styles */
 .dashed-underline {
-    border-bottom: 1px dashed #64748b;
+    border-bottom: 1px dashed var(--afl-n-500);
     cursor: pointer;
 }
 
@@ -3640,7 +3640,7 @@ textarea.import-input {
     justify-content: center;
     width: 16px;
     height: 16px;
-    background-color: #64748b;
+    background-color: var(--afl-n-500);
     color: white;
     border-radius: 50%;
     font-size: 11px;
@@ -3652,18 +3652,18 @@ textarea.import-input {
 }
 
 .help-badge:hover {
-    background-color: #475569;
+    background-color: var(--afl-n-600);
 }
 
 .import-explanation {
     display: none;
     margin-top: 15px;
     padding: 15px;
-    background-color: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background-color: var(--afl-n-50);
+    border: 1px solid var(--afl-n-200);
     border-radius: 10px;
     font-size: 0.85em;
-    color: #334155;
+    color: var(--afl-n-700);
     line-height: 1.5;
     text-align: left;
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
@@ -3683,7 +3683,7 @@ textarea.import-input {
 }
 
 .upload-box {
-    border: 2px dashed #007bff;
+    border: 2px dashed var(--afl-info-500);
     border-radius: 16px;
     padding: 40px;
     background: #f8fbff;
@@ -3698,7 +3698,7 @@ textarea.import-input {
 
 .upload-box:hover, .upload-box.drag-over {
     background: #eef6ff;
-    border-color: #0056b3;
+    border-color: var(--afl-info-700);
     transform: translateY(-2px);
     box-shadow: 0 10px 20px rgba(0,123,255,0.1);
 }
@@ -3710,18 +3710,18 @@ textarea.import-input {
 .upload-box .text {
     font-size: 1.1em;
     font-weight: 600;
-    color: #495057;
+    color: var(--afl-n-600);
 }
 
 .upload-box .hint {
     font-size: 0.85em;
-    color: #6c757d;
+    color: var(--afl-n-500);
 }
 
 /* Animated Arrow */
 .animated-arrow {
     font-size: 2.5em;
-    color: #007bff;
+    color: var(--afl-info-500);
     margin-bottom: 10px;
     animation: arrow-bounce 1s infinite;
 }
@@ -3740,7 +3740,7 @@ textarea.import-input {
 
 .import-links a {
     font-size: 0.9em;
-    color: #0056b3;
+    color: var(--afl-info-700);
     text-decoration: underline;
     font-weight: 500;
 }
@@ -3769,7 +3769,7 @@ textarea.import-input {
     display: block;
     margin-bottom: 10px;
     font-size: 0.85em;
-    color: #6c757d;
+    color: var(--afl-n-500);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -3823,7 +3823,7 @@ textarea.import-input {
 
 #ai-search-body {
     flex-grow: 1;
-    background-color: #f8f9fa;
+    background-color: var(--afl-n-50);
     padding: 20px;
     overflow-y: auto;
 }
@@ -3831,7 +3831,7 @@ textarea.import-input {
 .ai-search-footer {
     padding: 15px;
     background: white;
-    border-top: 1px solid #dee2e6;
+    border-top: 1px solid var(--afl-n-200);
 }
 
 .ai-input-wrapper {
@@ -3842,7 +3842,7 @@ textarea.import-input {
 #ai-search-input {
     flex-grow: 1;
     padding: 12px 15px;
-    border: 1px solid #ced4da;
+    border: 1px solid var(--afl-n-300);
     border-radius: 25px;
     outline: none;
     font-size: 0.95em;
@@ -3868,7 +3868,7 @@ textarea.import-input {
 }
 
 .ai-apply-btn {
-    background-color: #28a745;
+    background-color: var(--afl-success-500);
     color: white;
     border: none;
     padding: 10px 20px;
@@ -3881,7 +3881,7 @@ textarea.import-input {
 
 .ai-apply-btn:hover {
     transform: translateY(-2px);
-    background-color: #218838;
+    background-color: var(--afl-success-700);
 }
 
 /* Ensure messages look good in this modal */
@@ -3892,8 +3892,8 @@ textarea.import-input {
 
 
 .ai-link-pill {
-    background-color: #e7f5ff;
-    color: #007bff;
+    background-color: var(--afl-info-50);
+    color: var(--afl-info-500);
     padding: 2px 8px;
     border-radius: 12px;
     font-weight: 600;
@@ -3905,7 +3905,7 @@ textarea.import-input {
 }
 
 .ai-link-pill:hover {
-    background-color: #007bff;
+    background-color: var(--afl-info-500);
     color: white;
     transform: translateY(-1px);
     box-shadow: 0 2px 5px rgba(0,123,255,0.3);
@@ -3914,7 +3914,7 @@ textarea.import-input {
 
 .ai-search-tooltip {
     position: fixed;
-    background-color: #333;
+    background-color: var(--afl-n-700);
     color: white;
     padding: 8px 12px;
     border-radius: 6px;
@@ -3928,20 +3928,20 @@ textarea.import-input {
 }
 
 .ai-search-tooltip strong {
-    color: #fff;
+    color: var(--afl-n-0);
     font-weight: 600;
 }
 
 .ai-search-tooltip small {
-    color: #ccc;
+    color: var(--afl-n-300);
     font-size: 0.9em;
 }
 
 
 /* Chat History Styles */
 .history-container {
-    border: 1px solid #e9ecef !important;
-    background-color: #f8f9fa !important;
+    border: 1px solid var(--afl-n-100) !important;
+    background-color: var(--afl-n-50) !important;
     border-radius: 12px !important;
     padding: 15px !important;
     margin-bottom: 20px !important;
@@ -3954,15 +3954,15 @@ textarea.import-input {
 }
 
 .history-message.message-user .message-content {
-    background: #e2e8f0 !important; /* Grey for user history */
-    color: #475569 !important;
-    border: 1px solid #cbd5e1;
+    background: var(--afl-n-200) !important; /* Grey for user history */
+    color: var(--afl-n-600) !important;
+    border: 1px solid var(--afl-n-300);
 }
 
 .history-message.message-ai .message-content {
-    background: #ffffff !important; /* White for AI history */
-    color: #64748b !important;
-    border: 1px solid #e2e8f0;
+    background: var(--afl-n-0) !important; /* White for AI history */
+    color: var(--afl-n-500) !important;
+    border: 1px solid var(--afl-n-200);
     font-style: italic;
 }
 
@@ -3970,12 +3970,12 @@ textarea.import-input {
 /* Chat Controls Toolbar */
 .control-btn {
     background: white;
-    border: 1px solid #ced4da;
+    border: 1px solid var(--afl-n-300);
     border-radius: 15px;
     padding: 2px 10px;
     font-size: 0.75em;
     cursor: pointer;
-    color: #495057;
+    color: var(--afl-n-600);
     transition: all 0.2s;
     display: flex;
     align-items: center;
@@ -3983,13 +3983,13 @@ textarea.import-input {
 }
 
 .control-btn:hover {
-    background: #e9ecef;
-    color: #212529;
+    background: var(--afl-n-100);
+    color: var(--afl-n-900);
 }
 
 .control-btn.active {
-    background: #e7f5ff;
-    color: #007bff;
+    background: var(--afl-info-50);
+    color: var(--afl-info-500);
     border-color: #b6d4fe;
 }
 
@@ -4036,7 +4036,7 @@ table {
   margin-top: 1.5em;
   margin-bottom: 1.5em;
   width: 100%;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--afl-n-100);
   border-radius: 8px;
   overflow: hidden;
   font-size: 0.95em;
@@ -4054,15 +4054,15 @@ tr:hover {
 
 td, th {
   border: none;
-  border-bottom: 1px solid #f1f3f5;
+  border-bottom: 1px solid var(--afl-n-100);
   padding: 12px 15px;
   text-align: left;
   line-height: 1.5;
 }
 
 th {
-  background-color: #f8fafc;
-  color: #495057;
+  background-color: var(--afl-n-50);
+  color: var(--afl-n-600);
   font-weight: 700;
   text-transform: uppercase;
   font-size: 0.85em;
@@ -4077,7 +4077,7 @@ tr:last-child td {
 /* Handle nested tables (often found in SPL) */
 td table {
   margin: 0.5em 0;
-  border: 1px solid #f1f3f5;
+  border: 1px solid var(--afl-n-100);
   box-shadow: none;
 }
 
@@ -4211,7 +4211,7 @@ td.Listing, th.Listing {
 }
 
 .OddRow {
-  background-color: #CCCCCC;
+  background-color: var(--afl-n-300);
 }
 
 .Highlight {
@@ -4250,7 +4250,7 @@ td.Listing, th.Listing {
     height: auto;
     position: relative;
     border-right: none;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--afl-n-200);
   }
   .dashboard-header-container {
     flex-direction: column;
