@@ -661,9 +661,8 @@ const LocalQueryContent = () => {
                                                             </Button>
                                                             {r.product_code && (
                                                                 <Button
-                                                                    variant="secondary"
+                                                                    variant="info"
                                                                     size="sm"
-                                                                    style={{ background: 'var(--afl-info-500)', color: 'var(--afl-text-inverse)', borderColor: 'var(--afl-info-500)' }}
                                                                     onClick={() => setAnalyzeTarget({ code: r.product_code, id: r.id })}
                                                                 >
                                                                     Safety Profile

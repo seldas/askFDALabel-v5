@@ -160,6 +160,7 @@ type ButtonVariant =
   | 'ghost'
   | 'danger'
   | 'success'
+  | 'info'
   | 'tint-success'
   | 'tint-danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
