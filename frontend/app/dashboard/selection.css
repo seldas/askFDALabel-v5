@@ -1,0 +1,95 @@
+/*
+ * Dashboard multi-label selection bar. Tokens only.
+ *
+ * Replaces a hand-styled bar whose only action was a hardcoded "COMPARE NOW"
+ * button; the actions now come from the tool registry, so any future
+ * multi-label tool appears here without touching this file.
+ */
+
+.afl-selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--afl-space-4);
+  flex-wrap: wrap;
+  padding: var(--afl-space-3) var(--afl-space-4);
+  margin-bottom: var(--afl-space-5);
+  background: var(--afl-bg-surface);
+  border: 1px solid var(--afl-a-100);
+  border-radius: var(--afl-radius-lg);
+  box-shadow: var(--afl-shadow-sm);
+}
+
+.afl-selection-bar__queue {
+  display: flex;
+  align-items: center;
+  gap: var(--afl-space-2);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.afl-selection-bar__label {
+  font-size: var(--afl-text-xs);
+  font-weight: var(--afl-weight-heavy);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--afl-text-secondary);
+}
+
+.afl-selection-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--afl-space-2);
+  flex-wrap: wrap;
+}
+
+.afl-selection-bar__hint {
+  font-size: var(--afl-text-xs);
+  color: var(--afl-text-muted);
+}
+
+/* ---- Chip --------------------------------------------------------------- */
+
+.afl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--afl-space-2);
+  max-width: 220px;
+  padding: var(--afl-space-1) var(--afl-space-2) var(--afl-space-1) var(--afl-space-3);
+  background: var(--afl-bg-sunken);
+  border: 1px solid var(--afl-border);
+  border-radius: var(--afl-radius-pill);
+  font-size: var(--afl-text-xs);
+  font-weight: var(--afl-weight-medium);
+  color: var(--afl-text-primary);
+}
+
+.afl-chip__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.afl-chip__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  padding: 2px;
+  border-radius: var(--afl-radius-pill);
+  color: var(--afl-text-muted);
+  cursor: pointer;
+  line-height: 1;
+  transition: color var(--afl-transition), background var(--afl-transition);
+}
+
+.afl-chip__remove:hover {
+  color: var(--afl-danger-500);
+  background: var(--afl-danger-50);
+}
+
+.afl-chip__remove:focus-visible {
+  outline: 2px solid var(--afl-focus-ring);
+  outline-offset: 1px;
+}

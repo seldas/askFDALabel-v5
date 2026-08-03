@@ -8,7 +8,11 @@ import Header from "../components/Header";
 import ProjectSummary, { type ProjectStats } from './components/ProjectSummary';
 import AEProfileModal from './components/AEProfileModal';
 import Link from 'next/link';
+import { Button, ButtonLink } from '../platform/primitives';
+import { ToolLauncher } from '../platform/ToolLauncher';
+import { labelRoute, type LaunchContext } from '../platform/context';
 import './dashboard.css';
+import './selection.css';
 
 interface Project {
   id: number;
@@ -127,12 +131,11 @@ function DashboardContent() {
     setSelectedLabels([]);
   };
 
-  const handleBatchCompare = () => {
-    if (selectedLabels.length === 0) return;
-    const params = new URLSearchParams();
-    selectedLabels.forEach(l => params.append('set_ids', l.set_id));
-    router.push(`/labelcomp?${params.toString()}`);
-  };
+  /* Selected labels as a launch context; the registry builds the tool URLs. */
+  const selectionContext = useMemo<LaunchContext>(
+    () => ({ setIds: selectedLabels.map(l => l.set_id) }),
+    [selectedLabels],
+  );
 
   // Filtering & Pagination State
   const [projectSearch, setProjectSearch] = useState('');
@@ -913,60 +916,55 @@ function DashboardContent() {
                   {projectTab === 'labels' ? (
                     <div>
                       {/* Comparison Selection Banner */}
+                      {/*
+                        Selected labels form a labelSet context, so the actions
+                        come from the tool registry rather than a hardcoded
+                        Compare button. Any future multi-label tool shows up
+                        here automatically.
+                      */}
                       {selectedLabels.length > 0 && (
-                        <div style={{ 
-                            background: '#f8fafc', 
-                            border: '1px solid #e2e8f0', 
-                            borderRadius: '12px', 
-                            padding: '12px 20px', 
-                            marginBottom: '20px',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Comparison Queue ({selectedLabels.length}/4):
+                        <div className="afl-selection-bar">
+                            <div className="afl-selection-bar__queue">
+                                <span className="afl-selection-bar__label">
+                                    Selected ({selectedLabels.length}/4)
                                 </span>
                                 {selectedLabels.map(l => (
-                                    <div key={l.set_id} style={{ 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        gap: '6px', 
-                                        background: '#fff', 
-                                        border: '1px solid #cbd5e1', 
-                                        padding: '4px 10px', 
-                                        borderRadius: '20px',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 600,
-                                        color: '#334155'
-                                    }}>
-                                        <span title={l.brand_name}>{l.brand_name?.slice(0, 15)}... (..{l.set_id?.slice(-4)})</span>
-                                        <button 
+                                    <span key={l.set_id} className="afl-chip">
+                                        <span className="afl-chip__text" title={l.brand_name}>
+                                            {l.brand_name || l.set_id}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            className="afl-chip__remove"
                                             onClick={() => removeLabel(l.set_id)}
-                                            style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center' }}
-                                            onMouseOver={e => e.currentTarget.style.color = '#ef4444'}
-                                            onMouseOut={e => e.currentTarget.style.color = '#94a3b8'}
+                                            aria-label={`Remove ${l.brand_name || l.set_id} from selection`}
                                         >
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                                         </button>
-                                    </div>
+                                    </span>
                                 ))}
                             </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <button 
-                                    onClick={clearSelections}
-                                    style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
-                                >
+                            <div className="afl-selection-bar__actions">
+                                <Button variant="ghost" size="sm" onClick={clearSelections}>
                                     Reset
-                                </button>
-                                <button 
-                                    onClick={handleBatchCompare}
-                                    style={{ padding: '6px 16px', borderRadius: '8px', border: 'none', background: '#6366f1', color: '#fff', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 2px 4px rgba(99, 102, 241, 0.2)' }}
-                                >
-                                    COMPARE NOW
-                                </button>
+                                </Button>
+                                {/*
+                                  Compare declares both 'label' and 'labelSet',
+                                  so it is offered from a single selection too —
+                                  labelcomp opens with one slot filled and the
+                                  user adds the rest there.
+                                */}
+                                <ToolLauncher
+                                    context={selectionContext}
+                                    variant="strip"
+                                    matchContexts={['labelSet']}
+                                    aria-label="Tools for the selected labels"
+                                    emptyState={
+                                        <span className="afl-selection-bar__hint">
+                                            No tools available for this selection
+                                        </span>
+                                    }
+                                />
                             </div>
                         </div>
                       )}
@@ -1079,24 +1077,13 @@ function DashboardContent() {
                                   </td>
                                   <td style={{ padding: '16px', textAlign: 'right' }}>
                                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                      <Link 
-                                        href={`/dashboard/label/${item.set_id}`} 
-                                        style={{ 
-                                          padding: '6px 12px', 
-                                          background: '#6366f1', 
-                                          color: 'white', 
-                                          borderRadius: '8px', 
-                                          fontSize: '0.75rem', 
-                                          fontWeight: 800, 
-                                          textDecoration: 'none',
-                                          transition: 'all 0.2s ease',
-                                          boxShadow: '0 2px 4px rgba(99, 102, 241, 0.2)'
-                                        }}
-                                        onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                                        onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+                                      <ButtonLink
+                                        href={labelRoute(item.set_id)}
+                                        variant="primary"
+                                        size="sm"
                                       >
-                                        OPEN
-                                      </Link>
+                                        Open
+                                      </ButtonLink>
                                       <button 
                                         onClick={() => handleDeleteLabel(item.id)} 
                                         title="Remove from Task"
