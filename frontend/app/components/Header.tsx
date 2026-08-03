@@ -6,6 +6,9 @@ import { usePathname } from 'next/navigation';
 import { useUser } from '../context/UserContext';
 import { useCapabilities } from '../platform/capabilities';
 import { cx } from '../platform/primitives';
+import { ToolIcon } from '../platform/icons';
+import { getTool } from '../platform/registry';
+import { isToolAvailable } from '../platform/ToolLauncher';
 import { withAppBase } from '../utils/appPaths';
 
 type DropdownKey = 'user' | 'nav' | 'more' | 'ai' | 'updates' | null;
@@ -20,6 +23,18 @@ export type ActiveApp =
   | 'drugtox'
   | 'localquery'
   | 'webtest';
+
+// Empty launch context: every tool in this nav declares the 'global' context
+// kind, so {} is enough for isToolAvailable to evaluate capability gating.
+const GLOBAL_CTX = {};
+
+/** Primary nav bar items, in display order, mapped to their ActiveApp key. */
+const PRIMARY_NAV: { toolId: string; activeApp: ActiveApp }[] = [
+  { toolId: 'search', activeApp: 'afl' },
+  { toolId: 'dashboard', activeApp: 'dashboard' },
+  { toolId: 'labelcomp', activeApp: 'labelcomp' },
+  { toolId: 'drugtox', activeApp: 'drugtox' },
+];
 
 function inferActiveApp(pathname: string): ActiveApp {
   if (pathname === '/' || pathname === '') return 'home';
@@ -47,9 +62,10 @@ export default function Header({
   );
 
   // Deployment capabilities come from the shared provider — this component and
-  // the home page used to probe /api/check-fdalabel independently.
+  // the home page used to probe /api/check-fdalabel independently. Gating on
+  // individual booleans (fdaAccessible, allowLocalQuery, ...) now happens
+  // inside isToolAvailable() via each tool's `requires`, not here.
   const { capabilities } = useCapabilities();
-  const { isInternal, fdaAccessible, cderAccessible, allowLocalQuery } = capabilities;
 
   const [activeDropdown, setActiveDropdown] = useState<DropdownKey | 'tasks'>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -312,71 +328,31 @@ export default function Header({
 
       {/* Center: Main Navigation */}
       <nav className={cx('header-nav', mobileMenuOpen && 'open')}>
-        
-        {/* Conversational AI Search */}
-        <Link
-          href="/search"
-          className={cx('hp-nav-item', resolvedActiveApp === 'afl' && 'is-active')}
-          aria-current={resolvedActiveApp === 'afl' ? 'page' : undefined}
-          onClick={handleNavClick}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            <path d="M11 8a2 2 0 0 0-2 2"></path>
-          </svg>
-          AI Chat
-        </Link>
 
-        {/* Dashboard */}
-        <Link
-          href="/dashboard"
-          className={cx('hp-nav-item', resolvedActiveApp === 'dashboard' && 'is-active')}
-          aria-current={resolvedActiveApp === 'dashboard' ? 'page' : undefined}
-          onClick={handleNavClick}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="20" x2="18" y2="10"></line>
-            <line x1="12" y1="20" x2="12" y2="4"></line>
-            <line x1="6" y1="20" x2="6" y2="14"></line>
-          </svg>
-          My Dashboard
-        </Link>
-
-        {/* Label Compare */}
-        <Link
-          href="/labelcomp"
-          className={cx('hp-nav-item', resolvedActiveApp === 'labelcomp' && 'is-active')}
-          aria-current={resolvedActiveApp === 'labelcomp' ? 'page' : undefined}
-          onClick={handleNavClick}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path>
-            <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path>
-            <path d="M7 21h10"></path>
-            <path d="M12 3v18"></path>
-            <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path>
-          </svg>
-          Compare
-        </Link>
-
-        {/* DrugTox */}
-        <Link
-          href="/drugtox"
-          className={cx('hp-nav-item', resolvedActiveApp === 'drugtox' && 'is-active')}
-          aria-current={resolvedActiveApp === 'drugtox' ? 'page' : undefined}
-          onClick={handleNavClick}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M10 2v8"></path>
-            <path d="M14 2v8"></path>
-            <path d="M8.5 15c.7 0 1.3-.5 1.5-1.2l.5-2.3c.2-.7.8-1.2 1.5-1.2s1.3.5 1.5 1.2l.5 2.3c.2.7.8 1.2 1.5 1.2"></path>
-            <path d="M6 18h12"></path>
-            <path d="M6 22h12"></path>
-            <circle cx="12" cy="13" r="10"></circle>
-          </svg>
-          DrugTox
-        </Link>
+        {/*
+          Sourced from the tool registry so the URL and label live in one
+          place (platform/registry.ts) instead of being hardcoded here too.
+          Icons come from platform/icons.tsx, which was built from these
+          exact paths, so this renders pixel-identical to the markup it
+          replaces.
+        */}
+        {PRIMARY_NAV.map(({ toolId, activeApp }) => {
+          const tool = getTool(toolId);
+          if (!tool || !isToolAvailable(tool, GLOBAL_CTX, capabilities)) return null;
+          const isActive = resolvedActiveApp === activeApp;
+          return (
+            <Link
+              key={toolId}
+              href={tool.href(GLOBAL_CTX)}
+              className={cx('hp-nav-item', isActive && 'is-active')}
+              aria-current={isActive ? 'page' : undefined}
+              onClick={handleNavClick}
+            >
+              <ToolIcon id={tool.iconId} size={16} />
+              {tool.name}
+            </Link>
+          );
+        })}
 
         {/* Search Dropdown (Drug & Device) */}
         <div
@@ -402,135 +378,74 @@ export default function Header({
               FDALabel
             </div>
 
-            {allowLocalQuery && (
-              <Link
-                href="/localquery"
-                className={cx('hp-dropdown-item', resolvedActiveApp === 'localquery' && 'is-active')}
-                onClick={handleNavClick}
-              >
-                <span className="hp-dropdown-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
-                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
-                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
-                  </svg>
-                </span>
-                <div>
-                  <div className="dropdown-title" style={{ fontWeight: 800 }}>Local Database Search</div>
-                  <div style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 500 }}>Query local SPL & drug records</div>
-                </div>
-              </Link>
-            )}
+            {/*
+              Local Database Search, the three FDALabel deployments, and
+              Web-test Tool all come from the registry now — url and gating
+              (localQuery / fdaAccessible / cderAccessible) live in one place
+              instead of being duplicated as local capability booleans here.
+            */}
+            {(() => {
+              const localquery = getTool('localquery')!;
+              return isToolAvailable(localquery, GLOBAL_CTX, capabilities) ? (
+                <Link
+                  href={localquery.href(GLOBAL_CTX)}
+                  className={cx('hp-dropdown-item', resolvedActiveApp === 'localquery' && 'is-active')}
+                  onClick={handleNavClick}
+                >
+                  <span className="hp-dropdown-icon">
+                    <ToolIcon id={localquery.iconId} size={18} />
+                  </span>
+                  <div>
+                    <div className="dropdown-title" style={{ fontWeight: 800 }}>{localquery.name}</div>
+                    <div style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 500 }}>{localquery.blurb}</div>
+                  </div>
+                </Link>
+              ) : null;
+            })()}
 
-            {(fdaAccessible || cderAccessible) ? (
-              <>
-                {fdaAccessible && (
-                  <a
-                    href="https://fdalabel.fda.gov:8443/fdalabel/ui/search"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hp-dropdown-item"
-                    onClick={handleNavClick}
-                  >
-                    <span className="hp-dropdown-icon">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 21h18"></path>
-                        <path d="M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4"></path>
-                        <path d="M5 21V10.85"></path>
-                        <path d="M19 21V10.85"></path>
-                        <path d="M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4"></path>
-                      </svg>
-                    </span>
-                    <div>
-                      <div className="dropdown-title">FDA version</div>
-                    </div>
-                  </a>
-                )}
-
-                {cderAccessible && (
-                  <a
-                    href="https://fdalabel.fda.gov:8443/fdalabel-r/ui/search"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hp-dropdown-item"
-                    onClick={handleNavClick}
-                  >
-                    <span className="hp-dropdown-icon">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                      </svg>
-                    </span>
-                    <div>
-                      <div className="dropdown-title">CDER-CBER version</div>
-                    </div>
-                  </a>
-                )}
-
+            {(['fdalabel-fda', 'fdalabel-cder', 'fdalabel-public'] as const).map((toolId) => {
+              const tool = getTool(toolId)!;
+              if (!isToolAvailable(tool, GLOBAL_CTX, capabilities)) return null;
+              return (
                 <a
-                  href="https://nctr-crs.fda.gov/fdalabel/ui/search"
-                  target="_blank"
+                  key={toolId}
+                  href={tool.href(GLOBAL_CTX)}
+                  target={tool.target ?? '_blank'}
                   rel="noopener noreferrer"
                   className="hp-dropdown-item"
                   onClick={handleNavClick}
                 >
                   <span className="hp-dropdown-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 21h18"></path>
-                      <path d="M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4"></path>
-                      <path d="M5 21V10.85"></path>
-                      <path d="M19 21V10.85"></path>
-                      <path d="M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4"></path>
-                    </svg>
+                    <ToolIcon id={tool.iconId} size={18} />
                   </span>
                   <div>
-                    <div className="dropdown-title">Public version</div>
+                    <div className="dropdown-title">{tool.name.replace('FDALabel (', '').replace(')', '')} version</div>
                   </div>
                 </a>
-              </>
-            ) : (
-              <a
-                href="https://nctr-crs.fda.gov/fdalabel/ui/search"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hp-dropdown-item"
-                onClick={handleNavClick}
-              >
-                <span className="hp-dropdown-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 21h18"></path>
-                    <path d="M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4"></path>
-                    <path d="M5 21V10.85"></path>
-                    <path d="M19 21V10.85"></path>
-                    <path d="M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4"></path>
-                  </svg>
-                </span>
-                <div>
-                  <div className="dropdown-title">Public version</div>
-                </div>
-              </a>
-            )}
-
-
+              );
+            })}
 
             {/* ELSA Support widgets */}
             <div className="dropdown-section-label" style={{ padding: '8px 12px 4px', fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>
               Others
             </div>
 
-            {/* Web-test Tool */}
-            <Link
-              href="/webtest"
-              className={cx('hp-dropdown-item', resolvedActiveApp === 'webtest' && 'is-active')}
-              onClick={handleNavClick}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-              </svg>
-              <div>
-                <div className="dropdown-title">Web-test Tool</div>
-                <div className="dropdown-subtitle">Automated Web Testing</div>
-              </div>
-            </Link>
+            {(() => {
+              const webtest = getTool('webtest')!;
+              return (
+                <Link
+                  href={webtest.href(GLOBAL_CTX)}
+                  className={cx('hp-dropdown-item', resolvedActiveApp === 'webtest' && 'is-active')}
+                  onClick={handleNavClick}
+                >
+                  <ToolIcon id={webtest.iconId} size={16} />
+                  <div>
+                    <div className="dropdown-title">{webtest.name}</div>
+                    <div className="dropdown-subtitle">{webtest.blurb}</div>
+                  </div>
+                </Link>
+              );
+            })()}
 
           </div>
         </div>
