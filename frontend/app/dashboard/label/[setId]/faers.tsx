@@ -283,15 +283,15 @@ function EmergingAeAnalysis({
 
   return (
     <div className="chart-card full-width" style={{ marginTop: '0', borderTop: 'none', paddingTop: '0' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '16px 24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--afl-n-50)', padding: '16px 24px', borderRadius: '12px', border: '1px solid var(--afl-n-200)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '1.5rem' }}>🆕</span>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>Emerging Adverse Events (Last 5 Years Only)</h3>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--afl-n-900)' }}>Emerging Adverse Events (Last 5 Years Only)</h3>
         </div>
         {loading && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div className="loader" style={{ width: '16px', height: '16px', borderWidth: '2px', borderTopColor: '#0071bc' }}></div>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b' }}>Analyzing Reports...</span>
+                <div className="loader" style={{ width: '16px', height: '16px', borderWidth: '2px', borderTopColor: 'var(--afl-gov-blue)' }}></div>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-500)' }}>Analyzing Reports...</span>
             </div>
         )}
       </div>
@@ -301,18 +301,18 @@ function EmergingAeAnalysis({
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between', 
-          background: '#eff6ff', 
+          background: 'var(--afl-info-50)', 
           padding: '12px 20px', 
           borderRadius: '10px', 
-          border: '1px solid #dbeafe' 
+          border: '1px solid var(--afl-info-100)' 
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '1.1rem' }}>🤖</span>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e40af' }}>AI Semantic Matcher</span>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-info-700)' }}>AI Semantic Matcher</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#60a5fa' }}>Min Reports:</label>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--afl-info-500)' }}>Min Reports:</label>
                 <input 
                     type="number" 
                     value={aiMinCount} 
@@ -321,7 +321,7 @@ function EmergingAeAnalysis({
                         width: '60px', 
                         padding: '4px 8px', 
                         borderRadius: '6px', 
-                        border: '1px solid #bfdbfe', 
+                        border: '1px solid var(--afl-info-100)', 
                         fontSize: '0.75rem', 
                         fontWeight: 700 
                     }}
@@ -332,7 +332,7 @@ function EmergingAeAnalysis({
             onClick={runAiMatch}
             disabled={aiLoading || !data}
             style={{ 
-                backgroundColor: aiLoading ? '#94a3b8' : '#3b82f6', 
+                backgroundColor: aiLoading ? 'var(--afl-n-400)' : 'var(--afl-info-500)', 
                 color: 'white', 
                 padding: '6px 16px', 
                 borderRadius: '6px', 
@@ -349,13 +349,13 @@ function EmergingAeAnalysis({
         </button>
       </div>
       
-      <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '12px', marginBottom: '20px', maxWidth: '900px', lineHeight: '1.5', padding: '0 4px' }}>
+      <p style={{ fontSize: '0.8rem', color: 'var(--afl-n-500)', marginTop: '12px', marginBottom: '20px', maxWidth: '900px', lineHeight: '1.5', padding: '0 4px' }}>
         Identifies reactions present in the <strong>recent 5 years</strong> of reports but absent in the previous 5 years. 
         String matching verifies exact label presence; <strong>AI Semantic Matcher</strong> uses LLMs to find undocumented terms mentioned via synonyms or clinical context.
       </p>
 
       {error && (
-        <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fee2e2', color: '#991b1b', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '0.8rem' }}>
+        <div style={{ backgroundColor: 'var(--afl-danger-50)', border: '1px solid var(--afl-danger-100)', color: 'var(--afl-danger-700)', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '0.8rem' }}>
             <strong>Analysis Error:</strong> {error}
         </div>
       )}
@@ -373,9 +373,9 @@ function EmergingAeAnalysis({
                     border: '1px solid',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
-                    backgroundColor: activeFilters.has('exact') ? '#dcfce7' : 'transparent',
-                    color: activeFilters.has('exact') ? '#166534' : '#64748b',
-                    borderColor: activeFilters.has('exact') ? '#22c55e' : '#e2e8f0',
+                    backgroundColor: activeFilters.has('exact') ? 'var(--afl-success-50)' : 'transparent',
+                    color: activeFilters.has('exact') ? 'var(--afl-success-700)' : 'var(--afl-n-500)',
+                    borderColor: activeFilters.has('exact') ? 'var(--afl-success-500)' : 'var(--afl-n-200)',
                 }}
               >
                   {activeFilters.has('exact') ? '✓ ' : ''}Exact Match
@@ -390,9 +390,9 @@ function EmergingAeAnalysis({
                     border: '1px solid',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
-                    backgroundColor: activeFilters.has('semantic') ? '#ecfdf5' : 'transparent',
-                    color: activeFilters.has('semantic') ? '#065f46' : '#64748b',
-                    borderColor: activeFilters.has('semantic') ? '#10b981' : '#e2e8f0',
+                    backgroundColor: activeFilters.has('semantic') ? 'var(--afl-success-50)' : 'transparent',
+                    color: activeFilters.has('semantic') ? 'var(--afl-success-700)' : 'var(--afl-n-500)',
+                    borderColor: activeFilters.has('semantic') ? 'var(--afl-success-500)' : 'var(--afl-n-200)',
                 }}
               >
                   {activeFilters.has('semantic') ? '✓ ' : ''}Semantic Match
@@ -407,9 +407,9 @@ function EmergingAeAnalysis({
                     border: '1px solid',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
-                    backgroundColor: activeFilters.has('none') ? '#fef2f2' : 'transparent',
-                    color: activeFilters.has('none') ? '#991b1b' : '#64748b',
-                    borderColor: activeFilters.has('none') ? '#ef4444' : '#e2e8f0',
+                    backgroundColor: activeFilters.has('none') ? 'var(--afl-danger-50)' : 'transparent',
+                    color: activeFilters.has('none') ? 'var(--afl-danger-700)' : 'var(--afl-n-500)',
+                    borderColor: activeFilters.has('none') ? 'var(--afl-danger-500)' : 'var(--afl-n-200)',
                 }}
               >
                   {activeFilters.has('none') ? '✓ ' : ''}Not Matched
@@ -418,7 +418,7 @@ function EmergingAeAnalysis({
 
           <table className="coverage-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0', background: '#f1f5f9' }}>
+              <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--afl-n-200)', background: 'var(--afl-n-100)' }}>
                 <th style={{ padding: '10px 12px', width: '22%' }}>Emerging AE (MedDRA PT)</th>
                 <th style={{ padding: '10px 12px', width: '8%' }}>Reports</th>
                 <th style={{ padding: '10px 12px', width: '18%' }}>SOC Hierarchy</th>
@@ -432,46 +432,46 @@ function EmergingAeAnalysis({
                     key={i} 
                     onClick={() => setSelectedAe(ae)}
                     style={{ 
-                        borderBottom: '1px solid #f1f5f9', 
+                        borderBottom: '1px solid var(--afl-n-100)', 
                         verticalAlign: 'top',
                         cursor: 'pointer',
-                        backgroundColor: selectedAe?.term === ae.term ? '#f1f7fd' : 'transparent',
+                        backgroundColor: selectedAe?.term === ae.term ? 'var(--afl-info-50)' : 'transparent',
                         transition: 'background-color 0.2s ease'
                     }}
-                    onMouseOver={e => { if (selectedAe?.term !== ae.term) e.currentTarget.style.backgroundColor = '#f8fafc'; }}
+                    onMouseOver={e => { if (selectedAe?.term !== ae.term) e.currentTarget.style.backgroundColor = 'var(--afl-n-50)'; }}
                     onMouseOut={e => { if (selectedAe?.term !== ae.term) e.currentTarget.style.backgroundColor = 'transparent'; }}
                 >
-                  <td style={{ padding: '12px', fontWeight: 700, color: '#0f172a' }}>
+                  <td style={{ padding: '12px', fontWeight: 700, color: 'var(--afl-n-900)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {selectedAe?.term === ae.term && <span style={{ color: '#0071bc' }}>→</span>}
+                        {selectedAe?.term === ae.term && <span style={{ color: 'var(--afl-gov-blue)' }}>→</span>}
                         {ae.term}
                     </div>
                   </td>
                   <td style={{ padding: '12px' }}>
-                    <span style={{ background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px', fontWeight: 800, color: '#334155', fontSize: '0.75rem' }}>
+                    <span style={{ background: 'var(--afl-n-100)', padding: '2px 8px', borderRadius: '4px', fontWeight: 800, color: 'var(--afl-n-700)', fontSize: '0.75rem' }}>
                         {ae.count}
                     </span>
                   </td>
                   <td style={{ padding: '12px' }}>
-                    <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>{ae.soc}</div>
-                    <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 500, marginTop: '2px' }}>{ae.hlt}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--afl-n-600)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>{ae.soc}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--afl-n-400)', fontWeight: 500, marginTop: '2px' }}>{ae.hlt}</div>
                   </td>
                   <td style={{ padding: '12px' }}>
                     {ae.label_matches && ae.label_matches.length > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {ae.label_matches.map((match, mIdx) => (
-                          <div key={mIdx} style={{ background: '#f0fdf4', padding: '8px', borderRadius: '6px', borderLeft: '3px solid #22c55e' }}>
-                            <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#166534', marginBottom: '4px', textTransform: 'uppercase' }}>
+                          <div key={mIdx} style={{ background: 'var(--afl-success-50)', padding: '8px', borderRadius: '6px', borderLeft: '3px solid var(--afl-success-500)' }}>
+                            <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--afl-success-700)', marginBottom: '4px', textTransform: 'uppercase' }}>
                                 Found in: {match.section}
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#334155', lineHeight: 1.4, fontStyle: 'italic' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--afl-n-700)', lineHeight: 1.4, fontStyle: 'italic' }}>
                                 "...{match.snippet}..."
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#991b1b', background: '#fef2f2', padding: '6px 12px', borderRadius: '6px', width: 'fit-content', fontSize: '0.7rem', fontWeight: 800 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--afl-danger-700)', background: 'var(--afl-danger-50)', padding: '6px 12px', borderRadius: '6px', width: 'fit-content', fontSize: '0.7rem', fontWeight: 800 }}>
                         <span style={{ fontSize: '1rem' }}>⚠</span> NOT FOUND (EXACT)
                       </div>
                     )}
@@ -479,28 +479,28 @@ function EmergingAeAnalysis({
                   <td style={{ padding: '12px' }}>
                     {ae.ai_match ? (
                         <div style={{ 
-                            background: ae.ai_match.found ? '#ecfdf5' : '#fff7ed', 
+                            background: ae.ai_match.found ? 'var(--afl-success-50)' : 'var(--afl-warn-50)', 
                             padding: '10px', 
                             borderRadius: '8px', 
-                            border: `1px solid ${ae.ai_match.found ? '#10b981' : '#f97316'}` 
+                            border: `1px solid ${ae.ai_match.found ? 'var(--afl-success-500)' : 'var(--afl-warn-500)'}` 
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                                 <span style={{ fontSize: '0.9rem' }}>{ae.ai_match.found ? '✅' : '❓'}</span>
                                 <span style={{ 
                                     fontSize: '0.7rem', 
                                     fontWeight: 800, 
-                                    color: ae.ai_match.found ? '#065f46' : '#9a3412',
+                                    color: ae.ai_match.found ? 'var(--afl-success-700)' : 'var(--afl-warn-700)',
                                     textTransform: 'uppercase'
                                 }}>
                                     {ae.ai_match.found ? `Semantic Match: ${ae.ai_match.section || 'General'}` : 'Still Undocumented'}
                                 </span>
                             </div>
-                            <div style={{ fontSize: '0.7rem', color: '#334155', lineHeight: 1.4 }}>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--afl-n-700)', lineHeight: 1.4 }}>
                                 {ae.ai_match.explanation}
                             </div>
                         </div>
                     ) : (
-                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', padding: '10px', textAlign: 'center', border: '1px dashed #e2e8f0', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--afl-n-400)', fontStyle: 'italic', padding: '10px', textAlign: 'center', border: '1px dashed var(--afl-n-200)', borderRadius: '8px' }}>
                             {ae.label_matches.length > 0 ? 'Verified by exact match' : (ae.count < aiMinCount ? 'Below AI count threshold' : 'Pending AI evaluation')}
                         </div>
                     )}
@@ -508,7 +508,7 @@ function EmergingAeAnalysis({
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', fontStyle: 'italic' }}>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--afl-n-400)', fontStyle: 'italic' }}>
                     No entirely new AE terms found in the recent period for this drug.
                   </td>
                 </tr>
@@ -520,11 +520,11 @@ function EmergingAeAnalysis({
           {totalPages > 1 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', padding: '0 4px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Show:</label>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)', fontWeight: 600 }}>Show:</label>
                     <select 
                         value={itemsPerPage} 
                         onChange={(e) => setItemsPerPage(parseInt(e.target.value))}
-                        style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.75rem', fontWeight: 600 }}
+                        style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--afl-n-200)', fontSize: '0.75rem', fontWeight: 600 }}
                     >
                         <option value={5}>5</option>
                         <option value={10}>10</option>
@@ -539,18 +539,18 @@ function EmergingAeAnalysis({
                         style={{ 
                             padding: '6px 12px', 
                             borderRadius: '6px', 
-                            border: '1px solid #e2e8f0', 
-                            background: currentPage === 1 ? '#f8fafc' : 'white', 
+                            border: '1px solid var(--afl-n-200)', 
+                            background: currentPage === 1 ? 'var(--afl-n-50)' : 'white', 
                             cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
                             fontSize: '0.75rem',
                             fontWeight: 700,
-                            color: currentPage === 1 ? '#cbd5e1' : '#334155'
+                            color: currentPage === 1 ? 'var(--afl-n-300)' : 'var(--afl-n-700)'
                         }}
                     >
                         Previous
                     </button>
                     
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-500)' }}>
                         Page {currentPage} of {totalPages}
                     </span>
 
@@ -560,12 +560,12 @@ function EmergingAeAnalysis({
                         style={{ 
                             padding: '6px 12px', 
                             borderRadius: '6px', 
-                            border: '1px solid #e2e8f0', 
-                            background: currentPage === totalPages ? '#f8fafc' : 'white', 
+                            border: '1px solid var(--afl-n-200)', 
+                            background: currentPage === totalPages ? 'var(--afl-n-50)' : 'white', 
                             cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
                             fontSize: '0.75rem',
                             fontWeight: 700,
-                            color: currentPage === totalPages ? '#cbd5e1' : '#334155'
+                            color: currentPage === totalPages ? 'var(--afl-n-300)' : 'var(--afl-n-700)'
                         }}
                     >
                         Next
@@ -573,7 +573,7 @@ function EmergingAeAnalysis({
                 </div>
             </div>
           )}
-          <div style={{ marginTop: '12px', fontSize: '0.7rem', color: '#94a3b8', textAlign: 'right', fontWeight: 500 }}>
+          <div style={{ marginTop: '12px', fontSize: '0.7rem', color: 'var(--afl-n-400)', textAlign: 'right', fontWeight: 500 }}>
             Analysis Engine: Hybrid exact-string + semantic-AI. Results cached in project database.
           </div>
 
@@ -581,18 +581,18 @@ function EmergingAeAnalysis({
           <div style={{ 
               marginTop: '30px', 
               padding: '24px', 
-              background: '#ffffff', 
+              background: 'var(--afl-n-0)', 
               borderRadius: '16px', 
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--afl-n-200)',
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#1e293b' }}>
+                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--afl-n-800)' }}>
                     {selectedAe ? `Cumulative Reporting Trend: ${selectedAe.term}` : 'Select an AE term above to view reporting trend'}
                 </h4>
                 {selectedAe && (
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>
-                        Total Reports: <span style={{ color: '#0071bc', fontWeight: 800 }}>{selectedAe.count}</span>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)', fontWeight: 600 }}>
+                        Total Reports: <span style={{ color: 'var(--afl-gov-blue)', fontWeight: 800 }}>{selectedAe.count}</span>
                     </div>
                 )}
             </div>
@@ -607,11 +607,11 @@ function EmergingAeAnalysis({
                         <AreaChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="colorCumulative" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#0071bc" stopOpacity={0.1}/>
-                                    <stop offset="95%" stopColor="#0071bc" stopOpacity={0}/>
+                                    <stop offset="5%" stopColor="var(--afl-gov-blue)" stopOpacity={0.1}/>
+                                    <stop offset="95%" stopColor="var(--afl-gov-blue)" stopOpacity={0}/>
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--afl-n-100)" />
                             <XAxis 
                                 dataKey="timestamp" 
                                 type="number"
@@ -619,7 +619,7 @@ function EmergingAeAnalysis({
                                 fontSize={11} 
                                 tickLine={false} 
                                 axisLine={false} 
-                                tick={{ fill: '#94a3b8' }}
+                                tick={{ fill: 'var(--afl-n-400)' }}
                                 minTickGap={30}
                                 tickFormatter={(ts) => new Date(ts).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}
                             />
@@ -627,7 +627,7 @@ function EmergingAeAnalysis({
                                 fontSize={11} 
                                 tickLine={false} 
                                 axisLine={false} 
-                                tick={{ fill: '#94a3b8' }}
+                                tick={{ fill: 'var(--afl-n-400)' }}
                             />
                             <Tooltip 
                                 labelFormatter={(ts) => new Date(ts).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
@@ -637,7 +637,7 @@ function EmergingAeAnalysis({
                             <Area 
                                 type="monotone" 
                                 dataKey="cumulative" 
-                                stroke="#0071bc" 
+                                stroke="var(--afl-gov-blue)" 
                                 strokeWidth={3}
                                 fillOpacity={1} 
                                 fill="url(#colorCumulative)" 
@@ -647,7 +647,7 @@ function EmergingAeAnalysis({
                         </AreaChart>
                     </ResponsiveContainer>
                 ) : (
-                    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #e2e8f0' }}>
+                    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--afl-n-400)', background: 'var(--afl-n-50)', borderRadius: '12px', border: '1px dashed var(--afl-n-200)' }}>
                         <span style={{ fontSize: '2rem', marginBottom: '8px' }}>📈</span>
                         <p style={{ fontSize: '0.85rem', fontWeight: 600 }}>
                             {selectedAe ? 'No trend data available for this term.' : 'Click a row in the table above to analyze its growth.'}

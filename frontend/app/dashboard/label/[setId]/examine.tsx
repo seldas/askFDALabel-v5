@@ -31,13 +31,13 @@ interface ExamineViewProps {
 
 function AppTypeBadge({ appType }: { appType: string }) {
   const badgeColors: Record<string, { bg: string; color: string }> = {
-    NDA:   { bg: '#dbeafe', color: '#1e40af' },
-    ANDA:  { bg: '#d1fae5', color: '#065f46' },
-    BLA:   { bg: '#ede9fe', color: '#5b21b6' },
-    OTC:   { bg: '#fef3c7', color: '#92400e' },
-    BIOLOGIC: { bg: '#ede9fe', color: '#5b21b6' },
+    NDA:   { bg: 'var(--afl-info-100)', color: 'var(--afl-info-700)' },
+    ANDA:  { bg: 'var(--afl-success-50)', color: 'var(--afl-success-700)' },
+    BLA:   { bg: 'var(--afl-a-50)', color: 'var(--afl-a-700)' },
+    OTC:   { bg: 'var(--afl-warn-50)', color: 'var(--afl-warn-700)' },
+    BIOLOGIC: { bg: 'var(--afl-a-50)', color: 'var(--afl-a-700)' },
   };
-  const style = badgeColors[appType?.toUpperCase()] ?? { bg: '#f1f5f9', color: '#64748b' };
+  const style = badgeColors[appType?.toUpperCase()] ?? { bg: 'var(--afl-n-100)', color: 'var(--afl-n-500)' };
   return (
     <span style={{
       display: 'inline-block',
@@ -61,20 +61,20 @@ function IngredientsList({ ingredients }: { ingredients: ProductData['ingredient
     <div style={{ fontSize: '0.78rem', lineHeight: 1.5 }}>
       {active.length > 0 && (
         <div>
-          <span style={{ fontWeight: 700, color: '#0f172a', display: 'block', marginBottom: '2px' }}>Active</span>
+          <span style={{ fontWeight: 700, color: 'var(--afl-n-900)', display: 'block', marginBottom: '2px' }}>Active</span>
           {active.map((ing, i) => (
-            <div key={i} style={{ color: '#1e40af' }}>
-              {ing.name}{ing.strength ? <span style={{ color: '#64748b', fontWeight: 400 }}> — {ing.strength}</span> : ''}
+            <div key={i} style={{ color: 'var(--afl-info-700)' }}>
+              {ing.name}{ing.strength ? <span style={{ color: 'var(--afl-n-500)', fontWeight: 400 }}> — {ing.strength}</span> : ''}
             </div>
           ))}
         </div>
       )}
       {inactive.length > 0 && (
         <div style={{ marginTop: active.length > 0 ? '6px' : 0 }}>
-          <span style={{ fontWeight: 600, color: '#64748b', display: 'block', marginBottom: '2px' }}>
+          <span style={{ fontWeight: 600, color: 'var(--afl-n-500)', display: 'block', marginBottom: '2px' }}>
             Inactive ({inactive.length})
           </span>
-          <span style={{ color: '#94a3b8', fontSize: '0.73rem' }}>
+          <span style={{ color: 'var(--afl-n-400)', fontSize: '0.73rem' }}>
             {inactive.map(i => i.name).filter(Boolean).join(', ')}
           </span>
         </div>
@@ -87,8 +87,8 @@ function ProductSpecsTable({ productData }: { productData: ProductData[] }) {
   if (!productData || productData.length === 0) {
     return (
       <div style={{
-        padding: '20px 24px', background: '#f8fafc', borderRadius: '12px',
-        border: '1px solid #e2e8f0', color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center',
+        padding: '20px 24px', background: 'var(--afl-n-50)', borderRadius: '12px',
+        border: '1px solid var(--afl-n-200)', color: 'var(--afl-n-400)', fontSize: '0.85rem', textAlign: 'center',
       }}>
         No structured product data found in this SPL document.
       </div>
@@ -96,36 +96,36 @@ function ProductSpecsTable({ productData }: { productData: ProductData[] }) {
   }
   const headers = ['Product Name', 'NDC Number', 'Dosage Form', 'Application No.', 'Category', 'Ingredients'];
   return (
-    <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+    <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid var(--afl-n-200)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
         <thead>
-          <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+          <tr style={{ background: 'var(--afl-n-50)', borderBottom: '2px solid var(--afl-n-200)' }}>
             {headers.map(h => (
               <th key={h} style={{
                 padding: '10px 14px', textAlign: 'left', fontWeight: 700,
                 fontSize: '0.7rem', textTransform: 'uppercase' as const,
-                letterSpacing: '0.06em', color: '#64748b', whiteSpace: 'nowrap' as const,
+                letterSpacing: '0.06em', color: 'var(--afl-n-500)', whiteSpace: 'nowrap' as const,
               }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {productData.map((prod, idx) => (
-            <tr key={idx} style={{ borderBottom: idx < productData.length - 1 ? '1px solid #f1f5f9' : 'none', background: idx % 2 === 0 ? '#ffffff' : '#fafbfc' }}>
-              <td style={{ padding: '12px 14px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' as const }}>{prod.name || '—'}</td>
+            <tr key={idx} style={{ borderBottom: idx < productData.length - 1 ? '1px solid var(--afl-n-100)' : 'none', background: idx % 2 === 0 ? 'var(--afl-n-0)' : 'var(--afl-n-50)' }}>
+              <td style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--afl-n-900)', whiteSpace: 'nowrap' as const }}>{prod.name || '—'}</td>
               <td style={{ padding: '12px 14px' }}>
                 {prod.ndc ? (
-                  <span style={{ display: 'inline-block', fontFamily: 'ui-monospace, monospace', fontSize: '0.78rem', fontWeight: 600, color: '#0f172a', background: '#f1f5f9', padding: '2px 7px', borderRadius: '5px', letterSpacing: '0.04em' }}>
+                  <span style={{ display: 'inline-block', fontFamily: 'ui-monospace, monospace', fontSize: '0.78rem', fontWeight: 600, color: 'var(--afl-n-900)', background: 'var(--afl-n-100)', padding: '2px 7px', borderRadius: '5px', letterSpacing: '0.04em' }}>
                     {prod.ndc}
                   </span>
                 ) : '—'}
               </td>
-              <td style={{ padding: '12px 14px', color: '#475569', whiteSpace: 'nowrap' as const }}>
+              <td style={{ padding: '12px 14px', color: 'var(--afl-n-600)', whiteSpace: 'nowrap' as const }}>
                 {prod.form ? prod.form.split(/\s+/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') : '—'}
               </td>
               <td style={{ padding: '12px 14px' }}>
                 {prod.app_num ? (
-                  <span style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700, color: '#1e40af', fontSize: '0.8rem' }}>{prod.app_num}</span>
+                  <span style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700, color: 'var(--afl-info-700)', fontSize: '0.8rem' }}>{prod.app_num}</span>
                 ) : '—'}
               </td>
               <td style={{ padding: '12px 14px' }}><AppTypeBadge appType={prod.app_type} /></td>
@@ -232,14 +232,14 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
   return (
     <div>
       <div style={{ marginBottom: '16px' }}>
-        <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>Clinical Query Engine</h3>
-        <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+        <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--afl-n-900)', letterSpacing: '-0.01em' }}>Clinical Query Engine</h3>
+        <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--afl-n-500)' }}>
           Select a pre-defined or custom question and the AI will analyze the labeling document to generate a clinical summary. Answers are cached per label version.
         </p>
       </div>
       <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', flexWrap: 'wrap' as const, marginBottom: '16px' }}>
         {promptsLoading ? (
-          <div style={{ padding: '10px', color: '#94a3b8', fontSize: '0.82rem' }}>Loading queries…</div>
+          <div style={{ padding: '10px', color: 'var(--afl-n-400)', fontSize: '0.82rem' }}>Loading queries…</div>
         ) : (
           <div style={{ flex: 1, minWidth: '260px' }}>
             <select
@@ -249,9 +249,9 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
                 setSelected(val === 'custom' ? 'custom' : Number(val));
               }}
               style={{
-                width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1',
+                width: '100%', padding: '10px 14px', border: '1px solid var(--afl-n-300)',
                 borderRadius: '10px', fontSize: '0.88rem', fontWeight: 600,
-                color: '#0f172a', background: '#ffffff', cursor: 'pointer',
+                color: 'var(--afl-n-900)', background: 'var(--afl-n-0)', cursor: 'pointer',
                 outline: 'none', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
               }}
             >
@@ -263,13 +263,13 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
               <option value="custom">✏️ Ask a custom question...</option>
             </select>
             {selectedPrompt?.description && (
-              <p style={{ margin: '6px 0 0 2px', fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>{selectedPrompt.description}</p>
+              <p style={{ margin: '6px 0 0 2px', fontSize: '0.75rem', color: 'var(--afl-n-500)', fontStyle: 'italic' }}>{selectedPrompt.description}</p>
             )}
             {selectedPrompt?.is_similar && (
               <p style={{
                 margin: '6px 0 0 2px',
                 fontSize: '0.75rem',
-                color: '#b45309',
+                color: 'var(--afl-warn-700)',
                 fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
@@ -288,10 +288,10 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
                     width: '100%',
                     minHeight: '80px',
                     padding: '10px 12px',
-                    border: '1px solid #cbd5e1',
+                    border: '1px solid var(--afl-n-300)',
                     borderRadius: '8px',
                     fontSize: '0.85rem',
-                    color: '#0f172a',
+                    color: 'var(--afl-n-900)',
                     outline: 'none',
                     resize: 'vertical',
                     boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)',
@@ -307,8 +307,8 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
             onClick={() => handleRun(false)}
             disabled={loading || !selectedPromptId}
             style={{
-              padding: '10px 20px', background: loading ? '#94a3b8' : '#1e40af',
-              color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700,
+              padding: '10px 20px', background: loading ? 'var(--afl-n-400)' : 'var(--afl-info-700)',
+              color: 'var(--afl-n-0)', border: 'none', borderRadius: '10px', fontWeight: 700,
               fontSize: '0.85rem', cursor: loading ? 'wait' : 'pointer',
               display: 'flex', alignItems: 'center', gap: '7px',
               boxShadow: loading ? 'none' : '0 2px 8px rgba(30,64,175,0.3)',
@@ -316,7 +316,7 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
             }}
           >
             {loading ? (
-              <><span style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.4)', borderTop: '2px solid #fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />Analyzing…</>
+              <><span style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.4)', borderTop: '2px solid var(--afl-n-0)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />Analyzing…</>
             ) : (
               <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Examine</>
             )}
@@ -328,8 +328,8 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
               disabled={loading}
               title="Force a fresh AI generation (bypass cache)"
               style={{
-                padding: '10px 14px', background: '#f1f5f9', color: '#475569',
-                border: '1px solid #e2e8f0', borderRadius: '10px', fontWeight: 700,
+                padding: '10px 14px', background: 'var(--afl-n-100)', color: 'var(--afl-n-600)',
+                border: '1px solid var(--afl-n-200)', borderRadius: '10px', fontWeight: 700,
                 fontSize: '0.82rem', cursor: loading ? 'wait' : 'pointer',
                 display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s ease',
               }}
@@ -343,38 +343,38 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
         </div>
       </div>
       {error && (
-        <div style={{ padding: '14px 18px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', color: '#b91c1c', fontSize: '0.84rem', marginBottom: '16px' }}>
+        <div style={{ padding: '14px 18px', background: 'var(--afl-danger-50)', border: '1px solid var(--afl-danger-100)', borderRadius: '10px', color: 'var(--afl-danger-700)', fontSize: '0.84rem', marginBottom: '16px' }}>
           {error}
         </div>
       )}
       {result && (
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+        <div style={{ background: 'var(--afl-n-0)', border: '1px solid var(--afl-n-200)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
           <div style={{
             padding: '10px 18px',
-            background: result.from_cache ? '#f0fdf4' : '#eff6ff',
-            borderBottom: '1px solid #e2e8f0',
+            background: result.from_cache ? 'var(--afl-success-50)' : 'var(--afl-info-50)',
+            borderBottom: '1px solid var(--afl-n-200)',
             display: 'flex', alignItems: 'center', gap: '16px',
             fontSize: '0.75rem', flexWrap: 'wrap' as const,
           }}>
-            <span style={{ fontWeight: 700, color: result.from_cache ? '#166534' : '#1e40af', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <span style={{ fontWeight: 700, color: result.from_cache ? 'var(--afl-success-700)' : 'var(--afl-info-700)', display: 'flex', alignItems: 'center', gap: '5px' }}>
               {result.from_cache ? 'Loaded from cache' : 'Freshly generated'}
             </span>
-            <span style={{ color: '#94a3b8' }}>Model: <strong style={{ color: '#475569' }}>{result.model_used}</strong></span>
-            <span style={{ color: '#94a3b8' }}>{new Date(result.created_at).toLocaleString()}</span>
+            <span style={{ color: 'var(--afl-n-400)' }}>Model: <strong style={{ color: 'var(--afl-n-600)' }}>{result.model_used}</strong></span>
+            <span style={{ color: 'var(--afl-n-400)' }}>{new Date(result.created_at).toLocaleString()}</span>
           </div>
           <div style={{ padding: '20px 24px' }}>
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                h1: ({children}) => <h1 style={{fontSize:'1.1rem',fontWeight:800,color:'#0f172a',margin:'0 0 12px',borderBottom:'2px solid #e2e8f0',paddingBottom:'6px'}}>{children}</h1>,
-                h2: ({children}) => <h2 style={{fontSize:'0.98rem',fontWeight:700,color:'#1e293b',margin:'18px 0 8px'}}>{children}</h2>,
-                h3: ({children}) => <h3 style={{fontSize:'0.88rem',fontWeight:700,color:'#334155',margin:'14px 0 6px'}}>{children}</h3>,
-                p:  ({children}) => <p  style={{margin:'0 0 10px',lineHeight:1.7,color:'#334155',fontSize:'0.87rem'}}>{children}</p>,
-                ul: ({children}) => <ul style={{margin:'0 0 10px',paddingLeft:'18px',color:'#334155',fontSize:'0.87rem'}}>{children}</ul>,
-                ol: ({children}) => <ol style={{margin:'0 0 10px',paddingLeft:'18px',color:'#334155',fontSize:'0.87rem'}}>{children}</ol>,
+                h1: ({children}) => <h1 style={{fontSize:'1.1rem',fontWeight:800,color:'var(--afl-n-900)',margin:'0 0 12px',borderBottom:'2px solid var(--afl-n-200)',paddingBottom:'6px'}}>{children}</h1>,
+                h2: ({children}) => <h2 style={{fontSize:'0.98rem',fontWeight:700,color:'var(--afl-n-800)',margin:'18px 0 8px'}}>{children}</h2>,
+                h3: ({children}) => <h3 style={{fontSize:'0.88rem',fontWeight:700,color:'var(--afl-n-700)',margin:'14px 0 6px'}}>{children}</h3>,
+                p:  ({children}) => <p  style={{margin:'0 0 10px',lineHeight:1.7,color:'var(--afl-n-700)',fontSize:'0.87rem'}}>{children}</p>,
+                ul: ({children}) => <ul style={{margin:'0 0 10px',paddingLeft:'18px',color:'var(--afl-n-700)',fontSize:'0.87rem'}}>{children}</ul>,
+                ol: ({children}) => <ol style={{margin:'0 0 10px',paddingLeft:'18px',color:'var(--afl-n-700)',fontSize:'0.87rem'}}>{children}</ol>,
                 li: ({children}) => <li style={{marginBottom:'4px',lineHeight:1.65}}>{children}</li>,
-                strong: ({children}) => <strong style={{fontWeight:700,color:'#0f172a'}}>{children}</strong>,
-                blockquote: ({children}) => <blockquote style={{margin:'12px 0',padding:'12px 16px',borderLeft:'4px solid #3b82f6',background:'#eff6ff',borderRadius:'0 8px 8px 0',color:'#1e40af',fontSize:'0.84rem',fontStyle:'italic'}}>{children}</blockquote>,
+                strong: ({children}) => <strong style={{fontWeight:700,color:'var(--afl-n-900)'}}>{children}</strong>,
+                blockquote: ({children}) => <blockquote style={{margin:'12px 0',padding:'12px 16px',borderLeft:'4px solid var(--afl-info-500)',background:'var(--afl-info-50)',borderRadius:'0 8px 8px 0',color:'var(--afl-info-700)',fontSize:'0.84rem',fontStyle:'italic'}}>{children}</blockquote>,
                 code: ({children, ...props}) => {
                   const text = String(children);
                   if (text.startsWith('MDD::')) {
@@ -382,8 +382,8 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
                     return (
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', gap: '5px',
-                        background: '#fef3c7', color: '#92400e',
-                        border: '1.5px solid #fcd34d',
+                        background: 'var(--afl-warn-50)', color: 'var(--afl-warn-700)',
+                        border: '1.5px solid var(--afl-warn-500)',
                         borderRadius: '6px', padding: '1px 9px',
                         fontWeight: 800, fontSize: '0.88rem',
                         fontFamily: 'inherit', letterSpacing: '0.01em',
@@ -417,26 +417,26 @@ export default function ExamineView({ activeTab, setId, productData }: ExamineVi
       <style>{`@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }`}</style>
       <section>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-          <div style={{ width: '4px', height: '20px', background: '#1e40af', borderRadius: '2px' }} />
-          <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
+          <div style={{ width: '4px', height: '20px', background: 'var(--afl-info-700)', borderRadius: '2px' }} />
+          <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--afl-n-900)', letterSpacing: '-0.01em' }}>
             Product &amp; Registration Specifications
           </h2>
           {productData.length > 0 && (
-            <span style={{ background: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe', borderRadius: '20px', padding: '2px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
+            <span style={{ background: 'var(--afl-info-50)', color: 'var(--afl-info-700)', border: '1px solid var(--afl-info-100)', borderRadius: '20px', padding: '2px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
               {productData.length} product{productData.length !== 1 ? 's' : ''}
             </span>
           )}
         </div>
-        <p style={{ margin: '0 0 14px', fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>
+        <p style={{ margin: '0 0 14px', fontSize: '0.78rem', color: 'var(--afl-n-500)', lineHeight: 1.5 }}>
           Structured product registration data extracted from the Structured Product Labeling (SPL) XML —
-          specifically the <code style={{ background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', fontSize: '0.74rem', fontFamily: 'ui-monospace, monospace' }}>48780-1</code> product data section.
+          specifically the <code style={{ background: 'var(--afl-n-100)', padding: '1px 5px', borderRadius: '4px', fontSize: '0.74rem', fontFamily: 'ui-monospace, monospace' }}>48780-1</code> product data section.
         </p>
         <ProductSpecsTable productData={productData} />
       </section>
-      <div style={{ borderTop: '1px solid #f1f5f9' }} />
+      <div style={{ borderTop: '1px solid var(--afl-n-100)' }} />
       <section>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-          <div style={{ width: '4px', height: '20px', background: '#059669', borderRadius: '2px' }} />
+          <div style={{ width: '4px', height: '20px', background: 'var(--afl-success-700)', borderRadius: '2px' }} />
         </div>
         <ClinicalQueryEngine setId={setId} />
       </section>

@@ -199,10 +199,10 @@ export default function DeepDiveView({
 
   const getLevelStyles = (code: string) => {
     switch (code) {
-      case 'B': return { bg: '#fee2e2', text: '#b91c1c', border: '#ef4444', label: 'Boxed', shadow: '0 0 8px rgba(239,68,68,0.2)' };
-      case 'W': return { bg: '#ffedd5', text: '#c2410c', border: '#f97316', label: 'Warning', shadow: 'none' };
-      case 'A': return { bg: '#fef9c3', text: '#a16207', border: '#eab308', label: 'Adverse', shadow: 'none' };
-      default:  return { bg: '#f8fafc', text: '#94a3b8', border: '#e2e8f0', label: 'None', shadow: 'none' };
+      case 'B': return { bg: 'var(--afl-danger-100)', text: 'var(--afl-danger-700)', border: 'var(--afl-danger-500)', label: 'Boxed', shadow: '0 0 8px rgba(239,68,68,0.2)' };
+      case 'W': return { bg: 'var(--afl-warn-100)', text: 'var(--afl-warn-700)', border: 'var(--afl-warn-500)', label: 'Warning', shadow: 'none' };
+      case 'A': return { bg: 'var(--afl-warn-50)', text: 'var(--afl-warn-700)', border: 'var(--afl-warn-500)', label: 'Adverse', shadow: 'none' };
+      default:  return { bg: 'var(--afl-n-50)', text: 'var(--afl-n-400)', border: 'var(--afl-n-200)', label: 'None', shadow: 'none' };
     }
   };
 
@@ -222,8 +222,8 @@ export default function DeepDiveView({
       <div className="selection-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>Regulatory Intelligence</h3>
-            <p style={{ margin: '6px 0 0 0', fontSize: '0.9rem', color: '#64748b', fontWeight: 500 }}>Select a clinical cohort to perform a comparative gap analysis.</p>
+            <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 900, color: 'var(--afl-n-900)', letterSpacing: '-0.02em' }}>Regulatory Intelligence</h3>
+            <p style={{ margin: '6px 0 0 0', fontSize: '0.9rem', color: 'var(--afl-n-500)', fontWeight: 500 }}>Select a clinical cohort to perform a comparative gap analysis.</p>
           </div>
         </div>
 
@@ -276,25 +276,25 @@ export default function DeepDiveView({
           {/* DEV LOG: Cache Statistics */}
           <div style={{
             backgroundColor: 'transparent',
-            color: '#64748b',
+            color: 'var(--afl-n-500)',
             padding: '8px 0',
             fontSize: '0.85rem',
             marginBottom: '16px',
-            borderBottom: '1px dashed #e2e8f0',
+            borderBottom: '1px dashed var(--afl-n-200)',
             display: 'flex',
             gap: '20px',
             alignItems: 'center',
             fontWeight: 500
           }}>
-            <span style={{ fontWeight: 800, color: '#94a3b8', fontSize: '0.75rem', letterSpacing: '0.05em' }}>[DEV_LOG]</span>
+            <span style={{ fontWeight: 800, color: 'var(--afl-n-400)', fontSize: '0.75rem', letterSpacing: '0.05em' }}>[DEV_LOG]</span>
             {results._stats ? (
               <>
-                <span style={{ color: '#475569' }}>Optimization Active:</span>
-                <span>Cache Hits: <strong style={{ color: '#0f172a' }}>{results._stats.cache_hits}</strong></span>
-                <span>New Scans: <strong style={{ color: '#0f172a' }}>{results._stats.cache_misses}</strong></span>
+                <span style={{ color: 'var(--afl-n-600)' }}>Optimization Active:</span>
+                <span>Cache Hits: <strong style={{ color: 'var(--afl-n-900)' }}>{results._stats.cache_hits}</strong></span>
+                <span>New Scans: <strong style={{ color: 'var(--afl-n-900)' }}>{results._stats.cache_misses}</strong></span>
                 <span style={{ 
-                  backgroundColor: '#f0fdf4', 
-                  color: '#16a34a', 
+                  backgroundColor: 'var(--afl-success-50)', 
+                  color: 'var(--afl-success-500)', 
                   padding: '2px 8px', 
                   borderRadius: '12px',
                   fontSize: '0.75rem',
@@ -312,7 +312,7 @@ export default function DeepDiveView({
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <h2 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.03em' }}>Signal Anomalies</h2>
+                <h2 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 900, color: 'var(--afl-n-900)', letterSpacing: '-0.03em' }}>Signal Anomalies</h2>
                 <div className="peer-summary-badge">Analyzed {results.peer_count} Peers</div>
               </div>
               <button onClick={generateMemo} disabled={selectedSignals.size === 0} className="memo-action-btn">
@@ -518,94 +518,94 @@ export default function DeepDiveView({
       )}
 
       <style jsx>{`
-        .selection-card { background: white; border-radius: 24px; padding: 32px; border: 1px solid #e2e8f0; box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05); margin-bottom: 32px; }
-        .source-toggle { background: #f1f5f9; padding: 6px; border-radius: 14px; display: flex; gap: 4px; }
-        .source-btn { padding: 8px 18px; border-radius: 10px; font-size: 0.8rem; font-weight: 800; cursor: pointer; border: none; background: transparent; color: #64748b; text-transform: uppercase; transition: all 0.2s; }
-        .source-btn.active { background: white; color: #0f172a; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .selection-card { background: white; border-radius: 24px; padding: 32px; border: 1px solid var(--afl-n-200); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05); margin-bottom: 32px; }
+        .source-toggle { background: var(--afl-n-100); padding: 6px; border-radius: 14px; display: flex; gap: 4px; }
+        .source-btn { padding: 8px 18px; border-radius: 10px; font-size: 0.8rem; font-weight: 800; cursor: pointer; border: none; background: transparent; color: var(--afl-n-500); text-transform: uppercase; transition: all 0.2s; }
+        .source-btn.active { background: white; color: var(--afl-n-900); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         
-        .cohort-column { background: #f8fafc; border-radius: 20px; border: 1px solid #e2e8f0; overflow: hidden; }
-        .cohort-header { padding: 16px 24px; background: rgba(255,255,255,0.6); border-bottom: 1px solid #e2e8f0; font-weight: 900; font-size: 0.8rem; color: #475569; text-transform: uppercase; }
+        .cohort-column { background: var(--afl-n-50); border-radius: 20px; border: 1px solid var(--afl-n-200); overflow: hidden; }
+        .cohort-header { padding: 16px 24px; background: rgba(255,255,255,0.6); border-bottom: 1px solid var(--afl-n-200); font-weight: 900; font-size: 0.8rem; color: var(--afl-n-600); text-transform: uppercase; }
         .cohort-body { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-        .cohort-card { display: flex; justify-content: space-between; align-items: center; background: white; padding: 16px 20px; border-radius: 14px; border: 2px solid #f1f5f9; cursor: pointer; transition: all 0.3s ease; }
-        .cohort-card:hover { transform: translateY(-3px); border-color: #3b82f6; }
-        .cohort-card.active { border-color: #3b82f6; background: #eff6ff; }
-        .cohort-name { font-weight: 800; color: #1e293b; }
-        .cohort-count { font-size: 0.75rem; font-weight: 900; background: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 8px; }
+        .cohort-card { display: flex; justify-content: space-between; align-items: center; background: white; padding: 16px 20px; border-radius: 14px; border: 2px solid var(--afl-n-100); cursor: pointer; transition: all 0.3s ease; }
+        .cohort-card:hover { transform: translateY(-3px); border-color: var(--afl-info-500); }
+        .cohort-card.active { border-color: var(--afl-info-500); background: var(--afl-info-50); }
+        .cohort-name { font-weight: 800; color: var(--afl-n-800); }
+        .cohort-count { font-size: 0.75rem; font-weight: 900; background: var(--afl-info-50); color: var(--afl-info-700); padding: 4px 10px; border-radius: 8px; }
 
-        .analysis-loading { text-align: center; padding: 80px; background: white; border-radius: 24px; border: 1px solid #e2e8f0; }
-        .peer-summary-badge { background: #f1f5f9; color: #475569; padding: 6px 14px; border-radius: 30px; font-size: 0.8rem; font-weight: 800; }
-        .memo-action-btn { background: #e11d48; color: white; border: none; padding: 12px 24px; border-radius: 14px; font-weight: 900; cursor: pointer; transition: all 0.3s; }
-        .memo-action-btn:disabled { background: #fca5a5; cursor: not-allowed; }
+        .analysis-loading { text-align: center; padding: 80px; background: white; border-radius: 24px; border: 1px solid var(--afl-n-200); }
+        .peer-summary-badge { background: var(--afl-n-100); color: var(--afl-n-600); padding: 6px 14px; border-radius: 30px; font-size: 0.8rem; font-weight: 800; }
+        .memo-action-btn { background: var(--afl-danger-500); color: white; border: none; padding: 12px 24px; border-radius: 14px; font-weight: 900; cursor: pointer; transition: all 0.3s; }
+        .memo-action-btn:disabled { background: var(--afl-danger-100); cursor: not-allowed; }
 
-        .anomaly-tier { background: white; border-radius: 24px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
+        .anomaly-tier { background: white; border-radius: 24px; border: 1px solid var(--afl-n-200); overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
         .tier-label { padding: 14px 24px; font-weight: 900; font-size: 0.8rem; text-transform: uppercase; }
-        .critical .tier-label { background: #fee2e2; color: #b91c1c; }
-        .moderate .tier-label { background: #fffbeb; color: #92400e; }
+        .critical .tier-label { background: var(--afl-danger-100); color: var(--afl-danger-700); }
+        .moderate .tier-label { background: var(--afl-warn-50); color: var(--afl-warn-700); }
         .tier-content { padding: 20px; }
 
-        .matrix-container { background: white; border-radius: 24px; border: 1px solid #e2e8f0; overflow: hidden; }
-        .matrix-header-main { padding: 20px 32px; background: #f8fafc; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+        .matrix-container { background: white; border-radius: 24px; border: 1px solid var(--afl-n-200); overflow: hidden; }
+        .matrix-header-main { padding: 20px 32px; background: var(--afl-n-50); border-bottom: 1px solid var(--afl-n-100); display: flex; justify-content: space-between; align-items: center; }
         .matrix-controls { display: flex; align-items: center; gap: 12px; }
-        .control-btn { padding: 6px 12px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.75rem; font-weight: 700; color: #475569; cursor: pointer; transition: all 0.2s; }
-        .control-btn:hover { background: #f8fafc; border-color: #3b82f6; color: #3b82f6; }
-        .filter-toggle { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; }
-        .toggle-label { font-size: 0.75rem; font-weight: 700; color: #475569; }
+        .control-btn { padding: 6px 12px; background: white; border: 1px solid var(--afl-n-200); border-radius: 8px; font-size: 0.75rem; font-weight: 700; color: var(--afl-n-600); cursor: pointer; transition: all 0.2s; }
+        .control-btn:hover { background: var(--afl-n-50); border-color: var(--afl-info-500); color: var(--afl-info-500); }
+        .filter-toggle { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: white; border: 1px solid var(--afl-n-200); border-radius: 8px; cursor: pointer; }
+        .toggle-label { font-size: 0.75rem; font-weight: 700; color: var(--afl-n-600); }
 
         .matrix-legend { display: flex; gap: 16px; }
         .legend-item { display: flex; align-items: center; gap: 6px; }
         .gem { width: 12px; height: 12px; border-radius: 3px; border: 1.5px solid; flex-shrink: 0; display: inline-block; }
-        .gem.B { background: #fee2e2; border-color: #ef4444; }
-        .gem.W { background: #ffedd5; border-color: #f97316; }
-        .gem.A { background: #fef9c3; border-color: #eab308; }
-        .gem.N { background: #f8fafc; border-color: #e2e8f0; }
-        .legend-text { font-size: 0.7rem; font-weight: 800; color: #64748b; }
+        .gem.B { background: var(--afl-danger-100); border-color: var(--afl-danger-500); }
+        .gem.W { background: var(--afl-warn-100); border-color: var(--afl-warn-500); }
+        .gem.A { background: var(--afl-warn-50); border-color: var(--afl-warn-500); }
+        .gem.N { background: var(--afl-n-50); border-color: var(--afl-n-200); }
+        .legend-text { font-size: 0.7rem; font-weight: 800; color: var(--afl-n-500); }
 
-        .soc-group { border-bottom: 1px solid #f1f5f9; }
-        .soc-header { padding: 16px 32px; background: #ffffff; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
-        .soc-header:hover { background: #f8fafc; }
-        .soc-name { font-weight: 900; color: #0f172a; }
-        .soc-count { font-size: 0.7rem; font-weight: 800; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 10px; }
-        .soc-summary-line { flex: 1; margin-left: 20px; height: 1px; background: #f1f5f9; }
+        .soc-group { border-bottom: 1px solid var(--afl-n-100); }
+        .soc-header { padding: 16px 32px; background: var(--afl-n-0); cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+        .soc-header:hover { background: var(--afl-n-50); }
+        .soc-name { font-weight: 900; color: var(--afl-n-900); }
+        .soc-count { font-size: 0.7rem; font-weight: 800; background: var(--afl-n-100); color: var(--afl-n-500); padding: 2px 8px; border-radius: 10px; }
+        .soc-summary-line { flex: 1; margin-left: 20px; height: 1px; background: var(--afl-n-100); }
 
         .modern-matrix-table { width: 100%; border-collapse: collapse; }
-        .modern-matrix-table th { padding: 12px 24px; font-size: 0.7rem; font-weight: 900; color: #94a3b8; text-transform: uppercase; text-align: left; }
-        .modern-matrix-table td { padding: 16px 24px; border-bottom: 1px solid #f8fafc; }
-        .is-discrepancy { background: #fffcf0; }
-        .pt-text { font-weight: 800; color: #1e293b; }
-        .original-match-tag { font-size: 0.7rem; font-weight: 700; color: #3b82f6; background: #eff6ff; padding: 2px 8px; border-radius: 6px; margin-left: 8px; }
+        .modern-matrix-table th { padding: 12px 24px; font-size: 0.7rem; font-weight: 900; color: var(--afl-n-400); text-transform: uppercase; text-align: left; }
+        .modern-matrix-table td { padding: 16px 24px; border-bottom: 1px solid var(--afl-n-50); }
+        .is-discrepancy { background: var(--afl-warn-50); }
+        .pt-text { font-weight: 800; color: var(--afl-n-800); }
+        .original-match-tag { font-size: 0.7rem; font-weight: 700; color: var(--afl-info-500); background: var(--afl-info-50); padding: 2px 8px; border-radius: 6px; margin-left: 8px; }
         .gem-badge { width: 32px; height: 32px; line-height: 32px; text-align: center; border-radius: 8px; font-size: 0.85rem; font-weight: 900; border: 2px solid; margin: 0 auto; }
-        .consensus-meta { font-size: 0.65rem; color: #94a3b8; font-weight: 900; margin-top: 6px; text-align: center; }
+        .consensus-meta { font-size: 0.65rem; color: var(--afl-n-400); font-weight: 900; margin-top: 6px; text-align: center; }
         .peer-track { display: flex; gap: 4px; flex-wrap: wrap; }
         .peer-gem { width: 10px; height: 20px; border-radius: 3px; cursor: pointer; }
 
         .memo-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.7); backdrop-filter: blur(12px); z-index: 5000; display: flex; alignItems: center; justifyContent: center; padding: 40px; }
-        .memo-modal-advanced { background: #f8fafc; width: 100%; maxWidth: 1000px; height: 85vh; border-radius: 24px; display: flex; overflow: hidden; box-shadow: 0 40px 100px -12px rgba(0,0,0,0.4); animation: modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .memo-modal-advanced { background: var(--afl-n-50); width: 100%; maxWidth: 1000px; height: 85vh; border-radius: 24px; display: flex; overflow: hidden; box-shadow: 0 40px 100px -12px rgba(0,0,0,0.4); animation: modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes modalPop { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .memo-modal-sidebar { width: 280px; background: #1e293b; padding: 32px; color: white; display: flex; flex-direction: column; }
+        .memo-modal-sidebar { width: 280px; background: var(--afl-n-800); padding: 32px; color: white; display: flex; flex-direction: column; }
         .stat-item { margin-top: 24px; }
-        .stat-item label { display: block; font-size: 0.65rem; text-transform: uppercase; font-weight: 800; color: #94a3b8; letter-spacing: 0.1em; }
-        .stat-item span { font-size: 0.95rem; font-weight: 600; color: #f8fafc; }
+        .stat-item label { display: block; font-size: 0.65rem; text-transform: uppercase; font-weight: 800; color: var(--afl-n-400); letter-spacing: 0.1em; }
+        .stat-item span { font-size: 0.95rem; font-weight: 600; color: var(--afl-n-50); }
         .memo-modal-main { flex: 1; display: flex; flex-direction: column; background: white; overflow: hidden; }
         .memo-document-container { flex: 1; padding: 40px; display: flex; flex-direction: column; overflow: hidden; }
-        .memo-header-formal { border-bottom: 2px solid #f1f5f9; padding-bottom: 24px; margin-bottom: 24px; }
-        .memo-title { font-size: 1.25rem; font-weight: 900; color: #0f172a; }
+        .memo-header-formal { border-bottom: 2px solid var(--afl-n-100); padding-bottom: 24px; margin-bottom: 24px; }
+        .memo-title { font-size: 1.25rem; font-weight: 900; color: var(--afl-n-900); }
         .memo-scroll-area { flex: 1; overflow-y: auto; padding-right: 10px; }
-        .memo-textarea-formal { width: 100%; height: 350px; border: none; font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; line-height: 1.7; outline: none; resize: none; color: #334155; }
+        .memo-textarea-formal { width: 100%; height: 350px; border: none; font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; line-height: 1.7; outline: none; resize: none; color: var(--afl-n-700); }
         
-        .memo-references-ui { margin-top: 40px; border-top: 2px dashed #f1f5f9; paddingTop: 24px; }
-        .refs-title { font-size: 0.75rem; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; }
+        .memo-references-ui { margin-top: 40px; border-top: 2px dashed var(--afl-n-100); paddingTop: 24px; }
+        .refs-title { font-size: 0.75rem; font-weight: 900; color: var(--afl-n-400); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; }
         .refs-list { display: flex; flex-direction: column; gap: 12px; }
-        .ref-item { display: flex; flex-direction: column; gap: 4px; padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px solid #f1f5f9; }
-        .ref-meta { font-size: 0.85rem; font-weight: 700; color: #1e293b; }
-        .ref-link { font-size: 0.8rem; color: #3b82f6; text-decoration: none; font-family: monospace; font-weight: 600; word-break: break-all; }
+        .ref-item { display: flex; flex-direction: column; gap: 4px; padding: 12px; background: var(--afl-n-50); border-radius: 10px; border: 1px solid var(--afl-n-100); }
+        .ref-meta { font-size: 0.85rem; font-weight: 700; color: var(--afl-n-800); }
+        .ref-link { font-size: 0.8rem; color: var(--afl-info-500); text-decoration: none; font-family: monospace; font-weight: 600; word-break: break-all; }
         .ref-link:hover { text-decoration: underline; }
 
-        .memo-modal-footer-advanced { padding: 24px 40px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 16px; }
-        .btn-copy-modern { background: #0f172a; color: white; padding: 12px 32px; border-radius: 12px; font-weight: 800; border: none; cursor: pointer; transition: all 0.2s; }
-        .btn-cancel-modern { background: white; color: #64748b; padding: 12px 24px; border-radius: 12px; font-weight: 800; border: 1px solid #e2e8f0; cursor: pointer; }
+        .memo-modal-footer-advanced { padding: 24px 40px; background: var(--afl-n-50); border-top: 1px solid var(--afl-n-200); display: flex; justify-content: flex-end; gap: 16px; }
+        .btn-copy-modern { background: var(--afl-n-900); color: white; padding: 12px 32px; border-radius: 12px; font-weight: 800; border: none; cursor: pointer; transition: all 0.2s; }
+        .btn-cancel-modern { background: white; color: var(--afl-n-500); padding: 12px 24px; border-radius: 12px; font-weight: 800; border: 1px solid var(--afl-n-200); cursor: pointer; }
         .animate-fade-in { animation: fadeIn 0.6s cubic-bezier(0.23, 1, 0.32, 1); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 2s linear infinite; }
+        .loader { border: 4px solid var(--afl-n-100); border-top: 4px solid var(--afl-info-500); border-radius: 50%; width: 30px; height: 30px; animation: spin 2s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
       `}</style>
 
@@ -616,9 +616,9 @@ export default function DeepDiveView({
 function renderAnomalyCard(s: Anomaly, tier: 'critical' | 'moderate' | 'minor', onToggle: (t:string)=>void, selected: Set<string>) {
   const isSelected = selected.has(s.term);
   const tierColors = {
-    critical: { bg: '#fff1f2', border: '#fecaca', text: '#9f1239', accent: '#e11d48' },
-    moderate: { bg: '#fffbeb', border: '#fde68a', text: '#92400e', accent: '#f59e0b' },
-    minor: { bg: '#f8fafc', border: '#e2e8f0', text: '#475569', accent: '#94a3b8' }
+    critical: { bg: 'var(--afl-danger-50)', border: 'var(--afl-danger-100)', text: 'var(--afl-danger-700)', accent: 'var(--afl-danger-500)' },
+    moderate: { bg: 'var(--afl-warn-50)', border: 'var(--afl-warn-100)', text: 'var(--afl-warn-700)', accent: 'var(--afl-warn-500)' },
+    minor: { bg: 'var(--afl-n-50)', border: 'var(--afl-n-200)', text: 'var(--afl-n-600)', accent: 'var(--afl-n-400)' }
   };
   const color = tierColors[tier];
   const distStr = `B:${s.distribution.B}% W:${s.distribution.W}% A:${s.distribution.A}% N:${s.distribution.N}%`;
@@ -635,15 +635,15 @@ function renderAnomalyCard(s: Anomaly, tier: 'critical' | 'moderate' | 'minor', 
         <input type="checkbox" checked={isSelected} readOnly style={{ width: '18px', height: '18px', accentColor: color.accent }} />
         <div>
           <div style={{ fontWeight: 900, color: color.text, fontSize: '1.05rem', letterSpacing: '-0.01em' }}>{s.term}</div>
-          <div style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 800, marginTop: '2px' }}>{s.soc}</div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--afl-n-400)', textTransform: 'uppercase', fontWeight: 800, marginTop: '2px' }}>{s.soc}</div>
           <div style={{ fontSize: '0.75rem', color: color.accent, fontWeight: 800, marginTop: '6px', background: 'rgba(255,255,255,0.5)', padding: '2px 8px', borderRadius: '4px', width: 'fit-content' }}>
             {s.note}
           </div>
         </div>
       </div>
       <div style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 900, marginBottom: '4px' }}>Peer Distribution</div>
-        <div style={{ fontFamily: 'monospace', fontSize: '0.85rem', fontWeight: 800, color: '#334155', background: '#f1f5f9', padding: '4px 10px', borderRadius: '6px' }}>
+        <div style={{ fontSize: '0.65rem', color: 'var(--afl-n-400)', textTransform: 'uppercase', fontWeight: 900, marginBottom: '4px' }}>Peer Distribution</div>
+        <div style={{ fontFamily: 'monospace', fontSize: '0.85rem', fontWeight: 800, color: 'var(--afl-n-700)', background: 'var(--afl-n-100)', padding: '4px 10px', borderRadius: '6px' }}>
           {distStr}
         </div>
       </div>

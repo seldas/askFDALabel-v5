@@ -14,8 +14,8 @@ const SectionComponent = memo(function SectionComponent({ section }: { section: 
     >
       {section.title && <h2 style={{ 
         fontSize: '1.5rem', 
-        color: '#1e293b', 
-        borderBottom: '2px solid #f1f5f9', 
+        color: 'var(--afl-n-800)', 
+        borderBottom: '2px solid var(--afl-n-100)', 
         paddingBottom: '12px',
         marginBottom: '20px',
         fontWeight: 700
@@ -39,21 +39,21 @@ const HighlightsComponent = memo(function HighlightsComponent({
     <div id="highlights-content">
         <h2 style={{ 
             fontSize: '1.25rem', 
-            color: '#000', 
-            marginBottom: '20px', 
-            fontWeight: 900, 
-            textTransform: 'uppercase', 
-            borderBottom: '2px solid #000', 
+            color: 'var(--afl-n-900)',
+            marginBottom: '20px',
+            fontWeight: 900,
+            textTransform: 'uppercase',
+            borderBottom: '2px solid var(--afl-n-900)',
             paddingBottom: '8px',
             letterSpacing: '0.05em' 
         }}>
             Highlights of Prescribing Information
         </h2>
         {highlights.map((h, i) => (
-            <div key={i} className="highlight-item" style={{ marginBottom: '18px', paddingBottom: '18px', borderBottom: '1px solid #e2e8f0' }}>
+            <div key={i} className="highlight-item" style={{ marginBottom: '18px', paddingBottom: '18px', borderBottom: '1px solid var(--afl-n-200)' }}>
                 <div className="highlight-item-header">
                     {h.source_section_title !== 'Untitled Section' && (
-                        <span className="source-title" style={{ fontWeight: 700, color: '#334155', textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                        <span className="source-title" style={{ fontWeight: 700, color: 'var(--afl-n-700)', textTransform: 'uppercase', fontSize: '0.75rem' }}>
                             {h.source_section_title}
                         </span>
                     )}
@@ -67,7 +67,7 @@ const HighlightsComponent = memo(function HighlightsComponent({
                         </button>
                     )}
                 </div>
-                <div className="highlight-body spl-content" style={{ color: '#1e293b', lineHeight: '1.7', fontSize: '0.9rem' }} dangerouslySetInnerHTML={{ __html: h.content_html }} />
+                <div className="highlight-body spl-content" style={{ color: 'var(--afl-n-800)', lineHeight: '1.7', fontSize: '0.9rem' }} dangerouslySetInnerHTML={{ __html: h.content_html }} />
             </div>
         ))}
     </div>
@@ -272,7 +272,7 @@ export default function LabelView({
           background: 'white',
           borderRadius: '16px',
           boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-          border: '1px solid #f1f5f9',
+          border: '1px solid var(--afl-n-100)',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
@@ -285,7 +285,7 @@ export default function LabelView({
               justifyContent: 'center', 
               alignItems: 'center',
               paddingBottom: '12px',
-              borderBottom: '1px solid #f1f5f9',
+              borderBottom: '1px solid var(--afl-n-100)',
               position: 'relative'
             }}>
               <h2 style={{ 
@@ -293,7 +293,7 @@ export default function LabelView({
                 fontWeight: 700, 
                 textTransform: 'uppercase', 
                 letterSpacing: '0.05em', 
-                color: '#64748b', 
+                color: 'var(--afl-n-500)', 
                 margin: 0 
               }}>
                 Table of Contents
@@ -301,11 +301,11 @@ export default function LabelView({
               <button 
                 onClick={() => setTocCollapsed(true)} 
                 style={{ 
-                  background: '#f8fafc', 
-                  border: '1px solid #e2e8f0', 
+                  background: 'var(--afl-n-50)', 
+                  border: '1px solid var(--afl-n-200)', 
                   borderRadius: '6px',
                   cursor: 'pointer', 
-                  color: '#94a3b8', 
+                  color: 'var(--afl-n-400)', 
                   fontSize: '0.75rem',
                   width: '24px',
                   height: '24px',
@@ -334,7 +334,7 @@ export default function LabelView({
                 ))}
               </ol>
             ) : (
-              <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>No TOC available.</p>
+              <p style={{ fontSize: '0.8rem', color: 'var(--afl-n-400)' }}>No TOC available.</p>
             )}
           </div>
         </div>
@@ -342,7 +342,7 @@ export default function LabelView({
         {/* Main Content */}
         <div className="label-main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto', maxHeight: '80vh' }}>
             {tocCollapsed && (
-              <button onClick={() => setTocCollapsed(false)} style={{ position: 'absolute', left: '20px', zIndex: 10, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '4px 12px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+              <button onClick={() => setTocCollapsed(false)} style={{ position: 'absolute', left: '20px', zIndex: 10, background: 'white', border: '1px solid var(--afl-n-200)', borderRadius: '8px', padding: '4px 12px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                 ☰ SHOW MENU
               </button>
             )}
@@ -353,7 +353,7 @@ export default function LabelView({
                 display: 'flex', 
                 flexDirection: 'column', 
                 minHeight: 0, 
-                background: '#f1f5f9',
+                background: 'var(--afl-n-100)',
                 borderRadius: '12px',
                 padding: '0',
                 position: 'relative',
@@ -377,14 +377,14 @@ export default function LabelView({
                     <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '40px' }}>
                         {data.is_latest === false && (
                           <div style={{
-                            background: '#fffbeb',
-                            border: '1px dashed #d97706',
+                            background: 'var(--afl-warn-50)',
+                            border: '1px dashed var(--afl-warn-700)',
                             borderRadius: '8px',
                             padding: '16px 20px',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '12px',
-                            color: '#92400e',
+                            color: 'var(--afl-warn-700)',
                             fontSize: '0.85rem',
                             fontWeight: 600,
                             boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
@@ -398,14 +398,14 @@ export default function LabelView({
                         )}
                         {data.is_latest !== false && data.openfda_status === 'Archived' && (
                           <div style={{
-                            background: '#fffbeb',
-                            border: '1px dashed #d97706',
+                            background: 'var(--afl-warn-50)',
+                            border: '1px dashed var(--afl-warn-700)',
                             borderRadius: '8px',
                             padding: '16px 20px',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '12px',
-                            color: '#92400e',
+                            color: 'var(--afl-warn-700)',
                             fontSize: '0.85rem',
                             fontWeight: 600,
                             boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
@@ -430,7 +430,7 @@ export default function LabelView({
                                     borderRadius: '8px',
                                     padding: '40px 50px',
                                     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                                    border: '1px solid #e2e8f0',
+                                    border: '1px solid var(--afl-n-200)',
                                     position: 'relative'
                                 }}
                             >
@@ -497,11 +497,11 @@ export default function LabelView({
         <style jsx>{`
             .toc-side-panel-inline { transition: width 0.3s ease; }
             .toc-side-panel-inline.collapsed { width: 0 !important; margin-right: -20px; border: none; }
-            .toc-close-btn:hover { background-color: #f1f5f9 !important; color: #475569 !important; border-color: #cbd5e1 !important; }
+            .toc-close-btn:hover { background-color: var(--afl-n-100) !important; color: var(--afl-n-600) !important; border-color: var(--afl-n-300) !important; }
             .label-viewport::-webkit-scrollbar { width: 8px; }
             .label-viewport::-webkit-scrollbar-track { background: transparent; }
-            .label-viewport::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-            .label-viewport::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+            .label-viewport::-webkit-scrollbar-thumb { background: var(--afl-n-300); border-radius: 4px; }
+            .label-viewport::-webkit-scrollbar-thumb:hover { background: var(--afl-n-400); }
             .page-inner-content :global(table) { width: 100% !important; font-size: 0.8rem !important; }
             .page-inner-content :global(img) { max-height: 300px; width: auto; object-fit: contain; }
         `}</style>
