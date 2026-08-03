@@ -17,7 +17,7 @@ import { useMemo } from 'react';
 import { useCapabilities, type Capabilities } from './capabilities';
 import { ToolIcon } from './icons';
 import { Badge, Grid, Tabs } from './primitives';
-import { contextKinds, type LaunchContext } from './context';
+import { contextKinds, type ContextKind, type LaunchContext } from './context';
 import {
   TOOLS,
   TOOL_GROUP_LABELS,
@@ -56,19 +56,33 @@ export function isToolAvailable(
 /** Tools reachable from `ctx`, optionally filtered to specific ids or groups. */
 export function useAvailableTools(
   ctx: LaunchContext,
-  opts?: { include?: string[]; exclude?: string[]; groups?: ToolGroup[] },
+  opts?: {
+    include?: string[];
+    exclude?: string[];
+    groups?: ToolGroup[];
+    matchContexts?: ContextKind[];
+  },
 ): ToolDef[] {
   const { capabilities } = useCapabilities();
-  const { include, exclude, groups } = opts ?? {};
+  const { include, exclude, groups, matchContexts } = opts ?? {};
 
   return useMemo(() => {
     return TOOLS.filter((tool) => {
       if (include && !include.includes(tool.id)) return false;
       if (exclude?.includes(tool.id)) return false;
       if (groups && !groups.includes(tool.group)) return false;
+      /*
+       * Every context also satisfies 'global', so once the user has picked a
+       * label, an unrestricted launcher would still offer Web-test, Local
+       * Database Search and the like. matchContexts narrows to tools that
+       * explicitly declare the specific kind we care about.
+       */
+      if (matchContexts && !tool.contexts.some((k) => matchContexts.includes(k))) {
+        return false;
+      }
       return isToolAvailable(tool, ctx, capabilities);
     });
-  }, [ctx, capabilities, include, exclude, groups]);
+  }, [ctx, capabilities, include, exclude, groups, matchContexts]);
 }
 
 /*
@@ -138,6 +152,8 @@ export interface ToolLauncherProps {
   include?: string[];
   exclude?: string[];
   groups?: ToolGroup[];
+  /** Only offer tools that explicitly declare one of these context kinds. */
+  matchContexts?: ContextKind[];
   /** cards only: group tools under their group headings. */
   grouped?: boolean;
   /** strip only: the currently active tool id. */
@@ -153,12 +169,13 @@ export function ToolLauncher({
   include,
   exclude,
   groups,
+  matchContexts,
   grouped = false,
   activeToolId,
   emptyState = null,
   'aria-label': ariaLabel = 'Tools',
 }: ToolLauncherProps) {
-  const tools = useAvailableTools(context, { include, exclude, groups });
+  const tools = useAvailableTools(context, { include, exclude, groups, matchContexts });
 
   if (tools.length === 0) return <>{emptyState}</>;
 
