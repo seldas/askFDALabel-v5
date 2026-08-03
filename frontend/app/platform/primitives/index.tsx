@@ -15,10 +15,16 @@ import type {
   HTMLAttributes,
   InputHTMLAttributes,
   ReactNode,
+  SelectHTMLAttributes,
 } from 'react';
 import './primitives.css';
 
-function cx(...parts: Array<string | false | null | undefined>) {
+/**
+ * The one className-joining helper for the app. Previously redefined per
+ * file (Header.tsx had its own copy) — exported here so there is a single
+ * implementation to import instead of another copy-paste.
+ */
+export function cx(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(' ');
 }
 
@@ -148,7 +154,13 @@ export function ToolbarGroup({ className, ...rest }: HTMLAttributes<HTMLDivEleme
 
 /* ---- Button -------------------------------------------------------------- */
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'ghost'
+  | 'danger'
+  | 'tint-success'
+  | 'tint-danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 function buttonClass(variant: ButtonVariant, size: ButtonSize, className?: string) {
@@ -265,6 +277,13 @@ export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputEleme
   return <input className={cx('afl-input', className)} {...rest} />;
 }
 
+export function Select({
+  className,
+  ...rest
+}: SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select className={cx('afl-select', className)} {...rest} />;
+}
+
 /* ---- Badge --------------------------------------------------------------- */
 
 type BadgeTone = 'neutral' | 'accent' | 'info' | 'success' | 'warn' | 'danger' | 'ai';
@@ -280,18 +299,25 @@ export function Badge({
 /* ---- Empty state --------------------------------------------------------- */
 
 export function EmptyState({
+  icon,
   title,
   description,
   action,
   className,
   ...rest
 }: HTMLAttributes<HTMLDivElement> & {
+  icon?: ReactNode;
   title: ReactNode;
   description?: ReactNode;
   action?: ReactNode;
 }) {
   return (
     <div className={cx('afl-empty', className)} {...rest}>
+      {icon ? (
+        <span className="afl-empty__icon" aria-hidden="true">
+          {icon}
+        </span>
+      ) : null}
       <h3 className="afl-empty__title">{title}</h3>
       {description ? <p className="afl-empty__desc">{description}</p> : null}
       {action}

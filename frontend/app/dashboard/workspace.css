@@ -1,0 +1,308 @@
+/*
+ * Dashboard workspace — sidebar import panel, project cards, hero header, tag
+ * chips. Split from dashboard.css (4000+ lines, mostly legacy) so the classes
+ * backing page.tsx are easy to find. Tokens only, no literals.
+ */
+
+/* ---- Sidebar heading ------------------------------------------------------ */
+
+.dash-sidebar-heading {
+  font-size: var(--afl-text-xl);
+  font-weight: var(--afl-weight-black);
+  color: var(--afl-text-primary);
+  margin: 0;
+}
+
+.dash-sidebar-subheading {
+  margin: var(--afl-space-1) 0 0;
+  font-size: var(--afl-text-xs);
+  color: var(--afl-text-secondary);
+  font-weight: var(--afl-weight-medium);
+}
+
+/* ---- Import panel ---------------------------------------------------------- */
+
+.dash-import-block {
+  padding: var(--afl-space-5);
+  border-bottom: 1px solid var(--afl-n-100);
+  background: var(--afl-bg-sunken);
+}
+
+.dash-import-toggle {
+  width: 100%;
+  padding: var(--afl-space-3);
+  border-radius: var(--afl-radius-md);
+  background: var(--afl-bg-surface);
+  border: 1px solid var(--afl-border);
+  color: var(--afl-text-secondary);
+  font-weight: var(--afl-weight-bold);
+  font-size: var(--afl-text-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--afl-space-2);
+  transition: all var(--afl-transition);
+}
+
+.dash-import-toggle[aria-pressed='true'] {
+  background: var(--afl-a-50);
+  border-color: var(--afl-a-500);
+  color: var(--afl-a-700);
+}
+
+.dash-import-panel {
+  margin-top: var(--afl-space-3);
+  padding: var(--afl-space-4);
+  background: var(--afl-bg-surface);
+  border-radius: var(--afl-radius-lg);
+  border: 1px solid var(--afl-border);
+  box-shadow: var(--afl-shadow-sm);
+}
+
+.dash-mode-selector {
+  display: flex;
+  background: var(--afl-bg-sunken);
+  padding: 3px;
+  border-radius: var(--afl-radius-md);
+  gap: 3px;
+  margin-bottom: var(--afl-space-3);
+}
+
+.dash-mode-tab {
+  flex: 1;
+  padding: var(--afl-space-2);
+  border-radius: var(--afl-radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--afl-text-secondary);
+  font-weight: var(--afl-weight-heavy);
+  font-size: var(--afl-text-xs);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dash-mode-tab[aria-selected='true'] {
+  background: var(--afl-bg-surface);
+  color: var(--afl-text-primary);
+  box-shadow: var(--afl-shadow-xs);
+}
+
+.dash-import-field { margin-bottom: var(--afl-space-3); }
+
+.dash-import-field__label {
+  display: block;
+  font-size: var(--afl-text-xs);
+  font-weight: var(--afl-weight-heavy);
+  color: var(--afl-text-secondary);
+  margin-bottom: var(--afl-space-1);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dash-file-picker {
+  width: 100%;
+  padding: var(--afl-space-2);
+  background: var(--afl-bg-surface);
+  border: 1px dashed var(--afl-n-400);
+  border-radius: var(--afl-radius-md);
+  color: var(--afl-text-secondary);
+  font-size: var(--afl-text-sm);
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Sidebar tag filter ---------------------------------------------------- */
+
+.dash-tag-filter { margin-bottom: var(--afl-space-4); padding: 0 4px; }
+
+/* ---- Project cards ---------------------------------------------------------
+ * .project-selection-card already carries base styling from dashboard.css;
+ * this adds the active-selection state that used to be computed inline.
+ */
+
+.dash-project-card {
+  cursor: pointer;
+  position: relative;
+  border: 2px solid var(--afl-n-100);
+  transition: all var(--afl-transition);
+}
+
+.dash-project-card[aria-pressed='true'] {
+  border-color: var(--afl-a-500);
+  background: var(--afl-a-50);
+}
+
+.dash-project-card__row {
+  display: flex;
+  align-items: center;
+  gap: var(--afl-space-2);
+  margin-bottom: var(--afl-space-1);
+}
+
+.dash-project-card__title {
+  font-weight: var(--afl-weight-heavy);
+  font-size: var(--afl-text-md);
+  color: var(--afl-text-primary);
+}
+
+.dash-project-card[aria-pressed='true'] .dash-project-card__title {
+  color: var(--afl-a-700);
+}
+
+.dash-project-card__meta {
+  font-size: var(--afl-text-xs);
+  color: var(--afl-text-secondary);
+  font-weight: var(--afl-weight-medium);
+}
+
+.dash-sidebar-empty {
+  text-align: center;
+  padding: var(--afl-space-6);
+  color: var(--afl-text-muted);
+  font-size: var(--afl-text-sm);
+}
+
+/* ---- Hero header ----------------------------------------------------------- */
+
+.dash-hero-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--afl-space-3);
+  margin-bottom: var(--afl-space-2);
+}
+
+.dash-hero-title {
+  font-size: var(--afl-text-3xl);
+  font-weight: var(--afl-weight-black);
+  color: var(--afl-text-primary);
+  margin: 0;
+  letter-spacing: -0.025em;
+}
+
+.dash-hero-desc {
+  margin: 0;
+  color: var(--afl-text-secondary);
+  font-weight: var(--afl-weight-medium);
+}
+
+.dash-hero-actions {
+  display: flex;
+  gap: var(--afl-space-2);
+}
+
+/* ---- Toolbar tabs ------------------------------------------------------- */
+
+.dash-tab-group {
+  display: flex;
+  background: var(--afl-bg-sunken);
+  padding: 4px;
+  border-radius: var(--afl-radius-lg);
+  gap: 4px;
+}
+
+.dash-tab {
+  padding: var(--afl-space-2) var(--afl-space-4);
+  border-radius: var(--afl-radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--afl-text-secondary);
+  font-weight: var(--afl-weight-heavy);
+  font-size: var(--afl-text-sm);
+  cursor: pointer;
+}
+
+.dash-tab[aria-selected='true'] {
+  background: var(--afl-bg-surface);
+  color: var(--afl-text-primary);
+  box-shadow: var(--afl-shadow-xs);
+}
+
+/* ---- Toolbar search ------------------------------------------------------- */
+
+.dash-search { position: relative; }
+
+.dash-search__input {
+  padding: var(--afl-space-2) var(--afl-space-3) var(--afl-space-2) 38px;
+  width: 240px;
+}
+
+.dash-search__icon {
+  position: absolute;
+  left: var(--afl-space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--afl-text-muted);
+  pointer-events: none;
+}
+
+/* ---- Tag chips (table cells) ----------------------------------------------- */
+
+.dash-tag-chip {
+  padding: 4px var(--afl-space-3);
+  background: var(--afl-bg-sunken);
+  color: var(--afl-text-secondary);
+  border: 1px solid var(--afl-border);
+  border-radius: var(--afl-radius-sm);
+  font-size: var(--afl-text-xs);
+  font-weight: var(--afl-weight-bold);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all var(--afl-transition);
+  box-shadow: var(--afl-shadow-xs);
+}
+
+.dash-tag-chip:hover {
+  background: var(--afl-n-200);
+  border-color: var(--afl-border-strong);
+  color: var(--afl-text-primary);
+  transform: translateY(-1px);
+}
+
+.dash-tag-add {
+  background: transparent;
+  border: 1px dashed var(--afl-n-300);
+  color: var(--afl-text-muted);
+  padding: 4px var(--afl-space-3);
+  border-radius: var(--afl-radius-pill);
+  font-size: var(--afl-text-xs);
+  font-weight: var(--afl-weight-medium);
+  cursor: pointer;
+  transition: all var(--afl-transition);
+}
+
+.dash-tag-add:hover {
+  border-color: var(--afl-n-400);
+  color: var(--afl-text-secondary);
+}
+
+/* ---- Row delete button ------------------------------------------------------ */
+
+.dash-row-delete {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--afl-border);
+  background: var(--afl-bg-surface);
+  color: var(--afl-text-muted);
+  border-radius: var(--afl-radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--afl-transition);
+}
+
+.dash-row-delete:hover {
+  color: var(--afl-danger-700);
+  border-color: var(--afl-danger-100);
+  background: var(--afl-danger-50);
+}
+
+@media (max-width: 640px) {
+  .dash-search__input { width: 100%; }
+}

@@ -165,6 +165,25 @@
 }
 .afl-btn--danger:hover:not([disabled]) { background: var(--afl-danger-700); }
 
+/*
+ * Tinted variants: a light-fill button for a secondary action that still
+ * needs a status colour (e.g. "Delete" next to a neutral "Stats" button,
+ * without competing with a solid-danger primary action on the same page).
+ */
+.afl-btn--tint-success {
+  background: var(--afl-success-50);
+  border-color: var(--afl-success-500);
+  color: var(--afl-success-700);
+}
+.afl-btn--tint-success:hover:not([disabled]) { background: var(--afl-success-50); filter: brightness(0.97); }
+
+.afl-btn--tint-danger {
+  background: var(--afl-danger-50);
+  border-color: var(--afl-danger-100);
+  color: var(--afl-danger-700);
+}
+.afl-btn--tint-danger:hover:not([disabled]) { background: var(--afl-danger-100); }
+
 .afl-btn--sm { padding: var(--afl-space-1) var(--afl-space-3); font-size: var(--afl-text-xs); }
 .afl-btn--lg { padding: var(--afl-space-3) var(--afl-space-5); font-size: var(--afl-text-md); }
 
@@ -241,6 +260,24 @@
 
 .afl-input[aria-invalid='true'] { border-color: var(--afl-danger-500); }
 
+.afl-select {
+  padding: var(--afl-space-2) var(--afl-space-3);
+  border: 1px solid var(--afl-border);
+  border-radius: var(--afl-radius-md);
+  background: var(--afl-bg-surface);
+  color: var(--afl-text-primary);
+  font-family: inherit;
+  font-size: var(--afl-text-sm);
+  font-weight: var(--afl-weight-medium);
+  cursor: pointer;
+}
+
+.afl-select:focus {
+  outline: none;
+  border-color: var(--afl-focus-ring);
+  box-shadow: 0 0 0 3px var(--afl-a-100);
+}
+
 /* ---- Badge ------------------------------------------------------------- */
 .afl-badge {
   display: inline-flex;
@@ -262,6 +299,75 @@
 .afl-badge--danger   { background: var(--afl-danger-50); color: var(--afl-danger-700); }
 .afl-badge--ai       { background: var(--afl-ai-grad); color: var(--afl-text-inverse); }
 
+/* ---- Table --------------------------------------------------------------
+ * A CSS class rather than a React component: pages here render native
+ * <table> markup with page-specific column logic, so this just gives that
+ * markup a consistent shell instead of reimplementing borders/spacing per
+ * page. Apply .afl-table to the wrapping div around the table.
+ */
+
+.afl-table-wrap {
+  background: var(--afl-bg-surface);
+  border: 1px solid var(--afl-border);
+  border-radius: var(--afl-radius-xl);
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.afl-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.afl-table thead tr {
+  background: var(--afl-bg-sunken);
+  border-bottom: 1px solid var(--afl-border);
+}
+
+.afl-table th {
+  padding: var(--afl-space-3) var(--afl-space-4);
+  font-size: var(--afl-text-xs);
+  font-weight: var(--afl-weight-heavy);
+  color: var(--afl-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.afl-table th[aria-sort] { cursor: pointer; user-select: none; }
+
+.afl-table td {
+  padding: var(--afl-space-4);
+  font-size: var(--afl-text-sm);
+  color: var(--afl-text-secondary);
+}
+
+.afl-table tbody tr {
+  border-bottom: 1px solid var(--afl-bg-sunken);
+}
+.afl-table tbody tr:last-child { border-bottom: none; }
+
+.afl-table tbody tr[data-selected='true'] {
+  background: var(--afl-a-50);
+}
+
+/* ---- Pagination ----------------------------------------------------------*/
+
+.afl-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--afl-space-3);
+  margin-top: var(--afl-space-5);
+  padding-bottom: var(--afl-space-4);
+}
+
+.afl-pagination__status {
+  font-size: var(--afl-text-sm);
+  font-weight: var(--afl-weight-bold);
+  color: var(--afl-text-secondary);
+}
+
 /* ---- Empty state ------------------------------------------------------- */
 .afl-empty {
   display: flex;
@@ -273,6 +379,17 @@
   background: var(--afl-bg-surface);
   border: 1px dashed var(--afl-border);
   border-radius: var(--afl-radius-xl);
+}
+
+.afl-empty__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--afl-radius-pill);
+  background: var(--afl-bg-sunken);
+  color: var(--afl-text-muted);
 }
 
 .afl-empty__title {

@@ -8,11 +8,12 @@ import Header from "../components/Header";
 import ProjectSummary, { type ProjectStats } from './components/ProjectSummary';
 import AEProfileModal from './components/AEProfileModal';
 import Link from 'next/link';
-import { Button, ButtonLink } from '../platform/primitives';
+import { Badge, Button, ButtonLink, EmptyState, Input, Select, cx } from '../platform/primitives';
 import { ToolLauncher } from '../platform/ToolLauncher';
 import { labelRoute, type LaunchContext } from '../platform/context';
 import './dashboard.css';
 import './selection.css';
+import './workspace.css';
 
 interface Project {
   id: number;
@@ -531,12 +532,14 @@ function DashboardContent() {
           {/* Sidebar: Tasks */}
           <aside className="dashboard-sidebar">
             <div className="workspace-header">
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>Tasks</h2>
-              <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>{projects.length} tasks</p>
+              <h2 className="dash-sidebar-heading">Tasks</h2>
+              <p className="dash-sidebar-subheading">{projects.length} tasks</p>
             </div>
 
-            <div style={{ padding: '1.25rem', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
+            <div className="dash-import-block">
               <button
+                className="dash-import-toggle"
+                aria-pressed={showImportUI}
                 onClick={() => {
                   setShowImportUI(!showImportUI);
                   if (!showImportUI) {
@@ -548,71 +551,35 @@ function DashboardContent() {
                     }
                   }
                 }}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '10px',
-                  background: showImportUI ? '#eef2ff' : 'white',
-                  border: showImportUI ? '1px solid #6366f1' : '1px solid #e2e8f0',
-                  color: showImportUI ? '#4338ca' : '#475569',
-                  fontWeight: 700,
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s ease'
-                }}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 {showImportUI ? 'Cancel Import' : 'Import Task'}
               </button>
-              
+
               {showImportUI && (
-                <div style={{ marginTop: '12px', padding: '16px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                  
+                <div className="dash-import-panel">
+
                   {/* Mode Selector */}
-                  <div style={{ display: 'flex', background: '#f1f5f9', padding: '3px', borderRadius: '8px', gap: '3px', marginBottom: '12px' }}>
+                  <div className="dash-mode-selector" role="tablist" aria-label="Import target">
                     <button
                       type="button"
+                      role="tab"
+                      aria-selected={importTargetMode === 'new'}
+                      className="dash-mode-tab"
                       onClick={() => setImportTargetMode('new')}
-                      style={{
-                        flex: 1,
-                        padding: '6px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        background: importTargetMode === 'new' ? 'white' : 'transparent',
-                        color: importTargetMode === 'new' ? '#0f172a' : '#64748b',
-                        fontWeight: 800,
-                        fontSize: '0.75rem',
-                        cursor: 'pointer',
-                        boxShadow: importTargetMode === 'new' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                        transition: 'all 0.15s ease'
-                      }}
                     >
                       New Task
                     </button>
                     <button
                       type="button"
+                      role="tab"
+                      aria-selected={importTargetMode === 'existing'}
+                      className="dash-mode-tab"
                       onClick={() => {
                         setImportTargetMode('existing');
                         if (!importTargetProjectId && projects.length > 0) {
                           setImportTargetProjectId(projects[0].id.toString());
                         }
-                      }}
-                      style={{
-                        flex: 1,
-                        padding: '6px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        background: importTargetMode === 'existing' ? 'white' : 'transparent',
-                        color: importTargetMode === 'existing' ? '#0f172a' : '#64748b',
-                        fontWeight: 800,
-                        fontSize: '0.75rem',
-                        cursor: 'pointer',
-                        boxShadow: importTargetMode === 'existing' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                        transition: 'all 0.15s ease'
                       }}
                     >
                       Existing Task
@@ -621,37 +588,25 @@ function DashboardContent() {
 
                   {/* New Task Field */}
                   {importTargetMode === 'new' && (
-                    <div style={{ marginBottom: '12px' }}>
-                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Task Name</label>
-                      <input 
-                        type="text" 
-                        value={newImportProjectName} 
-                        onChange={(e) => setNewImportProjectName(e.target.value)} 
-                        placeholder="e.g. Q1 Labels..." 
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.8rem', outline: 'none' }} 
+                    <div className="dash-import-field">
+                      <label className="dash-import-field__label">Task Name</label>
+                      <Input
+                        type="text"
+                        value={newImportProjectName}
+                        onChange={(e) => setNewImportProjectName(e.target.value)}
+                        placeholder="e.g. Q1 Labels..."
                       />
                     </div>
                   )}
 
                   {/* Existing Task Selector */}
                   {importTargetMode === 'existing' && (
-                    <div style={{ marginBottom: '12px' }}>
-                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Select Task</label>
-                      <select
+                    <div className="dash-import-field">
+                      <label className="dash-import-field__label">Select Task</label>
+                      <Select
+                        style={{ width: '100%' }}
                         value={importTargetProjectId}
                         onChange={(e) => setImportTargetProjectId(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '8px 10px',
-                          borderRadius: '8px',
-                          border: '1px solid #cbd5e1',
-                          background: 'white',
-                          color: '#334155',
-                          fontSize: '0.8rem',
-                          fontWeight: 600,
-                          outline: 'none',
-                          cursor: 'pointer'
-                        }}
                       >
                         {projects.length === 0 ? (
                           <option value="">No tasks available</option>
@@ -660,26 +615,26 @@ function DashboardContent() {
                             <option key={p.id} value={p.id.toString()}>{p.title}</option>
                           ))
                         )}
-                      </select>
+                      </Select>
                     </div>
                   )}
 
                   {/* Batch Tags Field */}
-                  <div style={{ marginBottom: '12px' }}>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Batch Tags (Optional)</label>
-                    <input 
-                      type="text" 
-                      value={importBatchTags} 
-                      onChange={(e) => setImportBatchTags(e.target.value)} 
-                      placeholder="e.g. oncology, FDA 2026..." 
-                      style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.8rem', outline: 'none' }} 
+                  <div className="dash-import-field">
+                    <label className="dash-import-field__label">Batch Tags (Optional)</label>
+                    <Input
+                      type="text"
+                      value={importBatchTags}
+                      onChange={(e) => setImportBatchTags(e.target.value)}
+                      placeholder="e.g. oncology, FDA 2026..."
                     />
                   </div>
 
                   {/* Excel File Uploader */}
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>FDALabel Excel</label>
-                    <button 
+                  <div className="dash-import-field" style={{ marginBottom: '16px' }}>
+                    <label className="dash-import-field__label">FDALabel Excel</label>
+                    <button
+                      className="dash-file-picker"
                       onClick={() => {
                         const input = document.createElement('input');
                         input.type = 'file';
@@ -695,66 +650,43 @@ function DashboardContent() {
                         };
                         input.click();
                       }}
-                      style={{ width: '100%', padding: '8px', background: 'white', border: '1px dashed #94a3b8', borderRadius: '8px', color: '#475569', fontSize: '0.8rem', cursor: 'pointer', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                     >
                       {uploadedFile ? uploadedFile.name : 'Choose file...'}
                     </button>
                   </div>
 
                   {/* Submit Button */}
-                  <button 
-                    onClick={() => { if(uploadedFile) handleExcelFile(uploadedFile); }} 
+                  <Button
+                    variant="primary"
+                    style={{ width: '100%' }}
+                    onClick={() => { if(uploadedFile) handleExcelFile(uploadedFile); }}
                     disabled={
-                      uploading || 
-                      !uploadedFile || 
+                      uploading ||
+                      !uploadedFile ||
                       (importTargetMode === 'new' && !newImportProjectName.trim()) ||
                       (importTargetMode === 'existing' && !importTargetProjectId)
-                    } 
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      borderRadius: '8px',
-                      background: '#6366f1',
-                      color: 'white',
-                      border: 'none',
-                      fontWeight: 800,
-                      fontSize: '0.8rem',
-                      cursor: (uploading || !uploadedFile || (importTargetMode === 'new' && !newImportProjectName.trim()) || (importTargetMode === 'existing' && !importTargetProjectId)) ? 'not-allowed' : 'pointer',
-                      opacity: (uploading || !uploadedFile || (importTargetMode === 'new' && !newImportProjectName.trim()) || (importTargetMode === 'existing' && !importTargetProjectId)) ? 0.6 : 1
-                    }}
+                    }
                   >
                     {uploading ? 'Importing...' : importTargetMode === 'new' ? 'Create Task' : 'Import to Task'}
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
 
             {/* Tag Filter for Tasks */}
             {allProjectsTags.length > 0 && (
-              <div style={{ marginBottom: '16px', padding: '0 4px' }}>
-                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 800, color: '#64748b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Filter tasks by tag</label>
-                <select
+              <div className="dash-tag-filter">
+                <label className="dash-import-field__label" style={{ marginBottom: '6px' }}>Filter tasks by tag</label>
+                <Select
+                  style={{ width: '100%' }}
                   value={sidebarTagFilter}
                   onChange={(e) => setSidebarTagFilter(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
-                    background: 'white',
-                    color: '#334155',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    outline: 'none',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                  }}
                 >
                   <option value="All">All Tags</option>
                   {allProjectsTags.map(tag => (
                     <option key={tag} value={tag}>{tag}</option>
                   ))}
-                </select>
+                </Select>
               </div>
             )}
 
@@ -762,35 +694,37 @@ function DashboardContent() {
               {projectsLoading ? (
                 <div style={{ textAlign: 'center', padding: '2rem' }}><div className="loader" style={{ width: '30px', height: '30px' }}></div></div>
               ) : filteredProjects.length > 0 ? (
-                filteredProjects.map(p => (
-                  <div
-                    key={p.id}
-                    onClick={() => setActiveProject(activeProject?.id === p.id ? null : p)}
-                    style={{
-                      padding: '1rem',
-                      borderRadius: '12px',
-                      border: '2px solid',
-                      borderColor: activeProject?.id === p.id ? '#6366f1' : '#f1f5f9',
-                      background: activeProject?.id === p.id ? '#f5f3ff' : 'white',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      position: 'relative'
-                    }}
-                    className="project-selection-card"
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-                      {p.title === 'Favorite' ? (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="#eab308"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                      ) : (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={activeProject?.id === p.id ? "#6366f1" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                      )}
-                      <span style={{ fontWeight: 800, fontSize: '0.9rem', color: activeProject?.id === p.id ? '#1e1b4b' : '#334155' }}>{p.title}</span>
+                filteredProjects.map(p => {
+                  const isActive = activeProject?.id === p.id;
+                  return (
+                    <div
+                      key={p.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={isActive}
+                      onClick={() => setActiveProject(isActive ? null : p)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setActiveProject(isActive ? null : p);
+                        }
+                      }}
+                      className={cx('project-selection-card', 'dash-project-card')}
+                    >
+                      <div className="dash-project-card__row">
+                        {p.title === 'Favorite' ? (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="#eab308"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        ) : (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isActive ? "var(--afl-a-500)" : "var(--afl-n-400)"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                        )}
+                        <span className="dash-project-card__title">{p.title}</span>
+                      </div>
+                      <div className="dash-project-card__meta">{p.count} labels • {p.role.toUpperCase()}</div>
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>{p.count} labels • {p.role.toUpperCase()}</div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
-                <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8', fontSize: '0.85rem' }}>
+                <div className="dash-sidebar-empty">
                   {projects.length > 0 ? 'No tasks match selected tag.' : 'No tasks found.'}
                 </div>
               )}
@@ -805,42 +739,36 @@ function DashboardContent() {
                 <div className="active-workspace-hero">
                   <div className="dashboard-header-container">
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                        <h1 style={{ fontSize: '2.25rem', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.025em' }}>{activeProject.title}</h1>
-                        <span style={{ padding: '4px 10px', background: '#eef2ff', color: '#6366f1', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase' }}>{activeProject.role}</span>
+                      <div className="dash-hero-title-row">
+                        <h1 className="dash-hero-title">{activeProject.title}</h1>
+                        <Badge tone="accent">{activeProject.role}</Badge>
                       </div>
-                      <p style={{ margin: 0, color: '#64748b', fontWeight: 500 }}>
+                      <p className="dash-hero-desc">
                         Task: Managing <strong>{activeProject.count}</strong> pharmaceutical product labels.
                       </p>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button
-                        onClick={openProjectStatsModal}
-                        style={{ padding: '10px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}
-                      >
+                    <div className="dash-hero-actions">
+                      <Button variant="secondary" onClick={openProjectStatsModal}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
                         Stats
-                      </button>
+                      </Button>
                       {activeProject.is_mutable && (
                         <>
-                          <button
+                          <Button
+                            variant="tint-success"
                             onClick={() => {
                               setImportTargetMode('existing');
                               setImportTargetProjectId(activeProject.id.toString());
                               setShowImportUI(true);
                             }}
-                            style={{ padding: '10px 16px', borderRadius: '10px', border: '1px solid #cceecc', background: '#f0fdf4', color: '#16a34a', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}
                           >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                             Import Excel
-                          </button>
-                          <button
-                            onClick={() => handleDeleteProject(activeProject.id)}
-                            style={{ padding: '10px 16px', borderRadius: '10px', border: '1px solid #fee2e2', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}
-                          >
+                          </Button>
+                          <Button variant="tint-danger" onClick={() => handleDeleteProject(activeProject.id)}>
                             Delete
-                          </button>
+                          </Button>
                         </>
                       )}
                     </div>
@@ -848,10 +776,12 @@ function DashboardContent() {
 
                   {/* Toolbar & Tabs */}
                   <div className="dashboard-toolbar">
-                    <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '12px', gap: '4px' }}>
+                    <div className="dash-tab-group" role="tablist" aria-label="Project view">
                       <button
+                        role="tab"
+                        aria-selected={projectTab === 'labels'}
+                        className="dash-tab"
                         onClick={() => setProjectTab('labels')}
-                        style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: projectTab === 'labels' ? 'white' : 'transparent', color: projectTab === 'labels' ? '#0f172a' : '#64748b', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', boxShadow: projectTab === 'labels' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
                       >
                         Labels ({filteredLabels.length})
                       </button>
@@ -860,47 +790,33 @@ function DashboardContent() {
                     <div className="dashboard-toolbar-actions">
                       {activeProjectTags.length > 0 && (
                         <div>
-                          <select
+                          <Select
                             value={tableTagFilter}
                             onChange={(e) => setTableTagFilter(e.target.value)}
-                            style={{
-                              padding: '10px 16px',
-                              borderRadius: '10px',
-                              border: '1px solid #e2e8f0',
-                              background: 'white',
-                              color: '#475569',
-                              fontSize: '0.85rem',
-                              fontWeight: 700,
-                              outline: 'none',
-                              cursor: 'pointer'
-                            }}
                           >
                             <option value="All">All Tags</option>
                             {activeProjectTags.map(tag => (
                               <option key={tag} value={tag}>{tag}</option>
                             ))}
-                          </select>
+                          </Select>
                         </div>
                       )}
 
-                      <div style={{ position: 'relative' }}>
-                        <input
+                      <div className="dash-search">
+                        <Input
+                          className="dash-search__input"
                           type="text"
                           placeholder="Filter task content..."
                           value={projectSearch}
                           onChange={(e) => setProjectSearch(e.target.value)}
-                          style={{ padding: '10px 12px 10px 38px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.85rem', width: '240px', outline: 'none' }}
                         />
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <svg className="dash-search__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                       </div>
 
                       <div ref={dropdownRef} style={{ position: 'relative' }}>
-                        <button
-                          onClick={() => setActiveDropdown(activeDropdown === 'analyze' ? null : 'analyze')}
-                          style={{ padding: '10px 16px', borderRadius: '10px', background: '#6366f1', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}
-                        >
+                        <Button variant="primary" onClick={() => setActiveDropdown(activeDropdown === 'analyze' ? null : 'analyze')}>
                           Export ▼
-                        </button>
+                        </Button>
                         {activeDropdown === 'analyze' && (
                           <div className="dropdown-menu visible" style={{ right: 0, top: '100%', marginTop: '8px', width: '220px', display: 'block', position: 'absolute', zIndex: 1000 }}>
                             <button className="dropdown-item" onClick={() => { handleExportProject(activeProject.id, activeProject.title); setActiveDropdown(null); }}>to XLSX</button>
@@ -969,113 +885,69 @@ function DashboardContent() {
                         </div>
                       )}
 
-                      <div style={{ background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', overflowX: 'auto' }}>
-                        <table style={{ width: '100%', minWidth: '750px', borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <div className="afl-table-wrap">
+                        <table className="afl-table" style={{ minWidth: '750px' }}>
                           <thead>
-                            <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                              <th style={{ padding: '12px 16px', width: '40px' }}></th>
-                              <th style={{ padding: '12px 16px', fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Product Name</th>
-                              <th style={{ padding: '12px 16px', fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Manufacturer</th>
-                              <th 
-                                  style={{ padding: '12px 16px', fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', cursor: 'pointer' }}
+                            <tr>
+                              <th style={{ width: '40px' }}></th>
+                              <th>Product Name</th>
+                              <th>Manufacturer</th>
+                              <th
+                                  aria-sort={effTimeSort === 'asc' ? 'ascending' : effTimeSort === 'desc' ? 'descending' : 'none'}
                                   onClick={toggleEffTimeSort}
                               >
                                   Effective Time {effTimeSort === 'asc' ? '↑' : effTimeSort === 'desc' ? '↓' : '↕'}
                               </th>
-                              <th style={{ padding: '12px 16px', fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Tag</th>
-                              <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+                              <th>Tag</th>
+                              <th style={{ textAlign: 'right' }}>Actions</th>
                             </tr>
                           </thead>
                           <tbody>
                             {paginatedLabels.map((item, idx) => {
                               const isSelected = selectedLabels.some(l => l.set_id === item.set_id);
                               return (
-                                <tr key={`${item.set_id}-${idx}`} style={{ borderBottom: '1px solid #f1f5f9', background: isSelected ? '#f5f3ff' : 'transparent' }}>
-                                  <td style={{ padding: '16px', textAlign: 'center' }}>
-                                    <input 
-                                      type="checkbox" 
+                                <tr key={`${item.set_id}-${idx}`} data-selected={isSelected}>
+                                  <td style={{ textAlign: 'center' }}>
+                                    <input
+                                      type="checkbox"
                                       checked={isSelected}
                                       onChange={() => toggleLabelSelection(item)}
-                                      style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#6366f1' }}
+                                      style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--afl-a-500)' }}
                                     />
                                   </td>
-                                  <td style={{ padding: '16px' }}>
-                                    <Link href={`/dashboard/label/${item.set_id}`} style={{ fontWeight: 700, color: '#0f172a', textDecoration: 'none' }}>
+                                  <td>
+                                    <Link href={labelRoute(item.set_id)} style={{ fontWeight: 700, color: 'var(--afl-text-primary)', textDecoration: 'none' }}>
                                         <TruncatedText text={item.brand_name || 'N/A'} />
                                     </Link>
-                                    <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>
+                                    <div style={{ fontSize: 'var(--afl-text-xs)', color: 'var(--afl-text-muted)', marginTop: '2px' }}>
                                         <TruncatedText text={item.generic_name || ''} limit={120} />
                                     </div>
                                   </td>
-                                  <td style={{ padding: '16px', fontSize: '0.85rem', color: '#475569' }}>{item.manufacturer_name || 'N/A'}</td>
-                                  <td style={{ padding: '16px', fontSize: '0.85rem', color: '#475569' }}>{formatEffectiveTime(item.effective_time)}</td>
-                                  <td style={{ padding: '16px', fontSize: '0.85rem' }}>
+                                  <td>{item.manufacturer_name || 'N/A'}</td>
+                                  <td>{formatEffectiveTime(item.effective_time)}</td>
+                                  <td>
                                     {item.tag ? (
                                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
                                         {item.tag.split(/[;,]/).map(t => t.trim()).filter(Boolean).map((t, idx) => (
-                                          <span 
+                                          <span
                                             key={idx}
+                                            className="dash-tag-chip"
                                             onClick={() => handleUpdateTag(item.id, item.set_id, item.tag || '')}
-                                            style={{ 
-                                              padding: '4px 10px', 
-                                              background: '#f1f5f9', 
-                                              color: '#475569', 
-                                              borderRadius: '6px', 
-                                              fontSize: '0.7rem', 
-                                              fontWeight: 700, 
-                                              cursor: 'pointer',
-                                              display: 'inline-flex',
-                                              alignItems: 'center',
-                                              gap: '3px',
-                                              transition: 'all 0.2s ease',
-                                              border: '1px solid #e2e8f0',
-                                              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)'
-                                            }}
-                                            onMouseEnter={e => {
-                                              e.currentTarget.style.background = '#e2e8f0';
-                                              e.currentTarget.style.borderColor = '#cbd5e1';
-                                              e.currentTarget.style.color = '#1e293b';
-                                              e.currentTarget.style.transform = 'translateY(-1px)';
-                                            }}
-                                            onMouseLeave={e => {
-                                              e.currentTarget.style.background = '#f1f5f9';
-                                              e.currentTarget.style.borderColor = '#e2e8f0';
-                                              e.currentTarget.style.color = '#475569';
-                                              e.currentTarget.style.transform = 'translateY(0)';
-                                            }}
                                           >
                                             🏷️ {t}
                                           </span>
                                         ))}
                                       </div>
                                     ) : (
-                                      <button 
+                                      <button
+                                        className="dash-tag-add"
                                         onClick={() => handleUpdateTag(item.id, item.set_id, '')}
-                                        style={{ 
-                                          background: 'transparent',
-                                          border: '1px dashed #cbd5e1', 
-                                          color: '#94a3b8', 
-                                          padding: '4px 10px', 
-                                          borderRadius: '20px', 
-                                          fontSize: '0.75rem', 
-                                          fontWeight: 600, 
-                                          cursor: 'pointer',
-                                          transition: 'all 0.2s ease'
-                                        }}
-                                        onMouseOver={e => {
-                                          e.currentTarget.style.border = '1px solid #94a3b8';
-                                          e.currentTarget.style.color = '#64748b';
-                                        }}
-                                        onMouseOut={e => {
-                                          e.currentTarget.style.border = '1px dashed #cbd5e1';
-                                          e.currentTarget.style.color = '#94a3b8';
-                                        }}
                                       >
                                         + Tag
                                       </button>
                                     )}
                                   </td>
-                                  <td style={{ padding: '16px', textAlign: 'right' }}>
+                                  <td style={{ textAlign: 'right' }}>
                                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
                                       <ButtonLink
                                         href={labelRoute(item.set_id)}
@@ -1084,23 +956,10 @@ function DashboardContent() {
                                       >
                                         Open
                                       </ButtonLink>
-                                      <button 
-                                        onClick={() => handleDeleteLabel(item.id)} 
+                                      <button
+                                        className="dash-row-delete"
+                                        onClick={() => handleDeleteLabel(item.id)}
                                         title="Remove from Task"
-                                        style={{ 
-                                          border: '1px solid #e2e8f0', 
-                                          background: '#ffffff', 
-                                          color: '#94a3b8', 
-                                          cursor: 'pointer', 
-                                          padding: '6px',
-                                          borderRadius: '8px',
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          justifyContent: 'center',
-                                          transition: 'all 0.2s ease'
-                                        }}
-                                        onMouseOver={e => { e.currentTarget.style.color = '#dc2626'; e.currentTarget.style.borderColor = '#fecaca'; e.currentTarget.style.background = '#fef2f2'; }}
-                                        onMouseOut={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#ffffff'; }}
                                       >
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H5c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
                                       </button>
@@ -1115,24 +974,26 @@ function DashboardContent() {
 
                       {/* Pagination Toolbar (Labels) */}
                       {filteredLabels.length > ITEMS_PER_PAGE && (
-                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '1.5rem', paddingBottom: '1rem' }}>
-                          <button
+                        <div className="afl-pagination">
+                          <Button
+                            variant="secondary"
+                            size="sm"
                             disabled={labelPage === 1}
                             onClick={() => setLabelPage(p => Math.max(1, p - 1))}
-                            style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: labelPage === 1 ? '#f8fafc' : 'white', cursor: labelPage === 1 ? 'not-allowed' : 'pointer', fontSize: '0.8rem', fontWeight: 700, color: labelPage === 1 ? '#cbd5e1' : '#475569' }}
                           >
                             Previous
-                          </button>
-                          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b' }}>
+                          </Button>
+                          <span className="afl-pagination__status">
                             Page {labelPage} of {Math.ceil(filteredLabels.length / ITEMS_PER_PAGE)}
                           </span>
-                          <button
+                          <Button
+                            variant="secondary"
+                            size="sm"
                             disabled={labelPage >= Math.ceil(filteredLabels.length / ITEMS_PER_PAGE)}
                             onClick={() => setLabelPage(p => p + 1)}
-                            style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: labelPage >= Math.ceil(filteredLabels.length / ITEMS_PER_PAGE) ? '#f8fafc' : 'white', cursor: labelPage >= Math.ceil(filteredLabels.length / ITEMS_PER_PAGE) ? 'not-allowed' : 'pointer', fontSize: '0.8rem', fontWeight: 700, color: labelPage >= Math.ceil(filteredLabels.length / ITEMS_PER_PAGE) ? '#cbd5e1' : '#475569' }}
                           >
                             Next
-                          </button>
+                          </Button>
                         </div>
                       )}
                     </div>
@@ -1144,26 +1005,15 @@ function DashboardContent() {
                 </div>
               </div>
             ) : (
-              <div style={{ padding: '4rem', textAlign: 'center', maxWidth: '800px', margin: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                <div style={{ 
-                  background: 'white', 
-                  borderRadius: '24px', 
-                  padding: '4rem 2rem', 
-                  border: '1px dashed #cbd5e1',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '100%'
-                }}>
-                  <div style={{ width: '64px', height: '64px', background: '#f8fafc', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                  </div>
-                  <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#334155', margin: '0 0 0.5rem 0' }}>No Task Selected</h2>
-                  <p style={{ margin: 0, color: '#64748b', fontSize: '1rem', maxWidth: '300px', lineHeight: 1.5 }}>
-                    Select a task from the sidebar to view the labeling list, or import a new task.
-                  </p>
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 'var(--afl-space-7)' }}>
+                <EmptyState
+                  style={{ maxWidth: '440px' }}
+                  icon={
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                  }
+                  title="No Task Selected"
+                  description="Select a task from the sidebar to view the labeling list, or import a new task."
+                />
               </div>
             )}
           </main>
@@ -1194,7 +1044,7 @@ function DashboardContent() {
 export default function DashboardPage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9fafb' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--afl-bg-page)' }}>
         <div className="loader"></div>
       </div>
     }>

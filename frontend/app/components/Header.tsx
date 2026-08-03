@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { useUser } from '../context/UserContext';
 import { useCapabilities } from '../platform/capabilities';
+import { cx } from '../platform/primitives';
 import { withAppBase } from '../utils/appPaths';
 
 type DropdownKey = 'user' | 'nav' | 'more' | 'ai' | 'updates' | null;
@@ -19,10 +20,6 @@ export type ActiveApp =
   | 'drugtox'
   | 'localquery'
   | 'webtest';
-
-function cx(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(' ');
-}
 
 function inferActiveApp(pathname: string): ActiveApp {
   if (pathname === '/' || pathname === '') return 'home';
