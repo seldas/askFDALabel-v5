@@ -1,0 +1,626 @@
+/*
+ * FDALabel-style query panel.
+ *
+ * The `fdl-` prefix marks this as a deliberate visual departure from the `afl-`
+ * design system: the panel has to be recognizable to analysts who use FDALabel
+ * daily, which means its own spacing, its link-styled controls, and its tinted
+ * group boxes. Everything still resolves through design tokens so a future
+ * palette change reaches this file too.
+ */
+
+.fdl-shell {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--afl-space-5) var(--afl-space-5) var(--afl-space-8);
+}
+
+/* ---- Top action bar (Restore / Clear / Search) --------------------------- */
+
+.fdl-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--afl-space-5);
+  padding: var(--afl-space-4) 0;
+}
+
+.fdl-actions--bottom {
+  border-top: 1px solid var(--afl-border);
+  margin-top: var(--afl-space-5);
+}
+
+/* ---- Group ---------------------------------------------------------------- */
+
+.fdl-group {
+  position: relative;
+  background: var(--afl-info-50);
+  border: 1px solid var(--afl-gov-line);
+  border-radius: var(--afl-radius-md);
+  padding: var(--afl-space-5) var(--afl-space-5) var(--afl-space-4);
+}
+
+.fdl-group__x,
+.fdl-card__x {
+  position: absolute;
+  top: var(--afl-space-2);
+  right: var(--afl-space-3);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-size: var(--afl-text-lg);
+  line-height: 1;
+  color: var(--afl-text-muted);
+  padding: var(--afl-space-1);
+}
+
+.fdl-group__x:hover,
+.fdl-card__x:hover {
+  color: var(--afl-danger-700);
+}
+
+.fdl-or {
+  font-weight: var(--afl-weight-bold);
+  color: var(--afl-gov-blue);
+  text-align: center;
+  padding: var(--afl-space-3) 0;
+}
+
+/* ---- Card + the "&" gutter ------------------------------------------------ */
+
+.fdl-cardrow {
+  display: grid;
+  grid-template-columns: 1.5rem 1fr;
+  align-items: start;
+  column-gap: var(--afl-space-2);
+}
+
+.fdl-amp {
+  color: var(--afl-gov-blue);
+  font-weight: var(--afl-weight-bold);
+  /* Pulls the ampersand up into the gap between the two cards it joins. */
+  margin-top: calc(var(--afl-space-4) * -1);
+  padding-top: var(--afl-space-2);
+  text-align: center;
+}
+
+.fdl-cardrow:first-child .fdl-amp {
+  margin-top: 0;
+}
+
+.fdl-card {
+  position: relative;
+  background: var(--afl-n-50);
+  border: 1px solid var(--afl-border-strong);
+  border-radius: var(--afl-radius-md);
+  padding: var(--afl-space-4) var(--afl-space-5) var(--afl-space-4);
+  margin-bottom: var(--afl-space-4);
+}
+
+.fdl-card__title {
+  font-size: var(--afl-text-2xl);
+  font-weight: var(--afl-weight-bold);
+  color: var(--afl-n-800);
+  margin: 0 0 var(--afl-space-3);
+  padding-right: var(--afl-space-5);
+}
+
+.fdl-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--afl-space-3);
+}
+
+/* ---- Controls ------------------------------------------------------------- */
+
+.fdl-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afl-space-3);
+}
+
+.fdl-row--tight {
+  gap: var(--afl-space-2);
+}
+
+.fdl-row__grow {
+  flex: 1 1 20rem;
+  min-width: 0;
+}
+
+.fdl-row__word {
+  color: var(--afl-n-800);
+  font-size: var(--afl-text-md);
+  white-space: nowrap;
+}
+
+.fdl-input,
+.fdl-textarea,
+.fdl-select {
+  font: inherit;
+  font-size: var(--afl-text-md);
+  color: var(--afl-text-primary);
+  background: var(--afl-bg-surface);
+  border: 1px solid var(--afl-border-strong);
+  border-radius: var(--afl-radius-pill);
+  padding: var(--afl-space-2) var(--afl-space-4);
+  min-height: 2.5rem;
+}
+
+.fdl-textarea {
+  border-radius: var(--afl-radius-sm);
+  width: 100%;
+  resize: vertical;
+}
+
+.fdl-select {
+  border-radius: var(--afl-radius-sm);
+  padding-right: var(--afl-space-2);
+}
+
+.fdl-select--wide {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.fdl-input--grow {
+  flex: 1 1 22rem;
+  min-width: 0;
+}
+
+.fdl-input:focus,
+.fdl-textarea:focus,
+.fdl-select:focus {
+  outline: 2px solid var(--afl-focus-ring);
+  outline-offset: 1px;
+}
+
+/* Link-styled buttons — FDALabel's primary control idiom. */
+.fdl-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: var(--afl-text-md);
+  color: var(--afl-info-700);
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+}
+
+.fdl-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.fdl-link:disabled {
+  color: var(--afl-text-muted);
+  cursor: default;
+}
+
+.fdl-link--on {
+  font-weight: var(--afl-weight-bold);
+  text-decoration: underline;
+}
+
+.fdl-link--block {
+  display: inline-block;
+  font-weight: var(--afl-weight-medium);
+  padding: var(--afl-space-4) 0;
+}
+
+.fdl-quickpicks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afl-space-4);
+}
+
+.fdl-quickpicks__prompt {
+  color: var(--afl-n-800);
+  font-size: var(--afl-text-md);
+}
+
+.fdl-listadder {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afl-space-3);
+}
+
+.fdl-listadder__label {
+  color: var(--afl-n-800);
+  font-size: var(--afl-text-md);
+}
+
+.fdl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--afl-space-2);
+}
+
+.fdl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--afl-space-1);
+  background: var(--afl-gov-tint);
+  border: 1px solid var(--afl-gov-line);
+  border-radius: var(--afl-radius-pill);
+  padding: 0.15rem var(--afl-space-2) 0.15rem var(--afl-space-3);
+  font-size: var(--afl-text-sm);
+  color: var(--afl-n-800);
+}
+
+.fdl-chip__x {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: var(--afl-n-500);
+  font-size: var(--afl-text-md);
+  line-height: 1;
+  padding: 0 var(--afl-space-1);
+}
+
+.fdl-chip__x:hover {
+  color: var(--afl-danger-700);
+}
+
+/* ---- Token input with suggestions ---------------------------------------- */
+
+.fdl-tokeninput {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--afl-space-2);
+}
+
+.fdl-tokeninput .fdl-input {
+  width: 100%;
+}
+
+.fdl-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: var(--afl-space-1) 0 0;
+  padding: var(--afl-space-1);
+  list-style: none;
+  background: var(--afl-bg-surface);
+  border: 1px solid var(--afl-border-strong);
+  border-radius: var(--afl-radius-sm);
+  box-shadow: var(--afl-shadow-md);
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.fdl-suggestions button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--afl-text-sm);
+  color: var(--afl-text-primary);
+  padding: var(--afl-space-2) var(--afl-space-3);
+  border-radius: var(--afl-radius-sm);
+}
+
+.fdl-suggestions button:hover {
+  background: var(--afl-bg-hover);
+}
+
+/* ---- Helper copy ---------------------------------------------------------- */
+
+.fdl-help {
+  font-size: var(--afl-text-md);
+  color: var(--afl-n-800);
+  padding-left: var(--afl-space-6);
+}
+
+.fdl-help p {
+  margin: 0 0 var(--afl-space-1);
+}
+
+.fdl-help__term {
+  color: var(--afl-info-700);
+}
+
+.fdl-idlist {
+  margin: var(--afl-space-1) 0 0;
+  padding-left: var(--afl-space-5);
+}
+
+.fdl-idlist li {
+  margin-bottom: 0.15rem;
+}
+
+.fdl-note {
+  font-size: var(--afl-text-sm);
+  color: var(--afl-text-secondary);
+  margin: 0;
+}
+
+.fdl-note--warn {
+  color: var(--afl-warn-700);
+}
+
+/* ---- Add more criteria ----------------------------------------------------- */
+
+.fdl-addmore {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afl-space-2);
+  padding-top: var(--afl-space-2);
+  padding-left: var(--afl-space-5);
+}
+
+.fdl-addmore__label {
+  font-weight: var(--afl-weight-bold);
+  color: var(--afl-n-800);
+  font-size: var(--afl-text-md);
+}
+
+.fdl-addmore__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--afl-space-2);
+}
+
+.fdl-addmore__sep {
+  color: var(--afl-n-400);
+}
+
+/* ---- Buttons -------------------------------------------------------------- */
+
+.fdl-btn {
+  font: inherit;
+  font-size: var(--afl-text-md);
+  font-weight: var(--afl-weight-medium);
+  cursor: pointer;
+  border-radius: var(--afl-radius-sm);
+  border: 1px solid transparent;
+  padding: var(--afl-space-2) var(--afl-space-4);
+  background: var(--afl-bg-surface);
+  color: var(--afl-text-primary);
+  transition: background var(--afl-transition);
+}
+
+.fdl-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.fdl-btn--search {
+  background: var(--afl-gov-blue);
+  color: var(--afl-text-inverse);
+  font-size: var(--afl-text-xl);
+  font-weight: var(--afl-weight-bold);
+  padding: var(--afl-space-3) var(--afl-space-6);
+  border-radius: var(--afl-radius-md);
+  box-shadow: var(--afl-shadow-sm);
+}
+
+.fdl-btn--search:hover:not(:disabled) {
+  background: var(--afl-gov-navy);
+}
+
+.fdl-btn--ai {
+  background: var(--afl-ai-grad);
+  color: var(--afl-text-inverse);
+  font-weight: var(--afl-weight-bold);
+  padding: var(--afl-space-3) var(--afl-space-5);
+  white-space: nowrap;
+}
+
+.fdl-btn--quiet {
+  border-color: var(--afl-border-strong);
+}
+
+.fdl-btn--quiet:hover:not(:disabled) {
+  background: var(--afl-bg-hover);
+}
+
+/* ---- AI intent panel ------------------------------------------------------ */
+
+.fdl-ai {
+  background: var(--afl-bg-surface);
+  border: 1px solid var(--afl-border);
+  border-top: 3px solid transparent;
+  border-image: var(--afl-ai-grad) 1;
+  border-radius: var(--afl-radius-lg);
+  box-shadow: var(--afl-shadow-sm);
+  padding: var(--afl-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--afl-space-3);
+}
+
+.fdl-ai__title {
+  margin: 0;
+  font-size: var(--afl-text-xl);
+  font-weight: var(--afl-weight-bold);
+  color: var(--afl-text-primary);
+}
+
+.fdl-ai__lede {
+  margin: var(--afl-space-1) 0 0;
+  font-size: var(--afl-text-md);
+  color: var(--afl-text-secondary);
+}
+
+.fdl-ai__field {
+  display: flex;
+  gap: var(--afl-space-3);
+  align-items: stretch;
+}
+
+.fdl-ai__input {
+  flex: 1 1 auto;
+  font: inherit;
+  font-size: var(--afl-text-md);
+  border: 1px solid var(--afl-border-strong);
+  border-radius: var(--afl-radius-md);
+  padding: var(--afl-space-3) var(--afl-space-4);
+  resize: vertical;
+  min-width: 0;
+}
+
+.fdl-ai__input:focus {
+  outline: 2px solid var(--afl-focus-ring);
+  outline-offset: 1px;
+}
+
+.fdl-ai__examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--afl-space-2) var(--afl-space-4);
+  font-size: var(--afl-text-sm);
+}
+
+.fdl-ai__exlabel {
+  color: var(--afl-text-secondary);
+  font-size: var(--afl-text-sm);
+}
+
+.fdl-ai__examples .fdl-link {
+  font-size: var(--afl-text-sm);
+}
+
+.fdl-ai__error {
+  margin: 0;
+  font-size: var(--afl-text-sm);
+  color: var(--afl-danger-700);
+  background: var(--afl-danger-50);
+  border-radius: var(--afl-radius-sm);
+  padding: var(--afl-space-2) var(--afl-space-3);
+}
+
+.fdl-ai__notes {
+  margin: 0;
+  padding-left: var(--afl-space-5);
+  font-size: var(--afl-text-sm);
+  color: var(--afl-text-secondary);
+}
+
+/* ---- Results -------------------------------------------------------------- */
+
+.fdl-results {
+  margin-top: var(--afl-space-5);
+  background: var(--afl-bg-surface);
+  border: 1px solid var(--afl-border);
+  border-radius: var(--afl-radius-lg);
+  box-shadow: var(--afl-shadow-sm);
+  overflow: hidden;
+}
+
+.fdl-results__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--afl-space-4);
+  padding: var(--afl-space-3) var(--afl-space-4);
+  border-bottom: 1px solid var(--afl-border);
+  background: var(--afl-bg-sunken);
+}
+
+.fdl-results__count {
+  font-weight: var(--afl-weight-medium);
+  font-size: var(--afl-text-md);
+}
+
+.fdl-results__pager {
+  display: flex;
+  gap: var(--afl-space-2);
+}
+
+.fdl-results__warnings {
+  margin: 0;
+  padding: var(--afl-space-3) var(--afl-space-4) var(--afl-space-3) var(--afl-space-7);
+  background: var(--afl-warn-50);
+  color: var(--afl-warn-700);
+  font-size: var(--afl-text-sm);
+  border-bottom: 1px solid var(--afl-border);
+}
+
+.fdl-tablewrap {
+  overflow-x: auto;
+}
+
+.fdl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--afl-text-sm);
+}
+
+.fdl-table th,
+.fdl-table td {
+  text-align: left;
+  padding: var(--afl-space-3) var(--afl-space-4);
+  border-bottom: 1px solid var(--afl-border);
+  vertical-align: top;
+}
+
+.fdl-table th {
+  font-weight: var(--afl-weight-medium);
+  color: var(--afl-text-secondary);
+  white-space: nowrap;
+}
+
+.fdl-table__sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--afl-space-2);
+  margin-top: var(--afl-space-1);
+}
+
+.fdl-table__dim {
+  color: var(--afl-text-secondary);
+}
+
+.fdl-tag {
+  display: inline-block;
+  background: var(--afl-success-50);
+  color: var(--afl-success-700);
+  border-radius: var(--afl-radius-pill);
+  padding: 0 var(--afl-space-2);
+  font-size: var(--afl-text-xs);
+  font-weight: var(--afl-weight-bold);
+}
+
+.fdl-error {
+  margin: var(--afl-space-4) 0 0;
+  padding: var(--afl-space-3) var(--afl-space-4);
+  background: var(--afl-danger-50);
+  color: var(--afl-danger-700);
+  border-radius: var(--afl-radius-md);
+  font-size: var(--afl-text-md);
+}
+
+@media (max-width: 720px) {
+  .fdl-shell {
+    padding: var(--afl-space-3);
+  }
+
+  .fdl-cardrow {
+    grid-template-columns: 1rem 1fr;
+  }
+
+  .fdl-card__title {
+    font-size: var(--afl-text-xl);
+  }
+
+  .fdl-ai__field {
+    flex-direction: column;
+  }
+
+  .fdl-actions {
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+}

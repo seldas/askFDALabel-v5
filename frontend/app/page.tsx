@@ -1,115 +1,91 @@
 'use client';
 
 /*
- * Context-first home.
+ * Home is the query builder.
  *
- * v5 reframes the app as a platform that routes people to the right labeling
- * analysis tool. The entry point is therefore context, not a tool: find a label
- * (or open a task), and the platform then offers what applies to it.
+ * v5 previously opened on a context finder plus recent-work cards. That put a
+ * single free-text box in front of people whose actual question is structured
+ * ("human Rx, NDA, oral, boxed warning mentions X"), so the page could not
+ * express the query they came to run. The panel below is FDALabel's criteria
+ * model, which is the vocabulary those users already work in; tasks, recent
+ * conversations and the tool directory moved to /dashboard, /search and /tools,
+ * all still reachable from the header.
  *
- * The AI search box is still here, but as one way in rather than the whole
- * page — previously the hero *was* an AI chat box, so every session started by
- * asking a question even when the user already knew which label they wanted.
+ * The AI panel on top is an accelerator, not a second search: it writes into
+ * the same criteria tree and stops, so a translated query is reviewed and
+ * edited before anything executes.
  */
 
-import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import StartPage from './components/StartPage';
 import { useUser } from './context/UserContext';
-import { withAppBase } from './utils/appPaths';
+import { Page } from './platform/primitives';
+import { AiIntentPanel } from './querybuilder/AiIntentPanel';
+import type { OptionLists } from './querybuilder/CriterionCard';
+import { QueryPanel } from './querybuilder/QueryPanel';
+import { ResultsTable, type ResultSet } from './querybuilder/ResultsTable';
 import {
-  Badge,
-  Button,
-  ButtonLink,
-  Card,
-  CardButton,
-  EmptyState,
-  Grid,
-  Page,
-  PageBody,
-  SectionHeader,
-} from './platform/primitives';
-import { ToolLauncher } from './platform/ToolLauncher';
-import { labelRoute, type LaunchContext } from './platform/context';
-import './home.css';
+  countFilled,
+  fromWire,
+  type LabelQuery,
+  makeEmptyQuery,
+  toWire,
+  type WireQuery,
+} from './querybuilder/types';
+import './querybuilder/querybuilder.css';
 
-interface Project {
-  id: number;
-  title: string;
-  role: string;
-  count: number;
-}
+const LAST_QUERY_KEY = 'afl.labelquery.last';
+const PAGE_SIZE = 50;
 
-interface ChatHistoryItem {
-  id: number;
-  title: string;
-  chat_data: any[];
-  timestamp: string;
-}
-
-/** A row from /api/localquery/search. */
-interface LabelHit {
-  set_id: string;
-  spl_id?: string;
-  brand_name?: string | null;
-  generic_name?: string | null;
-  manufacturer?: string | null;
-  market_category?: string | null;
-  appr_num?: string | null;
-  revised_date?: string | null;
-  is_archived?: boolean;
-}
-
-const EXAMPLE_QUERIES = ['Tivicay', 'metformin', 'Ozempic', 'losartan'];
-
-function formatTimestamp(ts: string) {
-  try {
-    const date = new Date(ts + (ts.endsWith('Z') ? '' : 'Z'));
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return ts;
-  }
-}
+const EMPTY_OPTIONS: OptionLists = {
+  labelingTypes: [],
+  applicationTypes: [],
+  routes: [],
+  sections: [],
+  loading: true,
+};
 
 export default function HomePage() {
-  const router = useRouter();
   const { session, loading, refreshSession, openAuthModal } = useUser();
-
-  const [query, setQuery] = useState('');
-  const [hits, setHits] = useState<LabelHit[] | null>(null);
-  const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<LabelHit | null>(null);
-
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [histories, setHistories] = useState<ChatHistoryItem[]>([]);
-
   const isAuthed = Boolean(session?.is_authenticated);
 
+  const [query, setQuery] = useState<LabelQuery>(makeEmptyQuery);
+  const [options, setOptions] = useState<OptionLists>(EMPTY_OPTIONS);
+  const [results, setResults] = useState<ResultSet | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasSaved, setHasSaved] = useState(false);
+
+  const resultsRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setHasSaved(Boolean(window.localStorage.getItem(LAST_QUERY_KEY)));
+  }, []);
+
+  /* Dropdown contents come from the live database, so a deployment with a
+   * partial label import offers only what it actually has. */
   useEffect(() => {
     if (!isAuthed) return;
     let cancelled = false;
 
     (async () => {
       try {
-        const [pRes, hRes] = await Promise.all([
-          fetch('/api/dashboard/projects'),
-          fetch('/api/search/history'),
-        ]);
-        const [p, h] = await Promise.all([pRes.json(), hRes.json()]);
+        const res = await fetch('/api/labelquery/options');
+        const json = await res.json();
         if (cancelled) return;
-        setProjects((p.projects || []).slice(0, 4));
-        setHistories((h.histories || []).slice(0, 4));
+        if (!res.ok) throw new Error(json.error || 'Failed to load options');
+        setOptions({
+          labelingTypes: json.labelingTypes || [],
+          applicationTypes: json.applicationTypes || [],
+          routes: json.routes || [],
+          sections: json.sections || [],
+          loading: false,
+        });
       } catch (err) {
-        console.error('Failed to load recent work', err);
+        console.error('Failed to load query options', err);
+        if (!cancelled) setOptions((prev) => ({ ...prev, loading: false }));
       }
     })();
 
@@ -118,66 +94,55 @@ export default function HomePage() {
     };
   }, [isAuthed]);
 
-  /*
-   * Debounced label lookup. This is a structured search against the local
-   * labeling tables, not the AI pipeline — establishing context should be fast
-   * and deterministic.
-   */
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const runSearch = useCallback(
+    async (offset: number) => {
+      setBusy(true);
+      setError(null);
+      try {
+        const wire = toWire(query);
+        window.localStorage.setItem(LAST_QUERY_KEY, JSON.stringify(wire));
+        setHasSaved(true);
 
-  const runSearch = useCallback(async (term: string) => {
-    const trimmed = term.trim();
-    if (trimmed.length < 2) {
-      setHits(null);
-      setSearching(false);
-      setSearchError(null);
-      return;
-    }
+        const res = await fetch('/api/labelquery/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: wire, limit: PAGE_SIZE, offset }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || `Search failed (${res.status})`);
+        setResults(json as ResultSet);
+        // Only scroll on a fresh search; paging should hold position.
+        if (offset === 0) {
+          requestAnimationFrame(() =>
+            resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+          );
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+        setResults(null);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [query],
+  );
 
-    setSearching(true);
-    setSearchError(null);
+  const restoreLast = useCallback(() => {
+    const raw = window.localStorage.getItem(LAST_QUERY_KEY);
+    if (!raw) return;
     try {
-      const res = await fetch(
-        `/api/localquery/search?query=${encodeURIComponent(trimmed)}`,
-      );
-      if (!res.ok) throw new Error(`Search failed (${res.status})`);
-      const json = await res.json();
-      setHits((json.results || []).slice(0, 8));
-    } catch (err) {
-      setSearchError(err instanceof Error ? err.message : String(err));
-      setHits([]);
-    } finally {
-      setSearching(false);
+      setQuery(fromWire(JSON.parse(raw) as WireQuery));
+      setError(null);
+    } catch {
+      setError('The saved query could not be read.');
     }
   }, []);
 
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => runSearch(query), 300);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [query, runSearch]);
-
-  const askAi = useCallback(() => {
-    const trimmed = query.trim();
-    router.push(trimmed ? `/search?q=${encodeURIComponent(trimmed)}` : '/search');
-  }, [query, router]);
-
-  const openHistory = useCallback(
-    (h: ChatHistoryItem) => {
-      if (!h.chat_data?.length) return;
-      sessionStorage.setItem('initial_history_chat', JSON.stringify(h.chat_data));
-      sessionStorage.setItem('initial_history_id', String(h.id));
-      router.push('/search');
-    },
-    [router],
-  );
-
-  const labelContext = useMemo<LaunchContext>(
-    () => (selected ? { setIds: [selected.set_id] } : {}),
-    [selected],
-  );
+  const clearAll = useCallback(() => {
+    setQuery(makeEmptyQuery());
+    setResults(null);
+    setError(null);
+  }, []);
 
   const handleGuestLogin = async () => {
     try {
@@ -198,204 +163,55 @@ export default function HomePage() {
     );
   }
 
+  const filled = countFilled(query);
+
+  const actionBar = (position: 'top' | 'bottom') => (
+    <div className={position === 'top' ? 'fdl-actions' : 'fdl-actions fdl-actions--bottom'}>
+      <button type="button" className="fdl-link" onClick={restoreLast} disabled={!hasSaved}>
+        Restore Last Query
+      </button>
+      <button type="button" className="fdl-link" onClick={clearAll}>
+        Clear All
+      </button>
+      <button
+        type="button"
+        className="fdl-btn fdl-btn--search"
+        onClick={() => runSearch(0)}
+        disabled={busy}
+      >
+        {busy ? 'Searching…' : 'Search »'}
+      </button>
+    </div>
+  );
+
   return (
     <Page>
       <Header />
 
-      <PageBody>
-        <section className="afl-home-hero">
-          <img
-            className="afl-home-hero__logo"
-            src={withAppBase('/askFDALabel_hero.png')}
-            alt="AskFDALabel"
-          />
-          <p className="afl-home-hero__lede">
-            Start with a label or a task, then pick the analysis tool you need.
+      <main className="fdl-shell">
+        <AiIntentPanel onQuery={setQuery} disabled={busy} />
+
+        {actionBar('top')}
+
+        <QueryPanel query={query} onChange={setQuery} options={options} />
+
+        {actionBar('bottom')}
+
+        {filled === 0 ? (
+          <p className="fdl-note">
+            No criteria are filled in yet — searching now returns the most recently revised
+            labels.
           </p>
+        ) : null}
 
-          <div className="afl-finder">
-            <div className="afl-finder__field">
-              <input
-                className="afl-finder__input"
-                type="search"
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setSelected(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && hits?.length) setSelected(hits[0]);
-                }}
-                placeholder="Find a label — brand, generic, set ID, or application number"
-                aria-label="Find a label"
-              />
-            </div>
+        {error ? <p className="fdl-error">{error}</p> : null}
 
-            <div className="afl-finder__hint">
-              <span className="afl-finder__status" role="status">
-                {searching
-                  ? 'Searching…'
-                  : searchError
-                    ? searchError
-                    : hits
-                      ? `${hits.length} label${hits.length === 1 ? '' : 's'} found`
-                      : `Try ${EXAMPLE_QUERIES.join(', ')}`}
-              </span>
-              <Button variant="ghost" size="sm" onClick={askAi}>
-                Ask AI about this instead →
-              </Button>
-            </div>
-
-            {/* Context established: offer the tools that apply to it. */}
-            {selected ? (
-              <div className="afl-context">
-                <div className="afl-context__head">
-                  <div style={{ minWidth: 0 }}>
-                    <span className="afl-context__eyebrow">Selected label</span>
-                    <h2 className="afl-context__name">
-                      {selected.brand_name || selected.generic_name || selected.set_id}
-                    </h2>
-                    <p className="afl-context__meta">
-                      {[selected.generic_name, selected.manufacturer, selected.appr_num]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
-                    Clear
-                  </Button>
-                </div>
-                <ToolLauncher
-                  context={labelContext}
-                  matchContexts={['label', 'labelSet']}
-                  aria-label="Tools for this label"
-                />
-              </div>
-            ) : hits && hits.length > 0 ? (
-              <div className="afl-finder__results">
-                {hits.map((hit) => (
-                  <button
-                    key={hit.set_id}
-                    type="button"
-                    className="afl-result"
-                    onClick={() => setSelected(hit)}
-                  >
-                    <span className="afl-result__main">
-                      <span className="afl-result__name">
-                        {hit.brand_name || hit.generic_name || hit.set_id}
-                      </span>
-                      <span className="afl-result__meta">
-                        {[hit.generic_name, hit.manufacturer, hit.revised_date]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </span>
-                    </span>
-                    <span className="afl-result__badges">
-                      {hit.market_category ? (
-                        <Badge tone="neutral">{hit.market_category}</Badge>
-                      ) : null}
-                      {hit.is_archived ? <Badge tone="warn">Archived</Badge> : null}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ) : hits && hits.length === 0 && !searching ? (
-              <div className="afl-finder__results">
-                <EmptyState
-                  title="No labels matched"
-                  description="Try a brand or generic name, a set ID, or an application number. You can also ask the AI instead."
-                  action={
-                    <Button variant="primary" size="sm" onClick={askAi}>
-                      Ask AI
-                    </Button>
-                  }
-                />
-              </div>
-            ) : null}
-          </div>
-        </section>
-
-        <section className="afl-home-section">
-          <SectionHeader
-            title="Your tasks"
-            description="Groups of labels and saved comparisons."
-            actions={
-              <ButtonLink href={withAppBase('/dashboard')} variant="secondary" size="sm">
-                View all
-              </ButtonLink>
-            }
-          />
-          {projects.length > 0 ? (
-            <Grid min="230px">
-              {projects.map((p) => (
-                <Link
-                  key={p.id}
-                  href={`/dashboard?projectId=${p.id}`}
-                  style={{ textDecoration: 'none' }}
-                >
-                  <Card className="afl-card--interactive">
-                    <h3 className="afl-home-card__title">{p.title}</h3>
-                    <span className="afl-home-card__meta">
-                      {p.count} labels · {p.role.toUpperCase()}
-                    </span>
-                  </Card>
-                </Link>
-              ))}
-            </Grid>
-          ) : (
-            <EmptyState
-              title="No tasks yet"
-              description="Group labels into a task to compare them, track adverse events, and save notes."
-              action={
-                <ButtonLink href={withAppBase('/dashboard')} variant="primary" size="sm">
-                  Go to dashboard
-                </ButtonLink>
-              }
-            />
-          )}
-        </section>
-
-        <section className="afl-home-section">
-          <SectionHeader
-            title="Recent conversations"
-            actions={
-              <ButtonLink href={withAppBase('/search')} variant="secondary" size="sm">
-                Go to chat
-              </ButtonLink>
-            }
-          />
-          {histories.length > 0 ? (
-            <Grid min="230px">
-              {histories.map((h) => (
-                <CardButton key={h.id} onClick={() => openHistory(h)}>
-                  <h3 className="afl-home-card__title">{h.title}</h3>
-                  <span className="afl-home-card__meta">
-                    {h.chat_data?.length || 0} messages · {formatTimestamp(h.timestamp)}
-                  </span>
-                </CardButton>
-              ))}
-            </Grid>
-          ) : (
-            <EmptyState
-              title="No conversations yet"
-              description="Ask a question about any label to start one."
-            />
-          )}
-        </section>
-
-        <section className="afl-home-section">
-          <SectionHeader
-            title="All tools"
-            description="Browse everything available in this deployment."
-            actions={
-              <ButtonLink href={withAppBase('/tools')} variant="secondary" size="sm">
-                Open directory
-              </ButtonLink>
-            }
-          />
-          <ToolLauncher context={{}} groups={['discover', 'analyze']} aria-label="Platform tools" />
-        </section>
-      </PageBody>
+        <div ref={resultsRef}>
+          {results ? (
+            <ResultsTable data={results} busy={busy} onPage={(offset) => runSearch(offset)} />
+          ) : null}
+        </div>
+      </main>
 
       <Footer />
     </Page>
