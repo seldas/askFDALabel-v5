@@ -53,11 +53,11 @@ const VERSION_ORDER = [
 
 function getVersionColor(v: string) {
     const vUpper = v.toUpperCase();
-    if (vUpper.includes('PROD')) return vUpper.includes('CDER') ? '#3b82f6' : '#1e40af';
-    if (vUpper.includes('PUBLIC')) return vUpper.includes('CDER') ? '#10b981' : '#047857';
-    if (vUpper.includes('TEST')) return vUpper.includes('CDER') ? '#a855f7' : '#7e22ce';
-    if (vUpper.includes('DEV')) return vUpper.includes('CDER') ? '#f59e0b' : '#b45309';
-    return '#64748b';
+    if (vUpper.includes('PROD')) return vUpper.includes('CDER') ? 'var(--afl-info-500)' : 'var(--afl-info-700)';
+    if (vUpper.includes('PUBLIC')) return vUpper.includes('CDER') ? 'var(--afl-success-500)' : 'var(--afl-success-700)';
+    if (vUpper.includes('TEST')) return vUpper.includes('CDER') ? 'var(--afl-ai-from)' : 'var(--afl-a-700)';
+    if (vUpper.includes('DEV')) return vUpper.includes('CDER') ? 'var(--afl-warn-500)' : 'var(--afl-warn-700)';
+    return 'var(--afl-n-500)';
 }
 
 function formatCount(c: string | null | undefined): string {
@@ -68,16 +68,16 @@ function formatCount(c: string | null | undefined): string {
 function countBg(c: string | null | undefined): string {
     if (!c || c === 'N/A' || c === '—') return 'transparent';
     const n = parseInt(c);
-    if (isNaN(n)) return '#f1f5f9';
-    if (n === 0) return '#fee2e2';
-    return '#f0fdf4';
+    if (isNaN(n)) return 'var(--afl-n-100)';
+    if (n === 0) return 'var(--afl-danger-100)';
+    return 'var(--afl-success-50)';
 }
 function countColor(c: string | null | undefined): string {
-    if (!c || c === 'N/A' || c === '—') return '#94a3b8';
+    if (!c || c === 'N/A' || c === '—') return 'var(--afl-n-400)';
     const n = parseInt(c);
-    if (isNaN(n)) return '#64748b';
-    if (n === 0) return '#dc2626';
-    return '#16a34a';
+    if (isNaN(n)) return 'var(--afl-n-500)';
+    if (n === 0) return 'var(--afl-danger-500)';
+    return 'var(--afl-success-500)';
 }
 
 export default function WebTestingPage() {
@@ -354,33 +354,33 @@ export default function WebTestingPage() {
     const processedCount = results.filter(r => r.status !== 'pending').length;
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f0f4f8' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--afl-n-50)' }}>
             <Header />
             <main style={{ flex: 1, padding: '32px 24px', maxWidth: '1600px', margin: '0 auto', width: '100%' }}>
                 {/* Page title */}
                 <div style={{ marginBottom: '24px' }}>
-                    <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>FDALabel Auto-Test Dashboard</h1>
-                    <p style={{ color: '#64748b', margin: '4px 0 0' }}>Browse historical test runs by date, inspect per-task results, and view long-term trends.</p>
+                    <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--afl-n-900)', margin: 0 }}>FDALabel Auto-Test Dashboard</h1>
+                    <p style={{ color: 'var(--afl-n-500)', margin: '4px 0 0' }}>Browse historical test runs by date, inspect per-task results, and view long-term trends.</p>
                 </div>
 
                 {/* ── Control Bar ──────────────────────────────────────────── */}
-                <div style={{ background: '#fff', padding: '14px 24px', borderRadius: '14px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: '24px', border: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center' }}>
+                <div style={{ background: 'var(--afl-n-0)', padding: '14px 24px', borderRadius: '14px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: '24px', border: '1px solid var(--afl-n-200)', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center' }}>
                     {/* Status */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ padding: '3px 12px', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', backgroundColor: status === 'running' ? '#dbeafe' : status === 'completed' ? '#d1fae5' : '#f1f5f9', color: status === 'running' ? '#1e40af' : status === 'completed' ? '#065f46' : '#475569' }}>{status}</span>
-                        {status === 'running' && <><div className="loader" style={{ width: '14px', height: '14px', borderWidth: '2px' }}></div><span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#2563eb' }}>{taskProgress}%</span></>}
-                        {status !== 'running' && <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{processedCount}/{totalTasks} tasks</span>}
+                        <span style={{ padding: '3px 12px', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', backgroundColor: status === 'running' ? 'var(--afl-info-100)' : status === 'completed' ? 'var(--afl-success-50)' : 'var(--afl-n-100)', color: status === 'running' ? 'var(--afl-info-700)' : status === 'completed' ? 'var(--afl-success-700)' : 'var(--afl-n-600)' }}>{status}</span>
+                        {status === 'running' && <><div className="loader" style={{ width: '14px', height: '14px', borderWidth: '2px' }}></div><span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-info-700)' }}>{taskProgress}%</span></>}
+                        {status !== 'running' && <span style={{ fontSize: '0.8rem', color: 'var(--afl-n-500)' }}>{processedCount}/{totalTasks} tasks</span>}
                     </div>
-                    <button onClick={startAutomation} disabled={totalTasks === 0} style={{ padding: '9px 18px', backgroundColor: totalTasks > 0 ? '#2563eb' : '#cbd5e1', color: '#fff', borderRadius: '8px', fontWeight: 700, fontSize: '0.82rem', border: 'none', cursor: totalTasks > 0 ? 'pointer' : 'not-allowed', boxShadow: totalTasks > 0 ? '0 4px 12px rgba(37,99,235,0.25)' : 'none' }}>▶ Start Automation</button>
-                    {status === 'running' && <button onClick={() => { stopRef.current = true; }} style={{ padding: '9px 18px', backgroundColor: '#ef4444', color: '#fff', borderRadius: '8px', fontWeight: 700, fontSize: '0.82rem', border: 'none', cursor: 'pointer' }}>■ Stop</button>}
+                    <button onClick={startAutomation} disabled={totalTasks === 0} style={{ padding: '9px 18px', backgroundColor: totalTasks > 0 ? 'var(--afl-info-700)' : 'var(--afl-n-300)', color: 'var(--afl-n-0)', borderRadius: '8px', fontWeight: 700, fontSize: '0.82rem', border: 'none', cursor: totalTasks > 0 ? 'pointer' : 'not-allowed', boxShadow: totalTasks > 0 ? '0 4px 12px rgba(37,99,235,0.25)' : 'none' }}>▶ Start Automation</button>
+                    {status === 'running' && <button onClick={() => { stopRef.current = true; }} style={{ padding: '9px 18px', backgroundColor: 'var(--afl-danger-500)', color: 'var(--afl-n-0)', borderRadius: '8px', fontWeight: 700, fontSize: '0.82rem', border: 'none', cursor: 'pointer' }}>■ Stop</button>}
 
-                    <div style={{ width: '1px', height: '28px', background: '#e2e8f0', flexShrink: 0 }} />
+                    <div style={{ width: '1px', height: '28px', background: 'var(--afl-n-200)', flexShrink: 0 }} />
 
                     {/* Download */}
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                         <div>
-                            <label style={{ display: 'block', fontSize: '0.62rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '3px' }}>Download Range</label>
-                            <select value={downloadRange} onChange={e => setDownloadRange(e.target.value as any)} style={{ padding: '7px 28px 7px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.82rem', outline: 'none' }}>
+                            <label style={{ display: 'block', fontSize: '0.62rem', fontWeight: 800, color: 'var(--afl-n-400)', textTransform: 'uppercase', marginBottom: '3px' }}>Download Range</label>
+                            <select value={downloadRange} onChange={e => setDownloadRange(e.target.value as any)} style={{ padding: '7px 28px 7px 10px', borderRadius: '8px', border: '1px solid var(--afl-n-200)', fontSize: '0.82rem', outline: 'none' }}>
                                 <option value="1m">Past 1 Month</option>
                                 <option value="3m">Past 3 Months</option>
                                 <option value="1y">Past 1 Year</option>
@@ -389,35 +389,35 @@ export default function WebTestingPage() {
                         </div>
                         {downloadRange === 'custom' && <>
                             <div>
-                                <label style={{ display: 'block', fontSize: '0.62rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '3px' }}>Start</label>
-                                <input type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} style={{ padding: '7px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.82rem', outline: 'none' }} />
+                                <label style={{ display: 'block', fontSize: '0.62rem', fontWeight: 800, color: 'var(--afl-n-400)', textTransform: 'uppercase', marginBottom: '3px' }}>Start</label>
+                                <input type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} style={{ padding: '7px', borderRadius: '8px', border: '1px solid var(--afl-n-200)', fontSize: '0.82rem', outline: 'none' }} />
                             </div>
                             <div>
-                                <label style={{ display: 'block', fontSize: '0.62rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '3px' }}>End</label>
-                                <input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} style={{ padding: '7px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.82rem', outline: 'none' }} />
+                                <label style={{ display: 'block', fontSize: '0.62rem', fontWeight: 800, color: 'var(--afl-n-400)', textTransform: 'uppercase', marginBottom: '3px' }}>End</label>
+                                <input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} style={{ padding: '7px', borderRadius: '8px', border: '1px solid var(--afl-n-200)', fontSize: '0.82rem', outline: 'none' }} />
                             </div>
                         </>}
-                        <button onClick={downloadHistory} disabled={isDownloadingHistory || (downloadRange === 'custom' && (!customStartDate || !customEndDate))} style={{ padding: '9px 16px', backgroundColor: '#fff', color: '#475569', borderRadius: '8px', fontWeight: 700, fontSize: '0.82rem', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <button onClick={downloadHistory} disabled={isDownloadingHistory || (downloadRange === 'custom' && (!customStartDate || !customEndDate))} style={{ padding: '9px 16px', backgroundColor: 'var(--afl-n-0)', color: 'var(--afl-n-600)', borderRadius: '8px', fontWeight: 700, fontSize: '0.82rem', border: '1px solid var(--afl-n-200)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             {isDownloadingHistory ? <><div className="loader" style={{ width: '12px', height: '12px', borderWidth: '2px' }}></div>Downloading...</> : <>⬇ Download History</>}
                         </button>
                     </div>
-                    {error && <span style={{ color: '#ef4444', fontSize: '0.8rem', fontWeight: 600 }}>⚠ {error}</span>}
+                    {error && <span style={{ color: 'var(--afl-danger-500)', fontSize: '0.8rem', fontWeight: 600 }}>⚠ {error}</span>}
                 </div>
 
                 {/* ── Three-Panel Body ──────────────────────────────────────── */}
                 <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '20px', alignItems: 'start' }}>
 
                     {/* ── LEFT: Calendar Panel ─────────────────────────────── */}
-                    <div style={{ background: '#fff', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', position: 'sticky', top: '20px' }}>
+                    <div style={{ background: 'var(--afl-n-0)', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid var(--afl-n-200)', position: 'sticky', top: '20px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                            <button onClick={() => setCalendarMonth(prev => { const d = new Date(prev); d.setMonth(d.getMonth() - 1); return d; })} style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
-                            <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#1e293b' }}>{formatMonthYear(calendarMonth)}</span>
-                            <button onClick={() => setCalendarMonth(prev => { const d = new Date(prev); d.setMonth(d.getMonth() + 1); return d; })} style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+                            <button onClick={() => setCalendarMonth(prev => { const d = new Date(prev); d.setMonth(d.getMonth() - 1); return d; })} style={{ background: 'none', border: '1px solid var(--afl-n-200)', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+                            <span style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--afl-n-800)' }}>{formatMonthYear(calendarMonth)}</span>
+                            <button onClick={() => setCalendarMonth(prev => { const d = new Date(prev); d.setMonth(d.getMonth() + 1); return d; })} style={{ background: 'none', border: '1px solid var(--afl-n-200)', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
                         </div>
                         {/* Day-of-week header */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: '2px', marginBottom: '4px' }}>
                             {['S','M','T','W','T','F','S'].map((d, i) => (
-                                <div key={i} style={{ textAlign: 'center', fontSize: '0.62rem', fontWeight: 800, color: '#94a3b8', padding: '4px 0' }}>{d}</div>
+                                <div key={i} style={{ textAlign: 'center', fontSize: '0.62rem', fontWeight: 800, color: 'var(--afl-n-400)', padding: '4px 0' }}>{d}</div>
                             ))}
                         </div>
                         {/* Days grid */}
@@ -441,15 +441,15 @@ export default function WebTestingPage() {
                                             position: 'relative', width: '100%', aspectRatio: '1', borderRadius: '8px', border: 'none',
                                             cursor: hasData ? 'pointer' : 'default',
                                             fontSize: '0.72rem', fontWeight: isSelected ? 800 : hasData ? 700 : 400,
-                                            backgroundColor: isSelected ? '#2563eb' : hasData ? '#eff6ff' : 'transparent',
-                                            color: isSelected ? '#fff' : hasData ? '#1e40af' : isToday ? '#f59e0b' : '#94a3b8',
-                                            outline: isToday && !isSelected ? '2px solid #f59e0b' : 'none',
+                                            backgroundColor: isSelected ? 'var(--afl-info-700)' : hasData ? 'var(--afl-info-50)' : 'transparent',
+                                            color: isSelected ? 'var(--afl-n-0)' : hasData ? 'var(--afl-info-700)' : isToday ? 'var(--afl-warn-500)' : 'var(--afl-n-400)',
+                                            outline: isToday && !isSelected ? '2px solid var(--afl-warn-500)' : 'none',
                                             transition: 'all 0.15s ease',
                                         }}
                                     >
                                         {day}
                                         {hasData && !isSelected && (
-                                            <span style={{ position: 'absolute', bottom: '3px', left: '50%', transform: 'translateX(-50%)', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#2563eb', display: 'block' }} />
+                                            <span style={{ position: 'absolute', bottom: '3px', left: '50%', transform: 'translateX(-50%)', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--afl-info-700)', display: 'block' }} />
                                         )}
                                     </button>
                                 );
@@ -457,22 +457,22 @@ export default function WebTestingPage() {
                         </div>
 
                         {/* Legend */}
-                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f1f5f9', fontSize: '0.7rem', color: '#64748b' }}>
+                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--afl-n-100)', fontSize: '0.7rem', color: 'var(--afl-n-500)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                                <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', backgroundColor: '#eff6ff', border: '1px solid #dbeafe' }}></span>Has test data
+                                <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', backgroundColor: 'var(--afl-info-50)', border: '1px solid var(--afl-info-100)' }}></span>Has test data
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                                <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', backgroundColor: '#2563eb' }}></span>Selected date
+                                <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', backgroundColor: 'var(--afl-info-700)' }}></span>Selected date
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', outline: '2px solid #f59e0b' }}></span>Today
+                                <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', outline: '2px solid var(--afl-warn-500)' }}></span>Today
                             </div>
                         </div>
 
                         {/* Total runs count */}
                         {calendarDates.length > 0 && (
-                            <div style={{ marginTop: '12px', padding: '10px', background: '#f8fafc', borderRadius: '8px', fontSize: '0.72rem', color: '#475569' }}>
-                                <div style={{ fontWeight: 800, color: '#1e293b', marginBottom: '2px' }}>{calendarDates.length} test days in history</div>
+                            <div style={{ marginTop: '12px', padding: '10px', background: 'var(--afl-n-50)', borderRadius: '8px', fontSize: '0.72rem', color: 'var(--afl-n-600)' }}>
+                                <div style={{ fontWeight: 800, color: 'var(--afl-n-800)', marginBottom: '2px' }}>{calendarDates.length} test days in history</div>
                                 <div>Total {calendarDates.reduce((s, d) => s + d.run_count, 0).toLocaleString()} records tracked</div>
                             </div>
                         )}
@@ -482,23 +482,23 @@ export default function WebTestingPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
                         {/* ── Task Matrix (Right-Top) ─────────────────────── */}
-                        <div style={{ background: '#fff', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                            <div style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ background: 'var(--afl-n-0)', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid var(--afl-n-200)', overflow: 'hidden' }}>
+                            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--afl-n-100)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
-                                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#1e293b' }}>
+                                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--afl-n-800)' }}>
                                         {selectedDate ? `Results for ${selectedDate}` : 'FDALabel Auto-Test Tasks'}
                                     </h3>
-                                    {!selectedDate && <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#94a3b8' }}>Select a highlighted date on the calendar to view results.</p>}
+                                    {!selectedDate && <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--afl-n-400)' }}>Select a highlighted date on the calendar to view results.</p>}
                                 </div>
                                 {selectedDate && dateSnapshot.length > 0 && (
-                                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', backgroundColor: '#f1f5f9', padding: '4px 10px', borderRadius: '999px' }}>
+                                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--afl-n-500)', backgroundColor: 'var(--afl-n-100)', padding: '4px 10px', borderRadius: '999px' }}>
                                         {dateSnapshot.length} tasks · {activeVersions.length} versions
                                     </span>
                                 )}
                             </div>
 
                             {!selectedDate && (
-                                <div style={{ padding: '60px 20px', textAlign: 'center', color: '#94a3b8' }}>
+                                <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--afl-n-400)' }}>
                                     <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📅</div>
                                     <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>Pick a date to explore test results</div>
                                     <div style={{ fontSize: '0.78rem', marginTop: '4px' }}>Blue highlighted days in the calendar have test data available.</div>
@@ -506,28 +506,28 @@ export default function WebTestingPage() {
                             )}
 
                             {selectedDate && isSnapshotLoading && (
-                                <div style={{ padding: '60px 20px', textAlign: 'center', color: '#94a3b8', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--afl-n-400)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                                     <div className="loader" style={{ width: '28px', height: '28px', borderWidth: '3px' }}></div>
                                     <span style={{ fontSize: '0.85rem' }}>Loading results…</span>
                                 </div>
                             )}
 
                             {selectedDate && !isSnapshotLoading && dateSnapshot.length === 0 && (
-                                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8' }}>No records found for {selectedDate}.</div>
+                                <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--afl-n-400)' }}>No records found for {selectedDate}.</div>
                             )}
 
                             {selectedDate && !isSnapshotLoading && dateSnapshot.length > 0 && (
                                 <div style={{ overflowX: 'auto' }}>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
                                         <thead>
-                                            <tr style={{ backgroundColor: '#f8fafc' }}>
-                                                <th style={{ padding: '10px 16px', textAlign: 'left', color: '#64748b', fontWeight: 700, borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap', minWidth: '280px' }}>Task</th>
+                                            <tr style={{ backgroundColor: 'var(--afl-n-50)' }}>
+                                                <th style={{ padding: '10px 16px', textAlign: 'left', color: 'var(--afl-n-500)', fontWeight: 700, borderBottom: '1px solid var(--afl-n-100)', whiteSpace: 'nowrap', minWidth: '280px' }}>Task</th>
                                                 {activeVersions.map(v => (
-                                                    <th key={v} style={{ padding: '10px 10px', textAlign: 'center', color: getVersionColor(v), fontWeight: 800, borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap', fontSize: '0.68rem' }}>
+                                                    <th key={v} style={{ padding: '10px 10px', textAlign: 'center', color: getVersionColor(v), fontWeight: 800, borderBottom: '1px solid var(--afl-n-100)', whiteSpace: 'nowrap', fontSize: '0.68rem' }}>
                                                         {v.replace(' - ', '\n')}
                                                     </th>
                                                 ))}
-                                                <th style={{ padding: '10px 10px', textAlign: 'center', color: '#64748b', fontWeight: 700, borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap' }}>Details</th>
+                                                <th style={{ padding: '10px 10px', textAlign: 'center', color: 'var(--afl-n-500)', fontWeight: 700, borderBottom: '1px solid var(--afl-n-100)', whiteSpace: 'nowrap' }}>Details</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -538,17 +538,17 @@ export default function WebTestingPage() {
                                                         key={task.task_id}
                                                         onClick={() => setSelectedTask(isSelected ? null : task)}
                                                         style={{
-                                                            borderBottom: '1px solid #f8fafc',
-                                                            backgroundColor: isSelected ? '#eff6ff' : 'transparent',
-                                                            borderLeft: isSelected ? '3px solid #2563eb' : '3px solid transparent',
+                                                            borderBottom: '1px solid var(--afl-n-50)',
+                                                            backgroundColor: isSelected ? 'var(--afl-info-50)' : 'transparent',
+                                                            borderLeft: isSelected ? '3px solid var(--afl-info-700)' : '3px solid transparent',
                                                             cursor: 'pointer',
                                                             transition: 'all 0.15s ease',
                                                         }}
                                                         className="row-hover"
                                                     >
-                                                        <td style={{ padding: '9px 16px', color: '#1e293b', fontWeight: 600 }}>
+                                                        <td style={{ padding: '9px 16px', color: 'var(--afl-n-800)', fontWeight: 600 }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                <span style={{ backgroundColor: isSelected ? '#2563eb' : '#e2e8f0', color: isSelected ? '#fff' : '#475569', fontSize: '0.6rem', fontWeight: 800, padding: '1px 6px', borderRadius: '4px', flexShrink: 0 }}>#{task.task_num}</span>
+                                                                <span style={{ backgroundColor: isSelected ? 'var(--afl-info-700)' : 'var(--afl-n-200)', color: isSelected ? 'var(--afl-n-0)' : 'var(--afl-n-600)', fontSize: '0.6rem', fontWeight: 800, padding: '1px 6px', borderRadius: '4px', flexShrink: 0 }}>#{task.task_num}</span>
                                                                 <span style={{ fontSize: '0.76rem', lineHeight: 1.3 }}>{task.query_details}</span>
                                                             </div>
                                                         </td>
@@ -570,10 +570,10 @@ export default function WebTestingPage() {
                                                                             <span style={{ backgroundColor: countBg(c), color: countColor(c), fontWeight: 800, padding: '2px 8px', borderRadius: '6px', fontSize: '0.78rem', minWidth: '32px', display: 'inline-block', textAlign: 'center' }}>
                                                                                 {formatCount(c)}
                                                                             </span>
-                                                                            {delay != null && <span style={{ color: '#94a3b8', fontSize: '0.6rem' }}>{delay.toFixed(1)}s</span>}
+                                                                            {delay != null && <span style={{ color: 'var(--afl-n-400)', fontSize: '0.6rem' }}>{delay.toFixed(1)}s</span>}
                                                                         </div>
                                                                     ) : (
-                                                                        <span style={{ color: '#e2e8f0' }}>—</span>
+                                                                        <span style={{ color: 'var(--afl-n-200)' }}>—</span>
                                                                     )}
 
                                                                     {isHovered && vData && vData.runs && vData.runs.length > 0 && (
@@ -586,8 +586,8 @@ export default function WebTestingPage() {
                                                                                 bottom: '100%',
                                                                                 transform: 'translateX(-50%) translateY(-6px)',
                                                                             }),
-                                                                            backgroundColor: '#1e293b',
-                                                                            color: '#fff',
+                                                                            backgroundColor: 'var(--afl-n-800)',
+                                                                            color: 'var(--afl-n-0)',
                                                                             padding: '12px',
                                                                             borderRadius: '10px',
                                                                             boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
@@ -598,19 +598,19 @@ export default function WebTestingPage() {
                                                                             lineHeight: '1.4',
                                                                             pointerEvents: 'none',
                                                                         }}>
-                                                                            <div style={{ fontWeight: 800, borderBottom: '1px solid #334155', paddingBottom: '6px', marginBottom: '8px', color: '#38bdf8', fontSize: '0.74rem' }}>
+                                                                            <div style={{ fontWeight: 800, borderBottom: '1px solid var(--afl-n-700)', paddingBottom: '6px', marginBottom: '8px', color: 'var(--afl-info-500)', fontSize: '0.74rem' }}>
                                                                                 All Runs ({v})
                                                                             </div>
                                                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto' }}>
                                                                                 {vData.runs.map((run, idx) => (
-                                                                                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', borderBottom: idx < vData.runs.length - 1 ? '1px dashed #334155' : 'none', paddingBottom: idx < vData.runs.length - 1 ? '4px' : '0' }}>
+                                                                                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', borderBottom: idx < vData.runs.length - 1 ? '1px dashed var(--afl-n-700)' : 'none', paddingBottom: idx < vData.runs.length - 1 ? '4px' : '0' }}>
                                                                                         <div>
-                                                                                            <span style={{ fontWeight: 700, color: '#f8fafc' }}>{run.time}</span>
-                                                                                            {run.notes && <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.62rem' }}>{run.notes}</span>}
+                                                                                            <span style={{ fontWeight: 700, color: 'var(--afl-n-50)' }}>{run.time}</span>
+                                                                                            {run.notes && <span style={{ color: 'var(--afl-n-400)', display: 'block', fontSize: '0.62rem' }}>{run.notes}</span>}
                                                                                         </div>
                                                                                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
                                                                                             <span style={{ color: countColor(run.count), fontWeight: 800 }}>{formatCount(run.count)}</span>
-                                                                                            {run.delay != null && <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.62rem' }}>{run.delay.toFixed(1)}s</span>}
+                                                                                            {run.delay != null && <span style={{ color: 'var(--afl-n-400)', display: 'block', fontSize: '0.62rem' }}>{run.delay.toFixed(1)}s</span>}
                                                                                         </div>
                                                                                     </div>
                                                                                 ))}
@@ -619,10 +619,10 @@ export default function WebTestingPage() {
                                                                                 position: 'absolute',
                                                                                 ...(rowIndex < 3 ? {
                                                                                     bottom: '100%',
-                                                                                    borderBottom: '6px solid #1e293b',
+                                                                                    borderBottom: '6px solid var(--afl-n-800)',
                                                                                 } : {
                                                                                     top: '100%',
-                                                                                    borderTop: '6px solid #1e293b',
+                                                                                    borderTop: '6px solid var(--afl-n-800)',
                                                                                 }),
                                                                                 left: '50%',
                                                                                 transform: 'translateX(-50%)',
@@ -637,7 +637,7 @@ export default function WebTestingPage() {
                                                             );
                                                         })}
                                                         <td style={{ padding: '9px 10px', textAlign: 'center' }}>
-                                                            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: isSelected ? '#2563eb' : '#94a3b8', backgroundColor: isSelected ? '#dbeafe' : '#f8fafc', padding: '3px 8px', borderRadius: '6px', border: `1px solid ${isSelected ? '#93c5fd' : '#f1f5f9'}` }}>
+                                                            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: isSelected ? 'var(--afl-info-700)' : 'var(--afl-n-400)', backgroundColor: isSelected ? 'var(--afl-info-100)' : 'var(--afl-n-50)', padding: '3px 8px', borderRadius: '6px', border: `1px solid ${isSelected ? 'var(--afl-info-100)' : 'var(--afl-n-100)'}` }}>
                                                                 {isSelected ? '▲ Chart' : '▼ Chart'}
                                                             </span>
                                                         </td>
@@ -652,23 +652,23 @@ export default function WebTestingPage() {
 
                         {/* ── Historical Line Chart (Right-Bottom) ────────── */}
                         {selectedTask && (
-                            <div ref={chartRef} style={{ background: '#fff', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                                <div style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                            <div ref={chartRef} style={{ background: 'var(--afl-n-0)', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid var(--afl-n-200)', overflow: 'hidden' }}>
+                                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--afl-n-100)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                                     <div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span style={{ backgroundColor: '#2563eb', color: '#fff', fontSize: '0.6rem', fontWeight: 800, padding: '1px 6px', borderRadius: '4px' }}>#{selectedTask.task_num}</span>
-                                            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#1e293b' }}>Historical Trend</h3>
+                                            <span style={{ backgroundColor: 'var(--afl-info-700)', color: 'var(--afl-n-0)', fontSize: '0.6rem', fontWeight: 800, padding: '1px 6px', borderRadius: '4px' }}>#{selectedTask.task_num}</span>
+                                            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--afl-n-800)' }}>Historical Trend</h3>
                                         </div>
-                                        <p style={{ margin: '3px 0 0', fontSize: '0.76rem', color: '#64748b' }}>{selectedTask.query_details}</p>
+                                        <p style={{ margin: '3px 0 0', fontSize: '0.76rem', color: 'var(--afl-n-500)' }}>{selectedTask.query_details}</p>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b' }}>Range:</label>
+                                        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--afl-n-500)' }}>Range:</label>
                                         {(['3m', '1y', 'all'] as const).map(r => (
-                                            <button key={r} onClick={() => setHistoryRange(r)} style={{ padding: '4px 12px', borderRadius: '6px', border: '1px solid', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', backgroundColor: historyRange === r ? '#2563eb' : '#fff', color: historyRange === r ? '#fff' : '#64748b', borderColor: historyRange === r ? '#2563eb' : '#e2e8f0' }}>
+                                            <button key={r} onClick={() => setHistoryRange(r)} style={{ padding: '4px 12px', borderRadius: '6px', border: '1px solid', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', backgroundColor: historyRange === r ? 'var(--afl-info-700)' : 'var(--afl-n-0)', color: historyRange === r ? 'var(--afl-n-0)' : 'var(--afl-n-500)', borderColor: historyRange === r ? 'var(--afl-info-700)' : 'var(--afl-n-200)' }}>
                                                 {r === 'all' ? 'All' : r.toUpperCase()}
                                             </button>
                                         ))}
-                                        <button onClick={() => setShowOutliers(p => !p)} style={{ padding: '4px 12px', borderRadius: '6px', border: '1px solid', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', backgroundColor: showOutliers ? '#f59e0b' : '#fff', color: showOutliers ? '#fff' : '#64748b', borderColor: showOutliers ? '#f59e0b' : '#e2e8f0' }}>
+                                        <button onClick={() => setShowOutliers(p => !p)} style={{ padding: '4px 12px', borderRadius: '6px', border: '1px solid', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', backgroundColor: showOutliers ? 'var(--afl-warn-500)' : 'var(--afl-n-0)', color: showOutliers ? 'var(--afl-n-0)' : 'var(--afl-n-500)', borderColor: showOutliers ? 'var(--afl-warn-500)' : 'var(--afl-n-200)' }}>
                                             {showOutliers ? '● Outliers' : '○ Outliers'}
                                         </button>
                                     </div>
@@ -677,19 +677,19 @@ export default function WebTestingPage() {
                                 {isHistoryLoading ? (
                                     <div style={{ padding: '60px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                                         <div className="loader" style={{ width: '28px', height: '28px', borderWidth: '3px' }}></div>
-                                        <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Loading history…</span>
+                                        <span style={{ color: 'var(--afl-n-400)', fontSize: '0.85rem' }}>Loading history…</span>
                                     </div>
                                 ) : processedChartData.length > 0 ? (
                                     <div style={{ padding: '20px' }}>
                                         {/* Delay Chart */}
                                         <div style={{ marginBottom: '20px' }}>
-                                            <h4 style={{ margin: '0 0 12px', fontSize: '0.82rem', fontWeight: 800, color: '#ef4444' }}>⏱ Query Processed Time (seconds)</h4>
+                                            <h4 style={{ margin: '0 0 12px', fontSize: '0.82rem', fontWeight: 800, color: 'var(--afl-danger-500)' }}>⏱ Query Processed Time (seconds)</h4>
                                             <div style={{ height: '220px' }}>
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <LineChart data={processedChartData} syncId="histCharts" margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                                        <XAxis dataKey="DisplayDate" type="category" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                                                        <YAxis domain={[0, 'auto']} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--afl-n-100)" />
+                                                        <XAxis dataKey="DisplayDate" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--afl-n-400)', fontSize: 10 }} />
+                                                        <YAxis domain={[0, 'auto']} axisLine={false} tickLine={false} tick={{ fill: 'var(--afl-n-400)', fontSize: 10 }} />
                                                         <Tooltip contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 8px 16px rgba(0,0,0,0.1)', fontSize: '0.78rem' }}
                                                             formatter={(val: any) => [`${val}s`]} />
                                                         {chartVersions.filter(v => !hiddenLines.includes(v)).map(v => (
@@ -701,13 +701,13 @@ export default function WebTestingPage() {
                                         </div>
                                         {/* Count Chart */}
                                         <div>
-                                            <h4 style={{ margin: '0 0 12px', fontSize: '0.82rem', fontWeight: 800, color: '#6366f1' }}>📊 Result Count Over Time</h4>
+                                            <h4 style={{ margin: '0 0 12px', fontSize: '0.82rem', fontWeight: 800, color: 'var(--afl-a-500)' }}>📊 Result Count Over Time</h4>
                                             <div style={{ height: '220px' }}>
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <LineChart data={processedChartData} syncId="histCharts" margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                                        <XAxis dataKey="DisplayDate" type="category" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                                                        <YAxis domain={['auto', 'auto']} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--afl-n-100)" />
+                                                        <XAxis dataKey="DisplayDate" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--afl-n-400)', fontSize: 10 }} />
+                                                        <YAxis domain={['auto', 'auto']} axisLine={false} tickLine={false} tick={{ fill: 'var(--afl-n-400)', fontSize: 10 }} />
                                                         <Tooltip contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 8px 16px rgba(0,0,0,0.1)', fontSize: '0.78rem' }}
                                                             formatter={(val: any) => [val]} />
                                                         {chartVersions.filter(v => !hiddenLines.includes(v)).map(v => (
@@ -718,29 +718,29 @@ export default function WebTestingPage() {
                                             </div>
                                         </div>
                                         {/* Legend */}
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--afl-n-100)' }}>
                                             {chartVersions.map(v => {
                                                 const isHidden = hiddenLines.includes(v);
                                                 return (
-                                                    <button key={v} onClick={() => toggleLine(v)} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', opacity: isHidden ? 0.35 : 1, transition: 'opacity 0.2s', fontSize: '0.75rem', fontWeight: 700, color: '#475569', padding: '3px 8px', borderRadius: '6px', backgroundColor: isHidden ? 'transparent' : '#f8fafc' }}>
+                                                    <button key={v} onClick={() => toggleLine(v)} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', opacity: isHidden ? 0.35 : 1, transition: 'opacity 0.2s', fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-600)', padding: '3px 8px', borderRadius: '6px', backgroundColor: isHidden ? 'transparent' : 'var(--afl-n-50)' }}>
                                                         <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: getVersionColor(v), flexShrink: 0 }} />
                                                         {v}
                                                     </button>
                                                 );
                                             })}
                                         </div>
-                                        <div style={{ fontSize: '0.68rem', color: '#94a3b8', textAlign: 'center', marginTop: '10px', fontStyle: 'italic' }}>
+                                        <div style={{ fontSize: '0.68rem', color: 'var(--afl-n-400)', textAlign: 'center', marginTop: '10px', fontStyle: 'italic' }}>
                                             Click legend items to toggle visibility. Delay values after 03/01/2026 use new measurement technology.
                                         </div>
                                         {selectedTask.urls && Object.keys(selectedTask.urls).length > 0 && (
-                                            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e2e8f0', textAlign: 'left' }}>
-                                                <h5 style={{ margin: '0 0 12px', fontSize: '0.8rem', fontWeight: 800, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--afl-n-200)', textAlign: 'left' }}>
+                                                <h5 style={{ margin: '0 0 12px', fontSize: '0.8rem', fontWeight: 800, color: 'var(--afl-n-700)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                     🔗 Manual Verification Links (Test Outliers)
                                                 </h5>
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 8px' }}>
                                                     {Object.entries(selectedTask.urls).map(([ver, url]) => (
                                                         <div key={ver} style={{ display: 'flex', alignItems: 'baseline', gap: '10px', fontSize: '0.74rem' }}>
-                                                            <span style={{ fontWeight: 800, color: '#475569', minWidth: '140px', flexShrink: 0 }}>
+                                                            <span style={{ fontWeight: 800, color: 'var(--afl-n-600)', minWidth: '140px', flexShrink: 0 }}>
                                                                 {ver}:
                                                             </span>
                                                             <a
@@ -748,14 +748,14 @@ export default function WebTestingPage() {
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
                                                                 style={{
-                                                                    color: '#2563eb',
+                                                                    color: 'var(--afl-info-700)',
                                                                     textDecoration: 'none',
                                                                     wordBreak: 'break-all',
                                                                     fontWeight: 500,
                                                                     transition: 'color 0.15s ease',
                                                                 }}
-                                                                onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; e.currentTarget.style.color = '#1d4ed8'; }}
-                                                                onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; e.currentTarget.style.color = '#2563eb'; }}
+                                                                onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; e.currentTarget.style.color = 'var(--afl-info-700)'; }}
+                                                                onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; e.currentTarget.style.color = 'var(--afl-info-700)'; }}
                                                             >
                                                                 {url}
                                                             </a>
@@ -766,7 +766,7 @@ export default function WebTestingPage() {
                                         )}
                                     </div>
                                 ) : (
-                                    <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8', border: '2px dashed #f1f5f9', margin: '20px', borderRadius: '12px' }}>
+                                    <div style={{ padding: '40px', textAlign: 'center', color: 'var(--afl-n-400)', border: '2px dashed var(--afl-n-100)', margin: '20px', borderRadius: '12px' }}>
                                         No historical data found for this task.
                                     </div>
                                 )}
@@ -779,8 +779,8 @@ export default function WebTestingPage() {
             <Footer />
             <style jsx global>{`
                 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-                .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top-color: #2563eb; animation: spin 1s linear infinite; }
-                .row-hover:hover { background-color: #f8fafc !important; }
+                .loader { border: 3px solid var(--afl-n-100); border-radius: 50%; border-top-color: var(--afl-info-700); animation: spin 1s linear infinite; }
+                .row-hover:hover { background-color: var(--afl-n-50) !important; }
             `}</style>
         </div>
     );
