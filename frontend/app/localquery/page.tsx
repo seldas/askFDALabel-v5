@@ -5,6 +5,8 @@ import Header from "../components/Header";
 import Footer from '../components/Footer';
 import "../globals.css";
 import { withAppBase, withApiBase } from '../utils/appPaths';
+import { Badge, Button, ButtonLink, EmptyState, Input } from '../platform/primitives';
+import './localquery.css';
 
 interface LocalQueryResult {
     set_id: string;
@@ -287,30 +289,16 @@ const LocalQueryContent = () => {
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--afl-bg-page)' }}>
             <Header />
 
             <main style={{ flex: 1, padding: '40px 20px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-                <div style={{ marginBottom: '40px', textAlign: 'center' }}>
-                    <h1 className="hero-title-animated" style={{ fontSize: '2.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '10px' }}>
+                <div className="lq-hero">
+                    <h1 className="hero-title-animated lq-hero-title">
                         Search Databases
                     </h1>
-                    <div style={{ marginTop: '5px' }}>
-                        <Link 
-                            href="/search" 
-                            style={{ 
-                                fontSize: '0.95rem', 
-                                color: '#6366f1', 
-                                textDecoration: 'none', 
-                                fontWeight: 700, 
-                                display: 'inline-flex', 
-                                alignItems: 'center', 
-                                gap: '6px',
-                                transition: 'opacity 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
-                            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                        >
+                    <div>
+                        <Link href="/search" className="lq-hero-link">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="11" cy="11" r="8"></circle>
                                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -321,126 +309,55 @@ const LocalQueryContent = () => {
                     </div>
                 </div>
 
-                <div style={{
-                    background: '#fff',
-                    padding: '30px',
-                    borderRadius: '16px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                    marginBottom: '30px',
-                    position: 'relative' // For absolute positioning of suggestions
-                }}>
-                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
-                        <div style={{ display: 'flex', background: '#e2e8f0', borderRadius: '8px', padding: '4px' }}>
+                <div className="lq-search-card">
+                    <div className="lq-mode-tabs" role="tablist" aria-label="Search database">
+                        <div className="lq-mode-tabs__group">
                             <button
+                                role="tab"
+                                aria-selected={searchMode === 'archive'}
+                                className="lq-mode-tab"
                                 onClick={() => { setSearchMode('archive'); setHasSearched(false); setResults([]); }}
-                                style={{
-                                    padding: '8px 24px',
-                                    borderRadius: '6px',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    fontWeight: 700,
-                                    backgroundColor: searchMode === 'archive' ? '#fff' : 'transparent',
-                                    color: searchMode === 'archive' ? '#0f172a' : '#64748b',
-                                    boxShadow: searchMode === 'archive' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                                    transition: 'all 0.2s'
-                                }}
                             >
                                 Drug Labeling Search
                             </button>
                             <button
+                                role="tab"
+                                aria-selected={searchMode === 'rld'}
+                                className="lq-mode-tab"
                                 onClick={() => { setSearchMode('rld'); setHasSearched(false); setRldResults([]); }}
-                                style={{
-                                    padding: '8px 24px',
-                                    borderRadius: '6px',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    fontWeight: 700,
-                                    backgroundColor: searchMode === 'rld' ? '#fff' : 'transparent',
-                                    color: searchMode === 'rld' ? '#0f172a' : '#64748b',
-                                    boxShadow: searchMode === 'rld' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                                    transition: 'all 0.2s'
-                                }}
                             >
                                 Orange Book RLD Search
                             </button>
                             <button
+                                role="tab"
+                                aria-selected={searchMode === 'device'}
+                                className="lq-mode-tab"
                                 onClick={() => { setSearchMode('device'); setHasSearched(false); setDeviceResults([]); setSelectedDevices([]); }}
-                                style={{
-                                    padding: '8px 24px',
-                                    borderRadius: '6px',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    fontWeight: 700,
-                                    backgroundColor: searchMode === 'device' ? '#fff' : 'transparent',
-                                    color: searchMode === 'device' ? '#0f172a' : '#64748b',
-                                    boxShadow: searchMode === 'device' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                                    transition: 'all 0.2s'
-                                }}
                             >
                                 Device MAUDE Search
                             </button>
                         </div>
                     </div>
-                    <form onSubmit={(e) => handleSearch(e)} style={{ display: 'flex', gap: '12px' }}>
-                        <div style={{ flex: 1, position: 'relative' }}>
-                            <input
+                    <form onSubmit={(e) => handleSearch(e)} className="lq-search-form">
+                        <div className="lq-search-field">
+                            <Input
                                 type="text"
                                 value={query}
                                 onChange={(e) => handleInputChange(e.target.value)}
                                 onFocus={() => suggestions.length > 0 && userWantsSuggestions && setShowSuggestions(true)}
                                 placeholder={searchMode === 'device' ? "Search by Device Name, Manufacturer, or Identifier (e.g. K230001)..." : searchMode === 'rld' ? "Enter Ingredient, Trade Name, or App #..." : "Enter Generic name, Brand name, Set ID, or App #..."}
-                                style={{
-                                    width: '100%',
-                                    padding: '14px 20px',
-                                    borderRadius: '10px',
-                                    border: '2px solid #e2e8f0',
-                                    fontSize: '1rem',
-                                    outline: 'none',
-                                    transition: 'border-color 0.2s'
-                                }}
                             />
                             {showSuggestions && (
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '100%',
-                                    left: 0,
-                                    right: 0,
-                                    backgroundColor: '#fff',
-                                    border: '1px solid #e2e8f0',
-                                    borderRadius: '8px',
-                                    marginTop: '4px',
-                                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                                    zIndex: 100,
-                                    maxHeight: '300px',
-                                    overflowY: 'auto'
-                                }}>
-                                    <div style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        padding: '8px 20px',
-                                        borderBottom: '1px solid #f1f5f9',
-                                        backgroundColor: '#f8fafc'
-                                    }}>
-                                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Suggestions</span>
+                                <div className="lq-suggestions">
+                                    <div className="lq-suggestions__header">
+                                        <span>Suggestions</span>
                                         <button
+                                            className="lq-suggestions__close"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 setShowSuggestions(false);
                                                 setUserWantsSuggestions(false);
                                             }}
-                                            style={{
-                                                fontSize: '0.75rem',
-                                                fontWeight: 700,
-                                                color: '#ef4444',
-                                                backgroundColor: 'transparent',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                padding: '4px 8px',
-                                                borderRadius: '4px'
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                         >
                                             Close ✕
                                         </button>
@@ -448,15 +365,8 @@ const LocalQueryContent = () => {
                                     {suggestions.map((s, i) => (
                                         <div
                                             key={i}
+                                            className="lq-suggestion-item"
                                             onClick={() => handleSearch(undefined, s)}
-                                            style={{
-                                                padding: '10px 20px',
-                                                cursor: 'pointer',
-                                                borderBottom: i === suggestions.length - 1 ? 'none' : '1px solid #f1f5f9',
-                                                fontSize: '0.95rem'
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fff'}
                                         >
                                             {s}
                                         </div>
@@ -464,44 +374,10 @@ const LocalQueryContent = () => {
                                 </div>
                             )}
                         </div>
-                        <button
-                            type="submit"
-                            disabled={isLoading || !query.trim()}
-                            style={{
-                                padding: '0 30px',
-                                backgroundColor: '#2563eb',
-                                color: '#fff',
-                                borderRadius: '10px',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                border: 'none',
-                                height: '52px',
-                                transition: 'background-color 0.2s'
-                            }}
-                        >
+                        <Button type="submit" variant="primary" size="lg" disabled={isLoading || !query.trim()}>
                             {isLoading && query ? 'Searching...' : 'Search'}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleRandom}
-                            disabled={isLoading}
-                            style={{
-                                padding: '0 20px',
-                                backgroundColor: '#f1f5f9',
-                                color: '#475569',
-                                borderRadius: '10px',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                border: '1px solid #e2e8f0',
-                                height: '52px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e2e8f0'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                        >
+                        </Button>
+                        <Button type="button" variant="secondary" size="lg" onClick={handleRandom} disabled={isLoading}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M2 18h2c4.3 0 6-7 10-7h2"></path>
                                 <path d="M2 6h2c4.3 0 6 7 10 7h2"></path>
@@ -510,27 +386,21 @@ const LocalQueryContent = () => {
                                 <path d="M22 18h-4"></path>
                             </svg>
                             {isLoading && !query ? 'Fetching...' : 'Quick Access'}
-                        </button>
+                        </Button>
                     </form>
 
-                    <div style={{ display: 'flex', gap: '30px', marginTop: '20px', paddingLeft: '5px' }}>
+                    <div className="lq-filters">
                         {searchMode === 'archive' && (
                             <>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'not-allowed', fontSize: '0.95rem', color: '#334155', fontWeight: 700, opacity: 0.7 }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={true}
-                                        disabled={true}
-                                        style={{ width: '20px', height: '20px', cursor: 'not-allowed', accentColor: '#2563eb' }}
-                                    />
+                                <label className="lq-filter-label" data-disabled="true">
+                                    <input type="checkbox" checked={true} disabled={true} />
                                     Archived Label
                                 </label>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.95rem', color: '#334155', fontWeight: 700 }}>
+                                <label className="lq-filter-label">
                                     <input
                                         type="checkbox"
                                         checked={humanRxOnly}
                                         onChange={(e) => setHumanRxOnly(e.target.checked)}
-                                        style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#2563eb' }}
                                     />
                                     Human Prescription Only
                                 </label>
@@ -538,21 +408,19 @@ const LocalQueryContent = () => {
                         )}
                         {searchMode === 'rld' && (
                             <>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.95rem', color: '#334155', fontWeight: 700 }}>
+                                <label className="lq-filter-label">
                                     <input
                                         type="checkbox"
                                         checked={rldOnly}
                                         onChange={(e) => setRldOnly(e.target.checked)}
-                                        style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#2563eb' }}
                                     />
                                     RLD Only
                                 </label>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.95rem', color: '#334155', fontWeight: 700 }}>
+                                <label className="lq-filter-label">
                                     <input
                                         type="checkbox"
                                         checked={rsOnly}
                                         onChange={(e) => setRsOnly(e.target.checked)}
-                                        style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#2563eb' }}
                                     />
                                     RS Only
                                 </label>
@@ -562,127 +430,67 @@ const LocalQueryContent = () => {
                 </div>
 
                 {hasSearched && (
-                    <div style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
-                        <div style={{ padding: '20px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b' }}>
+                    <div className="lq-results-card">
+                        <div className="lq-results-header">
+                            <div className="lq-results-actions">
+                                <h2 className="lq-results-title">
                                     Results ({searchMode === 'device' ? deviceResults.length : searchMode === 'rld' ? rldResults.length : results.length})
                                 </h2>
                                 {(searchMode === 'archive' && results.length > 0) && (
-                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                    <div className="lq-results-actions">
                                         {session?.is_authenticated && (
-                                            <button 
-                                                onClick={handleExportToDashboardClick}
-                                                style={{
-                                                    padding: '8px 16px',
-                                                    backgroundColor: '#2563eb',
-                                                    color: '#fff',
-                                                    borderRadius: '8px',
-                                                    fontSize: '0.85rem',
-                                                    fontWeight: 700,
-                                                    cursor: 'pointer',
-                                                    border: 'none',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '6px',
-                                                    transition: 'background-color 0.2s'
-                                                }}
-                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-                                            >
+                                            <Button variant="primary" size="sm" onClick={handleExportToDashboardClick}>
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                                                     <line x1="3" y1="9" x2="21" y2="9"></line>
                                                     <line x1="9" y1="21" x2="9" y2="9"></line>
                                                 </svg>
                                                 Export to Dashboard
-                                            </button>
+                                            </Button>
                                         )}
-                                        <button 
-                                            onClick={handleExport}
-                                            style={{
-                                                padding: '8px 16px',
-                                                backgroundColor: '#10b981',
-                                                color: '#fff',
-                                                borderRadius: '8px',
-                                                fontSize: '0.85rem',
-                                                fontWeight: 700,
-                                                cursor: 'pointer',
-                                                border: 'none',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '6px',
-                                                transition: 'background-color 0.2s'
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
-                                        >
+                                        <Button variant="success" size="sm" onClick={handleExport}>
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                                 <polyline points="7 10 12 15 17 10"></polyline>
                                                 <line x1="12" y1="15" x2="12" y2="3"></line>
                                             </svg>
                                             Export to Excel
-                                        </button>
+                                        </Button>
                                     </div>
                                 )}
                             </div>
-                            <span style={{ fontSize: '0.875rem', color: '#64748b' }}>
+                            <span className="lq-results-source">
                                 Source: {searchMode === 'device' ? 'OPENFDA' : searchMode === 'rld' ? 'Orange Book Database' : 'Local Postgres Database'}
                             </span>
                         </div>
 
                         {searchMode === 'archive' && results.length > 0 ? (
-                            <div style={{ overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                    <thead style={{ backgroundColor: '#f8fafc', color: '#64748b', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <div className="afl-table-wrap" style={{ border: 'none', borderRadius: 0 }}>
+                                <table className="afl-table">
+                                    <thead>
                                         <tr>
-                                            <th style={{ padding: '12px 20px' }}>Product / Generic</th>
-                                            <th style={{ padding: '12px 20px' }}>Manufacturer</th>
-                                            <th style={{ padding: '12px 20px' }}>App # / NDC</th>
-                                            <th style={{ padding: '12px 20px' }}>Date</th>
-                                            <th style={{ padding: '12px 20px' }}>Action</th>
+                                            <th>Product / Generic</th>
+                                            <th>Manufacturer</th>
+                                            <th>App # / NDC</th>
+                                            <th>Date</th>
+                                            <th>Action</th>
                                         </tr>
                                     </thead>
-                                    <tbody style={{ fontSize: '0.9rem', color: '#334155' }}>
+                                    <tbody>
                                         {results.map((r, idx) => (
-                                            <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                                <td style={{ padding: '16px 20px' }}>
+                                            <tr key={idx}>
+                                                <td>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <div
-                                                            style={{ fontWeight: 700, color: '#1e40af' }}
-                                                            title={r.brand_name}
-                                                        >
+                                                        <div className="lq-cell-primary" title={r.brand_name}>
                                                             {r.brand_name.length > 40 ? r.brand_name.substring(0, 40) + '...' : r.brand_name}
                                                         </div>
                                                         {r.is_archived && (
-                                                            <span style={{
-                                                                marginLeft: '8px',
-                                                                padding: '2px 6px',
-                                                                backgroundColor: '#fee2e2',
-                                                                color: '#b91c1c',
-                                                                borderRadius: '4px',
-                                                                fontSize: '0.7rem',
-                                                                fontWeight: 700,
-                                                                textTransform: 'uppercase'
-                                                            }}>
-                                                                Archived
-                                                            </span>
+                                                            <Badge tone="danger" style={{ marginLeft: '8px' }}>Archived</Badge>
                                                         )}
                                                         {r.has_history && (
                                                             <div
+                                                                className="lq-history-icon"
                                                                 title="This label has historical versions available"
-                                                                style={{
-                                                                    display: 'inline-flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    width: '18px',
-                                                                    height: '18px',
-                                                                    borderRadius: '50%',
-                                                                    backgroundColor: '#fef3c7',
-                                                                    color: '#d97706',
-                                                                    cursor: 'help'
-                                                                }}
                                                             >
                                                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                                                                     <path d="M12 8v4l3 3"></path>
@@ -691,50 +499,34 @@ const LocalQueryContent = () => {
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <div
-                                                        style={{ fontSize: '0.8rem', color: '#64748b' }}
-                                                        title={r.generic_name}
-                                                    >
+                                                    <div className="lq-cell-secondary" title={r.generic_name}>
                                                         {r.generic_name.length > 50 ? r.generic_name.substring(0, 50) + '...' : r.generic_name}
                                                     </div>
                                                 </td>
-                                                <td style={{ padding: '16px 20px' }} title={r.manufacturer}>
+                                                <td title={r.manufacturer}>
                                                     {r.manufacturer.length > 40 ? r.manufacturer.substring(0, 40) + '...' : r.manufacturer}
                                                 </td>
-                                                <td style={{ padding: '16px 20px' }}>
+                                                <td>
                                                     <a
                                                         href={withAppBase(`/dashboard/history_by_appr_num/${r.appr_num}`)}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         title={r.appr_num}
-                                                        style={{
-                                                            fontWeight: 600,
-                                                            color: '#2563eb',
-                                                            textDecoration: 'none'
-                                                        }}
+                                                        style={{ fontWeight: 600, color: 'var(--afl-info-700)', textDecoration: 'none' }}
                                                     >
                                                         {r.appr_num.length > 25 ? r.appr_num.substring(0, 25) + '...' : r.appr_num}
                                                     </a>
-                                                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{r.ndc}</div>
-                                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px', fontStyle: 'italic' }}>SetID: {r.set_id}</div>
+                                                    <div className="lq-cell-secondary">{r.ndc}</div>
+                                                    <div className="lq-cell-muted">SetID: {r.set_id}</div>
                                                 </td>
-                                                <td style={{ padding: '16px 20px' }}>{r.revised_date}</td>
-                                                <td style={{ padding: '16px 20px' }}>
+                                                <td>{r.revised_date}</td>
+                                                <td>
                                                     <div style={{ display: 'flex', gap: '8px' }}>
                                                         <a
                                                             href={withAppBase(`/dashboard/label/${r.set_id}${r.spl_id ? `?spl_id=${r.spl_id}` : ''}`)}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            style={{
-                                                                color: '#2563eb',
-                                                                textDecoration: 'none',
-                                                                fontWeight: 600,
-                                                                padding: '6px 12px',
-                                                                borderRadius: '6px',
-                                                                backgroundColor: '#eff6ff',
-                                                                display: 'inline-block',
-                                                                fontSize: '0.85rem'
-                                                            }}
+                                                            className="lq-action-link lq-action-link--view"
                                                         >
                                                             View Label ↗
                                                         </a>
@@ -743,35 +535,14 @@ const LocalQueryContent = () => {
                                                                 href={withAppBase(`/dashboard/history/${r.set_id}`)}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
-                                                                style={{
-                                                                    color: '#0f172a',
-                                                                    textDecoration: 'none',
-                                                                    fontWeight: 600,
-                                                                    padding: '6px 12px',
-                                                                    borderRadius: '6px',
-                                                                    backgroundColor: '#f1f5f9',
-                                                                    display: 'inline-block',
-                                                                    fontSize: '0.85rem',
-                                                                    border: '1px solid #e2e8f0'
-                                                                }}
+                                                                className="lq-action-link lq-action-link--history"
                                                             >
                                                                 History Track 🕒
                                                             </a>
                                                         ) : (
                                                             <span
                                                                 title="No historical versions found in archive"
-                                                                style={{
-                                                                    color: '#94a3b8',
-                                                                    fontWeight: 600,
-                                                                    padding: '6px 12px',
-                                                                    borderRadius: '6px',
-                                                                    backgroundColor: '#f8fafc',
-                                                                    display: 'inline-block',
-                                                                    fontSize: '0.85rem',
-                                                                    border: '1px solid #f1f5f9',
-                                                                    cursor: 'not-allowed',
-                                                                    opacity: 0.6
-                                                                }}
+                                                                className="lq-action-link lq-action-link--history-disabled"
                                                             >
                                                                 History Track 🕒
                                                             </span>
@@ -784,55 +555,55 @@ const LocalQueryContent = () => {
                                 </table>
                             </div>
                         ) : searchMode === 'rld' && rldResults.length > 0 ? (
-                            <div style={{ overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                    <thead style={{ backgroundColor: '#f8fafc', color: '#64748b', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <div className="afl-table-wrap" style={{ border: 'none', borderRadius: 0 }}>
+                                <table className="afl-table">
+                                    <thead>
                                         <tr>
-                                            <th style={{ padding: '12px 20px' }}>Ingredient / Trade Name</th>
-                                            <th style={{ padding: '12px 20px' }}>Dosage & Route</th>
-                                            <th style={{ padding: '12px 20px' }}>Applicant</th>
-                                            <th style={{ padding: '12px 20px' }}>App / Product No</th>
-                                            <th style={{ padding: '12px 20px' }}>TE Code</th>
-                                            <th style={{ padding: '12px 20px' }}>Status</th>
+                                            <th>Ingredient / Trade Name</th>
+                                            <th>Dosage & Route</th>
+                                            <th>Applicant</th>
+                                            <th>App / Product No</th>
+                                            <th>TE Code</th>
+                                            <th>Status</th>
                                         </tr>
                                     </thead>
-                                    <tbody style={{ fontSize: '0.9rem', color: '#334155' }}>
+                                    <tbody>
                                         {rldResults.map((r, idx) => (
-                                            <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                                <td style={{ padding: '16px 20px' }}>
-                                                    <div style={{ fontWeight: 700, color: '#1e40af' }}>{r.trade_name || 'N/A'}</div>
-                                                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{r.ingredient}</div>
+                                            <tr key={idx}>
+                                                <td>
+                                                    <div className="lq-cell-primary">{r.trade_name || 'N/A'}</div>
+                                                    <div className="lq-cell-secondary">{r.ingredient}</div>
                                                 </td>
-                                                <td style={{ padding: '16px 20px' }}>
+                                                <td>
                                                     <div style={{ fontWeight: 600 }}>{r.strength}</div>
-                                                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{r.df_route}</div>
+                                                    <div className="lq-cell-secondary">{r.df_route}</div>
                                                 </td>
-                                                <td style={{ padding: '16px 20px' }}>{r.applicant}</td>
-                                                <td style={{ padding: '16px 20px' }}>
+                                                <td>{r.applicant}</td>
+                                                <td>
                                                     <a
                                                         href={withAppBase(`/dashboard/history_by_appr_num/${r.formatted_appl_no || r.appl_no}`)}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        style={{ fontWeight: 600, color: '#2563eb', textDecoration: 'none' }}
+                                                        style={{ fontWeight: 600, color: 'var(--afl-info-700)', textDecoration: 'none' }}
                                                     >
                                                         {r.formatted_appl_no || r.appl_no}
                                                     </a>
-                                                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Prod: {r.product_no}</div>
+                                                    <div className="lq-cell-secondary">Prod: {r.product_no}</div>
                                                 </td>
-                                                <td style={{ padding: '16px 20px' }}>
-                                                    <span 
+                                                <td>
+                                                    <span
                                                         title={getTECodeExplanation(r.te_code)}
-                                                        style={{ padding: '4px 8px', backgroundColor: '#f1f5f9', borderRadius: '4px', fontWeight: 600, cursor: 'help' }}
+                                                        style={{ padding: '4px 8px', backgroundColor: 'var(--afl-bg-sunken)', borderRadius: 'var(--afl-radius-sm)', fontWeight: 600, cursor: 'help' }}
                                                     >
                                                         {r.te_code || 'N/A'}
                                                     </span>
                                                 </td>
-                                                <td style={{ padding: '16px 20px' }}>
-                                                    <div style={{ display: 'flex', gap: '6px', flexDirection: 'column' }}>
-                                                        {r.rld === 'Yes' && <span style={{ padding: '2px 6px', backgroundColor: '#dcfce7', color: '#166534', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700, width: 'fit-content' }}>RLD</span>}
-                                                        {r.rs === 'Yes' && <span style={{ padding: '2px 6px', backgroundColor: '#dbeafe', color: '#1e40af', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700, width: 'fit-content' }}>RS</span>}
-                                                        <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{r.type}</span>
-                                                        {r.approval_date && <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Appr: {r.approval_date}</span>}
+                                                <td>
+                                                    <div style={{ display: 'flex', gap: '6px', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                                        {r.rld === 'Yes' && <Badge tone="success">RLD</Badge>}
+                                                        {r.rs === 'Yes' && <Badge tone="info">RS</Badge>}
+                                                        <span className="lq-cell-secondary">{r.type}</span>
+                                                        {r.approval_date && <span className="lq-cell-muted" style={{ marginTop: 0 }}>Appr: {r.approval_date}</span>}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -841,58 +612,62 @@ const LocalQueryContent = () => {
                                 </table>
                             </div>
                         ) : searchMode === 'device' && deviceResults.length > 0 ? (
-                            <div style={{ overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                    <thead style={{ backgroundColor: '#f8fafc', color: '#64748b', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <div className="afl-table-wrap" style={{ border: 'none', borderRadius: 0 }}>
+                                <table className="afl-table">
+                                    <thead>
                                         <tr>
-                                            <th style={{ padding: '12px 20px', width: '50px' }}>Select</th>
-                                            <th style={{ padding: '12px 20px' }}>Device Name / Type</th>
-                                            <th style={{ padding: '12px 20px' }}>Manufacturer</th>
-                                            <th style={{ padding: '12px 20px' }}>Product Code</th>
-                                            <th style={{ padding: '12px 20px' }}>Identifier & Date</th>
-                                            <th style={{ padding: '12px 20px' }}>Actions</th>
+                                            <th style={{ width: '50px' }}>Select</th>
+                                            <th>Device Name / Type</th>
+                                            <th>Manufacturer</th>
+                                            <th>Product Code</th>
+                                            <th>Identifier & Date</th>
+                                            <th>Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody style={{ fontSize: '0.9rem', color: '#334155' }}>
+                                    <tbody>
                                         {deviceResults.map((r, idx) => {
                                             const isSelected = selectedDevices.some(d => d.id === r.id);
                                             return (
-                                                <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: isSelected ? '#eff6ff' : 'transparent' }}>
-                                                    <td style={{ padding: '16px 20px' }}>
-                                                        <input 
-                                                            type="checkbox" 
+                                                <tr key={idx} data-selected={isSelected}>
+                                                    <td>
+                                                        <input
+                                                            type="checkbox"
                                                             checked={isSelected}
                                                             onChange={() => toggleSelection(r)}
-                                                            style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                                                            style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--afl-info-500)' }}
                                                         />
                                                     </td>
-                                                    <td style={{ padding: '16px 20px' }}>
-                                                        <div style={{ fontWeight: 700, color: '#0f172a' }}>{r.name}</div>
-                                                        <div style={{ fontSize: '0.75rem', fontWeight: 900, color: '#1d4ed8', backgroundColor: '#dbeafe', padding: '2px 8px', borderRadius: '100px', display: 'inline-block', marginTop: '4px' }}>
-                                                            {r.type}
+                                                    <td>
+                                                        <div style={{ fontWeight: 700, color: 'var(--afl-text-primary)' }}>{r.name}</div>
+                                                        <div style={{ marginTop: '4px' }}>
+                                                            <Badge tone="info">{r.type}</Badge>
                                                         </div>
                                                     </td>
-                                                    <td style={{ padding: '16px 20px' }}>{r.manufacturer}</td>
-                                                    <td style={{ padding: '16px 20px', fontFamily: 'monospace', fontWeight: 800 }}>{r.product_code || 'N/A'}</td>
-                                                    <td style={{ padding: '16px 20px' }}>
+                                                    <td>{r.manufacturer}</td>
+                                                    <td style={{ fontFamily: 'var(--afl-font-mono)', fontWeight: 800 }}>{r.product_code || 'N/A'}</td>
+                                                    <td>
                                                         <div style={{ fontWeight: 600 }}>{r.id}</div>
-                                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{r.date}</div>
+                                                        <div className="lq-cell-secondary">{r.date}</div>
                                                     </td>
-                                                    <td style={{ padding: '16px 20px' }}>
-                                                        <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
-                                                            <button 
-                                                                style={{ padding: '6px 12px', backgroundColor: '#0f172a', color: 'white', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800, border: 'none', cursor: 'pointer' }}
+                                                    <td>
+                                                        <div style={{ display: 'flex', gap: '8px', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                                            <Button
+                                                                variant="secondary"
+                                                                size="sm"
+                                                                style={{ background: 'var(--afl-n-900)', color: 'var(--afl-text-inverse)', borderColor: 'var(--afl-n-900)' }}
                                                                 onClick={() => window.open(`https://api.fda.gov/device/${r.type === 'PMA' ? 'pma' : '510k'}.json?search=${r.type === 'PMA' ? 'pma_number' : 'k_number'}:${r.id}`, '_blank')}
                                                             >
                                                                 FDA Metadata
-                                                            </button>
+                                                            </Button>
                                                             {r.product_code && (
-                                                                <button 
-                                                                    style={{ padding: '6px 12px', backgroundColor: '#3b82f6', color: 'white', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800, border: 'none', cursor: 'pointer' }}
+                                                                <Button
+                                                                    variant="secondary"
+                                                                    size="sm"
+                                                                    style={{ background: 'var(--afl-info-500)', color: 'var(--afl-text-inverse)', borderColor: 'var(--afl-info-500)' }}
                                                                     onClick={() => setAnalyzeTarget({ code: r.product_code, id: r.id })}
                                                                 >
                                                                     Safety Profile
-                                                                </button>
+                                                                </Button>
                                                             )}
                                                         </div>
                                                     </td>
@@ -903,9 +678,11 @@ const LocalQueryContent = () => {
                                 </table>
                             </div>
                         ) : (
-                            <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontSize: '1.1rem' }}>
-                                No results found. Try adjusting your search query.
-                            </div>
+                            <EmptyState
+                                style={{ padding: 'var(--afl-space-7)' }}
+                                title="No results found"
+                                description="Try adjusting your search query."
+                            />
                         )}
                     </div>
                 )}
@@ -917,8 +694,8 @@ const LocalQueryContent = () => {
                     bottom: '2rem', 
                     left: '50%', 
                     transform: 'translateX(-50%)', 
-                    backgroundColor: '#1e293b', 
-                    color: 'white', 
+                    backgroundColor: 'var(--afl-n-800)',
+                    color: 'white',
                     padding: '1rem 2rem', 
                     borderRadius: '100px', 
                     display: 'flex', 
@@ -937,7 +714,7 @@ const LocalQueryContent = () => {
                         disabled={selectedDevices.length !== 2}
                         style={{ 
                             padding: '10px 20px', 
-                            backgroundColor: selectedDevices.length === 2 ? '#3b82f6' : '#475569', 
+                            backgroundColor: selectedDevices.length === 2 ? 'var(--afl-info-500)' : 'var(--afl-n-600)',
                             color: 'white', 
                             border: 'none', 
                             borderRadius: '100px', 

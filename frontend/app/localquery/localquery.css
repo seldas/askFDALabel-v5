@@ -1,0 +1,237 @@
+/*
+ * Local Database Search. Tokens only, no literals.
+ */
+
+.lq-hero { margin-bottom: var(--afl-space-7); text-align: center; }
+
+.lq-hero-title {
+  font-size: var(--afl-text-3xl);
+  font-weight: var(--afl-weight-heavy);
+  color: var(--afl-text-primary);
+  margin-bottom: var(--afl-space-2);
+}
+
+.lq-hero-link {
+  margin-top: var(--afl-space-1);
+  font-size: var(--afl-text-md);
+  color: var(--afl-text-link);
+  text-decoration: none;
+  font-weight: var(--afl-weight-bold);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity var(--afl-transition);
+}
+.lq-hero-link:hover { opacity: 0.8; }
+
+/* ---- Search card --------------------------------------------------------- */
+
+.lq-search-card {
+  background: var(--afl-bg-surface);
+  padding: var(--afl-space-6);
+  border-radius: var(--afl-radius-xl);
+  box-shadow: var(--afl-shadow-md);
+  margin-bottom: var(--afl-space-6);
+  position: relative;
+}
+
+.lq-mode-tabs {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--afl-space-5);
+}
+
+.lq-mode-tabs__group {
+  display: flex;
+  background: var(--afl-n-200);
+  border-radius: var(--afl-radius-md);
+  padding: 4px;
+}
+
+.lq-mode-tab {
+  padding: var(--afl-space-2) var(--afl-space-5);
+  border-radius: var(--afl-radius-sm);
+  border: none;
+  cursor: pointer;
+  font-weight: var(--afl-weight-bold);
+  background: transparent;
+  color: var(--afl-text-secondary);
+  transition: all var(--afl-transition);
+}
+
+.lq-mode-tab[aria-selected='true'] {
+  background: var(--afl-bg-surface);
+  color: var(--afl-text-primary);
+  box-shadow: var(--afl-shadow-xs);
+}
+
+.lq-search-form { display: flex; gap: var(--afl-space-3); }
+
+.lq-search-field { flex: 1; position: relative; }
+
+.lq-search-field .afl-input {
+  padding: var(--afl-space-4) var(--afl-space-5);
+  font-size: var(--afl-text-lg);
+  border-width: 2px;
+}
+
+.lq-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--afl-bg-surface);
+  border: 1px solid var(--afl-border);
+  border-radius: var(--afl-radius-md);
+  margin-top: 4px;
+  box-shadow: var(--afl-shadow-lg);
+  z-index: 100;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.lq-suggestions__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--afl-space-2) var(--afl-space-5);
+  border-bottom: 1px solid var(--afl-n-100);
+  background: var(--afl-bg-sunken);
+  font-size: var(--afl-text-xs);
+  font-weight: var(--afl-weight-bold);
+  color: var(--afl-text-secondary);
+  text-transform: uppercase;
+}
+
+.lq-suggestions__close {
+  font-size: var(--afl-text-xs);
+  font-weight: var(--afl-weight-bold);
+  color: var(--afl-danger-500);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--afl-radius-sm);
+}
+.lq-suggestions__close:hover { background: var(--afl-danger-50); }
+
+.lq-suggestion-item {
+  padding: var(--afl-space-3) var(--afl-space-5);
+  cursor: pointer;
+  font-size: var(--afl-text-md);
+  border-bottom: 1px solid var(--afl-n-100);
+}
+.lq-suggestion-item:last-child { border-bottom: none; }
+.lq-suggestion-item:hover { background: var(--afl-bg-sunken); }
+
+.lq-filters {
+  display: flex;
+  gap: var(--afl-space-6);
+  margin-top: var(--afl-space-4);
+  padding-left: 5px;
+}
+
+.lq-filter-label {
+  display: flex;
+  align-items: center;
+  gap: var(--afl-space-2);
+  font-size: var(--afl-text-md);
+  color: var(--afl-text-primary);
+  font-weight: var(--afl-weight-bold);
+  cursor: pointer;
+}
+.lq-filter-label[data-disabled='true'] { cursor: not-allowed; opacity: 0.7; }
+
+.lq-filter-label input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: var(--afl-info-500);
+}
+.lq-filter-label[data-disabled='true'] input[type='checkbox'] { cursor: not-allowed; }
+
+/* ---- Results ---------------------------------------------------------- */
+
+.lq-results-card {
+  background: var(--afl-bg-surface);
+  border-radius: var(--afl-radius-xl);
+  overflow: hidden;
+  box-shadow: var(--afl-shadow-md);
+}
+
+.lq-results-header {
+  padding: var(--afl-space-5);
+  border-bottom: 1px solid var(--afl-n-100);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--afl-space-3);
+}
+
+.lq-results-title {
+  font-size: var(--afl-text-xl);
+  font-weight: var(--afl-weight-bold);
+  color: var(--afl-text-primary);
+}
+
+.lq-results-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--afl-space-3);
+  flex-wrap: wrap;
+}
+
+.lq-results-source {
+  font-size: var(--afl-text-sm);
+  color: var(--afl-text-secondary);
+}
+
+.lq-cell-primary { font-weight: var(--afl-weight-bold); color: var(--afl-info-700); }
+.lq-cell-secondary { font-size: var(--afl-text-sm); color: var(--afl-text-secondary); }
+.lq-cell-muted { font-size: var(--afl-text-xs); color: var(--afl-text-muted); font-style: italic; margin-top: 4px; }
+
+.lq-action-link {
+  display: inline-block;
+  padding: 6px var(--afl-space-3);
+  border-radius: var(--afl-radius-sm);
+  font-size: var(--afl-text-sm);
+  font-weight: var(--afl-weight-bold);
+  text-decoration: none;
+}
+
+.lq-action-link--view {
+  color: var(--afl-info-700);
+  background: var(--afl-info-50);
+}
+
+.lq-action-link--history {
+  color: var(--afl-text-primary);
+  background: var(--afl-bg-sunken);
+  border: 1px solid var(--afl-border);
+}
+
+.lq-action-link--history-disabled {
+  color: var(--afl-text-muted);
+  background: var(--afl-n-50);
+  border: 1px solid var(--afl-n-100);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.lq-history-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--afl-warn-50);
+  color: var(--afl-warn-700);
+  cursor: help;
+}
+
+@media (max-width: 640px) {
+  .lq-search-form { flex-direction: column; }
+  .lq-filters { flex-wrap: wrap; gap: var(--afl-space-4); }
+}

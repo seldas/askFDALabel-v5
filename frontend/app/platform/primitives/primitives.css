@@ -165,6 +165,12 @@
 }
 .afl-btn--danger:hover:not([disabled]) { background: var(--afl-danger-700); }
 
+.afl-btn--success {
+  background: var(--afl-success-500);
+  color: var(--afl-text-inverse);
+}
+.afl-btn--success:hover:not([disabled]) { background: var(--afl-success-700); }
+
 /*
  * Tinted variants: a light-fill button for a secondary action that still
  * needs a status colour (e.g. "Delete" next to a neutral "Stats" button,
