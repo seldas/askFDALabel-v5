@@ -10,7 +10,7 @@
 
 /* DELETED TEXT */
 .diffSub {
-  background-color: #fee2e2;
+  background-color: var(--afl-danger-100);
   color: #991b1b;
   text-decoration: line-through;
   border-radius: 3px;
@@ -25,7 +25,7 @@
 }
 
 .diffContainer del.diff-sub {
-  background-color: #fee2e2;
+  background-color: var(--afl-danger-100);
   color: #991b1b;
 }
 
@@ -35,13 +35,13 @@
 }
 
 .diffContainer :global(del.diff-sub) {
-  background-color: #fee2e2;
+  background-color: var(--afl-danger-100);
   border-bottom: 2px solid #dc2626;
 }
 
 /* Accordion Styles */
 .accordionItem {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--afl-n-200);
   border-radius: 8px;
   margin-bottom: 12px;
   overflow: hidden;
@@ -50,7 +50,7 @@
 
 .accordionHeader {
   padding: 12px 20px;
-  background-color: #f8fafc;
+  background-color: var(--afl-n-50);
   cursor: pointer;
   display: flex;
   justify-content: space-between;
@@ -59,13 +59,13 @@
 }
 
 .accordionHeader:hover {
-  background-color: #f1f5f9;
+  background-color: var(--afl-n-100);
 }
 
 .accordionTitle {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #334155;
+  color: var(--afl-n-700);
   margin: 0;
 }
 
@@ -73,7 +73,7 @@
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.3s ease-out, padding 0.3s ease;
-  background-color: #fff;
+  background-color: var(--afl-n-0);
 }
 
 .accordionContentExpanded {
@@ -86,7 +86,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1px;
-  background-color: #f1f5f9;
+  background-color: var(--afl-n-100);
 }
 
 @media (max-width: 1024px) {
@@ -97,13 +97,13 @@
 
 .diffPane {
   padding: 20px;
-  background-color: #fff;
+  background-color: var(--afl-n-0);
   overflow-x: auto;
 }
 
 .paneHeader {
   font-size: 0.65rem;
-  color: #94a3b8;
+  color: var(--afl-n-400);
   margin-bottom: 12px;
   font-weight: 800;
   text-transform: uppercase;
@@ -136,8 +136,8 @@
 }
 
 .showMoreButton {
-  background-color: #fff;
-  border: 1px solid #e2e8f0;
+  background-color: var(--afl-n-0);
+  border: 1px solid var(--afl-n-200);
   color: #2563eb;
   padding: 6px 16px;
   border-radius: 20px;
@@ -149,6 +149,6 @@
 }
 
 .showMoreButton:hover {
-  background-color: #f8fafc;
-  border-color: #cbd5e1;
+  background-color: var(--afl-n-50);
+  border-color: var(--afl-n-300);
 }

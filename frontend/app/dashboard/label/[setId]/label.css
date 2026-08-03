@@ -8,7 +8,7 @@
 .spl-content {
   font-family: 'Georgia', 'Times New Roman', serif;
   font-size: 0.92rem;
-  color: #1e293b;
+  color: var(--afl-n-800);
   line-height: 1.8;
 }
 
@@ -26,14 +26,14 @@
 .spl-content b,
 .spl-content strong {
   font-weight: 700;
-  color: #0f172a;
+  color: var(--afl-n-900);
 }
 
 .spl-content .Emphasis,
 .spl-content em,
 .spl-content i {
   font-style: italic;
-  color: #334155;
+  color: var(--afl-n-700);
 }
 
 .spl-content .Underline,
@@ -55,7 +55,7 @@
 
 /* --- Links --- */
 .spl-content a {
-  color: #0071bc;
+  color: var(--afl-gov-blue);
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
@@ -91,8 +91,8 @@
 .spl-content h2 {
   font-size: 1.25rem;
   font-weight: 800;
-  color: #0f172a;
-  border-bottom: 2px solid #f1f5f9;
+  color: var(--afl-n-900);
+  border-bottom: 2px solid var(--afl-n-100);
   padding-bottom: 10px;
   margin: 1.5em 0 0.75em;
 }
@@ -100,8 +100,8 @@
 .spl-content h3 {
   font-size: 1.05rem;
   font-weight: 700;
-  color: #1e293b;
-  border-left: 3px solid #0071bc;
+  color: var(--afl-n-800);
+  border-left: 3px solid var(--afl-gov-blue);
   padding-left: 10px;
   margin: 1.25em 0 0.6em;
 }
@@ -109,7 +109,7 @@
 .spl-content h4 {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #334155;
+  color: var(--afl-n-700);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin: 1em 0 0.5em;
@@ -126,14 +126,14 @@
   max-width: 100%;
   height: auto;
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--afl-n-200);
   box-shadow: 0 2px 8px rgba(0,0,0,0.07);
 }
 
 .spl-content .spl-figure caption,
 .spl-content .spl-figure p {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--afl-n-500);
   margin-top: 8px;
   font-style: italic;
 }
@@ -148,7 +148,7 @@
   overflow-x: auto;
   margin: 1.25em 0;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--afl-n-200);
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   -webkit-overflow-scrolling: touch;
 }
@@ -158,11 +158,11 @@
 }
 
 .spl-table-wrapper::-webkit-scrollbar-track {
-  background: #f8fafc;
+  background: var(--afl-n-50);
 }
 
 .spl-table-wrapper::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--afl-n-300);
   border-radius: 3px;
 }
 
@@ -173,7 +173,7 @@
   border-collapse: collapse;
   font-size: 0.85rem;
   font-family: 'Inter', -apple-system, sans-serif;
-  color: #1e293b;
+  color: var(--afl-n-800);
   line-height: 1.5;
 }
 
@@ -183,25 +183,25 @@
   text-align: left;
   font-size: 0.78rem;
   font-weight: 700;
-  color: #475569;
+  color: var(--afl-n-600);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 8px 12px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--afl-n-50);
+  border-bottom: 1px solid var(--afl-n-200);
 }
 
 .spl-content .spl-table thead th,
 .spl-table-wrapper .spl-table thead th {
-  background: #f1f5f9;
+  background: var(--afl-n-100);
   color: #374151;
   font-weight: 700;
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 10px 14px;
-  border-bottom: 2px solid #e2e8f0;
-  border-right: 1px solid #e2e8f0;
+  border-bottom: 2px solid var(--afl-n-200);
+  border-right: 1px solid var(--afl-n-200);
   text-align: left;
   white-space: nowrap;
   position: sticky;
@@ -217,8 +217,8 @@
 .spl-content .spl-table tbody td,
 .spl-table-wrapper .spl-table tbody td {
   padding: 9px 14px;
-  border-bottom: 1px solid #f1f5f9;
-  border-right: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--afl-n-100);
+  border-right: 1px solid var(--afl-n-100);
   vertical-align: top;
 }
 
@@ -235,7 +235,7 @@
 /* Alternating rows */
 .spl-content .spl-table tbody tr:nth-child(even),
 .spl-table-wrapper .spl-table tbody tr:nth-child(even) {
-  background: #f8fafc;
+  background: var(--afl-n-50);
 }
 
 /* Hover state */
@@ -251,9 +251,9 @@
   padding: 9px 14px;
   font-weight: 600;
   color: #374151;
-  background: #f8fafc;
-  border-bottom: 1px solid #f1f5f9;
-  border-right: 1px solid #e2e8f0;
+  background: var(--afl-n-50);
+  border-bottom: 1px solid var(--afl-n-100);
+  border-right: 1px solid var(--afl-n-200);
   vertical-align: top;
   text-align: left;
 }
@@ -266,9 +266,9 @@
   padding: 8px 14px;
   font-weight: 700;
   font-size: 0.8rem;
-  color: #475569;
-  background: #f1f5f9;
-  border-top: 2px solid #e2e8f0;
+  color: var(--afl-n-600);
+  background: var(--afl-n-100);
+  border-top: 2px solid var(--afl-n-200);
 }
 
 /* =====================================================================
@@ -276,7 +276,7 @@
    ===================================================================== */
 
 .label-section-item.boxed-warning-card {
-  background: linear-gradient(135deg, #fff5f5 0%, #ffffff 60%) !important;
+  background: linear-gradient(135deg, #fff5f5 0%, var(--afl-n-0) 60%) !important;
   border-left: 5px solid #dc2626 !important;
   border-color: #fca5a5 !important;
   box-shadow: 0 4px 20px rgba(220, 38, 38, 0.10), 0 1px 3px rgba(0,0,0,0.08) !important;
@@ -297,7 +297,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: #e2e8f0;
+  background: var(--afl-n-200);
   z-index: 20;
   flex-shrink: 0;
   border-radius: 0 0 2px 2px;
@@ -306,7 +306,7 @@
 
 .spl-progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, #0071bc 0%, #38bdf8 100%);
+  background: linear-gradient(90deg, var(--afl-gov-blue) 0%, #38bdf8 100%);
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 0 2px 2px 0;
   will-change: width;
@@ -322,7 +322,7 @@
   gap: 4px;
   font-size: 0.72rem;
   font-weight: 700;
-  color: #0071bc;
+  color: var(--afl-gov-blue);
   text-decoration: none;
   margin-top: 6px;
   padding: 3px 8px;
@@ -358,8 +358,8 @@
   flex-wrap: wrap;
   gap: 8px;
   padding: 10px 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--afl-n-50);
+  border: 1px solid var(--afl-n-200);
   border-radius: 10px;
 }
 
@@ -371,9 +371,9 @@
   padding: 6px 12px;
   border-radius: 999px;
 
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #0f172a;
+  background: var(--afl-n-0);
+  border: 1px solid var(--afl-n-300);
+  color: var(--afl-n-900);
 
   font-size: 0.85rem;
   font-weight: 700;
@@ -383,7 +383,7 @@
 }
 
 .soc-chip:hover {
-  border-color: #0071bc;
+  border-color: var(--afl-gov-blue);
   background: #f1f7fd;
 }
 
@@ -392,9 +392,9 @@
 }
 
 .soc-chip.active {
-  border-color: #0071bc;
+  border-color: var(--afl-gov-blue);
   background: #e6f2fb;
-  color: #002e5d;
+  color: var(--afl-gov-navy);
 }
 
 .soc-chip-count {
@@ -407,18 +407,18 @@
   padding: 0 8px;
 
   border-radius: 999px;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  color: #334155;
+  background: var(--afl-n-100);
+  border: 1px solid var(--afl-n-200);
+  color: var(--afl-n-700);
 
   font-size: 0.78rem;
   font-weight: 800;
 }
 
 .soc-chip.active .soc-chip-count {
-  background: #ffffff;
+  background: var(--afl-n-0);
   border-color: #b6d7f2;
-  color: #002e5d;
+  color: var(--afl-gov-navy);
 }
 
 /* Hierarchical TOC Styles */
@@ -430,7 +430,7 @@
 
 .toc-sub-list {
   margin-left: 12px;
-  border-left: 1px solid #f1f5f9;
+  border-left: 1px solid var(--afl-n-100);
 }
 
 .toc-item-container {
@@ -444,7 +444,7 @@
   border: none;
   cursor: pointer;
   padding: 4px;
-  color: #94a3b8;
+  color: var(--afl-n-400);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -458,7 +458,7 @@
 /* General TOC Link Adjustments for better spacing */
 .toc-link {
   text-decoration: none;
-  color: #475569;
+  color: var(--afl-n-600);
   font-size: 0.85rem;
   padding: 6px 10px;
   border-radius: 6px;
@@ -469,8 +469,8 @@
 }
 
 .toc-link:hover {
-  background-color: #f1f5f9;
-  color: #0f172a;
+  background-color: var(--afl-n-100);
+  color: var(--afl-n-900);
 }
 
 /* --- Boxed Warnings Refinement --- */
@@ -500,9 +500,9 @@
 /* --- Highlights Refinement --- */
 .toc-highlights {
   margin: 4px 0 !important;
-  background-color: #fffbeb; /* Creamy amber */
+  background-color: var(--afl-warn-50); /* Creamy amber */
   border: 1px solid #fde68a;
-  border-left: 4px solid #f59e0b; /* Amber accent */
+  border-left: 4px solid var(--afl-warn-500); /* Amber accent */
   border-radius: 6px;
   overflow: hidden;
 }
@@ -542,7 +542,7 @@
 /* Adjust standard root links to match the new vertical rhythm */
 .toc-link.root-link {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--afl-n-800);
   text-transform: uppercase;
   font-size: 0.8rem;
   letter-spacing: 0.05em;
@@ -551,7 +551,7 @@
 /* --- Book Mode Architecture --- */
 .book-mode-container {
   position: relative;
-  background-color: #f1f5f9;
+  background-color: var(--afl-n-100);
   border-radius: 12px;
   padding: 20px;
   margin-top: 20px;
@@ -601,7 +601,7 @@
   border-radius: 8px;
   box-shadow: 0 15px 35px rgba(0,0,0,0.1), 0 3px 10px rgba(0,0,0,0.05);
   position: relative;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--afl-n-200);
   flex-shrink: 0;
   
   display: flex;
@@ -619,11 +619,11 @@
   background: transparent;
 }
 .book-page-item::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
+  background: var(--afl-n-200);
   border-radius: 10px;
 }
 .book-page-item::-webkit-scrollbar-thumb:hover {
-  background: #cbd5e1;
+  background: var(--afl-n-300);
 }
 
 /* Book Gutter effect - more subtle for flexible height */
@@ -667,18 +667,18 @@
   height: 48px;
   border-radius: 50%;
   background: white;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--afl-n-200);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #64748b;
+  color: var(--afl-n-500);
   transition: all 0.2s ease;
   box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
 .book-flip-btn:hover:not(:disabled) {
-  background: #3b82f6;
+  background: var(--afl-info-500);
   color: white;
   transform: translateY(-2px);
   box-shadow: 0 8px 15px rgba(59, 130, 246, 0.2);
@@ -713,9 +713,9 @@ html {
 
 .book-page-item h2 {
   margin-top: 0;
-  color: #0f172a;
+  color: var(--afl-n-900);
   font-size: 1.5rem;
-  border-bottom: 2px solid #f1f5f9;
+  border-bottom: 2px solid var(--afl-n-100);
   padding-bottom: 15px;
   margin-bottom: 25px;
 }
@@ -731,7 +731,7 @@ html {
 
 .loader {
     border: 5px solid #f3f3f3;
-    border-top: 5px solid #007bff;
+    border-top: 5px solid var(--afl-info-500);
     border-radius: 50%;
     width: 40px;
     height: 40px;
@@ -773,7 +773,7 @@ html {
 }
 
 .chat-bubble {
-    background-color: #002e5d !important;
+    background-color: var(--afl-gov-navy) !important;
     box-shadow: 0 4px 12px rgba(0, 46, 93, 0.3) !important;
 }
 
@@ -786,8 +786,8 @@ html {
 
 .note-summary-item {
     padding: 16px;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--afl-n-0);
+    border: 1px solid var(--afl-n-200);
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -799,8 +799,8 @@ html {
 }
 
 .note-summary-item:hover {
-    border-color: #cbd5e1;
-    background-color: #f8fafc;
+    border-color: var(--afl-n-300);
+    background-color: var(--afl-n-50);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
@@ -825,21 +825,21 @@ html {
 
 .note-summary-text {
     font-size: 0.95rem;
-    color: #334155;
+    color: var(--afl-n-700);
     line-height: 1.5;
     font-weight: 500;
 }
 
 .note-summary-meta {
     font-size: 0.8rem;
-    color: #94a3b8;
+    color: var(--afl-n-400);
     font-weight: 600;
 }
 
 .note-delete-btn {
     background: transparent;
     border: none;
-    color: #cbd5e1;
+    color: var(--afl-n-300);
     cursor: pointer;
     padding: 6px;
     border-radius: 6px;
@@ -850,8 +850,8 @@ html {
 }
 
 .note-delete-btn:hover {
-    background-color: #fee2e2;
-    color: #ef4444;
+    background-color: var(--afl-danger-100);
+    color: var(--afl-danger-500);
 }
 
 /* --- Custom Modal (Generic) --- */
@@ -883,15 +883,15 @@ html {
 
 .custom-modal-header {
     padding: 15px 20px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
+    background: var(--afl-n-50);
+    border-bottom: 1px solid var(--afl-n-200);
     border-radius: 12px 12px 0 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.custom-modal-header h3 { margin: 0; color: #333; }
+.custom-modal-header h3 { margin: 0; color: var(--afl-n-700); }
 
 .close-modal {
     color: #aaa;
@@ -922,7 +922,7 @@ html {
     overflow: hidden; 
     z-index: 3001; 
     font-family: 'Inter', -apple-system, sans-serif;
-    border-left: 1px solid #e2e8f0;
+    border-left: 1px solid var(--afl-n-200);
     box-shadow: -4px 0 15px rgba(0,0,0,0.05);
     animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-sizing: border-box;
@@ -939,7 +939,7 @@ html {
 }
 
 .chat-header { 
-    background-color: #002e5d; 
+    background-color: var(--afl-gov-navy); 
     color: white; 
     padding: 1rem 1.5rem; 
     display: flex; 
@@ -957,7 +957,7 @@ html {
     flex-grow: 1; 
     padding: 1.5rem; 
     overflow-y: auto; 
-    background-color: #f8fafc; 
+    background-color: var(--afl-n-50); 
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
@@ -977,14 +977,14 @@ html {
 }
 
 .message-ai .message-content { 
-    background-color: #ffffff; 
-    color: #1e293b;
-    border: 1px solid #e2e8f0;
+    background-color: var(--afl-n-0); 
+    color: var(--afl-n-800);
+    border: 1px solid var(--afl-n-200);
     border-bottom-left-radius: 2px;
 }
 
 .message-user .message-content { 
-    background-color: #0071bc; 
+    background-color: var(--afl-gov-blue); 
     color: white; 
     border-bottom-right-radius: 2px;
 }
@@ -992,24 +992,24 @@ html {
 .chat-input-form {
     padding: 1.5rem;
     background-color: white;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid var(--afl-n-200);
     display: flex;
 }
 
 .chat-input-form input {
     flex-grow: 1;
     padding: 10px 16px;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--afl-n-300);
     border-radius: 8px;
     outline: none;
     font-size: 0.9rem;
-    background-color: #f8fafc;
+    background-color: var(--afl-n-50);
 }
 
 .chat-input-form button {
     margin-left: 10px;
     padding: 0 20px;
-    background-color: #002e5d;
+    background-color: var(--afl-gov-navy);
     color: white;
     border: none;
     border-radius: 8px;
@@ -1044,8 +1044,8 @@ html {
     justify-content: center;
     width: 24px;
     height: 24px;
-    background-color: #e7f5ff;
-    color: #007bff;
+    background-color: var(--afl-info-50);
+    color: var(--afl-info-500);
     border-radius: 50%;
     margin-left: 8px;
     cursor: pointer;
@@ -1058,7 +1058,7 @@ html {
 
 .chat-annotation-badge:hover, 
 .chat-annotation-badge.sticky {
-    background-color: #007bff;
+    background-color: var(--afl-info-500);
     color: white;
     box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
 }
@@ -1077,7 +1077,7 @@ html {
     width: 350px;
     max-height: 400px;
     background: white;
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--afl-n-200);
     border-radius: 8px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.15);
     z-index: 1000;
@@ -1104,9 +1104,9 @@ html {
 }
 
 .annotation-popover-header {
-    background-color: #f8f9fa;
+    background-color: var(--afl-n-50);
     padding: 8px 12px;
-    border-bottom: 1px solid #e9ecef;
+    border-bottom: 1px solid var(--afl-n-100);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1127,7 +1127,7 @@ html {
 .popover-header-title {
     font-size: 0.75em;
     font-weight: 700;
-    color: #6c757d;
+    color: var(--afl-n-500);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -1138,12 +1138,12 @@ html {
     cursor: pointer;
     font-size: 1.1em;
     padding: 2px;
-    color: #adb5bd;
+    color: var(--afl-n-400);
     transition: color 0.2s;
 }
 
 .popover-actions button:hover {
-    color: #495057;
+    color: var(--afl-n-600);
 }
 
 .close-note-btn {
@@ -1153,7 +1153,7 @@ html {
 }
 
 .popover-actions .delete-note-btn:hover {
-    color: #dc3545;
+    color: var(--afl-danger-500);
 }
 
 .popover-content-wrapper {
@@ -1166,13 +1166,13 @@ html {
     display: block;
     font-weight: 600;
     margin-bottom: 6px;
-    color: #343a40;
+    color: var(--afl-n-800);
     font-size: 0.9em;
 }
 
 .popover-a {
     font-size: 0.85em;
-    color: #495057;
+    color: var(--afl-n-600);
     line-height: 1.5;
 }
 
@@ -1205,7 +1205,7 @@ html {
     transform: translateX(-50%); 
     width: 280px; 
     background: white; 
-    border: 1px solid #dee2e6; 
+    border: 1px solid var(--afl-n-200); 
     border-radius: 12px; 
     box-shadow: 0 8px 30px rgba(0,0,0,0.15); 
     z-index: 1000; 
@@ -1228,7 +1228,7 @@ html {
 
 .chat-annotation-badge.match-yes:hover,
 .chat-annotation-badge.match-yes.sticky {
-    background-color: #10b981 !important;
+    background-color: var(--afl-success-500) !important;
     color: white !important;
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2) !important;
     border-color: #059669 !important;
@@ -1242,7 +1242,7 @@ html {
 
 .chat-annotation-badge.match-probable:hover,
 .chat-annotation-badge.match-probable.sticky {
-    background-color: #f59e0b !important;
+    background-color: var(--afl-warn-500) !important;
     color: white !important;
     box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2) !important;
     border-color: #d97706 !important;
@@ -1250,7 +1250,7 @@ html {
 
 /* Match Type Headers */
 .annotation-popover.match-yes .annotation-popover-header {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background: linear-gradient(135deg, var(--afl-success-500) 0%, #059669 100%);
     border-bottom: none;
 }
 
@@ -1267,7 +1267,7 @@ html {
 }
 
 .annotation-popover.match-probable .annotation-popover-header {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    background: linear-gradient(135deg, var(--afl-warn-500) 0%, #d97706 100%);
     border-bottom: none;
 }
 
@@ -1301,7 +1301,7 @@ html {
 .ai-evidence-tooltip {
     position: fixed;
     background: white;
-    border: 1px solid #ccc;
+    border: 1px solid var(--afl-n-300);
     border-radius: 8px;
     padding: 12px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.15);
@@ -1309,7 +1309,7 @@ html {
     width: 320px;
     font-size: 0.9em;
     line-height: 1.5;
-    color: #333;
+    color: var(--afl-n-700);
     pointer-events: none; /* Allows hover to pass through to icon unless sticky */
     opacity: 0;
     transition: opacity 0.2s ease, visibility 0.2s;
@@ -1323,12 +1323,12 @@ html {
 
 .ai-evidence-tooltip.sticky {
     pointer-events: auto; /* Enable interaction when sticky */
-    border-color: #007bff;
+    border-color: var(--afl-info-500);
     box-shadow: 0 8px 30px rgba(0,0,0,0.2);
 }
 
 .ai-evidence-tooltip strong {
-    color: #007bff;
+    color: var(--afl-info-500);
     display: block;
     margin-bottom: 5px;
     font-size: 1em;
@@ -1338,22 +1338,22 @@ html {
     display: block;
     margin-top: 8px;
     font-size: 0.85em;
-    color: #6c757d;
+    color: var(--afl-n-500);
     font-style: italic;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--afl-n-100);
     padding-top: 5px;
 }
 
 .ai-answer-icon.sticky {
-    background-color: #007bff;
+    background-color: var(--afl-info-500);
     color: white;
-    border-color: #007bff;
+    border-color: var(--afl-info-500);
     box-shadow: 0 0 0 2px rgba(0,123,255,0.3);
     transform: scale(1.1);
 }
 
 .ai-answer-icon.match {
-    background-color: #28a745 !important;
+    background-color: var(--afl-success-500) !important;
     border-color: #1e7e34 !important;
 }
 
@@ -1380,7 +1380,7 @@ html {
 }
 
 .meddra-soc-highlight {
-    background-color: #e7f5ff !important;
+    background-color: var(--afl-info-50) !important;
     border-bottom: 2px solid #339af0 !important;
     border-radius: 4px;
 }
@@ -1411,21 +1411,21 @@ html {
 }
 
 .tech-spec-header {
-    background: #f8fafc;
-    border-bottom: 2px solid #f1f5f9;
+    background: var(--afl-n-50);
+    border-bottom: 2px solid var(--afl-n-100);
 }
 
 .tech-spec-th {
     padding: 10px 16px;
     font-size: 0.65rem;
     font-weight: 800;
-    color: #64748b;
+    color: var(--afl-n-500);
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
 
 .tech-spec-row {
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--afl-n-100);
 }
 
 .tech-spec-row:last-child {
@@ -1447,8 +1447,8 @@ html {
 .ndc-badge {
     font-family: ui-monospace, monospace;
     font-weight: 700;
-    color: #0f172a;
-    background: #f1f5f9;
+    color: var(--afl-n-900);
+    background: var(--afl-n-100);
     padding: 4px 8px;
     border-radius: 6px;
     font-size: 0.8rem;
@@ -1457,23 +1457,23 @@ html {
 
 .product-name {
     font-weight: 700;
-    color: #334155;
+    color: var(--afl-n-700);
     font-size: 0.85rem;
     line-height: 1.2;
 }
 
 .product-form {
-    color: #64748b;
+    color: var(--afl-n-500);
     font-size: 0.75rem;
     margin-top: 2px;
     fontWeight: 500;
 }
 
 .composition-container {
-    background: #f9fafb;
+    background: var(--afl-n-50);
     border-radius: 8px;
     padding: 10px;
-    border: 1px solid #f1f5f9;
+    border: 1px solid var(--afl-n-100);
 }
 
 .ingredient-group {
@@ -1487,7 +1487,7 @@ html {
 .ingredient-group-title {
     font-size: 0.6rem;
     font-weight: 900;
-    color: #94a3b8;
+    color: var(--afl-n-400);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 4px;
@@ -1510,12 +1510,12 @@ html {
 .active-ingredient-name {
     font-size: 0.8rem;
     font-weight: 700;
-    color: #b91c1c; /* Darker red for active */
+    color: var(--afl-danger-700); /* Darker red for active */
 }
 
 .active-ingredient-strength {
     font-size: 0.75rem;
-    color: #475569;
+    color: var(--afl-n-600);
     font-weight: 700;
     font-family: ui-monospace, monospace;
 }
@@ -1528,7 +1528,7 @@ html {
 
 .inactive-ingredient-item {
     font-size: 0.75rem;
-    color: #475569;
+    color: var(--afl-n-600);
     font-weight: 500;
     display: inline-flex;
     align-items: center;
@@ -1536,7 +1536,7 @@ html {
 }
 
 .inactive-ingredient-strength {
-    color: #94a3b8;
+    color: var(--afl-n-400);
     font-size: 0.7rem;
     font-family: ui-monospace, monospace;
 }
@@ -1544,7 +1544,7 @@ html {
 .inactive-ingredient-item::after {
     content: "•";
     margin-left: 8px;
-    color: #cbd5e1;
+    color: var(--afl-n-300);
 }
 
 .inactive-ingredient-item:last-child::after {
@@ -1557,7 +1557,7 @@ html {
 .tab-btn {
   border: none;
   background: transparent;
-  color: #64748b;
+  color: var(--afl-n-500);
   padding: 10px 24px;
   border-radius: 12px;
   cursor: pointer;
@@ -1573,13 +1573,13 @@ html {
 }
 
 .tab-btn:hover {
-  color: #0f172a;
+  color: var(--afl-n-900);
   background: rgba(255, 255, 255, 0.5);
 }
 
 .tab-btn.active {
   background: white;
-  color: #0f172a !important;
+  color: var(--afl-n-900) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
@@ -1636,14 +1636,14 @@ html {
   align-items: center;
   gap: 8px;
   background: white;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--afl-n-200);
   padding: 10px 20px;
   border-radius: 30px; /* Pill shape for floating button look */
   font-size: 0.85rem;
   font-weight: 800;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  color: #475569;
+  color: var(--afl-n-600);
   position: relative;
   overflow: hidden;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* Elevated float look */
@@ -1652,7 +1652,7 @@ html {
 /* AI Chat button float style */
 .label-tool-chat {
   border: 1px solid rgba(168, 85, 247, 0.3) !important;
-  background: linear-gradient(135deg, #ffffff 0%, #fdfcff 100%) !important;
+  background: linear-gradient(135deg, var(--afl-n-0) 0%, #fdfcff 100%) !important;
   color: #7c3aed !important;
   box-shadow: 0 4px 12px rgba(168, 85, 247, 0.08) !important;
 }
@@ -1668,7 +1668,7 @@ html {
 /* Adverse Events button float style */
 .label-tool-meddra {
   border: 1px solid rgba(225, 29, 72, 0.25) !important; /* Rose-tinted */
-  background: linear-gradient(135deg, #ffffff 0%, #fffbfb 100%) !important;
+  background: linear-gradient(135deg, var(--afl-n-0) 0%, #fffbfb 100%) !important;
   color: #e11d48 !important;
   box-shadow: 0 4px 12px rgba(225, 29, 72, 0.06) !important;
 }
@@ -1684,7 +1684,7 @@ html {
 /* Notes button float style */
 .label-tool-notes {
   border: 1px solid rgba(2, 132, 199, 0.25) !important; /* Sky blue */
-  background: linear-gradient(135deg, #ffffff 0%, #f7fcff 100%) !important;
+  background: linear-gradient(135deg, var(--afl-n-0) 0%, #f7fcff 100%) !important;
   color: #0284c7 !important;
   box-shadow: 0 4px 12px rgba(2, 132, 199, 0.06) !important;
 }

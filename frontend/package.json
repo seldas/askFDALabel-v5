@@ -11,7 +11,8 @@
     "start": "cross-env NODE_ENV=production node scripts/start-frontend.js",
     "start:backend": "cross-env NODE_ENV=production node scripts/start-backend.js",
     "prod": "npm run build && concurrently \"npm run start\" \"npm run start:backend\"",
-    "lint": "next lint"
+    "lint": "next lint",
+    "check:colors": "node scripts/check-hardcoded-colors.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
