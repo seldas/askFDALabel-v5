@@ -1107,7 +1107,7 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
               border: 'none',
               cursor: 'pointer',
               fontSize: '0.85rem',
-              color: '#0077cc',
+              color: 'var(--afl-info-500)',
               textDecoration: 'underline'
             }}
           >
@@ -1220,7 +1220,7 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                 border: 'none',
                 cursor: 'pointer',
                 fontSize: '0.8rem',
-                color: '#0077cc',
+                color: 'var(--afl-info-500)',
                 textDecoration: 'underline'
               }}
             >
@@ -1739,7 +1739,7 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                   position: 'relative',
                   cursor: 'default',     // ✅ allow normal cursor + selection
                   userSelect: 'text',    // ✅ ensure selectable
-                  border: isHighlighted ? '2px solid #0077cc' : (isLastRef ? '2px solid var(--afl-success-500)' : '1px solid var(--afl-n-200)'),
+                  border: isHighlighted ? '2px solid var(--afl-info-500)' : (isLastRef ? '2px solid var(--afl-success-500)' : '1px solid var(--afl-n-200)'),
                   backgroundColor: isHighlighted ? 'var(--afl-info-50)' : (isLastRef ? 'var(--afl-success-50)' : 'var(--afl-n-0)'),
                   boxShadow: isLastRef ? '0 10px 15px -3px rgba(22, 163, 74, 0.1), 0 4px 6px -2px rgba(22, 163, 74, 0.05)' : 'none',
                   transform: isLastRef ? 'scale(1.01)' : 'scale(1)',
@@ -1871,12 +1871,12 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                       rel="noopener noreferrer"
                       style={{
                         fontSize: '0.85rem',
-                        color: '#0077cc',
+                        color: 'var(--afl-info-500)',
                         textDecoration: 'none',
                         fontWeight: 600,
                         padding: '4px 12px',
                         borderRadius: '4px',
-                        border: '1px solid #0077cc'
+                        border: '1px solid var(--afl-info-500)'
                       }}
                     >
                       View Label ↗

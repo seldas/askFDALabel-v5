@@ -253,7 +253,7 @@ body {
   align-items: center;
   padding: 15px 50px;
   background-color: white;
-  border-bottom: 3px solid #0077cc; /* Blue underline */
+  border-bottom: 3px solid var(--afl-info-500); /* Blue underline */
 }
 
 .logo {
@@ -275,7 +275,7 @@ body {
 }
 
 .chat-button {
-  background-color: #0077cc; /* Primary blue */
+  background-color: var(--afl-info-500); /* Primary blue */
   color: white;
   border: none;
   padding: 10px 15px;
@@ -402,7 +402,7 @@ mark:hover {
 }
 
 .summary-box::-webkit-scrollbar-thumb {
-  background-color: #0077cc; /* Blue scrollbar */
+  background-color: var(--afl-info-500); /* Blue scrollbar */
   border-radius: 4px;
 }
 
@@ -424,7 +424,7 @@ mark:hover {
   margin-bottom: 10px;
   font-size: 20px;
   font-weight: bold;
-  color: #0077cc;
+  color: var(--afl-info-500);
 }
 
 .summary-text table {
@@ -579,7 +579,7 @@ mark:hover {
 .page-button {
   padding: 6px 14px;
   border: none;
-  background-color: #0077cc;
+  background-color: var(--afl-info-500);
   color: white;
   border-radius: 6px;
   font-size: 16px;
@@ -603,7 +603,7 @@ mark:hover {
 
 /* Export button styled similarly */
 .export-button {
-  background-color: #0077cc;
+  background-color: var(--afl-info-500);
   color: white;
   font-size: 16px;
   font-weight: 600;
@@ -636,11 +636,11 @@ mark:hover {
 /* Base style for the switcher buttons */
 .view-switcher button {
   background-color: var(--afl-n-0);
-  color: #0077cc;
+  color: var(--afl-info-500);
   font-size: 16px;
   font-weight: 600;
   padding: 8px 16px;
-  border: 1px solid #0077cc;
+  border: 1px solid var(--afl-info-500);
   cursor: pointer;
   transition: all 0.2s ease-in-out;
   white-space: nowrap;
@@ -660,9 +660,9 @@ mark:hover {
 
 /* Style for the active/selected button */
 .view-switcher button.active {
-  background-color: #0077cc;
+  background-color: var(--afl-info-500);
   color: white;
-  border-color: #0077cc;
+  border-color: var(--afl-info-500);
 }
 
 /* Hover effect for the non-active button */
@@ -731,7 +731,7 @@ mark:hover {
 
 /* Link styling within the table */
 .results-table td a {
-  color: #0077cc;
+  color: var(--afl-info-500);
   text-decoration: none;
   font-weight: 500;
 }
@@ -1195,7 +1195,7 @@ body {
 
 .chat-message.user {
   align-self: flex-end;
-  background-color: #0077cc;
+  background-color: var(--afl-info-500);
   color: white;
   border-bottom-right-radius: 4px;
 }
@@ -1260,7 +1260,7 @@ body {
 }
 
 .input-wrapper:focus-within {
-  border-color: #0077cc;
+  border-color: var(--afl-info-500);
   box-shadow: 0 0 0 2px rgba(0, 119, 204, 0.1);
 }
 
@@ -1285,7 +1285,7 @@ body {
 .input-wrapper button {
   background: none;
   border: none;
-  color: #0077cc;
+  color: var(--afl-info-500);
   cursor: pointer;
   font-size: 20px;
   padding: 8px; /* Adjusted padding */
@@ -1362,7 +1362,7 @@ body {
   color: var(--afl-n-800);
   margin-bottom: 2.5rem;
   text-align: center;
-  background: linear-gradient(to right, #0077cc, #0ea5e9);
+  background: linear-gradient(to right, var(--afl-info-500), #0ea5e9);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -1385,7 +1385,7 @@ body {
 }
 
 .centered-input-wrapper:focus-within {
-  border-color: #0077cc;
+  border-color: var(--afl-info-500);
   box-shadow: 0 8px 24px rgba(0, 119, 204, 0.15);
   transform: translateY(-1px);
 }
@@ -1422,11 +1422,11 @@ body {
 
 .centered-input-wrapper button:hover:not(:disabled) {
   background-color: var(--afl-n-100);
-  color: #0077cc;
+  color: var(--afl-info-500);
 }
 
 .centered-input-wrapper button.send-btn-centered {
-  background-color: #0077cc;
+  background-color: var(--afl-info-500);
   color: white;
   margin-left: 8px;
   width: 40px;
@@ -1760,7 +1760,7 @@ body {
 }
 
 .highlighted-result {
-  border-left: 4px solid #0077cc !important;
+  border-left: 4px solid var(--afl-info-500) !important;
 }
 
 /* Loading Status UI */
@@ -1787,7 +1787,7 @@ body {
   width: 12px;
   height: 12px;
   border: 2px solid var(--afl-n-300);
-  border-top-color: #0077cc;
+  border-top-color: var(--afl-info-500);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   display: inline-block;
