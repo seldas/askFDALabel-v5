@@ -13,11 +13,12 @@
  */
 
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
 import { useCapabilities, type Capabilities } from './capabilities';
 import { ToolIcon } from './icons';
 import { Badge, Grid, Tabs } from './primitives';
-import { contextKinds, type ContextKind, type LaunchContext } from './context';
+import { contextKinds, labelRoute, type ContextKind, type LaunchContext } from './context';
 import {
   TOOLS,
   TOOL_GROUP_LABELS,
@@ -71,12 +72,6 @@ export function useAvailableTools(
       if (include && !include.includes(tool.id)) return false;
       if (exclude?.includes(tool.id)) return false;
       if (groups && !groups.includes(tool.group)) return false;
-      /*
-       * Every context also satisfies 'global', so once the user has picked a
-       * label, an unrestricted launcher would still offer Web-test, Local
-       * Database Search and the like. matchContexts narrows to tools that
-       * explicitly declare the specific kind we care about.
-       */
       if (matchContexts && !tool.contexts.some((k) => matchContexts.includes(k))) {
         return false;
       }
@@ -85,11 +80,6 @@ export function useAvailableTools(
   }, [ctx, capabilities, include, exclude, groups, matchContexts]);
 }
 
-/*
- * Internal destinations render as next/link so client-side navigation and the
- * configured basePath both apply. External ones are plain anchors with
- * noopener, and always open in a new tab.
- */
 function ToolAnchor({
   tool,
   href,
@@ -132,7 +122,6 @@ function ToolCard({ tool, ctx }: { tool: ToolDef; ctx: LaunchContext }) {
       <span className="afl-tool-card__body">
         <span className="afl-tool-card__title">
           {tool.name}
-          {tool.ai ? <Badge tone="ai">AI</Badge> : null}
           {tool.kind === 'external' ? (
             <span className="afl-tool-card__external" title="Opens in a new tab">
               <ToolIcon id="external" size={13} />
@@ -148,17 +137,12 @@ function ToolCard({ tool, ctx }: { tool: ToolDef; ctx: LaunchContext }) {
 export interface ToolLauncherProps {
   context: LaunchContext;
   variant?: 'cards' | 'strip';
-  /** Restrict to these tool ids, in registry order. */
   include?: string[];
   exclude?: string[];
   groups?: ToolGroup[];
-  /** Only offer tools that explicitly declare one of these context kinds. */
   matchContexts?: ContextKind[];
-  /** cards only: group tools under their group headings. */
   grouped?: boolean;
-  /** strip only: the currently active tool id. */
   activeToolId?: string;
-  /** Rendered when no tool matches. */
   emptyState?: React.ReactNode;
   'aria-label'?: string;
 }
@@ -193,7 +177,6 @@ export function ToolLauncher({
           >
             <ToolIcon id={tool.iconId} size={15} />
             {tool.name}
-            {tool.ai ? <Badge tone="ai">AI</Badge> : null}
           </ToolAnchor>
         ))}
       </Tabs>
@@ -231,22 +214,6 @@ export function ToolLauncher({
   );
 }
 
-/**
- * The label workspace tool strip.
- *
- * Restricted to the label-scoped tools by explicit id. Filtering on context
- * alone is not enough: a label context also satisfies 'global', so every
- * platform-wide tool (Web-test, Local Database Search, …) would appear in the
- * strip alongside them.
- */
-export const LABEL_TOOL_IDS = [
-  'label-reader',
-  'label-faers',
-  'label-tox',
-  'label-examine',
-  'label-deepdive',
-] as const;
-
 export function LabelToolStrip({
   setId,
   activeToolId,
@@ -254,16 +221,30 @@ export function LabelToolStrip({
   setId: string;
   activeToolId?: string;
 }) {
-  const context = useMemo<LaunchContext>(() => ({ setIds: [setId] }), [setId]);
-  const include = useMemo(() => [...LABEL_TOOL_IDS], []);
+  const searchParams = useSearchParams();
+  const isToolbox = searchParams?.get('view') === 'toolbox';
+
   return (
-    <ToolLauncher
-      context={context}
-      variant="strip"
-      activeToolId={activeToolId}
-      aria-label="Label tools"
-      include={include}
-    />
+    <Tabs label="Label workspace navigation" className="afl-tool-strip">
+      <Link
+        href={labelRoute(setId)}
+        className="afl-tab"
+        role="tab"
+        aria-selected={!isToolbox}
+      >
+        <ToolIcon id="document" size={15} />
+        Label View
+      </Link>
+      <Link
+        href={`${labelRoute(setId)}?view=toolbox`}
+        className="afl-tab"
+        role="tab"
+        aria-selected={isToolbox}
+      >
+        <ToolIcon id="wrench" size={15} />
+        Toolbox
+      </Link>
+    </Tabs>
   );
 }
 

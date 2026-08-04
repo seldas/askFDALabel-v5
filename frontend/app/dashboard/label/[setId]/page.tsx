@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState, Suspense, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import LegacyBridge from './LegacyBridge';
 import { TOOL_LABEL, useLabel } from './LabelContext';
 import { labelRoute } from '../../../platform/context';
 import { useUser } from '../../../context/UserContext';
 import { withApiBase } from '../../../utils/appPaths';
+import { ToolIcon } from '../../../platform/icons';
 
 // The reader body. FAERS, Deep Dive and Examine are sibling routes now, and
 // the Header / identity chrome belongs to ../layout.tsx.
@@ -135,18 +136,185 @@ function ExportSectionItem({
   );
 }
 
+function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
+  const brandName = data?.brand_name || data?.drug_name || 'this product';
+
+  const [favoriteToolIds, setFavoriteToolIds] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return ['label-faers', 'label-tox'];
+    try {
+      const saved = localStorage.getItem('askfdalabel_favorite_tools');
+      return saved ? JSON.parse(saved) : ['label-faers', 'label-tox'];
+    } catch {
+      return ['label-faers', 'label-tox'];
+    }
+  });
+
+  const toggleFavoriteTool = (toolId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFavoriteToolIds((prev) => {
+      const next = prev.includes(toolId) ? prev.filter((id) => id !== toolId) : [...prev, toolId];
+      try {
+        localStorage.setItem('askfdalabel_favorite_tools', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const toolsList = [
+    {
+      id: 'label-faers',
+      name: 'FAERS',
+      blurb: 'Adverse event reports and MedDRA term profile for this product.',
+      iconId: 'pulse',
+      href: `/dashboard/label/${setId}/faers`,
+    },
+    {
+      id: 'label-tox',
+      name: 'DrugTox Agents',
+      blurb: 'Assessment of DILI, DICT, DIRI and PGx signals in this label.',
+      iconId: 'flask',
+      href: `/dashboard/label/${setId}/tox`,
+    },
+    {
+      id: 'label-examine',
+      name: 'Examine',
+      blurb: 'Run clinical prompt templates against this label.',
+      iconId: 'microscope',
+      href: `/dashboard/label/${setId}/examine`,
+    },
+    {
+      id: 'label-deepdive',
+      name: 'Deep Dive',
+      blurb: 'Compare this label against its pharmacologic class peers.',
+      iconId: 'compare',
+      href: `/dashboard/label/${setId}/deepdive`,
+    },
+    {
+      id: 'labelcomp',
+      name: 'Compare Labels',
+      blurb: 'Side-by-side section diff of up to four labels.',
+      iconId: 'compare',
+      href: `/labelcomp?set_ids=${setId}`,
+    },
+    {
+      id: 'drugtox',
+      name: 'askDrugTox',
+      blurb: 'Browse harmonized toxicity records across the drug catalog.',
+      iconId: 'flask',
+      href: '/drugtox',
+    },
+    {
+      id: 'localquery',
+      name: 'Local Database Search',
+      blurb: 'Structured query over local SPL and drug records.',
+      iconId: 'database',
+      href: '/localquery',
+    },
+    {
+      id: 'search',
+      name: 'AI Chat Search',
+      blurb: 'Ask questions across all labels and get grounded answers.',
+      iconId: 'chat',
+      href: '/search',
+    },
+  ];
+
+  const sortedTools = [...toolsList].sort((a, b) => {
+    const aFav = favoriteToolIds.includes(a.id);
+    const bFav = favoriteToolIds.includes(b.id);
+    if (aFav && !bFav) return -1;
+    if (!aFav && bFav) return 1;
+    return 0;
+  });
+
+  return (
+    <div className="toolbox-panel" style={{ padding: '16px 0' }}>
+      <div style={{ marginBottom: '24px', background: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
+        <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0' }}>
+          Product Toolbox
+        </h2>
+        <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>
+          Launch analytical tools for <strong>{brandName}</strong>. Click any tool button to open in a new window. Star tools to keep them pinned at the top of your toolbox.
+        </p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+        {sortedTools.map((t) => {
+          const isFav = favoriteToolIds.includes(t.id);
+          return (
+            <a
+              key={t.id}
+              href={t.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="toolbox-card"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                justify: 'space-between',
+                padding: '20px',
+                borderRadius: '14px',
+                background: '#ffffff',
+                border: isFav ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                boxShadow: isFav ? '0 4px 14px rgba(59, 130, 246, 0.12)' : '0 2px 8px rgba(0,0,0,0.04)',
+                textDecoration: 'none',
+                position: 'relative',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', borderRadius: '10px', background: isFav ? '#eff6ff' : '#f8fafc', color: isFav ? '#2563eb' : '#0284c7' }}>
+                      <ToolIcon id={t.iconId as any} size={20} />
+                    </span>
+                    <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#0f172a' }}>
+                      {t.name}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => toggleFavoriteTool(t.id, e)}
+                    title={isFav ? 'Unstar tool' : 'Star tool'}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '1.4rem',
+                      color: isFav ? '#eab308' : '#cbd5e1',
+                      padding: '4px',
+                      lineHeight: 1,
+                      transition: 'color 0.2s ease'
+                    }}
+                  >
+                    {isFav ? '★' : '☆'}
+                  </button>
+                </div>
+                <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 16px 0', lineHeight: 1.45 }}>
+                  {t.blurb}
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 700, color: '#2563eb' }}>
+                Open Tool <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function LabelContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isToolbox = searchParams?.get('view') === 'toolbox';
   const { session, loading: userLoading, openAuthModal } = useUser();
 
   // Supplied by the workspace shell; see ./LabelContext.
   const { setId, data, loading, error } = useLabel();
 
-  /*
-   * The reader is always the label view. Tool selection used to be local state
-   * seeded from ?tab=, which meant the four tools shared one URL; each is now
-   * its own route. Legacy ?tab= links are redirected below.
-   */
   const activeTab = TOOL_LABEL;
 
   useEffect(() => {
@@ -432,7 +600,29 @@ function LabelContent() {
 
   if (!data) return null;
 
-  return (
+  if (isToolbox) {
+    return <ToolboxPanel setId={setId} data={data} />;
+  }
+
+  const handleDownloadMeddraProfile = async () => {
+    try {
+      const response = await fetch(`/api/dashboard/meddra/profile/${setId}`);
+      if (!response.ok) throw new Error("Failed to fetch MedDRA profile");
+      const dataJson = await response.json();
+      const blob = new Blob([JSON.stringify(dataJson, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `MedDRA_Profile_${dataJson.metadata?.brand_name || setId}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error("MedDRA Profile Export Error:", err);
+      alert("Failed to export MedDRA profile.");
+    }
+  };
     <>
       {/*
         The page-level chrome — Header, breadcrumb, and the drug title/badges —
@@ -492,48 +682,6 @@ function LabelContent() {
                               onMouseOver={e => e.currentTarget.style.backgroundColor = '#e2e8f0'}
                               onMouseOut={e => e.currentTarget.style.backgroundColor = '#f1f5f9'}
                             >
-                               <span style={{ fontSize: '1rem' }}>{"\u2913"}</span> EXPORT
-                            </button>
-
-                            <button 
-                                 onClick={async () => {
-                                   try {
-                                     const response = await fetch(`/api/dashboard/meddra/profile/${setId}`);
-                                     if (!response.ok) throw new Error("Failed to fetch MedDRA profile");
-                                     const dataJson = await response.json();
-                                     const blob = new Blob([JSON.stringify(dataJson, null, 2)], { type: 'application/json' });
-                                     const url = window.URL.createObjectURL(blob);
-                                     const a = document.createElement('a');
-                                     a.href = url;
-                                     a.download = `MedDRA_Profile_${dataJson.metadata?.brand_name || setId}.json`;
-                                     document.body.appendChild(a);
-                                     a.click();
-                                     window.URL.revokeObjectURL(url);
-                                     document.body.removeChild(a);
-                                   } catch (err) {
-                                     console.error("MedDRA Profile Export Error:", err);
-                                     alert("Failed to export MedDRA profile.");
-                                   }
-                                 }}
-                               title="Export MedDRA Profile JSON"
-                               style={{ 
-                                  background: '#f1f5f9', 
-                                  border: '1px solid #e2e8f0', 
-                                  color: '#6366f1', 
-                                  padding: '8px 14px', 
-                                  borderRadius: '10px', 
-                                  fontSize: '0.8rem', 
-                                  fontWeight: 800, 
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  gap: '6px', 
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s ease'
-                              }}
-                              onMouseOver={e => e.currentTarget.style.backgroundColor = '#e2e8f0'}
-                              onMouseOut={e => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                            >
-                               <span style={{ fontSize: '1rem' }}>{"\u2b21"}</span> MedDRA Profile
                             </button>
                           </>
                         )}
@@ -650,25 +798,7 @@ function LabelContent() {
                     title="AI Assistant — ask questions about this label"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      AI Chat
-                      <span style={{ 
-                        background: 'linear-gradient(135deg, #a855f7 0%, #3b82f6 100%)', 
-                        color: '#ffffff', 
-                        fontSize: '0.62rem', 
-                        fontWeight: 800, 
-                        padding: '1px 5px', 
-                        borderRadius: '4px', 
-                        letterSpacing: '0.04em',
-                        textTransform: 'uppercase',
-                        lineHeight: '1.2',
-                        display: 'inline-block',
-                        marginLeft: '4px',
-                        verticalAlign: 'middle'
-                      }}>
-                        AI
-                      </span>
-                    </span>
+                    <span>AI Chat</span>
                     <svg className="pop-indicator" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px', verticalAlign: 'middle' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                   </button>
 
@@ -754,7 +884,34 @@ function LabelContent() {
 
       <div id="meddra-stats-modal" className="custom-modal" style={{ display: 'none' }}>
         <div className="custom-modal-content">
-          <div className="custom-modal-header"><h3>Statistics of Adverse Events by MedDRA</h3><span className="close-modal" id="close-meddra-stats">&times;</span></div>
+          <div className="custom-modal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+            <h3 style={{ margin: 0 }}>Statistics of Adverse Events by MedDRA</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button 
+                className="button meddra-profile-dl-btn"
+                onClick={handleDownloadMeddraProfile}
+                title="Export MedDRA Profile JSON"
+                style={{ 
+                  background: '#6366f1', 
+                  color: '#ffffff', 
+                  border: 'none', 
+                  padding: '6px 14px', 
+                  borderRadius: '8px', 
+                  fontSize: '0.8rem', 
+                  fontWeight: 700, 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '6px', 
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 6px rgba(99, 102, 241, 0.25)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span style={{ fontSize: '1rem' }}>{"\u2b21"}</span> Download MedDRA Profile
+              </button>
+              <span className="close-modal" id="close-meddra-stats" style={{ cursor: 'pointer', fontSize: '1.5rem' }}>&times;</span>
+            </div>
+          </div>
           <div className="custom-modal-body" id="meddra-stats-body"></div>
         </div>
       </div>
