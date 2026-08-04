@@ -176,13 +176,6 @@ export default function HomePage() {
 
         {actionBar('bottom')}
 
-        {filled === 0 ? (
-          <p className="fdl-note">
-            No criteria are filled in yet — searching now returns the most recently revised
-            labels.
-          </p>
-        ) : null}
-
         {error ? <p className="fdl-error">{error}</p> : null}
       </main>
 
