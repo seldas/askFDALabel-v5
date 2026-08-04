@@ -591,6 +591,5 @@ export default function DrugToxDetailPage() {
           </div>
         </div>
       </div>
-    </div>
   );
 }
