@@ -31,6 +31,23 @@ _LIST_COLUMNS = {
     'dosageForm': 's.dosage_forms',
 }
 
+# Pharmacologic class filters, as (indexing_type values, indexing_name suffixes).
+#
+# Neither signal alone is enough. substance_indexing.indexing_type holds 'EPC',
+# 'MoA', 'PE', 'Chemical' and 'Unknown' — never the UI's tokens, so ILIKE
+# '%cs%' matched nothing. And the importer files every Chemical Structure class
+# under 'Unknown' while leaving the '[CS]' marker in the name, so type alone
+# loses 2818 of them. FDA always appends the bracketed class to the name, and
+# that suffix is 100% consistent here, so it is matched too.
+#
+# '[' is not a LIKE metacharacter in Postgres, so these patterns are literal.
+CLASS_TYPE_FILTERS = {
+    'epc': (['EPC'], ['%[EPC]']),
+    'moa': (['MoA'], ['%[MoA]']),
+    'pe': (['PE'], ['%[PE]']),
+    'cs': (['Chemical'], ['%[CS]', '%[Chemical/Ingredient]']),
+}
+
 _PRODUCT_NAME_COLUMNS = {
     'trade': ['s.product_names'],
     'generic': ['s.generic_names'],
@@ -385,8 +402,12 @@ def _c_pharm_class(criterion, bag, warnings):
         # MoA / PE / CS live in substance_indexing, reachable through the
         # label's active ingredients.
         type_clause = ''
-        if class_type != 'any':
-            type_clause = f' AND si.indexing_type ILIKE {bag.add(f"%{class_type}%")}'
+        if class_type in CLASS_TYPE_FILTERS:
+            types, suffixes = CLASS_TYPE_FILTERS[class_type]
+            type_clause = (
+                f' AND (si.indexing_type ILIKE ANY({bag.add(types)})'
+                f' OR si.indexing_name ILIKE ANY({bag.add(suffixes)}))'
+            )
         alts.append(
             'EXISTS (SELECT 1 FROM labeling.active_ingredients_map aim '
             'JOIN labeling.substance_indexing si '
@@ -414,7 +435,7 @@ def _merge_application_prefixes(tokens):
     return merged
 
 
-def _c_identifier(criterion, bag, warnings):
+def _c_identifier(criterion, bag, warnings, unii_available=True):
     tokens = _merge_application_prefixes(
         [t for t in re.split(r'[\s,;:]+', str(criterion.get('text') or '')) if t]
     )
@@ -458,6 +479,15 @@ def _c_identifier(criterion, bag, warnings):
             padded = token.zfill(6)
             alts.append(_like_any(['s.appr_num'], [f'%{padded}%', f'%{token}%'], bag))
         elif _UNII_RE.match(token):
+            if not unii_available:
+                # The column exists and is indexed but the SPL importer leaves it
+                # blank, so this would return nothing at all rather than nothing
+                # matching. Say so instead of looking like a real zero-result.
+                warnings.append(
+                    f'UNII {token} was skipped: ingredient UNII codes are not populated '
+                    'in this database. Search the ingredient by name in Product Name(s).'
+                )
+                continue
             conditions = [f'aim.spl_id = s.spl_id', f'UPPER(aim.unii) = {bag.add(token.upper())}']
             if ingredient_type == 'active':
                 conditions.append('aim.is_active = 1')
@@ -478,7 +508,11 @@ def _c_identifier(criterion, bag, warnings):
         )
     alts = [a for a in alts if a]
     if not alts:
-        return None
+        # The user did type identifiers; none of them could be searched. Dropping
+        # the criterion would widen the query to everything else on the panel —
+        # or to every label, if this was the only criterion. Match nothing
+        # instead, and let the warnings above explain why.
+        return 'FALSE'
     return '(' + ' OR '.join(alts) + ')'
 
 
@@ -492,7 +526,7 @@ def _c_chemical_structure(criterion, bag, warnings):
     return None
 
 
-def _compile_criterion(criterion, bag, warnings, expand_meddra):
+def _compile_criterion(criterion, bag, warnings, expand_meddra, capabilities):
     ctype = criterion.get('type')
     value = criterion.get('value') or {}
 
@@ -511,7 +545,7 @@ def _compile_criterion(criterion, bag, warnings, expand_meddra):
     if ctype == 'pharmClass':
         return _c_pharm_class(value, bag, warnings)
     if ctype == 'identifier':
-        return _c_identifier(value, bag, warnings)
+        return _c_identifier(value, bag, warnings, capabilities.get('unii', True))
     if ctype == 'chemicalStructure':
         return _c_chemical_structure(value, bag, warnings)
 
@@ -552,21 +586,25 @@ def order_by_sql(sort, direction):
     return f"{column} {'DESC' if descending else 'ASC'} NULLS LAST, s.set_id"
 
 
-def compile_where(query, expand_meddra=None):
+def compile_where(query, expand_meddra=None, capabilities=None):
     """
     Turns a criteria tree into ``(where_sql, params, warnings)``.
 
-    `expand_meddra(level, terms) -> [pt_names]` is injected rather than imported
-    so the compiler stays free of DB access and stays unit-testable.
+    `expand_meddra(level, terms) -> [pt_names]` and `capabilities` are injected
+    rather than imported so the compiler stays free of DB access and stays
+    unit-testable. `capabilities` reports what this deployment's data actually
+    supports (currently just `unii`), so a criterion backed by an unpopulated
+    column can warn instead of returning a misleading empty result.
     """
     bag = _ParamBag()
     warnings = []
     group_clauses = []
+    capabilities = capabilities or {}
 
     for group in (query.get('groups') or []):
         criterion_clauses = []
         for criterion in (group.get('criteria') or []):
-            clause = _compile_criterion(criterion, bag, warnings, expand_meddra)
+            clause = _compile_criterion(criterion, bag, warnings, expand_meddra, capabilities)
             if clause:
                 criterion_clauses.append(clause)
         if criterion_clauses:

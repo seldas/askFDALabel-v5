@@ -21,7 +21,13 @@ from flask import Blueprint, request, jsonify, send_file
 from flask_login import current_user
 
 from dashboard.services.fdalabel_db import FDALabelDBService
-from .compiler import SELECT_COLUMNS, QueryCompileError, compile_where, order_by_sql
+from .compiler import (
+    CLASS_TYPE_FILTERS,
+    SELECT_COLUMNS,
+    QueryCompileError,
+    compile_where,
+    order_by_sql,
+)
 
 labelquery_bp = Blueprint('labelquery', __name__)
 
@@ -123,9 +129,15 @@ def suggest_pharm_class():
     try:
         params = {'q': f'%{q}%'}
         type_clause = ''
-        if class_type not in ('any', 'epc'):
-            type_clause = 'AND si.indexing_type ILIKE %(t)s'
-            params['t'] = f'%{class_type}%'
+        if class_type in CLASS_TYPE_FILTERS:
+            # Same two-signal match the compiler uses, so suggestions can never
+            # offer a class the search would then fail to find.
+            types, suffixes = CLASS_TYPE_FILTERS[class_type]
+            type_clause = (
+                'AND (si.indexing_type ILIKE ANY(%(t)s) OR si.indexing_name ILIKE ANY(%(sfx)s))'
+            )
+            params['t'] = types
+            params['sfx'] = suffixes
 
         rows = []
         if class_type in ('any', 'epc'):
@@ -184,6 +196,30 @@ def suggest_meddra():
         return jsonify({'error': str(e)}), 500
 
 
+_capability_cache = {}
+
+
+def _capabilities():
+    """
+    What this deployment's data can actually answer.
+
+    Cached per process: the answer only changes on a re-import, and the probe
+    would otherwise run on every search. Restart the app after importing.
+    """
+    if 'unii' not in _capability_cache:
+        try:
+            rows = _rows(
+                "SELECT 1 FROM labeling.active_ingredients_map "
+                "WHERE unii IS NOT NULL AND unii <> '' LIMIT 1"
+            )
+            _capability_cache['unii'] = bool(rows)
+        except Exception:
+            # Assume supported on probe failure: a warning that the data is
+            # missing is worse than none if the column is really there.
+            _capability_cache['unii'] = True
+    return dict(_capability_cache)
+
+
 def _expand_meddra(level, terms):
     """
     Resolves a non-PT MedDRA selection down to the PT names actually used in
@@ -240,7 +276,9 @@ def execute():
         return jsonify({'error': 'limit and offset must be integers'}), 400
 
     try:
-        where, params, warnings = compile_where(query, expand_meddra=_expand_meddra)
+        where, params, warnings = compile_where(
+            query, expand_meddra=_expand_meddra, capabilities=_capabilities()
+        )
     except QueryCompileError as e:
         return jsonify({'error': str(e)}), 400
 
@@ -323,7 +361,9 @@ EXPORT_COLUMNS = [
 
 
 def _export_rows(query, sort, direction):
-    where, params, _ = compile_where(query, expand_meddra=_expand_meddra)
+    where, params, _ = compile_where(
+        query, expand_meddra=_expand_meddra, capabilities=_capabilities()
+    )
     page_params = dict(params)
     page_params['_limit'] = EXPORT_CAP
     return _rows(
