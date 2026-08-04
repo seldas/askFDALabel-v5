@@ -3,8 +3,8 @@
 # Path to the certs
 CERT_SRC="/etc/nginx/certs/cert.pem"
 KEY_SRC="/etc/nginx/certs/key.pem"
-CERT_DEST="/etc/nginx/certs/fdalabel-v3.crt"
-KEY_DEST="/etc/nginx/certs/fdalabel-v3.key"
+CERT_DEST="/etc/nginx/certs/askfdalabel.crt"
+KEY_DEST="/etc/nginx/certs/askfdalabel.key"
 CONF_FILE="/etc/nginx/conf.d/default.conf"
 SSL_TEMPLATE="/etc/nginx/conf.d/ssl.conf.template"
 SSL_ENABLED="/etc/nginx/conf.d/ssl_enabled.conf"
