@@ -21,32 +21,6 @@ export default function ManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [activeTasks, setActiveTasks] = useState<Record<number, any>>({});
-  const [dbStatus, setDbStatus] = useState<Record<string, any>>({});
-  const [envConfig, setEnvConfig] = useState<any>({
-    labeling_source: 'local',
-    postgres_db: 'local',
-    external_pg_host: '',
-    external_pg_user: '',
-    external_pg_password: '',
-    external_pg_database: '',
-    oracle_db_env: 'tst',
-    ai_model_provider: 'elsa',
-    custom_llm_url: '',
-    custom_llm_key: ''
-  });
-  const [pendingEnvConfig, setPendingEnvConfig] = useState<any>({
-    labeling_source: 'local',
-    postgres_db: 'local',
-    external_pg_host: '',
-    external_pg_user: '',
-    external_pg_password: '',
-    external_pg_database: '',
-    oracle_db_env: 'tst',
-    ai_model_provider: 'elsa',
-    custom_llm_url: '',
-    custom_llm_key: ''
-  });
-  const [savingEnv, setSavingEnv] = useState(false);
 
   const [selectedProvider, setSelectedProvider] = useState<string>('elsa');
   const [customSettings, setCustomSettings] = useState({
@@ -131,10 +105,7 @@ export default function ManagementPage() {
 
   useEffect(() => {
     if (session && !initialTabSet) {
-      if (session.is_admin) {
-        setActiveTab('system');
-        fetchEnvironment();
-      } else if (session.username === 'guest') {
+      if (session.username === 'guest') {
         setActiveTab('tokens');
       } else {
         setActiveTab('ai');
@@ -142,48 +113,6 @@ export default function ManagementPage() {
       setInitialTabSet(true);
     }
   }, [session, initialTabSet]);
-
-  const fetchEnvironment = async () => {
-    try {
-      const res = await fetch('/api/dashboard/admin/system-settings');
-      const data = await res.json();
-      if (data.success && data.config) {
-        setEnvConfig(data.config);
-        setPendingEnvConfig(data.config);
-      }
-    } catch (e) {
-      console.error('Failed to fetch environment:', e);
-    }
-  };
-
-  const handleEnvChange = (field: string, value: string) => {
-    setPendingEnvConfig((prev: any) => ({ ...prev, [field]: value }));
-  };
-
-  const handleApplyEnvSettings = async () => {
-    setSavingEnv(true);
-    try {
-      const res = await fetch('/api/dashboard/admin/system-settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(pendingEnvConfig)
-      });
-      const data = await res.json();
-      if (data.success) {
-        setEnvConfig(pendingEnvConfig);
-        alert('System settings applied successfully! Database connection is reloading...');
-        if (typeof refreshSession === 'function') {
-          await refreshSession();
-        }
-      } else {
-        alert(data.error || 'Failed to apply settings');
-      }
-    } catch (e) {
-      console.error(e);
-      alert('Network error applying settings');
-    }
-    setSavingEnv(false);
-  };
 
   const [pendingUpdateType, setPendingUpdateType] = useState<string | null>(null);
   const [pendingUpdateStats, setPendingUpdateStats] = useState<any>(null);
@@ -774,18 +703,6 @@ export default function ManagementPage() {
 
           {/* SIDEBAR NAVIGATION */}
           <div style={{ width: '250px', display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
-            {session?.is_admin && (
-              <button
-                className={`sidebar-tab ${activeTab === 'system' ? 'active' : ''}`}
-                onClick={() => setActiveTab('system')}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
-                  <path d="M21.18 8.02c-1-2.3-2.85-4.17-5.16-5.18"></path>
-                </svg>
-                System Settings
-              </button>
-            )}
             <button
               className={`sidebar-tab ${activeTab === 'ai' ? 'active' : ''}`}
               onClick={() => setActiveTab('ai')}
@@ -828,130 +745,7 @@ export default function ManagementPage() {
 
           {/* MAIN CONTENT AREA */}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-            {activeTab === 'system' && session?.is_admin && (
-              <section className="mgmt-card">
-                <h2 className="section-title">System Settings</h2>
-                <p style={{ color: 'var(--afl-n-500)', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.5 }}>
-                  Configure the global environment, database endpoints, and active LLM models. Changes here apply to all users immediately.
-                </p>
 
-                <div style={{ marginBottom: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  
-                  {/* Labeling Source */}
-                  <div>
-                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: 'var(--afl-n-800)' }}>Labeling Source</h3>
-                    <select 
-                      value={pendingEnvConfig.labeling_source || 'local'} 
-                      onChange={(e) => handleEnvChange('labeling_source', e.target.value)}
-                      disabled={savingEnv}
-                      style={{ padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--afl-n-300)', fontSize: '1rem', minWidth: '300px', background: 'white' }}
-                    >
-                      <option value="local">Local Database (SQLite/Postgres)</option>
-                      <option value="fdalabel">FDALabel (Oracle Database)</option>
-                    </select>
-                  </div>
-
-                  {/* Oracle Database Environment selection (dev vs tst) */}
-                  {pendingEnvConfig.labeling_source === 'fdalabel' && (
-                    <div style={{ padding: '1.25rem', background: 'var(--afl-n-50)', borderRadius: '8px', border: '1px solid var(--afl-n-200)', display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '500px' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Oracle Database Environment</label>
-                      <select 
-                        value={pendingEnvConfig.oracle_db_env || 'tst'} 
-                        onChange={(e) => handleEnvChange('oracle_db_env', e.target.value)}
-                        disabled={savingEnv}
-                        style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.9rem', background: 'white' }}
-                      >
-                        <option value="tst">Testing (TST) - lbltst2</option>
-                        <option value="dev">Development (DEV)</option>
-                      </select>
-                    </div>
-                  )}
-
-                  {/* PostgreSQL Database */}
-                  <div>
-                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: 'var(--afl-n-800)' }}>PostgreSQL Database</h3>
-                    <select 
-                      value={pendingEnvConfig.postgres_db || 'local'} 
-                      onChange={(e) => handleEnvChange('postgres_db', e.target.value)}
-                      disabled={savingEnv}
-                      style={{ padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--afl-n-300)', fontSize: '1rem', minWidth: '300px', background: 'white' }}
-                    >
-                      <option value="local">Local PostgreSQL</option>
-                      <option value="external">External / Remote PostgreSQL</option>
-                    </select>
-                  </div>
-
-                  {/* External PostgreSQL Configuration */}
-                  {pendingEnvConfig.postgres_db === 'external' && (
-                    <div style={{ padding: '1.25rem', background: 'var(--afl-n-50)', borderRadius: '8px', border: '1px solid var(--afl-n-200)', display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '500px' }}>
-                      <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--afl-n-600)' }}>External PostgreSQL Configuration</h4>
-                      
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>PG Host / URL</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. localhost:5432 or postgresql://..."
-                          value={pendingEnvConfig.external_pg_host || ''}
-                          onChange={(e) => handleEnvChange('external_pg_host', e.target.value)}
-                          disabled={savingEnv}
-                          style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
-                        />
-                      </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>PG Username</label>
-                        <input
-                          type="text"
-                          placeholder="Username"
-                          value={pendingEnvConfig.external_pg_user || ''}
-                          onChange={(e) => handleEnvChange('external_pg_user', e.target.value)}
-                          disabled={savingEnv}
-                          style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
-                        />
-                      </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>PG Password</label>
-                        <input
-                          type="password"
-                          placeholder="Password"
-                          value={pendingEnvConfig.external_pg_password || ''}
-                          onChange={(e) => handleEnvChange('external_pg_password', e.target.value)}
-                          disabled={savingEnv}
-                          style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
-                        />
-                      </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>PG Database Name</label>
-                        <input
-                          type="text"
-                          placeholder="Database Name"
-                          value={pendingEnvConfig.external_pg_database || ''}
-                          onChange={(e) => handleEnvChange('external_pg_database', e.target.value)}
-                          disabled={savingEnv}
-                          style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div style={{ marginTop: '1rem' }}>
-                    <button
-                      onClick={handleApplyEnvSettings}
-                      disabled={savingEnv}
-                      className="btn-primary"
-                      style={{ padding: '0.75rem 2rem', fontSize: '0.95rem' }}
-                    >
-                      {savingEnv ? 'Applying Settings...' : 'Apply Settings'}
-                    </button>
-                  </div>
-
-                  {savingEnv && <span style={{ color: 'var(--afl-n-500)', fontSize: '0.9rem' }}>Saving settings...</span>}
-                </div>
-
-              </section>
-            )}
 
             {activeTab === 'ai' && session?.username !== 'guest' && (
               <section className="mgmt-card" style={{ maxWidth: '800px' }}>
