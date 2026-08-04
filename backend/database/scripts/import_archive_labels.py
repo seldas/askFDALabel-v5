@@ -68,7 +68,12 @@ def parse_spl_xml(xml_path):
         revised_date, effective_time_raw = normalize_effective_date(eff_val)
 
         doc_type_el = root.find('ns:code', NS)
-        doc_type = doc_type_el.get('displayName') if doc_type_el is not None else ""
+        doc_type_raw = doc_type_el.get('displayName') if doc_type_el is not None else ""
+        try:
+            from db_07_import_labels import normalize_doc_type
+        except ImportError:
+            from database.scripts.db_07_import_labels import normalize_doc_type
+        doc_type = normalize_doc_type(doc_type_raw)
 
         title_el = root.find('ns:title', NS)
         title_text = get_el_text(title_el)

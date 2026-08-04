@@ -163,7 +163,12 @@ def parse_file_metadata_only(file_path):
         set_id = (set_id_el.get('root') if set_id_el is not None else "").strip().lower()
 
         code_el = root.find('ns:code', NS)
-        doc_type = code_el.get('displayName') if code_el is not None else ""
+        doc_type_raw = code_el.get('displayName') if code_el is not None else ""
+        try:
+            from db_07_import_labels import normalize_doc_type
+        except ImportError:
+            from database.scripts.db_07_import_labels import normalize_doc_type
+        doc_type = normalize_doc_type(doc_type_raw)
 
         title_el = root.find('ns:title', NS)
         doc_title = get_el_text(title_el) if title_el is not None else ""

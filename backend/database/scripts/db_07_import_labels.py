@@ -134,6 +134,19 @@ def _init_worker(ob_dict):
     _ob_dict = ob_dict
 
 
+def normalize_doc_type(doc_type_raw):
+    """
+    Normalizes SPL document type (doc_type) string into a clean, canonical uppercase representation.
+    Collapses casing variants, removes trailing '.PLR' or ' PLR', and standardizes 'LABELING' -> 'LABEL'.
+    """
+    if not doc_type_raw:
+        return ""
+    dt = " ".join((doc_type_raw or "").strip().split()).upper()
+    dt = re.sub(r'\.?\s*PLR\b', '', dt, flags=re.IGNORECASE).strip()
+    dt = dt.replace('LABELING', 'LABEL')
+    return dt
+
+
 def normalize_effective_date(eff_val):
     """
     Returns:
@@ -240,7 +253,8 @@ def parse_spl_zip(zip_path):
 
         # Extract doc_type (document code / displayName)
         code_el = root.find('ns:code', NS)
-        doc_type = code_el.get('displayName') if code_el is not None else ""
+        doc_type_raw = code_el.get('displayName') if code_el is not None else ""
+        doc_type = normalize_doc_type(doc_type_raw)
 
         # revised_date / effectiveTime
         eff_el = root.find('ns:effectiveTime', NS)
