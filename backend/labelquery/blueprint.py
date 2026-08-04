@@ -178,39 +178,33 @@ SECTION_TAXONOMY = [
 
 @labelquery_bp.route('/options', methods=['GET'])
 def options():
-    """Every dropdown the panel needs, in one round trip."""
+    """Every dropdown the panel needs, served instantly from the pre-computed stats cache."""
     try:
-        db_counts = {}
+        cache_rows = []
         try:
-            total_labels = _rows("SELECT COUNT(DISTINCT set_id) AS n FROM labeling.sum_spl WHERE is_latest = TRUE")
-            if total_labels and total_labels[0].get('n'):
-                db_counts['SPLTITLE'] = total_labels[0]['n']
-
-            appr_labels = _rows("SELECT COUNT(DISTINCT set_id) AS n FROM labeling.sum_spl WHERE is_latest = TRUE AND initial_approval_year IS NOT NULL")
-            if appr_labels and appr_labels[0].get('n'):
-                db_counts['43683-2'] = appr_labels[0]['n']
-
-            sec_rows = _rows(
-                """
-                SELECT
-                    sec.loinc_code AS code,
-                    UPPER(regexp_replace(sec.title, '^[0-9]+(\\.[0-9]+)*\\s+', '')) AS title,
-                    COUNT(DISTINCT s.set_id) AS n
-                FROM labeling.spl_sections sec
-                JOIN labeling.sum_spl s ON sec.spl_id = s.spl_id
-                WHERE s.is_latest = TRUE
-                  AND ((sec.loinc_code IS NOT NULL AND sec.loinc_code <> '')
-                       OR (sec.title IS NOT NULL AND sec.title <> ''))
-                GROUP BY sec.loinc_code, 2
-                """
-            )
-            for r in sec_rows:
-                if r.get('code'):
-                    db_counts[r['code']] = max(db_counts.get(r['code'], 0), r['n'])
-                if r.get('title'):
-                    db_counts[r['title']] = max(db_counts.get(r['title'], 0), r['n'])
+            cache_rows = _rows("SELECT category, key_name, item_count FROM labeling.query_options_cache ORDER BY item_count DESC")
         except Exception:
-            pass
+            cache_rows = []
+
+        # If cache is missing or empty, attempt an on-the-fly refresh
+        if not cache_rows:
+            try:
+                from database.scripts.db_07_import_labels import refresh_query_options_cache
+                refresh_query_options_cache()
+                cache_rows = _rows("SELECT category, key_name, item_count FROM labeling.query_options_cache ORDER BY item_count DESC")
+            except Exception as ex:
+                print(f"[WARN] Options cache refresh fallback failed: {ex}")
+
+        # Group cached items by category
+        grouped = {}
+        db_counts = {}
+        for r in cache_rows:
+            cat = r['category']
+            if cat not in grouped:
+                grouped[cat] = []
+            grouped[cat].append({'value': r['key_name'], 'count': r['item_count']})
+            if cat in ('db_counts', 'sections'):
+                db_counts[r['key_name']] = r['item_count']
 
         sections = []
         for group, label, code_or_val, default_count in SECTION_TAXONOMY:
@@ -223,10 +217,10 @@ def options():
             })
 
         return jsonify({
-            'labelingTypes': _distinct_list_column('doc_type'),
-            'applicationTypes': _distinct_list_column('market_categories'),
-            'routes': _distinct_list_column('routes'),
-            'dosageForms': _distinct_list_column('dosage_forms'),
+            'labelingTypes': grouped.get('labelingTypes', []),
+            'applicationTypes': grouped.get('applicationTypes', []),
+            'routes': grouped.get('routes', []),
+            'dosageForms': grouped.get('dosageForms', []),
             'sections': sections,
         })
     except Exception as e:

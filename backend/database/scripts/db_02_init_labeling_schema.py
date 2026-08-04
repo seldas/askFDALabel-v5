@@ -241,7 +241,19 @@ def init_labeling_schema():
             )
             """)
 
-            # 7. Indexes for the query builder
+            # 7. Pre-computed query options statistics cache
+            print("Ensuring 'labeling.query_options_cache' exists...")
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS labeling.query_options_cache (
+                category TEXT NOT NULL,
+                key_name TEXT NOT NULL,
+                item_count INTEGER NOT NULL DEFAULT 0,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (category, key_name)
+            );
+            """)
+
+            # 8. Indexes for the query builder
             create_query_indexes(cursor)
 
             print("[SUCCESS] 'labeling' schema initialized.")

@@ -770,6 +770,85 @@ def sync_from_storage(storage_dir, num_workers=4, force=False, refresh_existing=
     print(f"\nFinished Sync. Imported: {processed}, Skipped: {skipped}, Failed: {failed}")
     refresh_version_lineage()
     refresh_epc_mappings()
+    refresh_query_options_cache()
+
+
+def refresh_query_options_cache():
+    print("Refreshing query options statistics cache in labeling.query_options_cache...")
+    columns = [
+        ('labelingTypes', 'doc_type'),
+        ('applicationTypes', 'market_categories'),
+        ('routes', 'routes'),
+        ('dosageForms', 'dosage_forms'),
+    ]
+    
+    # Clean stale cache
+    try:
+        PGUtils.execute_query("DELETE FROM labeling.query_options_cache;")
+    except Exception:
+        pass
+
+    queries = []
+    
+    # 1. Column counts
+    for category, col in columns:
+        queries.append(f"""
+            INSERT INTO labeling.query_options_cache (category, key_name, item_count, updated_at)
+            SELECT '{category}' AS category, value AS key_name, COUNT(*) AS item_count, CURRENT_TIMESTAMP
+            FROM (
+                SELECT TRIM(unnest(string_to_array(s.{col}, ';'))) AS value
+                FROM labeling.sum_spl s
+                WHERE s.is_latest = TRUE AND s.{col} IS NOT NULL AND s.{col} <> ''
+            ) t
+            WHERE value <> ''
+            GROUP BY value
+            ON CONFLICT (category, key_name) 
+            DO UPDATE SET item_count = EXCLUDED.item_count, updated_at = CURRENT_TIMESTAMP;
+        """)
+
+    # 2. Total labels count ('SPLTITLE')
+    queries.append("""
+        INSERT INTO labeling.query_options_cache (category, key_name, item_count, updated_at)
+        SELECT 'db_counts', 'SPLTITLE', COUNT(DISTINCT set_id), CURRENT_TIMESTAMP
+        FROM labeling.sum_spl WHERE is_latest = TRUE
+        ON CONFLICT (category, key_name) 
+        DO UPDATE SET item_count = EXCLUDED.item_count, updated_at = CURRENT_TIMESTAMP;
+    """)
+
+    # 3. Approved labels count ('43683-2')
+    queries.append("""
+        INSERT INTO labeling.query_options_cache (category, key_name, item_count, updated_at)
+        SELECT 'db_counts', '43683-2', COUNT(DISTINCT set_id), CURRENT_TIMESTAMP
+        FROM labeling.sum_spl WHERE is_latest = TRUE AND initial_approval_year IS NOT NULL
+        ON CONFLICT (category, key_name) 
+        DO UPDATE SET item_count = EXCLUDED.item_count, updated_at = CURRENT_TIMESTAMP;
+    """)
+
+    # 4. Section counts
+    queries.append("""
+        WITH sec_counts AS (
+            SELECT
+                COALESCE(NULLIF(sec.loinc_code, ''), UPPER(regexp_replace(sec.title, '^[0-9]+(\\.[0-9]+)*\\s+', ''))) AS key_name,
+                COUNT(DISTINCT s.set_id) AS n
+            FROM labeling.spl_sections sec
+            JOIN labeling.sum_spl s ON sec.spl_id = s.spl_id
+            WHERE s.is_latest = TRUE
+              AND ((sec.loinc_code IS NOT NULL AND sec.loinc_code <> '')
+                   OR (sec.title IS NOT NULL AND sec.title <> ''))
+            GROUP BY 1
+        )
+        INSERT INTO labeling.query_options_cache (category, key_name, item_count, updated_at)
+        SELECT 'sections', key_name, n, CURRENT_TIMESTAMP FROM sec_counts
+        WHERE key_name IS NOT NULL AND key_name <> ''
+        ON CONFLICT (category, key_name) 
+        DO UPDATE SET item_count = EXCLUDED.item_count, updated_at = CURRENT_TIMESTAMP;
+    """)
+
+    for q in queries:
+        try:
+            PGUtils.execute_query(q)
+        except Exception as e:
+            print(f"[WARN] Failed options cache query: {e}")
 
 
 def refresh_version_lineage():
