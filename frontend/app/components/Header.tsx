@@ -29,12 +29,7 @@ export type ActiveApp =
 const GLOBAL_CTX = {};
 
 /** Primary nav bar items, in display order, mapped to their ActiveApp key. */
-const PRIMARY_NAV: { toolId: string; activeApp: ActiveApp }[] = [
-  { toolId: 'search', activeApp: 'afl' },
-  { toolId: 'dashboard', activeApp: 'dashboard' },
-  { toolId: 'labelcomp', activeApp: 'labelcomp' },
-  { toolId: 'drugtox', activeApp: 'drugtox' },
-];
+const PRIMARY_NAV: { toolId: string; activeApp: ActiveApp }[] = [];
 
 function inferActiveApp(pathname: string): ActiveApp {
   if (pathname === '/' || pathname === '') return 'home';
@@ -61,10 +56,6 @@ export default function Header({
     [activeApp, pathname]
   );
 
-  // Deployment capabilities come from the shared provider — this component and
-  // the home page used to probe /api/check-fdalabel independently. Gating on
-  // individual booleans (fdaAccessible, allowLocalQuery, ...) now happens
-  // inside isToolAvailable() via each tool's `requires`, not here.
   const { capabilities } = useCapabilities();
 
   const [activeDropdown, setActiveDropdown] = useState<DropdownKey | 'tasks'>(null);
@@ -114,7 +105,6 @@ export default function Header({
     }
   };
 
-  // Poll for logs if the selected task is active
   useEffect(() => {
     if (!isLogModalOpen || !selectedTaskId) return;
 
@@ -134,7 +124,6 @@ export default function Header({
     return () => clearInterval(interval);
   }, [isLogModalOpen, selectedTaskId, activeTasks]);
 
-  // Scroll to bottom when logs update or modal opens (if auto-scroll is enabled)
   useEffect(() => {
     if (isLogModalOpen && logScrollRef.current) {
       if (shouldAutoScroll) {
@@ -147,7 +136,7 @@ export default function Header({
     const container = logScrollRef.current;
     if (!container) return;
 
-    const threshold = 50; // pixels from the bottom
+    const threshold = 50;
     const isAtBottom = container.scrollHeight - container.clientHeight - container.scrollTop <= threshold;
     setShouldAutoScroll(isAtBottom);
   };
@@ -188,7 +177,6 @@ export default function Header({
       console.error('Logout failed', err);
     }
   };
-
 
   return (
     <>
@@ -326,44 +314,21 @@ export default function Header({
         )}
       </button>
 
-      {/* Center: Main Navigation */}
-      <nav className={cx('header-nav', mobileMenuOpen && 'open')}>
+      {/* Right: User & Resources Controls */}
+      <div className={cx('header-controls', mobileMenuOpen && 'open')}>
 
-        {/*
-          Sourced from the tool registry so the URL and label live in one
-          place (platform/registry.ts) instead of being hardcoded here too.
-          Icons come from platform/icons.tsx, which was built from these
-          exact paths, so this renders pixel-identical to the markup it
-          replaces.
-        */}
-        {PRIMARY_NAV.map(({ toolId, activeApp }) => {
-          const tool = getTool(toolId);
-          if (!tool || !isToolAvailable(tool, GLOBAL_CTX, capabilities)) return null;
-          const isActive = resolvedActiveApp === activeApp;
-          return (
-            <Link
-              key={toolId}
-              href={tool.href(GLOBAL_CTX)}
-              className={cx('hp-nav-item', isActive && 'is-active')}
-              aria-current={isActive ? 'page' : undefined}
-              onClick={handleNavClick}
-            >
-              <ToolIcon id={tool.iconId} size={16} />
-              {tool.name}
-            </Link>
-          );
-        })}
-
-        {/* Search Dropdown (Drug & Device) */}
+        {/* Resources Dropdown moved to right side */}
         <div
           className="hp-nav-dropdown"
           onMouseEnter={() => setActiveDropdown('nav')}
           onMouseLeave={() => setActiveDropdown(null)}
+          style={{ position: 'relative' }}
         >
           <button
-            className={cx('hp-nav-item', (resolvedActiveApp === 'fdalabel' || resolvedActiveApp === 'device' || resolvedActiveApp === 'localquery') && 'is-active')}
-            aria-current={(resolvedActiveApp === 'fdalabel' || resolvedActiveApp === 'device' || resolvedActiveApp === 'localquery') ? 'page' : undefined}
+            className={cx('hp-nav-item', (resolvedActiveApp === 'fdalabel' || resolvedActiveApp === 'device' || resolvedActiveApp === 'localquery' || resolvedActiveApp === 'drugtox') && 'is-active')}
+            aria-current={(resolvedActiveApp === 'fdalabel' || resolvedActiveApp === 'device' || resolvedActiveApp === 'localquery' || resolvedActiveApp === 'drugtox') ? 'page' : undefined}
             onClick={(e) => e.preventDefault()}
+            style={{ fontWeight: 700 }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8"></circle>
@@ -372,18 +337,11 @@ export default function Header({
             Resources <span className="dropdown-caret">▼</span>
           </button>
 
-          <div className={cx('hp-dropdown-content', activeDropdown === 'nav' && 'visible')} style={{ minWidth: '240px' }}>
-            {/* Drug Search Section */}
+          <div className={cx('hp-dropdown-content', activeDropdown === 'nav' && 'visible')} style={{ minWidth: '250px', right: 0, left: 'auto' }}>
             <div className="dropdown-section-label" style={{ padding: '8px 12px 4px', fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>
               FDALabel
             </div>
 
-            {/*
-              Local Database Search, the three FDALabel deployments, and
-              Web-test Tool all come from the registry now — url and gating
-              (localQuery / fdaAccessible / cderAccessible) live in one place
-              instead of being duplicated as local capability booleans here.
-            */}
             {(() => {
               const localquery = getTool('localquery')!;
               return isToolAvailable(localquery, GLOBAL_CTX, capabilities) ? (
@@ -425,10 +383,31 @@ export default function Header({
               );
             })}
 
-            {/* ELSA Support widgets */}
             <div className="dropdown-section-label" style={{ padding: '8px 12px 4px', fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>
               Others
             </div>
+
+            {(() => {
+              const drugtox = getTool('drugtox');
+              if (!drugtox || !isToolAvailable(drugtox, GLOBAL_CTX, capabilities)) return null;
+              return (
+                <a
+                  href={drugtox.href(GLOBAL_CTX)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cx('hp-dropdown-item', resolvedActiveApp === 'drugtox' && 'is-active')}
+                  onClick={handleNavClick}
+                >
+                  <span className="hp-dropdown-icon">
+                    <ToolIcon id={drugtox.iconId} size={18} />
+                  </span>
+                  <div>
+                    <div className="dropdown-title" style={{ fontWeight: 800 }}>askDrugTox</div>
+                    <div style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 500 }}>{drugtox.blurb}</div>
+                  </div>
+                </a>
+              );
+            })()}
 
             {(() => {
               const webtest = getTool('webtest')!;
@@ -450,10 +429,6 @@ export default function Header({
           </div>
         </div>
 
-      </nav>
-
-      {/* Right: User Controls */}
-      <div className={cx('header-controls', mobileMenuOpen && 'open')}>
         {loading ? (
           <span className="header-muted">Loading...</span>
         ) : session?.is_authenticated ? (
@@ -554,7 +529,11 @@ export default function Header({
                   </div>
 
                   <div className="account-actions">
-                    <Link href="/management" className="dropdown-item" style={{ color: '#6366f1', fontWeight: 800 }}>
+                    <a href={process.env.NEXT_PUBLIC_DASHBOARD_BASE || '/dashboard'} className="dropdown-item" style={{ color: '#2563eb', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                      My Dashboard
+                    </a>
+                    <Link href="/management" className="dropdown-item" style={{ color: '#6366f1', fontWeight: 700 }}>
                       {session?.is_admin ? 'System Management' : 'Settings & Preferences'}
                     </Link>
                     {session?.username === 'guest' && (
