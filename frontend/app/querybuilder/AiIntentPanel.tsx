@@ -136,12 +136,12 @@ export function AiIntentPanel({
 
       {!isFolded && (
         <>
-          <div className="fdl-ai__field" style={{ marginTop: '16px', display: 'flex', gap: '10px', alignItems: 'stretch' }}>
+          <div className="fdl-ai__field" style={{ marginTop: '16px' }}>
             <textarea
               className="fdl-ai__input"
               rows={2}
               value={intent}
-              disabled={disabled || busy || refining}
+              disabled={disabled || busy}
               placeholder="e.g. Human prescription labels for SGLT2 inhibitors that mention ketoacidosis in Warnings"
               onChange={(e) => setIntent(e.target.value)}
               onKeyDown={(e) => {
@@ -151,64 +151,15 @@ export function AiIntentPanel({
                 }
               }}
             />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <button
-                type="button"
-                className="fdl-btn fdl-btn--ai"
-                disabled={disabled || busy || refining || !intent.trim()}
-                onClick={() => translate(intent)}
-                style={{ flex: 1, whiteSpace: 'nowrap' }}
-              >
-                {busy ? 'Building…' : 'Build query'}
-              </button>
-              <button
-                type="button"
-                disabled={disabled || busy || refining || !intent.trim()}
-                onClick={() => refine(intent)}
-                style={{
-                  flex: 1,
-                  whiteSpace: 'nowrap',
-                  background: 'linear-gradient(135deg, #f3e8ff 0%, #e0e7ff 100%)',
-                  color: '#6b21a8',
-                  border: '1px solid #c084fc',
-                  fontWeight: 800,
-                  fontSize: '0.85rem',
-                  borderRadius: '8px',
-                  padding: '6px 14px',
-                  cursor: disabled || busy || refining || !intent.trim() ? 'not-allowed' : 'pointer',
-                  opacity: disabled || busy || refining || !intent.trim() ? 0.6 : 1,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {refining ? 'Refining…' : '🪄 Refine Prompt'}
-              </button>
-            </div>
+            <button
+              type="button"
+              className="fdl-btn fdl-btn--ai"
+              disabled={disabled || busy || !intent.trim()}
+              onClick={() => translate(intent)}
+            >
+              {busy ? 'Building…' : 'Build query'}
+            </button>
           </div>
-
-          {warnings.length > 0 && (
-            <div style={{
-              marginTop: '12px',
-              padding: '12px 16px',
-              borderRadius: '10px',
-              background: '#fffbeb',
-              border: '1px solid #fde047',
-              color: '#92400e',
-              fontSize: '0.85rem'
-            }}>
-              <div style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                ⚠️ Refinement Guidance & Warnings:
-              </div>
-              <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: 1.5 }}>
-                {warnings.map((w, idx) => (
-                  <li key={idx}>{w}</li>
-                ))}
-              </ul>
-            </div>
-          )}
 
           <div className="fdl-ai__examples" style={{ marginTop: '12px' }}>
             <span className="fdl-ai__exlabel">Try:</span>
