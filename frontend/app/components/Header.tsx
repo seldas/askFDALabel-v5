@@ -601,22 +601,39 @@ export default function Header({
           }
         }
 
+        .header-controls {
+          display: flex !important;
+          align-items: center !important;
+          gap: 8px !important;
+        }
+
+        .custom-dropdown {
+          position: relative !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          vertical-align: middle !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+
         .header-chip {
-          height: 38px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0 14px;
-          border-radius: 10px;
-          border: 1px solid rgba(255, 255, 255, 0.25);
-          background: rgba(255, 255, 255, 0.08);
-          color: #ffffff;
-          font-size: 0.88rem;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          box-sizing: border-box;
-          line-height: 1;
+          height: 36px !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          padding: 0 14px !important;
+          border-radius: 10px !important;
+          border: 1px solid rgba(255, 255, 255, 0.25) !important;
+          background: rgba(255, 255, 255, 0.08) !important;
+          color: #ffffff !important;
+          font-size: 0.88rem !important;
+          font-weight: 700 !important;
+          cursor: pointer !important;
+          transition: all 0.2s ease !important;
+          box-sizing: border-box !important;
+          line-height: 1 !important;
+          margin: 0 !important;
+          vertical-align: middle !important;
         }
 
         .header-chip:hover {
