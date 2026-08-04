@@ -125,7 +125,9 @@ def parse_spl_xml(xml_path):
                 if code_el is not None and code_el.get('codeSystem') == '2.16.840.1.113883.4.9':
                     unii = code_el.get('code') or ""
 
-                is_active = 1 if class_code in ['ACTIM', 'ACTIB'] else 0
+                # ACTIR is active too — it differs from ACTIB/ACTIM only in what
+                # the strength is expressed against (reference substance).
+                is_active = 1 if class_code in ('ACTIM', 'ACTIB', 'ACTIR') else 0
 
                 if is_active:
                     active_ingredients.append(sub_name)

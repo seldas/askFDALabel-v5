@@ -607,6 +607,19 @@
   color: var(--afl-n-800);
 }
 
+.fdl-unii {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.fdl-unii code {
+  font-family: var(--afl-font-mono);
+  font-size: var(--afl-text-xs);
+  color: var(--afl-n-700);
+  white-space: nowrap;
+}
+
 .fdl-td--strong {
   font-weight: var(--afl-weight-bold);
 }
@@ -662,16 +675,94 @@
   border-bottom: 1px solid var(--afl-border);
 }
 
+/*
+ * The scroll region and its sticky proxy scrollbar share this wrapper: sticky
+ * positioning resolves against the nearest scrolling ancestor, so the bar rides
+ * the viewport only while this block is on screen, then settles at its end.
+ */
+.fdl-tablescroll {
+  position: relative;
+}
+
 .fdl-tablewrap {
   /* Wide result sets scroll inside the table, never the page. */
   overflow-x: auto;
   border: 1px solid var(--afl-border-strong);
   border-radius: var(--afl-radius-md) var(--afl-radius-md) 0 0;
   background: var(--afl-bg-surface);
+  /* Native bar hidden: .fdl-xbar below is the one the user actually reaches.
+   * Two visible scrollbars for one axis would be confusing. */
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+.fdl-tablewrap::-webkit-scrollbar {
+  display: none;
+}
+
+.fdl-xbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Tall enough to grab comfortably; the spacer inside gives it something to
+   * scroll. Firefox needs an explicit height since the child has none. */
+  height: 14px;
+  background: var(--afl-bg-sunken);
+  border: 1px solid var(--afl-border-strong);
+  border-top: 0;
+  border-radius: 0 0 var(--afl-radius-md) var(--afl-radius-md);
+  scrollbar-width: thin;
+}
+
+.fdl-xbar__spacer {
+  height: 1px;
+}
+
+.fdl-xbar::-webkit-scrollbar {
+  height: 12px;
+}
+
+.fdl-xbar::-webkit-scrollbar-thumb {
+  background: var(--afl-n-400);
+  border-radius: var(--afl-radius-pill);
+  border: 3px solid var(--afl-bg-sunken);
+}
+
+.fdl-xbar::-webkit-scrollbar-thumb:hover {
+  background: var(--afl-n-500);
+}
+
+/*
+ * Freeze the Links column. Panning a 13-column table sideways otherwise loses
+ * which row you are on, and Links is the row's identity (it holds View Label).
+ */
+.fdl-table th:first-child,
+.fdl-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: inherit;
+  box-shadow: 1px 0 0 var(--afl-border);
+}
+
+.fdl-table thead th:first-child {
+  z-index: 2;
+}
+
+/* Rows need an opaque background of their own or the frozen cell shows the
+ * scrolling content through it. */
+.fdl-table tbody tr {
+  background: var(--afl-bg-surface);
+}
+
+.fdl-table thead tr,
+.fdl-table thead th {
+  background: var(--afl-gov-tint);
 }
 
 .fdl-table thead th {
-  background: var(--afl-gov-tint);
   color: var(--afl-n-900);
   font-size: var(--afl-text-md);
   font-weight: var(--afl-weight-bold);

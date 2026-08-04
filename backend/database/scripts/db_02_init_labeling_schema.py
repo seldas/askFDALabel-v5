@@ -1,6 +1,88 @@
 from pg_utils import PGUtils
 from psycopg2 import sql
 
+# Columns the criteria builder matches with ILIKE '%term%'. A btree index cannot
+# serve a leading-wildcard pattern, so these get pg_trgm GIN indexes — without
+# them every Product Name, Labeling Type, Route or Marketing Category criterion
+# is a sequential scan over the whole table.
+#
+# gin_trgm_ops (not gist) because these are read-mostly: GIN is slower to build
+# and update but substantially faster to search, and the table only changes
+# during an import.
+_TRIGRAM_INDEXES = [
+    # (index name, table, indexed expression — a bare column, or SQL wrapped in
+    #  parentheses below so an expression index works the same way)
+    ('idx_sum_spl_product_names_trgm', 'labeling.sum_spl', 'product_names'),
+    ('idx_sum_spl_generic_names_trgm', 'labeling.sum_spl', 'generic_names'),
+    ('idx_sum_spl_active_ingr_trgm', 'labeling.sum_spl', 'active_ingredients'),
+    ('idx_sum_spl_manufacturer_trgm', 'labeling.sum_spl', 'manufacturer'),
+    ('idx_sum_spl_doc_type_trgm', 'labeling.sum_spl', 'doc_type'),
+    ('idx_sum_spl_market_cat_trgm', 'labeling.sum_spl', 'market_categories'),
+    ('idx_sum_spl_routes_trgm', 'labeling.sum_spl', 'routes'),
+    ('idx_sum_spl_dosage_forms_trgm', 'labeling.sum_spl', 'dosage_forms'),
+    ('idx_sum_spl_appr_num_trgm', 'labeling.sum_spl', 'appr_num'),
+    # Expression index, not a plain column one: NDCs are stored hyphenated but
+    # pasted in either form, so the identifier criterion always searches
+    # REPLACE(ndc_codes, '-', ''). An index on the raw column cannot serve that.
+    ('idx_sum_spl_ndc_codes_trgm', 'labeling.sum_spl', "REPLACE(ndc_codes, '-', '')"),
+    ('idx_sum_spl_epc_trgm', 'labeling.sum_spl', 'epc'),
+    ('idx_epc_map_term_trgm', 'labeling.epc_map', 'epc_term'),
+    ('idx_substance_indexing_iname_trgm', 'labeling.substance_indexing', 'indexing_name'),
+    ('idx_active_ingr_name_trgm', 'labeling.active_ingredients_map', 'substance_name'),
+]
+
+
+def create_query_indexes(cursor):
+    """
+    Indexes that make the criteria builder usable at full-import scale.
+
+    Idempotent, and safe to re-run on a populated database. Deliberately NOT
+    CONCURRENTLY: this script runs at setup rather than against live traffic,
+    and a failed concurrent build leaves an INVALID index behind that nothing
+    here would clean up. On a large table these take minutes to build.
+    """
+    print("Ensuring pg_trgm extension...")
+    try:
+        cursor.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
+    except Exception as e:
+        # Needs superuser on some managed instances. The indexes below are the
+        # only thing that depends on it, so degrade instead of aborting the
+        # whole schema init.
+        print(f"[WARN] Could not enable pg_trgm ({e}). Skipping trigram indexes; "
+              f"name and category searches will use sequential scans.")
+        return
+
+    print(f"Ensuring {len(_TRIGRAM_INDEXES)} trigram indexes (may take a while on a full import)...")
+    for name, table, expression in _TRIGRAM_INDEXES:
+        # An expression index needs its own parentheses; a bare column must not
+        # have them, or Postgres treats it as an expression and the planner will
+        # not match it to a plain column predicate.
+        indexed = f'({expression})' if '(' in expression else expression
+        try:
+            cursor.execute(
+                f"CREATE INDEX IF NOT EXISTS {name} ON {table} "
+                f"USING GIN ({indexed} gin_trgm_ops);"
+            )
+        except Exception as e:
+            print(f"[WARN] Index {name} failed: {e}")
+
+    # Every criteria query filters on is_latest and orders by revised_date.
+    # Partial on is_latest so the index only carries the rows queries can reach.
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_sum_spl_latest_revised "
+        "ON labeling.sum_spl (revised_date DESC) WHERE is_latest;"
+    )
+    # Identifier lookups by set_id/spl_id are exact, so btree, not trigram.
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_sum_spl_spl_id ON labeling.sum_spl (spl_id);"
+    )
+    # Supports the ingredient-name join in the pharmacologic class criterion.
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_active_ingr_name_upper "
+        "ON labeling.active_ingredients_map (UPPER(substance_name));"
+    )
+
+
 def init_labeling_schema():
     print("Initializing 'labeling' schema in PostgreSQL...")
     PGUtils.create_schema('labeling')
@@ -158,6 +240,9 @@ def init_labeling_schema():
                 processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """)
+
+            # 7. Indexes for the query builder
+            create_query_indexes(cursor)
 
             print("[SUCCESS] 'labeling' schema initialized.")
     except Exception as e:

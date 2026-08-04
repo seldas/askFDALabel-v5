@@ -348,6 +348,7 @@ EXPORT_COLUMNS = [
     ('Trade Name', 'product_names'),
     ('Generic/Proper Name(s)', 'generic_names'),
     ('Active Ingredient(s)', 'active_ingredients'),
+    ('Active Ingredient UNII(s)', 'active_uniis'),
     ('Labeler', 'manufacturer'),
     ('Dosage Form(s)', 'dosage_forms'),
     ('Route(s) of Administration', 'routes'),

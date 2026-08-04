@@ -298,9 +298,18 @@ def _c_value_list(criterion, key, bag, warnings):
     values = _as_list(criterion.get('values'))
     if not values:
         return None
+
+    # The EXISTS below is authoritative but unindexable — Postgres cannot use an
+    # index for a predicate over unnest(). The redundant ILIKE on the raw column
+    # is what lets the pg_trgm index (db_02_init_labeling_schema) narrow the
+    # candidate rows first; it over-matches on purpose ('%NDA%' still hits ANDA)
+    # and the EXISTS then discards those. Dropping it costs a sequential scan,
+    # not correctness.
+    broad = [v if '%' in v else f'%{v}%' for v in values]
     return (
+        f'({column} ILIKE ANY ({bag.add(broad)}) AND '
         f"EXISTS (SELECT 1 FROM unnest(string_to_array({column}, ';')) AS item "
-        f'WHERE btrim(item) ILIKE ANY ({bag.add(values)}))'
+        f'WHERE btrim(item) ILIKE ANY ({bag.add(values)})))'
     )
 
 
@@ -560,7 +569,14 @@ SELECT_COLUMNS = """
     s.set_id, s.spl_id, s.product_names, s.generic_names, s.manufacturer,
     s.appr_num, s.ndc_codes, s.revised_date, s.market_categories, s.doc_type,
     s.active_ingredients, s.dosage_forms, s.routes, s.epc, s.is_rld, s.is_rs,
-    s.initial_approval_year
+    s.initial_approval_year,
+    (
+        SELECT string_agg(DISTINCT aim.unii, '; ' ORDER BY aim.unii)
+        FROM labeling.active_ingredients_map aim
+        WHERE aim.spl_id = s.spl_id
+          AND aim.is_active = 1
+          AND aim.unii IS NOT NULL AND aim.unii <> ''
+    ) AS active_uniis
 """
 
 # Sortable result columns, keyed by the token the client sends. Whitelisted

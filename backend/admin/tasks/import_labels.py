@@ -98,7 +98,9 @@ def parse_spl_file(file_path, ob_dict, is_archived=False):
                     if name_el is not None:
                         sub_name = get_el_text(name_el)
                         unii = code_el.get('code') if (code_el is not None and code_el.get('codeSystem') == '2.16.840.1.113883.4.9') else ""
-                        is_active = 1 if class_code in ['ACTIM', 'ACTIB'] else 0
+                        # ACTIR is active too — it differs from ACTIB/ACTIM only
+                        # in what the strength is expressed against.
+                        is_active = 1 if class_code in ('ACTIM', 'ACTIB', 'ACTIR') else 0
                         if is_active: active_ingredients.append(sub_name)
                         ingr_map.append({'spl_id': spl_id, 'substance_name': sub_name, 'unii': unii, 'is_active': is_active})
             for rel in prod.findall('.//ns:routeCode', NS): routes.append(rel.get('displayName'))

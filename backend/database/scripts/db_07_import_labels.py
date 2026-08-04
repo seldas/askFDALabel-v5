@@ -36,6 +36,26 @@ from psycopg2.extras import execute_values
 
 NS = {'ns': 'urn:hl7-org:v3'}
 
+# FDA's Unique Ingredient Identifier code system. An <ingredientSubstance> can
+# carry several <code> elements; only the one on this OID is the UNII.
+UNII_CODE_SYSTEM = '2.16.840.1.113883.4.9'
+
+# HL7 ingredient classCodes that mean "active". All three are active — they only
+# differ in what the strength is expressed against (basis of strength, moiety,
+# reference substance). ACTIR was previously filed as inactive.
+ACTIVE_INGREDIENT_CLASS_CODES = ('ACTIB', 'ACTIM', 'ACTIR')
+
+
+def extract_unii(substance_el):
+    """UNII for an <ingredientSubstance>, or '' when it declares none."""
+    if substance_el is None:
+        return ""
+    for code_el in substance_el.findall('ns:code', NS):
+        if code_el.get('codeSystem') == UNII_CODE_SYSTEM and code_el.get('code'):
+            return code_el.get('code').strip()
+    return ""
+
+
 _ob_dict = {}
 
 # ---------------------------------------------------------------------------
@@ -271,31 +291,55 @@ def parse_spl_zip(zip_path):
                 if ndc:
                     ndc_codes.add(ndc)
 
-            # Active Ingredients
-            ingredients = mp.findall('.//ns:ingredient', NS)
-            for ing in ingredients:
+            # Ingredients, active and inactive.
+            #
+            # The substance is always a direct <ingredientSubstance> child, and
+            # its UNII is the <code> whose codeSystem is the FDA UNII OID —
+            # never an <id extension>. Reading <id extension> is why every UNII
+            # in active_ingredients_map was blank, and matching <activeMoiety>
+            # instead of <ingredientSubstance> is why inactive ingredients (which
+            # have no moiety) were dropped and active ones were recorded under
+            # their moiety name ("DOXORUBICIN" rather than the labeled
+            # "DOXORUBICIN HYDROCHLORIDE").
+            #
+            # This now matches admin/tasks/import_labels.py and
+            # import_archive_labels.py, which always parsed it this way.
+            for ing in mp.findall('ns:ingredient', NS):
                 class_code = ing.get('classCode') or ""
-                # ACTIB = active ingredient, ACTIM = active moiety
-                is_active = 1 if class_code in ('ACTIB', 'ACTIM') else 0
+                is_active = 1 if class_code in ACTIVE_INGREDIENT_CLASS_CODES else 0
 
-                substance = ing.find('.//ns:activeIngredient/ns:activeIngredient', NS)
+                substance = ing.find('ns:ingredientSubstance', NS)
                 if substance is None:
-                    substance = ing.find('.//ns:activeMoiety/ns:activeMoiety', NS)
-                if substance is None:
-                    # check general ingredient substance
-                    substance = ing.find('.//ns:substanceIngredient', NS)
+                    continue
 
-                if substance is not None:
-                    name_sub = get_el_text(substance.find('ns:name', NS))
-                    id_sub = substance.find('ns:id', NS)
-                    unii = id_sub.get('extension') if id_sub is not None else ""
+                name_sub = get_el_text(substance.find('ns:name', NS))
+                if not name_sub:
+                    continue
 
-                    if name_sub:
-                        if is_active:
-                            active_ingredients.add(name_sub)
+                unii = extract_unii(substance)
+                if is_active:
+                    active_ingredients.add(name_sub)
+                ingr_map.append({
+                    'substance_name': name_sub,
+                    'unii': unii,
+                    'is_active': is_active
+                })
+
+                # The active moiety is a distinct substance with its own UNII
+                # ("METFORMIN" under "METFORMIN HYDROCHLORIDE"), and a UNII
+                # search is expected to find a label by either. Recording it
+                # also keeps active_ingredients a superset of what the previous
+                # moiety-only parsing produced, so no existing name search
+                # narrows because of this fix.
+                if is_active:
+                    for moiety in substance.findall('.//ns:activeMoiety/ns:activeMoiety', NS):
+                        moiety_name = get_el_text(moiety.find('ns:name', NS))
+                        if not moiety_name or moiety_name == name_sub:
+                            continue
+                        active_ingredients.add(moiety_name)
                         ingr_map.append({
-                            'substance_name': name_sub,
-                            'unii': unii,
+                            'substance_name': moiety_name,
+                            'unii': extract_unii(moiety),
                             'is_active': is_active
                         })
 
@@ -376,10 +420,23 @@ def parse_spl_zip(zip_path):
             if year_match:
                 metadata['initial_approval_year'] = int(year_match.group(0))
 
+        # A label repeats the same substance once per manufacturedProduct (and
+        # now once more per active moiety), so de-duplicate before insert. The
+        # table has no unique constraint, and the rows carry no per-product
+        # information, so duplicates are pure bloat.
+        seen_ingr = set()
+        unique_ingr = []
+        for i in ingr_map:
+            key = (i['substance_name'], i['unii'], i['is_active'])
+            if key in seen_ingr:
+                continue
+            seen_ingr.add(key)
+            unique_ingr.append(i)
+
         return {
             'spl_id': spl_id,
             'metadata': metadata,
-            'ingr_map': [{'spl_id': spl_id, **i} for i in ingr_map],
+            'ingr_map': [{'spl_id': spl_id, **i} for i in unique_ingr],
             'sections': [{'spl_id': spl_id, **s} for s in sections]
         }
 
