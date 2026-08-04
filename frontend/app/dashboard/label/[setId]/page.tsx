@@ -7,7 +7,7 @@ import LegacyBridge from './LegacyBridge';
 import { TOOL_LABEL, useLabel } from './LabelContext';
 import { labelRoute } from '../../../platform/context';
 import { useUser } from '../../../context/UserContext';
-import { withApiBase } from '../../../utils/appPaths';
+import { withApiBase, withAppBase } from '../../../utils/appPaths';
 import { ToolIcon } from '../../../platform/icons';
 
 // The reader body. FAERS, Deep Dive and Examine are sibling routes now, and
