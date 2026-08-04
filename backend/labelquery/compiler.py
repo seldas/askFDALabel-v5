@@ -242,17 +242,50 @@ def _tsquery_sql(mode, text, bag):
         return f"to_tsquery('english', {bag.add(_advanced_tsquery_expression(text))})"
     
     words = text.split()
-    if len(words) == 1 and re.match(r'^\w+$', words[0]):
-        prefix_expr = f"{words[0]}:*"
-        return f"to_tsquery('english', {bag.add(prefix_expr)})"
+    if len(words) == 1:
+        # A single word is a plain lexeme lookup, which GIN answers straight out
+        # of the index. It used to compile to "word:*", and that one character
+        # was most of why simple search felt slow: a prefix query has to walk
+        # every entry in the GIN entry tree under that prefix, union all their
+        # posting lists, and then recheck each candidate row against the heap.
+        # Users who want prefix matching can still type "word*" in Advanced.
+        return f"plainto_tsquery('english', {bag.add(text)})"
 
     # Simple search is FDALabel's exact-phrase mode.
     return f"phraseto_tsquery('english', {bag.add(text)})"
 
 
 def _tsquery_union(terms, bag):
-    """OR-combines phrase queries for a list of terms into one tsquery."""
-    parts = [f"phraseto_tsquery('english', {bag.add(t)})" for t in terms if t]
+    """
+    OR-combines a list of terms into one tsquery.
+
+    Single-word terms are folded into a single ``a | b | c`` to_tsquery rather
+    than one phraseto_tsquery each. Phrase queries are lossy for GIN — every
+    candidate row has to be refetched from the heap and rechecked — so a MedDRA
+    selection that expands to a couple of hundred terms would otherwise pay that
+    penalty a couple of hundred times over. Only the genuinely multi-word terms
+    still need phrase semantics.
+    """
+    singles = []
+    phrases = []
+    for term in terms:
+        if not term:
+            continue
+        words = _ADVANCED_WORD_RE.findall(str(term))
+        if len(words) == 1:
+            # '*' would turn this into the prefix query the caller did not ask
+            # for, and a trailing '-' is the one leftover the word regex can
+            # produce that to_tsquery has no operand for.
+            word = words[0].replace('*', '').strip('-')
+            if word:
+                singles.append(word)
+        elif words:
+            phrases.append(term)
+
+    parts = []
+    if singles:
+        parts.append(f"to_tsquery('english', {bag.add(' | '.join(singles))})")
+    parts += [f"phraseto_tsquery('english', {bag.add(t)})" for t in phrases]
     if not parts:
         return None
     return '(' + ' || '.join(parts) + ')'
@@ -723,11 +756,20 @@ SORT_COLUMNS = {
 }
 
 
+def sort_column_sql(sort):
+    """The single whitelisted `sum_spl` column a result page is ordered by."""
+    return SORT_COLUMNS.get(sort or '', 's.revised_date')
+
+
+def sort_direction_sql(direction):
+    return 'DESC' if str(direction or 'desc').lower() != 'asc' else 'ASC'
+
+
 def order_by_sql(sort, direction):
     """ORDER BY for a whitelisted sort token, always tie-broken on set_id."""
-    column = SORT_COLUMNS.get(sort or '', 's.revised_date')
-    descending = str(direction or 'desc').lower() != 'asc'
-    return f"{column} {'DESC' if descending else 'ASC'} NULLS LAST, s.set_id"
+    return (
+        f'{sort_column_sql(sort)} {sort_direction_sql(direction)} NULLS LAST, s.set_id'
+    )
 
 
 def compile_where(query, expand_meddra=None, capabilities=None):

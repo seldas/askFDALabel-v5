@@ -27,14 +27,18 @@ from .compiler import (
     QueryCompileError,
     compile_where,
     order_by_sql,
+    sort_column_sql,
+    sort_direction_sql,
 )
 
 labelquery_bp = Blueprint('labelquery', __name__)
 
 MAX_LIMIT = 200
-# Counting an unbounded match set costs more than the page itself, so the count
-# is capped and the UI shows "10000+" when the cap is hit.
-COUNT_CAP = 10000
+# How far into a match set the UI will page. FDALabel shows the most recent N
+# rather than everything, and bounding the browse window is what keeps paging
+# cheap: the page query only ever sorts and slices, never scrolls past 3000.
+# The reported total stays exact, so the header reads "3,000 / 32,422".
+BROWSE_CAP = 3000
 
 
 def _pg():
@@ -415,6 +419,11 @@ def execute():
     except (TypeError, ValueError):
         return jsonify({'error': 'limit and offset must be integers'}), 400
 
+    # Clamp the requested page into the browse window. Done here rather than in
+    # SQL so `offset` in the response is the page actually returned.
+    offset = min(offset, max(0, BROWSE_CAP - 1))
+    limit = max(1, min(limit, BROWSE_CAP - offset))
+
     try:
         where, params, warnings = compile_where(
             query, expand_meddra=_expand_meddra, capabilities=_capabilities()
@@ -423,42 +432,60 @@ def execute():
         return jsonify({'error': str(e)}), 400
 
     order_by = order_by_sql(payload.get('sort'), payload.get('dir'))
+    sort_column = sort_column_sql(payload.get('sort'))
+    sort_dir = sort_direction_sql(payload.get('dir'))
 
     conn = None
     try:
         conn = _pg()
+        page_params = dict(params)
+        page_params['_limit'] = limit
+        page_params['_offset'] = offset
         with conn.cursor() as cur:
-            count_params = dict(params)
-            count_params['_cap'] = COUNT_CAP
+            # One statement, one evaluation of `where`. It used to be two — a
+            # capped COUNT and then the page — and with a text criterion that
+            # meant paying for the full-text semi-join twice per search.
+            #
+            # `matched` carries only the id and the sort key, so materializing
+            # the whole match set stays cheap even at a few hundred thousand
+            # rows; the wide columns are fetched for the 50 rows of one page.
+            #
+            # The count is joined in with LEFT JOINs rather than read from the
+            # rows, so an out-of-range offset still reports the real total
+            # instead of collapsing to zero results and zero total.
             cur.execute(
                 f"""
-                SELECT COUNT(*) AS n FROM (
-                    SELECT 1 FROM labeling.sum_spl s WHERE {where} LIMIT %(_cap)s
-                ) capped
-                """,
-                count_params,
-            )
-            total = cur.fetchone()['n']
-
-            page_params = dict(params)
-            page_params['_limit'] = limit
-            page_params['_offset'] = offset
-            cur.execute(
-                f"""
-                SELECT {SELECT_COLUMNS}
-                FROM labeling.sum_spl s
-                WHERE {where}
+                WITH matched AS MATERIALIZED (
+                    SELECT s.spl_id, {sort_column} AS sort_key, s.set_id
+                    FROM labeling.sum_spl s
+                    WHERE {where}
+                ),
+                page AS (
+                    SELECT spl_id FROM matched
+                    ORDER BY sort_key {sort_dir} NULLS LAST, set_id
+                    LIMIT %(_limit)s OFFSET %(_offset)s
+                )
+                SELECT t.n AS total_count, {SELECT_COLUMNS}
+                FROM (SELECT COUNT(*) AS n FROM matched) t
+                LEFT JOIN page ON TRUE
+                LEFT JOIN labeling.sum_spl s ON s.spl_id = page.spl_id
                 ORDER BY {order_by}
-                LIMIT %(_limit)s OFFSET %(_offset)s
                 """,
                 page_params,
             )
-            results = [dict(r) for r in cur.fetchall()]
+            rows = [dict(r) for r in cur.fetchall()]
+
+        total = rows[0]['total_count'] if rows else 0
+        results = [{k: v for k, v in r.items() if k != 'total_count'}
+                   for r in rows if r.get('spl_id')]
 
         return jsonify({
             'results': results,
             'total': total,
-            'capped': total >= COUNT_CAP,
+            # How many of `total` the UI can actually page through.
+            'browsable': min(total, BROWSE_CAP),
+            'cap': BROWSE_CAP,
+            'capped': total > BROWSE_CAP,
             'limit': limit,
             'offset': offset,
             'warnings': warnings,

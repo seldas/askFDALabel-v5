@@ -37,7 +37,12 @@ export interface LabelRow {
 
 export interface ResultSet {
   results: LabelRow[];
+  /** Exact number of matching labels, however large. */
   total: number;
+  /** How many of `total` can be paged through — min(total, cap). */
+  browsable: number;
+  cap: number;
+  /** True when `total` exceeds `cap`, i.e. only the most recent are browsable. */
   capped: boolean;
   limit: number;
   offset: number;

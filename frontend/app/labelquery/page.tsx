@@ -153,6 +153,9 @@ function ResultsPage() {
 
   const rows: LabelRow[] = data?.results || [];
   const total = data?.total || 0;
+  // What the pager can reach. The backend caps the browse window; `total` stays
+  // exact so the header can say "most recent 3,000 / 32,422".
+  const browsable = data?.browsable ?? total;
   const to = offset + rows.length;
 
   return (
@@ -166,7 +169,9 @@ function ResultsPage() {
               ? 'Query results'
               : busy && !data
                 ? 'Searching…'
-                : `${total.toLocaleString()}${data?.capped ? '+' : ''} labeling result${total === 1 ? '' : 's'}`}
+                : data?.capped
+                  ? `Most Recent ${browsable.toLocaleString()}/${total.toLocaleString()} Labeling Results`
+                  : `${total.toLocaleString()} labeling result${total === 1 ? '' : 's'}`}
           </h1>
 
           <div className="fdl-viewtoggle" role="group" aria-label="Result detail">
@@ -232,8 +237,8 @@ function ResultsPage() {
             <div className="fdl-results__bar fdl-results__bar--bottom">
               <span className="fdl-results__count">
                 Showing {(offset + 1).toLocaleString()}–{to.toLocaleString()} of{' '}
-                {total.toLocaleString()}
-                {data?.capped ? '+' : ''}
+                {browsable.toLocaleString()}
+                {data?.capped ? ` most recent (of ${total.toLocaleString()} matching)` : ''}
               </span>
               <span className="fdl-results__pager">
                 <button
@@ -247,7 +252,7 @@ function ResultsPage() {
                 <button
                   type="button"
                   className="fdl-btn fdl-btn--quiet"
-                  disabled={busy || to >= total}
+                  disabled={busy || to >= browsable}
                   onClick={() => setOffset(offset + PAGE_SIZE)}
                 >
                   Next ›
