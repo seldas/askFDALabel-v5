@@ -182,20 +182,33 @@ def options():
     try:
         db_counts = {}
         try:
+            total_labels = _rows("SELECT COUNT(DISTINCT set_id) AS n FROM labeling.sum_spl WHERE is_latest = TRUE")
+            if total_labels and total_labels[0].get('n'):
+                db_counts['SPLTITLE'] = total_labels[0]['n']
+
+            appr_labels = _rows("SELECT COUNT(DISTINCT set_id) AS n FROM labeling.sum_spl WHERE is_latest = TRUE AND initial_approval_year IS NOT NULL")
+            if appr_labels and appr_labels[0].get('n'):
+                db_counts['43683-2'] = appr_labels[0]['n']
+
             sec_rows = _rows(
                 """
-                SELECT sec.loinc_code AS code, regexp_replace(sec.title, '^[0-9]+(\\.[0-9]+)*\\s+', '') AS title, COUNT(*) AS n
+                SELECT
+                    sec.loinc_code AS code,
+                    UPPER(regexp_replace(sec.title, '^[0-9]+(\\.[0-9]+)*\\s+', '')) AS title,
+                    COUNT(DISTINCT s.set_id) AS n
                 FROM labeling.spl_sections sec
-                WHERE (sec.loinc_code IS NOT NULL AND sec.loinc_code <> '')
-                   OR (sec.title IS NOT NULL AND sec.title <> '')
+                JOIN labeling.sum_spl s ON sec.spl_id = s.spl_id
+                WHERE s.is_latest = TRUE
+                  AND ((sec.loinc_code IS NOT NULL AND sec.loinc_code <> '')
+                       OR (sec.title IS NOT NULL AND sec.title <> ''))
                 GROUP BY sec.loinc_code, 2
                 """
             )
             for r in sec_rows:
                 if r.get('code'):
-                    db_counts[r['code']] = db_counts.get(r['code'], 0) + r['n']
+                    db_counts[r['code']] = max(db_counts.get(r['code'], 0), r['n'])
                 if r.get('title'):
-                    db_counts[r['title'].upper()] = db_counts.get(r['title'].upper(), 0) + r['n']
+                    db_counts[r['title']] = max(db_counts.get(r['title'], 0), r['n'])
         except Exception:
             pass
 

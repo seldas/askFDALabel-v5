@@ -224,7 +224,7 @@ export function CriterionCard({
                     {opts.map((o) => (
                       <option key={`${groupLabel}-${o.value}`} value={o.value}>
                         {(o.label || o.value) +
-                          (o.count !== undefined ? ` (${o.count.toLocaleString()} labeling)` : '')}
+                          (o.count !== undefined ? ` (${o.count} labeling)` : '')}
                       </option>
                     ))}
                   </optgroup>
