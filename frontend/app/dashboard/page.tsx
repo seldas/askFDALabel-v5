@@ -532,13 +532,18 @@ function DashboardContent() {
           {/* Sidebar: Tasks */}
           <aside className="dashboard-sidebar">
             <div className="workspace-header">
-              <h2 className="dash-sidebar-heading">Tasks</h2>
-              <p className="dash-sidebar-subheading">{projects.length} tasks</p>
+              <div className="dash-sidebar-title-row">
+                <div className="dash-sidebar-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                </div>
+                <h2 className="dash-sidebar-heading">Tasks</h2>
+                <span className="dash-sidebar-count-chip">{projects.length} {projects.length === 1 ? 'task' : 'tasks'}</span>
+              </div>
             </div>
 
             <div className="dash-import-block">
               <button
-                className="dash-import-toggle"
+                className={cx('dash-import-toggle', showImportUI && 'active')}
                 aria-pressed={showImportUI}
                 onClick={() => {
                   setShowImportUI(!showImportUI);
@@ -552,8 +557,19 @@ function DashboardContent() {
                   }
                 }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                {showImportUI ? 'Cancel Import' : 'Import Task'}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  {showImportUI ? (
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                  ) : (
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                  )}
+                  {showImportUI ? (
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  ) : (
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  )}
+                </svg>
+                <span>{showImportUI ? 'Cancel Import' : 'Import Task'}</span>
               </button>
 
               {showImportUI && (
@@ -676,23 +692,26 @@ function DashboardContent() {
             {/* Tag Filter for Tasks */}
             {allProjectsTags.length > 0 && (
               <div className="dash-tag-filter">
-                <label className="dash-import-field__label" style={{ marginBottom: '6px' }}>Filter tasks by tag</label>
-                <Select
-                  style={{ width: '100%' }}
-                  value={sidebarTagFilter}
-                  onChange={(e) => setSidebarTagFilter(e.target.value)}
-                >
-                  <option value="All">All Tags</option>
-                  {allProjectsTags.map(tag => (
-                    <option key={tag} value={tag}>{tag}</option>
-                  ))}
-                </Select>
+                <label className="dash-tag-filter__label">FILTER TASKS BY TAG</label>
+                <div className="dash-select-wrapper">
+                  <select
+                    className="dash-custom-select"
+                    value={sidebarTagFilter}
+                    onChange={(e) => setSidebarTagFilter(e.target.value)}
+                  >
+                    <option value="All">All Tags</option>
+                    {allProjectsTags.map(tag => (
+                      <option key={tag} value={tag}>{tag}</option>
+                    ))}
+                  </select>
+                  <span className="dash-select-caret">▼</span>
+                </div>
               </div>
             )}
 
             <div className="workspace-list">
               {projectsLoading ? (
-                <div style={{ textAlign: 'center', padding: '2rem' }}><div className="loader" style={{ width: '30px', height: '30px' }}></div></div>
+                <div style={{ textAlign: 'center', padding: '2rem' }}><div className="loader" style={{ width: '28px', height: '28px', margin: '0 auto' }}></div></div>
               ) : filteredProjects.length > 0 ? (
                 filteredProjects.map(p => {
                   const isActive = activeProject?.id === p.id;
@@ -709,17 +728,23 @@ function DashboardContent() {
                           setActiveProject(isActive ? null : p);
                         }
                       }}
-                      className={cx('project-selection-card', 'dash-project-card')}
+                      className={cx('dash-project-card', isActive && 'active')}
                     >
-                      <div className="dash-project-card__row">
-                        {p.title === 'Favorite' ? (
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="#eab308"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        ) : (
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isActive ? "var(--afl-a-500)" : "var(--afl-n-400)"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                        )}
+                      <div className="dash-project-card__header">
+                        <div className="dash-project-card__icon-wrapper">
+                          {p.title === 'Favorite' ? (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="#eab308" stroke="#ca8a04" strokeWidth="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                          ) : (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isActive ? "#2563eb" : "#64748b"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                          )}
+                        </div>
                         <span className="dash-project-card__title">{p.title}</span>
                       </div>
-                      <div className="dash-project-card__meta">{p.count} labels • {p.role.toUpperCase()}</div>
+                      <div className="dash-project-card__meta">
+                        <span>{p.count} label{p.count !== 1 ? 's' : ''}</span>
+                        <span className="dash-project-card__dot">•</span>
+                        <span className="dash-project-card__badge">{p.role.toUpperCase()}</span>
+                      </div>
                     </div>
                   );
                 })
