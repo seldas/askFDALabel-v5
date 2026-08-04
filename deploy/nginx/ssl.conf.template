@@ -10,18 +10,18 @@ server {
     ssl_prefer_server_ciphers on;
 
     location = / {
-        return 302 /askfdalabel/;
+        return 302 /fdalabel-v3/;
     }
 
-    location ^~ /askfdalabel_api/ {
-        rewrite ^/askfdalabel_api/(.*)$ /$1 break;
+    location ^~ /fdalabel-v3_api/ {
+        rewrite ^/fdalabel-v3_api/(.*)$ /$1 break;
         proxy_pass http://backend:8842;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Proto https;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Prefix /askfdalabel_api;
+        proxy_set_header X-Forwarded-Prefix /fdalabel-v3_api;
         proxy_set_header Connection "";
         proxy_read_timeout 600s;
         proxy_connect_timeout 75s;
@@ -31,14 +31,14 @@ server {
         proxy_set_header Upgrade $http_upgrade;
     }
 
-    location ^~ /askfdalabel {
+    location ^~ /fdalabel-v3 {
         proxy_pass http://frontend:8841;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Proto https;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Prefix /askfdalabel;
+        proxy_set_header X-Forwarded-Prefix /fdalabel-v3;
         proxy_set_header Connection "";
         proxy_read_timeout 90s;
         proxy_set_header Upgrade $http_upgrade;
