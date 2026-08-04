@@ -306,8 +306,12 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
         <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0' }}>
           Product Toolbox
         </h2>
-        <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>
+        <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 10px 0', lineHeight: 1.5 }}>
           Launch analytical tools for <strong>{brandName}</strong>. Click any tool button to open in a new window. Star tools to keep them pinned at the top of your toolbox.
+        </p>
+        <p style={{ color: '#475569', fontSize: '0.84rem', margin: 0, lineHeight: 1.5, background: '#f8fafc', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '1.05rem', flexShrink: 0 }}>🤝</span>
+          <span>We are continuously collecting and building more tools for drug labeling analysis and warmly welcome research collaborations. To discuss new analytical tools or collaborative projects, please contact <a href="mailto:askfdalabel@fda.hhs.gov" style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'underline' }}>askfdalabel@fda.hhs.gov</a>.</span>
         </p>
       </div>
 
