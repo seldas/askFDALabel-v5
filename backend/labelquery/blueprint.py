@@ -585,24 +585,24 @@ Allowed "type" values and the exact shape of their "value":
                        "op": "contains"|"startsWith"|"equals"|"notContains",
                        "text": "metformin"}
 - "fullText"          {"mode": "simple"|"advanced", "text": "hepatic failure"}
-- "labelingSection"   {"mode": "simple"|"advanced", "text": "...",
-                       "sections": ["34084-4"]}    // LOINC codes or section title words
+- "labelingSection"   {"mode": "simple"|"advanced",
+                       "text": "DILI OR hepatotoxicity OR \"liver function test\" OR \"acute liver failure\"",
+                       "sections": ["BOXED WARNING", "WARNINGS AND PRECAUTIONS", "ADVERSE REACTIONS"]}
 - "marketStatus"      {"values": ["rld"]}          // rld, rs, marketed, discontinued
-- "meddra"            {"level": "pt"|"llt"|"hlt"|"hlgt"|"soc", "terms": ["Hepatic failure"]}
+- "meddra"            {"level": "pt"|"llt"|"hlt"|"hlgt"|"soc", "terms": ["Hepatic failure", "Hepatotoxicity", "Drug-induced liver injury", "Acute hepatic failure"]}
 - "pharmClass"        {"classType": "any"|"epc"|"moa"|"pe"|"cs", "terms": ["Kinase Inhibitor"]}
 - "identifier"        {"text": "NDA 021436", "ingredientType": "active"|"inactive"|"both"}
 
 Rules:
-- Use "simple" mode for an exact phrase; "advanced" only when the user needs
-  boolean operators (AND/OR/NOT) or a trailing * for prefix matching.
-- A drug name goes in "productName", never "identifier". Application numbers,
-  NDC codes, set IDs and UNII codes go in "identifier".
-- An adverse event or medical concept goes in "meddra" when it is a recognizable
-  MedDRA term, otherwise "fullText".
-- "Warnings", "Boxed Warning", "Adverse Reactions", "Contraindications" and
-  similar are sections: use "labelingSection" with the section name in "sections".
-- Omit any criterion you have no value for. Never invent identifiers.
-- Chemical structure search is not supported; put that in "notes".
+1. Multi-term or Adverse Event OR Queries:
+   When multiple terms, adverse events, or conditions are requested (e.g. "DILI, hepatotoxicity, liver function test abnormalities, or acute liver failure"):
+   - Use "labelingSection" or "fullText" with "mode": "advanced" and join phrases with "OR" (e.g. text: "\"drug-induced liver injury\" OR DILI OR hepatotoxicity OR \"liver function test\" OR \"acute liver failure\"").
+   - OR use "meddra" with a list of terms in "terms": ["Drug-induced liver injury", "Hepatotoxicity", "Liver function test abnormal", "Acute hepatic failure"].
+2. Target Sections:
+   When specific sections are named (e.g. "Boxed Warning", "Warnings and Precautions", "Adverse Reactions"):
+   - Use "labelingSection" with "sections": ["BOXED WARNING", "WARNINGS AND PRECAUTIONS", "ADVERSE REACTIONS"] and place the search terms in "text".
+3. A drug name goes in "productName", never "identifier".
+4. Never return an empty "groups" array when medical concepts, adverse events, or labeling sections are requested.
 """
 
 _ALLOWED_TYPES = {
@@ -629,10 +629,7 @@ def _parse_json_object(text):
 
 def _sanitize_translation(parsed):
     """
-    Keeps only criteria the compiler understands.
-
-    A model that invents a type or nests the value wrongly should degrade to a
-    partly-filled panel the user can finish, not a 500.
+    Keeps only criteria the compiler understands and normalizes loose LLM outputs.
     """
     groups = []
     dropped = []
@@ -646,6 +643,25 @@ def _sanitize_translation(parsed):
             if ctype not in _ALLOWED_TYPES:
                 dropped.append(str(ctype))
                 continue
+
+            # Auto-repair loose values from LLM
+            if isinstance(value, str):
+                if ctype in ('fullText', 'labelingSection'):
+                    value = {'mode': 'advanced' if ' OR ' in value or ' AND ' in value else 'simple', 'text': value}
+                elif ctype == 'productName':
+                    value = {'field': 'any', 'op': 'contains', 'text': value}
+                elif ctype == 'meddra':
+                    value = {'level': 'pt', 'terms': [value]}
+                elif ctype == 'pharmClass':
+                    value = {'classType': 'any', 'terms': [value]}
+                elif ctype in ('labelingType', 'applicationType', 'route', 'marketStatus'):
+                    value = {'values': [value]}
+            elif isinstance(value, list):
+                if ctype in ('labelingType', 'applicationType', 'route', 'marketStatus'):
+                    value = {'values': value}
+                elif ctype in ('meddra', 'pharmClass'):
+                    value = {'level': 'pt' if ctype == 'meddra' else 'any', 'terms': value}
+
             if not isinstance(value, dict):
                 dropped.append(str(ctype))
                 continue
