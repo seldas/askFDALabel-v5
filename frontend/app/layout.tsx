@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   title: "askFDALabel | Scientific Drug Label Intelligence",
   description: "Advanced semantic search and toxicological analysis for FDA drug labeling.",
   icons: {
-    icon: withAppBase("/askfdalabel_icon.svg"),
+    icon: withAppBase("/fdalabel-v3_icon.svg"),
   },
 };
 

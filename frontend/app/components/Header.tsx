@@ -545,7 +545,7 @@ export default function Header({
               textAlign: 'center'
             }}>
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
-                <img src={withAppBase("/askfdalabel_icon.svg")} alt="Logo" style={{ height: '48px' }} />
+                <img src={withAppBase("/fdalabel-v3_icon.svg")} alt="Logo" style={{ height: '48px' }} />
               </div>
               <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b', marginBottom: '12px' }}>
                 AskFDALabel Suite
