@@ -128,7 +128,6 @@ interface HistoryItem {
 
 const BACKEND_API_PREFIX = `${API_BASE}/api`;
 const DRUGTOX_API_PREFIX = `${BACKEND_API_PREFIX}/drugtox`;
-const tabs = [
 
 export default function DrugToxDetailPage() {
   const params = useParams();
