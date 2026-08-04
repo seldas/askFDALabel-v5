@@ -265,20 +265,46 @@
 
 .fdl-link--on {
   font-weight: var(--afl-weight-bold);
-  text-decoration: underline;
-}
-
-.fdl-link--block {
-  display: inline-block;
-  font-weight: var(--afl-weight-medium);
-  padding: var(--afl-space-4) 0;
+  text-decoration: none;
 }
 
 .fdl-quickpicks {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--afl-space-4);
+  gap: var(--afl-space-2);
+}
+
+.fdl-quickpicks .fdl-link {
+  padding: 3px 10px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  font-weight: 600;
+  font-size: var(--afl-text-sm);
+  line-height: 1.4;
+}
+
+.fdl-quickpicks .fdl-link:hover:not(:disabled) {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  text-decoration: none;
+}
+
+.fdl-quickpicks .fdl-link--on {
+  background-color: #2563eb;
+  color: #ffffff !important;
+  font-weight: 700;
+  border-color: #2563eb;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.25);
+  text-decoration: none !important;
+}
+
+.fdl-quickpicks .fdl-link--on:hover:not(:disabled) {
+  background-color: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #ffffff !important;
+  text-decoration: none !important;
 }
 
 .fdl-quickpicks__prompt {
