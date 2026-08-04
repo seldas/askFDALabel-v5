@@ -81,8 +81,8 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False):
 
     # 1. Redis Service
     redis_service = {
-        "image": "askfdalabel-redis:latest" if mode == "prod" else "bitnami/redis:latest",
-        "container_name": "askfdalabel-redis",
+        "image": "fdalabel-v3-redis:latest" if mode == "prod" else "bitnami/redis:latest",
+        "container_name": "fdalabel-v3-redis",
         "restart": "always",
         "networks": ["default"],
         "environment": {
@@ -96,8 +96,8 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False):
     # 2. Optional local DB Service
     if local_db:
         db_service = {
-            "image": "askfdalabel-db:latest" if mode == "prod" else "ankane/pgvector:latest",
-            "container_name": "askfdalabel-db",
+            "image": "fdalabel-v3-db:latest" if mode == "prod" else "ankane/pgvector:latest",
+            "container_name": "fdalabel-v3-db",
             "restart": "always",
             "shm_size": "256mb" if efficient else "1gb",
             "volumes": ["./database/pgdata:/var/lib/postgresql/data"],
@@ -164,8 +164,8 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False):
 
 
     backend_service = {
-        "image": "askfdalabel-backend:latest",
-        "container_name": "askfdalabel-backend",
+        "image": "fdalabel-v3-backend:latest",
+        "container_name": "fdalabel-v3-backend",
         "env_file": ["./.env"],
         "environment": backend_env,
         "volumes": backend_volumes,
@@ -208,8 +208,8 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False):
 
     concurrency = 1 if efficient else 4
     celery_service = {
-        "image": "askfdalabel-backend:latest",
-        "container_name": "askfdalabel-celery",
+        "image": "fdalabel-v3-backend:latest",
+        "container_name": "fdalabel-v3-celery",
         "command": ["sh", "-c", f"celery -A celery_app.celery worker --loglevel=info --concurrency={concurrency}"],
         "depends_on": ["redis"],
         "env_file": ["./.env"],
@@ -222,11 +222,6 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False):
         "volumes": celery_volumes,
         "restart": "always"
     }
-    if not rapid:
-        celery_service["build"] = {
-            "context": "./backend",
-            "dockerfile": "Dockerfile"
-        }
     services["celery_worker"] = celery_service
 
     # 5. Frontend Service
@@ -252,8 +247,8 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False):
     frontend_volumes.append("./frontend/public:/app/public")
 
     frontend_service = {
-        "image": "askfdalabel-frontend:latest",
-        "container_name": "askfdalabel-frontend-app",
+        "image": "fdalabel-v3-frontend:latest",
+        "container_name": "fdalabel-v3-frontend-app",
         "depends_on": ["backend"],
         "env_file": ["./.env"],
         "environment": frontend_env,
@@ -292,12 +287,12 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False):
     # 6. Nginx Service (Production/Efficient Only)
     if mode == "prod" and not rapid:
         nginx_service = {
-            "image": "askfdalabel-nginx:latest",
+            "image": "fdalabel-v3-nginx:latest",
             "build": {
                 "context": "./deploy/nginx",
                 "dockerfile": "Dockerfile"
             },
-            "container_name": "askfdalabel-nginx",
+            "container_name": "fdalabel-v3-nginx",
             "depends_on": ["frontend", "backend"],
             "ports": ["80:80", "443:443"],
             "healthcheck": {
@@ -421,13 +416,13 @@ def main():
     # Verify and prepare required images in production mode
     if args.mode == "prod" and not args.down:
         print("Verifying production base images...")
-        redis_ok = check_and_prepare_image("askfdalabel-redis:latest", "bitnami/redis:latest")
+        redis_ok = check_and_prepare_image("fdalabel-v3-redis:latest", "bitnami/redis:latest")
         if not redis_ok:
-            redis_ok = check_and_prepare_image("askfdalabel-redis:latest", "redis:alpine")
+            redis_ok = check_and_prepare_image("fdalabel-v3-redis:latest", "redis:alpine")
             
         db_ok = True
         if local_db_active:
-            db_ok = check_and_prepare_image("askfdalabel-db:latest", "ankane/pgvector:latest")
+            db_ok = check_and_prepare_image("fdalabel-v3-db:latest", "ankane/pgvector:latest")
             
         if not redis_ok or not db_ok:
             print("\n[ERROR] Missing required production images.")

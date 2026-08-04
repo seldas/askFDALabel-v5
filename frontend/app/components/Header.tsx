@@ -311,7 +311,7 @@ export default function Header({
                 return (
                   <Link
                     href={searchTool.href(GLOBAL_CTX)}
-                    className={cx('hp-dropdown-item', resolvedActiveApp === 'search' && 'is-active')}
+                    className={cx('hp-dropdown-item', resolvedActiveApp === 'afl' && 'is-active')}
                     onClick={handleNavClick}
                   >
                     <span className="hp-dropdown-icon">

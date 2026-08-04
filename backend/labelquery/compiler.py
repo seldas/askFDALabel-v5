@@ -258,14 +258,99 @@ def _tsquery_union(terms, bag):
     return '(' + ' || '.join(parts) + ')'
 
 
+LOINC_TO_TITLES = {
+    '43685-7': ['%WARNINGS AND PRECAUTIONS%', '%WARNINGS%'],
+    '34071-1': ['%WARNINGS%'],
+    '42232-9': ['%PRECAUTIONS%'],
+    '34066-1': ['%BOXED WARNING%', '%BOX WARNING%'],
+    '34067-9': ['%INDICATIONS AND USAGE%', '%INDICATIONS%'],
+    '34068-7': ['%DOSAGE AND ADMINISTRATION%', '%DOSAGE%'],
+    '43678-2': ['%DOSAGE FORMS AND STRENGTHS%', '%DOSAGE FORMS%'],
+    '34070-3': ['%CONTRAINDICATIONS%'],
+    '34084-4': ['%ADVERSE REACTIONS%'],
+    '34073-7': ['%DRUG INTERACTIONS%'],
+    '43684-0': ['%USE IN SPECIFIC POPULATIONS%'],
+    '42228-7': ['%Pregnancy%'],
+    '77290-5': ['%Lactation%'],
+    '34079-4': ['%Labor and Delivery%'],
+    '77291-3': ['%Reproductive Potential%'],
+    '34080-2': ['%Nursing Mothers%'],
+    '34081-0': ['%Pediatric Use%'],
+    '34082-8': ['%Geriatric Use%'],
+    '42227-9': ['%DRUG ABUSE AND DEPENDENCE%', '%DRUG ABUSE%'],
+    '34088-5': ['%OVERDOSAGE%'],
+    '34089-3': ['%DESCRIPTION%'],
+    '34090-1': ['%CLINICAL PHARMACOLOGY%'],
+    '43679-0': ['%Mechanism of Action%'],
+    '43681-6': ['%Pharmacodynamics%'],
+    '43682-4': ['%Pharmacokinetics%'],
+    '34091-9': ['%NONCLINICAL TOXICOLOGY%'],
+    '34083-6': ['%Carcinogenesis%'],
+    '34092-7': ['%CLINICAL STUDIES%'],
+    '34093-5': ['%REFERENCES%'],
+    '34069-5': ['%HOW SUPPLIED%'],
+    '34076-0': ['%PATIENT COUNSELING%', '%INFORMATION FOR PATIENTS%']
+}
+
+TITLE_TO_LOINCS = {
+    'WARNINGS AND PRECAUTIONS': ['43685-7', '34071-1', '42232-9'],
+    'BOXED WARNING': ['34066-1'],
+    'INDICATIONS AND USAGE': ['34067-9'],
+    'DOSAGE AND ADMINISTRATION': ['34068-7'],
+    'DOSAGE FORMS AND STRENGTHS': ['43678-2'],
+    'CONTRAINDICATIONS': ['34070-3'],
+    'ADVERSE REACTIONS': ['34084-4'],
+    'DRUG INTERACTIONS': ['34073-7'],
+    'USE IN SPECIFIC POPULATIONS': ['43684-0'],
+    'PREGNANCY': ['42228-7'],
+    'LACTATION': ['77290-5'],
+    'LABOR AND DELIVERY': ['34079-4'],
+    'NURSING MOTHERS': ['34080-2'],
+    'PEDIATRIC USE': ['34081-0'],
+    'GERIATRIC USE': ['34082-8'],
+    'DRUG ABUSE AND DEPENDENCE': ['42227-9'],
+    'OVERDOSAGE': ['34088-5'],
+    'DESCRIPTION': ['34089-3'],
+    'CLINICAL PHARMACOLOGY': ['34090-1'],
+    'MECHANISM OF ACTION': ['43679-0'],
+    'PHARMACODYNAMICS': ['43681-6'],
+    'PHARMACOKINETICS': ['43682-4'],
+    'NONCLINICAL TOXICOLOGY': ['34091-9'],
+    'CARCINOGENESIS': ['34083-6'],
+    'CLINICAL STUDIES': ['34092-7'],
+    'REFERENCES': ['34093-5'],
+    'HOW SUPPLIED': ['34069-5'],
+    'PATIENT COUNSELING INFORMATION': ['34076-0'],
+    'WARNINGS': ['34071-1', '43685-7'],
+    'PRECAUTIONS': ['42232-9', '43685-7']
+}
+
+
 def _sections_exists(tsquery_sql, section_filters, bag):
     """EXISTS over spl_sections, optionally narrowed to specific sections."""
     conditions = ['sec.spl_id = s.spl_id']
     if tsquery_sql:
         conditions.append(f'sec.search_vector @@ {tsquery_sql}')
     if section_filters:
-        loincs = [f for f in section_filters if re.match(r'^[\d.\-]+$', f)]
-        titles = [f'%{f}%' for f in section_filters if f not in loincs]
+        loincs_set = set()
+        titles_set = set()
+        for f in section_filters:
+            if re.match(r'^[\d.\-]+$', f):
+                loincs_set.add(f)
+                if f in LOINC_TO_TITLES:
+                    for t in LOINC_TO_TITLES[f]:
+                        titles_set.add(t)
+            else:
+                clean = re.sub(r'^[0-9]+(\.[0-9]+)*\s*', '', f).strip().upper()
+                if clean:
+                    titles_set.add(f'%{clean}%')
+                    if clean in TITLE_TO_LOINCS:
+                        for l in TITLE_TO_LOINCS[clean]:
+                            loincs_set.add(l)
+                titles_set.add(f'%{f}%')
+
+        loincs = list(loincs_set)
+        titles = list(titles_set)
         alts = []
         if loincs:
             alts.append(f'sec.loinc_code = ANY({bag.add(loincs)})')
