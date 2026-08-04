@@ -189,10 +189,10 @@ window.initFavorites = function() {
             })
             .catch(err => console.error('Error checking favorite:', err));
 
-        // Toggle on click
         favoriteBtn.addEventListener('click', async () => {
             try {
-                let brandName = document.querySelector('.DocumentTitle').childNodes[0].textContent.trim();
+                let docTitleElem = document.querySelector('.DocumentTitle') || document.querySelector('.afl-label-identity__title') || document.querySelector('h1');
+                let brandName = docTitleElem ? (docTitleElem.textContent || '').trim() : (typeof currentDrugName !== 'undefined' ? currentDrugName : '');
                 
                 const res = await fetch('/api/dashboard/toggle_favorite', {
                     method: 'POST',

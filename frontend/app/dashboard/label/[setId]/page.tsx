@@ -167,56 +167,35 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
       name: 'FAERS',
       blurb: 'Adverse event reports and MedDRA term profile for this product.',
       iconId: 'pulse',
-      href: `/dashboard/label/${setId}/faers`,
+      href: labelRoute(setId, 'faers'),
     },
     {
       id: 'label-tox',
       name: 'DrugTox Agents',
       blurb: 'Assessment of DILI, DICT, DIRI and PGx signals in this label.',
       iconId: 'flask',
-      href: `/dashboard/label/${setId}/tox`,
+      href: labelRoute(setId, 'tox'),
     },
     {
       id: 'label-examine',
       name: 'Examine',
       blurb: 'Run clinical prompt templates against this label.',
       iconId: 'microscope',
-      href: `/dashboard/label/${setId}/examine`,
+      href: labelRoute(setId, 'examine'),
     },
     {
       id: 'label-deepdive',
       name: 'Deep Dive',
       blurb: 'Compare this label against its pharmacologic class peers.',
       iconId: 'compare',
-      href: `/dashboard/label/${setId}/deepdive`,
+      href: labelRoute(setId, 'deepdive'),
     },
     {
       id: 'labelcomp',
       name: 'Compare Labels',
       blurb: 'Side-by-side section diff of up to four labels.',
       iconId: 'compare',
-      href: `/labelcomp?set_ids=${setId}`,
-    },
-    {
-      id: 'drugtox',
-      name: 'askDrugTox',
-      blurb: 'Browse harmonized toxicity records across the drug catalog.',
-      iconId: 'flask',
-      href: '/drugtox',
-    },
-    {
-      id: 'localquery',
-      name: 'Local Database Search',
-      blurb: 'Structured query over local SPL and drug records.',
-      iconId: 'database',
-      href: '/localquery',
-    },
-    {
-      id: 'search',
-      name: 'AI Chat Search',
-      blurb: 'Ask questions across all labels and get grounded answers.',
-      iconId: 'chat',
-      href: '/search',
+      href: withAppBase(`/labelcomp?set_ids=${setId}`),
     },
   ];
 
@@ -642,77 +621,7 @@ function LabelContent() {
                 boxShadow: (data?.openfda_status === 'Archived' || data?.is_latest === false) ? '0 4px 20px rgba(60,45,30,0.04)' : '0 4px 20px rgba(0,0,0,0.04)', 
                 border: (data?.openfda_status === 'Archived' || data?.is_latest === false) ? '1px solid #dcd3bf' : '1px solid #f1f5f9' 
             }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '40px' }}>
-                        {/* Title, badges and generic name are rendered by the
-                            workspace shell (../layout.tsx) for every tool route. */}
-                    
-                      <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexShrink: 0 }}>
-                        {session?.is_authenticated && (
-                          <>
-                            <button 
-                              onClick={() => {
-                                const allIds = new Set<string>();
-                                const addIdsRecursive = (items: any[]) => {
-                                  items.forEach(i => {
-                                    allIds.add(i.id);
-                                    if (i.children && i.children.length > 0) {
-                                      addIdsRecursive(i.children);
-                                    }
-                                  });
-                                };
-                                if (data.table_of_contents) {
-                                  addIdsRecursive(data.table_of_contents);
-                                }
-                                setSelectedSectionsForExport(allIds);
-                                setExportModalOpen(true);
-                              }}
-                              title="Export Selected Sections"
-                              style={{ 
-                                  background: '#f1f5f9', 
-                                  border: '1px solid #e2e8f0', 
-                                  color: '#475569', 
-                                  padding: '8px 14px', 
-                                  borderRadius: '10px', 
-                                  fontSize: '0.8rem', 
-                                  fontWeight: 800, 
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  gap: '6px', 
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s ease'
-                              }}
-                              onMouseOver={e => e.currentTarget.style.backgroundColor = '#e2e8f0'}
-                              onMouseOut={e => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                            >
-                            </button>
-                          </>
-                        )}
-                          <button 
-                            id="favorite-btn" 
-                            className="favorite-btn" 
-                            onClick={handleFavoriteClick}
-                            disabled={!session?.is_authenticated}
-                            title={session?.is_authenticated ? "Manage Projects" : "Login is required"}
-                            style={{ 
-                              background:'none', 
-                              border:'none', 
-                              cursor: session?.is_authenticated ? 'pointer' : 'not-allowed', 
-                              fontSize: '2.2rem', 
-                              color: isFavoriteAny ? '#ef4444' : '#cbd5e1', 
-                              padding: 0,
-                              lineHeight: 1,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              transition: 'all 0.2s ease'
-                            }}
-                          >
-                              {isFavoriteAny ? "\u2605" : "\u2606"}
-                          </button>
-                      </div>
-                </div>
-
-                <div className="label-meta-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', marginTop: '24px' }}>
+                <div className="label-meta-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px' }}>
                     {data.has_boxed_warning && (
                     <div className="meta-item" style={{ gridColumn: '1 / -1', backgroundColor: '#fff1f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <span style={{ fontSize: '1.5rem', color: '#e11d48' }}>{"\u26A0"}</span>
@@ -793,6 +702,52 @@ function LabelContent() {
             */}
             <div className="function-tabs-bar" style={{ width: '100%', padding: '0 0 20px 0', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px' }}>
                 <div className="label-toolbar">
+                  {/* Export — authenticated only */}
+                  {session?.is_authenticated && (
+                    <button 
+                      id="export-pdf-btn"
+                      onClick={() => {
+                        const allIds = new Set<string>();
+                        const addIdsRecursive = (items: any[]) => {
+                          items.forEach(i => {
+                            allIds.add(i.id);
+                            if (i.children && i.children.length > 0) {
+                              addIdsRecursive(i.children);
+                            }
+                          });
+                        };
+                        if (data.table_of_contents) {
+                          addIdsRecursive(data.table_of_contents);
+                        }
+                        setSelectedSectionsForExport(allIds);
+                        setExportModalOpen(true);
+                      }}
+                      title="Export Selected Sections"
+                      className="label-tool-btn label-tool-export"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <span style={{ fontSize: '0.9rem' }}>{"\u2913"}</span> EXPORT
+                    </button>
+                  )}
+
+                  {/* Add to Projects button (Fav) */}
+                  <button 
+                    id="favorite-btn" 
+                    className={`label-tool-btn label-tool-fav ${isFavoriteAny ? 'active' : ''}`}
+                    onClick={handleFavoriteClick}
+                    disabled={!session?.is_authenticated}
+                    title={session?.is_authenticated ? "Add to Projects" : "Login is required to add to projects"}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      cursor: session?.is_authenticated ? 'pointer' : 'not-allowed',
+                      opacity: session?.is_authenticated ? 1 : 0.6
+                    }}
+                  >
+                    <span style={{ fontSize: '1.1rem', fontWeight: 800, lineHeight: 1 }}>+</span> Add to Projects
+                  </button>
+
                   {/* Chat — always available */}
                   <button
                     id="chat-bubble"
