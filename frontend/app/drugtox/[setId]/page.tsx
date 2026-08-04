@@ -249,23 +249,24 @@ export default function DrugToxDetailPage() {
     ])
       .then(([detailRes, historyRes]) => {
         setDetail(detailRes.data);
-        setHistory(historyRes.data);
+        const fetchedHistory = historyRes.data || [];
+        setHistory(fetchedHistory);
         setLoading(false);
+
+        // Auto-generate ONLY if no current result exists for this agent
+        const matching = fetchedHistory.filter(
+          (h: any) => h.Tox_Type?.toLowerCase() === agentKey.toLowerCase()
+        );
+        if (matching.length === 0) {
+          generateReport(agentKey);
+        }
       })
       .catch((err) => {
         console.error('Error fetching drug details:', err);
         setError('Failed to load drug details.');
         setLoading(false);
       });
-  }, [setId]);
-
-  useEffect(() => {
-    if (setId) {
-      const targetAgent = agentKey;
-      setActiveTox(targetAgent);
-      generateReport(targetAgent);
-    }
-  }, [agentKey, setId]);
+  }, [setId, agentKey]);
 
   const getToxColor = (toxClass: string) => {
     if (!toxClass) return 'default';
