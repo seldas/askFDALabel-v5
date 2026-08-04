@@ -129,6 +129,37 @@ interface HistoryItem {
 const BACKEND_API_PREFIX = `${API_BASE}/api`;
 const DRUGTOX_API_PREFIX = `${BACKEND_API_PREFIX}/drugtox`;
 
+const AGENT_CONFIGS: Record<string, { name: string; title: string; color: string; icon: string; instructions: string }> = {
+  dili: {
+    name: 'DILI Agent',
+    title: 'Drug-Induced Liver Injury (DILI) Safety Assessment',
+    color: '#0891b2',
+    icon: '🧪',
+    instructions: 'DILI Agent leverages advanced AI to analyze official FDA prescribing labels for hepatotoxicity signals. It evaluates risk concern levels (Most, Less, or No DILI Concern), ALT/AST liver enzyme elevation patterns, serum bilirubin monitoring thresholds, clinical liver toxicity warnings, and historical DILI database classifications.'
+  },
+  dict: {
+    name: 'DICT Agent',
+    title: 'Drug-Induced Cardiotoxicity (DICT) Safety Assessment',
+    color: '#e11d48',
+    icon: '❤️',
+    instructions: 'DICT Agent analyzes prescribing information for cardiotoxicity risk signals. It evaluates QT interval prolongation, arrhythmias, heart failure risk, cardiomyopathy, LVEF monitoring requirements, and FDA boxed warnings for cardiovascular adverse events.'
+  },
+  diri: {
+    name: 'DIRI Agent',
+    title: 'Drug-Induced Renal Injury (DIRI) Safety Assessment',
+    color: '#d97706',
+    icon: '🩺',
+    instructions: 'DIRI Agent scans prescribing labels for nephrotoxicity and renal impairment guidance. It detects acute kidney injury (AKI) risks, serum creatinine/eGFR monitoring thresholds, dosage adjustment recommendations for renal failure, and renal safety precautions.'
+  },
+  pgx: {
+    name: 'PGx Agent',
+    title: 'Pharmacogenomics (PGx) Safety Assessment',
+    color: '#7c3aed',
+    icon: '🧬',
+    instructions: 'PGx Agent extracts pharmacogenomic biomarker guidance and genetic variant associations from prescribing labels. It identifies actionable genes (e.g., CYP2D6, HLA-B*5701, TPMT, G6PD), testing recommendations, dose modification guidelines, and variant-specific adverse reaction risks.'
+  }
+};
+
 export default function DrugToxDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
