@@ -699,3 +699,50 @@ def translate():
         return jsonify({'error': f'The generated query was invalid: {e}'}), 502
 
     return jsonify({'query': query, 'notes': notes})
+
+
+REFINE_SYSTEM_PROMPT = """
+You are an expert FDA Drug Label Query Analyst and prompt engineer for AskFDALabel.
+Your job is to rewrite a user's natural language search intent into a highly clear, standardized, formal query description that can be accurately parsed into FDA prescribing label search criteria (such as product names, labeling sections like Boxed Warning or Warnings, MedDRA adverse event terms, pharmacologic classes, or route of administration).
+
+Also, evaluate the query for any ambiguities, broad/vague terms, or missing scope that could affect query performance or accuracy, and provide clear warning notes.
+
+Return ONLY a JSON object (no markdown, no code fences) with this schema:
+{
+  "refined_intent": "A standardized, explicit, and well-structured natural language prompt describing the search criteria in clear formal clinical language.",
+  "warnings": [
+    "Clear, helpful warning note regarding broad terms, ambiguous sections, or potential search coverage issues."
+  ]
+}
+"""
+
+
+@labelquery_bp.route('/refine', methods=['POST'])
+def refine():
+    payload = request.get_json(silent=True) or {}
+    intent = (payload.get('intent') or '').strip()
+    if not intent:
+        return jsonify({'error': 'intent is required'}), 400
+
+    from dashboard.services.ai_handler import call_llm
+
+    user = current_user._get_current_object() if current_user.is_authenticated else None
+    try:
+        raw = call_llm(
+            user=user,
+            system_prompt=REFINE_SYSTEM_PROMPT,
+            user_message=json.dumps({'request': intent}),
+            temperature=0.2,
+        )
+    except Exception as e:
+        return jsonify({'error': f'AI prompt refinement failed: {e}'}), 502
+
+    parsed = _parse_json_object(raw)
+    if not isinstance(parsed, dict) or not parsed.get('refined_intent'):
+        return jsonify({'error': 'The model did not return a usable refined prompt.'}), 502
+
+    return jsonify({
+        'refined_intent': parsed.get('refined_intent'),
+        'warnings': [str(w) for w in (parsed.get('warnings') or []) if w][:5]
+    })
+
