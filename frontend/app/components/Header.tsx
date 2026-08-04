@@ -601,9 +601,42 @@ export default function Header({
           }
         }
 
+        .header-chip {
+          height: 38px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 14px;
+          border-radius: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.25);
+          background: rgba(255, 255, 255, 0.08);
+          color: #ffffff;
+          font-size: 0.88rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-sizing: border-box;
+          line-height: 1;
+        }
+
+        .header-chip:hover {
+          background-color: rgba(255, 255, 255, 0.2) !important;
+          border-color: rgba(255, 255, 255, 0.4) !important;
+          color: #ffffff !important;
+        }
+
         .header-chip.active {
-          background-color: #e0e7ff !important;
-          border-color: #6366f1 !important;
+          background-color: #ffffff !important;
+          color: #0f172a !important;
+          border-color: #ffffff !important;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        .header-chip.active span,
+        .header-chip.active .caret,
+        .header-chip.active svg {
+          color: #0f172a !important;
+          stroke: #0f172a !important;
         }
 
         .header-updates-btn:hover, .header-updates-btn.active {
