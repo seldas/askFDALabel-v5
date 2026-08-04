@@ -99,7 +99,7 @@ export default function LabelLayout({
   const isStale = data?.openfda_status === 'Archived' || data?.is_latest === false;
   const [companyModalOpen, setCompanyModalOpen] = useState(false);
 
-  const isExaminePage = activeToolId === 'label-examine';
+  const hideCrumbsAndTools = activeToolId === 'label-examine' || activeToolId === 'label-faers';
 
   return (
     <div className="afl-label-shell">
@@ -107,7 +107,7 @@ export default function LabelLayout({
 
       <div className="afl-label-shell__scroll">
         <div className="afl-label-shell__inner">
-          {!isExaminePage && (
+          {!hideCrumbsAndTools && (
             <nav className="afl-label-crumbs">
               <Link href="/dashboard">Dashboard</Link>
               <span aria-hidden="true">›</span>
@@ -226,7 +226,7 @@ export default function LabelLayout({
             </div>
           )}
 
-          {!isExaminePage && (
+          {!hideCrumbsAndTools && (
             <div className="afl-label-tools">
               <LabelToolStrip setId={setId} activeToolId={activeToolId} />
             </div>
