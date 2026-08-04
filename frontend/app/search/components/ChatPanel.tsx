@@ -417,8 +417,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onSearch }) => {
     <div className="chat-panel">
       {chatHistory.length === 0 ? (
         <div className="initial-view-container">
-            <h1 className="hero-title-animated" style={{ fontSize: '3.5rem', fontWeight: 800, marginBottom: '1rem' }}>
-              AI assistant for FDALabel
+            <h1 className="hero-title-animated" style={{ fontSize: '3.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>
+              Hi, {session?.username ? (session.username.charAt(0).toUpperCase() + session.username.slice(1)) : 'User'}
             </h1>
             
             <form onSubmit={handleSearch} className="centered-search-form">
@@ -438,31 +438,6 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onSearch }) => {
                     </button>
                 </div>
             </form>
-
-            <div style={{ textAlign: 'center', marginTop: '-0.5rem', marginBottom: '1.5rem' }}>
-              <Link 
-                href="/localquery" 
-                style={{ 
-                  fontSize: '0.9rem', 
-                  color: '#6366f1', 
-                  textDecoration: 'none', 
-                  fontWeight: 700, 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
-                  gap: '6px',
-                  transition: 'opacity 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
-                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
-                  <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
-                  <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
-                </svg>
-                Direct Structured Database Query
-              </Link>
-            </div>
 
             <div className="suggestions-grid">
                 {semanticSuggestions.map((suggestion, index) => (
