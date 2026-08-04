@@ -277,31 +277,28 @@ def execute_batch_update(meta_batch):
             """)
             updated_sum_spl = cur.rowcount
 
-            # 2. Upsert active ingredients map / UNII
+            # 2. Update active ingredients map / UNII
             ingr_dedup = {}
             for m in meta_batch:
                 for item in m.get('ingr_map', []):
                     key = (item['spl_id'], item['substance_name'].upper())
                     ingr_dedup[key] = (
                         item['spl_id'],
-                        item['set_id'],
                         item['substance_name'],
                         item['unii'],
-                        item['is_active']
+                        1 if item['is_active'] else 0
                     )
 
             ingr_rows = list(ingr_dedup.values())
 
             if ingr_rows:
+                spl_ids = list(dedup_spl.keys())
+                cur.execute("DELETE FROM labeling.active_ingredients_map WHERE spl_id = ANY(%s);", (spl_ids,))
                 execute_values(
                     cur,
                     """
-                    INSERT INTO labeling.active_ingredients_map (spl_id, set_id, substance_name, unii, is_active)
-                    VALUES %s
-                    ON CONFLICT (spl_id, substance_name)
-                    DO UPDATE SET
-                        unii = EXCLUDED.unii,
-                        is_active = EXCLUDED.is_active;
+                    INSERT INTO labeling.active_ingredients_map (spl_id, substance_name, unii, is_active)
+                    VALUES %s;
                     """,
                     ingr_rows,
                     page_size=2000
