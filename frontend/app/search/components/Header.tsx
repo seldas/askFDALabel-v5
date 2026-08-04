@@ -33,7 +33,7 @@ const Header: React.FC = () => {
     <header className="header-main">
       {/* Left: Branding & Page Title */}
       <div className="header-branding">
-        <a href={process.env.NEXT_PUBLIC_DASHBOARD_BASE || '/askfdalabel'} className="header-logo-link" style={{ 
+        <a href={process.env.NEXT_PUBLIC_DASHBOARD_BASE || '/fdalabel-v3'} className="header-logo-link" style={{
           background: 'rgba(255,255,255,0.15)',
           padding: '4px 12px',
           borderRadius: '20px',

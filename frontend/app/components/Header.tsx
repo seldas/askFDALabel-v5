@@ -171,7 +171,7 @@ export default function Header({
         headers: { Accept: 'application/json' },
       });
       if (res.ok) {
-        window.location.href = process.env.NEXT_PUBLIC_DASHBOARD_BASE || '/askfdalabel';
+        window.location.href = process.env.NEXT_PUBLIC_DASHBOARD_BASE || '/fdalabel-v3';
       }
     } catch (err) {
       console.error('Logout failed', err);
@@ -183,7 +183,7 @@ export default function Header({
     <header className="header-main header-typography">
       {/* Left: Branding */}
       <div className="header-branding">
-        <a href={process.env.NEXT_PUBLIC_DASHBOARD_BASE || '/askfdalabel'} className="header-logo-link" onClick={handleNavClick} aria-label="AskFDALabel Home">
+        <a href={process.env.NEXT_PUBLIC_DASHBOARD_BASE || '/fdalabel-v3'} className="header-logo-link" onClick={handleNavClick} aria-label="AskFDALabel Home">
           <svg
             width="32"
             height="32"
@@ -207,7 +207,7 @@ export default function Header({
 
         <h1 className="header-title">
           <a
-            href={process.env.NEXT_PUBLIC_DASHBOARD_BASE || '/askfdalabel'}
+            href={process.env.NEXT_PUBLIC_DASHBOARD_BASE || '/fdalabel-v3'}
             style={{ color: "inherit", textDecoration: "none" }}
           >
             AskFDALabel
