@@ -11,14 +11,17 @@ user reviews and edits what the model produced before anything is executed —
 which is also why it returns `notes` describing what it could not express.
 """
 
+import csv
+import io
 import json
 import re
+from datetime import datetime
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 from flask_login import current_user
 
 from dashboard.services.fdalabel_db import FDALabelDBService
-from .compiler import SELECT_COLUMNS, QueryCompileError, compile_where
+from .compiler import SELECT_COLUMNS, QueryCompileError, compile_where, order_by_sql
 
 labelquery_bp = Blueprint('labelquery', __name__)
 
@@ -241,6 +244,8 @@ def execute():
     except QueryCompileError as e:
         return jsonify({'error': str(e)}), 400
 
+    order_by = order_by_sql(payload.get('sort'), payload.get('dir'))
+
     conn = None
     try:
         conn = _pg()
@@ -265,7 +270,7 @@ def execute():
                 SELECT {SELECT_COLUMNS}
                 FROM labeling.sum_spl s
                 WHERE {where}
-                ORDER BY s.revised_date DESC NULLS LAST, s.set_id
+                ORDER BY {order_by}
                 LIMIT %(_limit)s OFFSET %(_offset)s
                 """,
                 page_params,
@@ -285,6 +290,117 @@ def execute():
     finally:
         if conn:
             conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Export
+# ---------------------------------------------------------------------------
+
+# "Download Full Results" means the whole match set, not the visible page, so
+# this is capped separately and much higher than a page.
+EXPORT_CAP = 5000
+
+# (header, row key) in the order FDALabel's own download uses.
+EXPORT_COLUMNS = [
+    ('SET ID', 'set_id'),
+    ('SPL ID', 'spl_id'),
+    ('Labeling Type', 'doc_type'),
+    ('Marketing Category', 'market_categories'),
+    ('Application Number(s)', 'appr_num'),
+    ('Trade Name', 'product_names'),
+    ('Generic/Proper Name(s)', 'generic_names'),
+    ('Active Ingredient(s)', 'active_ingredients'),
+    ('Labeler', 'manufacturer'),
+    ('Dosage Form(s)', 'dosage_forms'),
+    ('Route(s) of Administration', 'routes'),
+    ('Pharmacologic Class(es)', 'epc'),
+    ('NDC Code(s)', 'ndc_codes'),
+    ('Most Recent SPL Date', 'revised_date'),
+    ('Initial Approval Year', 'initial_approval_year'),
+    ('RLD', 'is_rld'),
+    ('RS', 'is_rs'),
+]
+
+
+def _export_rows(query, sort, direction):
+    where, params, _ = compile_where(query, expand_meddra=_expand_meddra)
+    page_params = dict(params)
+    page_params['_limit'] = EXPORT_CAP
+    return _rows(
+        f"""
+        SELECT {SELECT_COLUMNS}
+        FROM labeling.sum_spl s
+        WHERE {where}
+        ORDER BY {order_by_sql(sort, direction)}
+        LIMIT %(_limit)s
+        """,
+        page_params,
+    )
+
+
+def _cell(row, key):
+    value = row.get(key)
+    if key in ('is_rld', 'is_rs'):
+        return 'Yes' if value else 'No'
+    # Multi-valued columns are "; "-joined in storage; a comma reads better in a
+    # spreadsheet and does not collide with CSV quoting.
+    return (value or '').replace(';', ',') if isinstance(value, str) else value
+
+
+@labelquery_bp.route('/export', methods=['POST'])
+def export():
+    payload = request.get_json(silent=True) or {}
+    fmt = (payload.get('format') or 'csv').lower()
+    if fmt not in ('csv', 'xlsx'):
+        return jsonify({'error': "format must be 'csv' or 'xlsx'"}), 400
+
+    try:
+        rows = _export_rows(payload.get('query') or {}, payload.get('sort'), payload.get('dir'))
+    except QueryCompileError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    stamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    headers = [h for h, _ in EXPORT_COLUMNS]
+
+    if fmt == 'csv':
+        buffer = io.StringIO()
+        writer = csv.writer(buffer, lineterminator='\n')
+        writer.writerow(headers)
+        for row in rows:
+            writer.writerow([_cell(row, key) for _, key in EXPORT_COLUMNS])
+        # utf-8-sig: Excel on Windows reads a plain UTF-8 CSV as cp1252 and
+        # mangles the non-ASCII characters common in labeler names.
+        data = io.BytesIO(buffer.getvalue().encode('utf-8-sig'))
+        return send_file(
+            data,
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name=f'FDALabel_Query_{stamp}.csv',
+        )
+
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Query Results'
+    ws.append(headers)
+    for row in rows:
+        ws.append([_cell(row, key) for _, key in EXPORT_COLUMNS])
+    for column in ws.columns:
+        width = max((len(str(c.value)) for c in column if c.value is not None), default=10)
+        ws.column_dimensions[column[0].column_letter].width = min(45, width + 2)
+
+    data = io.BytesIO()
+    wb.save(data)
+    data.seek(0)
+    return send_file(
+        data,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'FDALabel_Query_{stamp}.xlsx',
+    )
 
 
 # ---------------------------------------------------------------------------

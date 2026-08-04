@@ -16,16 +16,17 @@
  * edited before anything executes.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import StartPage from './components/StartPage';
 import { useUser } from './context/UserContext';
 import { Page } from './platform/primitives';
+import { withAppBase } from './utils/appPaths';
 import { AiIntentPanel } from './querybuilder/AiIntentPanel';
 import type { OptionLists } from './querybuilder/CriterionCard';
 import { QueryPanel } from './querybuilder/QueryPanel';
-import { ResultsTable, type ResultSet } from './querybuilder/ResultsTable';
+import { resultsPath } from './querybuilder/queryUrl';
 import {
   countFilled,
   fromWire,
@@ -37,7 +38,6 @@ import {
 import './querybuilder/querybuilder.css';
 
 const LAST_QUERY_KEY = 'afl.labelquery.last';
-const PAGE_SIZE = 50;
 
 const EMPTY_OPTIONS: OptionLists = {
   labelingTypes: [],
@@ -53,12 +53,8 @@ export default function HomePage() {
 
   const [query, setQuery] = useState<LabelQuery>(makeEmptyQuery);
   const [options, setOptions] = useState<OptionLists>(EMPTY_OPTIONS);
-  const [results, setResults] = useState<ResultSet | null>(null);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSaved, setHasSaved] = useState(false);
-
-  const resultsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setHasSaved(Boolean(window.localStorage.getItem(LAST_QUERY_KEY)));
@@ -94,38 +90,27 @@ export default function HomePage() {
     };
   }, [isAuthed]);
 
-  const runSearch = useCallback(
-    async (offset: number) => {
-      setBusy(true);
-      setError(null);
-      try {
-        const wire = toWire(query);
-        window.localStorage.setItem(LAST_QUERY_KEY, JSON.stringify(wire));
-        setHasSaved(true);
-
-        const res = await fetch('/api/labelquery/execute', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: wire, limit: PAGE_SIZE, offset }),
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || `Search failed (${res.status})`);
-        setResults(json as ResultSet);
-        // Only scroll on a fresh search; paging should hold position.
-        if (offset === 0) {
-          requestAnimationFrame(() =>
-            resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-          );
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-        setResults(null);
-      } finally {
-        setBusy(false);
-      }
-    },
-    [query],
-  );
+  /*
+   * Results open in their own window, as FDALabel does — the builder stays put
+   * so the criteria that produced a result set are still on screen to refine.
+   * The query rides in the URL because a new window cannot read this one's state.
+   *
+   * withAppBase is required, not decorative: window.open sidesteps both Next's
+   * automatic basePath handling (which only covers Link and the router) and
+   * FetchPrefix, whose rewriter passes through any route outside /api and its
+   * hardcoded module list. Without it the new window lands on a 404.
+   */
+  const runSearch = useCallback(() => {
+    setError(null);
+    try {
+      const wire = toWire(query);
+      window.localStorage.setItem(LAST_QUERY_KEY, JSON.stringify(wire));
+      setHasSaved(true);
+      window.open(withAppBase(resultsPath(wire)), '_blank', 'noopener');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, [query]);
 
   const restoreLast = useCallback(() => {
     const raw = window.localStorage.getItem(LAST_QUERY_KEY);
@@ -140,7 +125,6 @@ export default function HomePage() {
 
   const clearAll = useCallback(() => {
     setQuery(makeEmptyQuery());
-    setResults(null);
     setError(null);
   }, []);
 
@@ -173,13 +157,8 @@ export default function HomePage() {
       <button type="button" className="fdl-link" onClick={clearAll}>
         Clear All
       </button>
-      <button
-        type="button"
-        className="fdl-btn fdl-btn--search"
-        onClick={() => runSearch(0)}
-        disabled={busy}
-      >
-        {busy ? 'Searching…' : 'Search »'}
+      <button type="button" className="fdl-btn fdl-btn--search" onClick={runSearch}>
+        Search »
       </button>
     </div>
   );
@@ -189,7 +168,7 @@ export default function HomePage() {
       <Header />
 
       <main className="fdl-shell">
-        <AiIntentPanel onQuery={setQuery} disabled={busy} />
+        <AiIntentPanel onQuery={setQuery} />
 
         {actionBar('top')}
 
@@ -205,12 +184,6 @@ export default function HomePage() {
         ) : null}
 
         {error ? <p className="fdl-error">{error}</p> : null}
-
-        <div ref={resultsRef}>
-          {results ? (
-            <ResultsTable data={results} busy={busy} onPage={(offset) => runSearch(offset)} />
-          ) : null}
-        </div>
       </main>
 
       <Footer />

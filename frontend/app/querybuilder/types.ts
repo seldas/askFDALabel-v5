@@ -46,7 +46,11 @@ export interface WireQuery {
 
 export interface QuickPick {
   label: string;
-  /** Sent as-is; `%` makes it a LIKE pattern against the `; `-joined column. */
+  /**
+   * Sent as-is. Matched against one element of the `; `-joined column, so a
+   * bare value is an exact category ("NDA" does not match "ANDA") and a value
+   * containing `%` is a LIKE pattern within a single element.
+   */
   value: string;
 }
 
@@ -65,11 +69,12 @@ let counter = 0;
 export const uid = () => `c${Date.now().toString(36)}${(counter += 1).toString(36)}`;
 
 /*
- * Quick-pick values are LIKE patterns rather than exact doc_type strings on
- * purpose: SPL document types vary ("HUMAN PRESCRIPTION DRUG LABEL",
+ * Labeling-type quick picks are LIKE patterns rather than exact doc_type
+ * strings on purpose: SPL document types vary ("HUMAN PRESCRIPTION DRUG LABEL",
  * "PRESCRIPTION DRUG LABEL FOR HUMAN USE"), and a substring is the only match
- * that survives that. The dropdown below each row still offers exact values
- * pulled live from the database.
+ * that survives that. Marketing categories and routes are stable vocabularies,
+ * so those quick picks are exact — which is what keeps NDA off ANDA. The
+ * dropdown below each row offers exact values pulled live from the database.
  */
 export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
   labelingType: {
@@ -96,7 +101,10 @@ export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
       { label: 'BLA', value: 'BLA' },
       { label: 'NDA', value: 'NDA' },
       { label: 'NDA Authorized Generic', value: 'NDA authorized generic' },
-      { label: 'OTC Monograph Drug', value: 'OTC monograph' },
+      // Pattern, not exact: FDA uses several monograph categories ("OTC
+      // monograph drug", "OTC monograph final", "OTC monograph not final")
+      // and the quick pick means all of them.
+      { label: 'OTC Monograph Drug', value: '%OTC monograph%' },
     ],
     defaultValue: () => ({ values: [] }),
   },

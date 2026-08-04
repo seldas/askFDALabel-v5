@@ -507,6 +507,115 @@
   color: var(--afl-text-secondary);
 }
 
+/* ---- Results page --------------------------------------------------------- */
+
+/* Result tables are wide by nature; the builder is not. */
+.fdl-shell--results {
+  max-width: none;
+}
+
+.fdl-resultshead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--afl-space-4);
+  padding-bottom: var(--afl-space-4);
+}
+
+.fdl-resultshead__count {
+  margin: 0;
+  font-size: var(--afl-text-2xl);
+  font-weight: var(--afl-weight-bold);
+  color: var(--afl-text-primary);
+}
+
+.fdl-resultshead__tools {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--afl-space-1);
+  font-size: var(--afl-text-md);
+  color: var(--afl-n-800);
+  text-align: right;
+}
+
+.fdl-viewtoggle {
+  display: inline-flex;
+  border-radius: var(--afl-radius-sm);
+  overflow: hidden;
+  box-shadow: var(--afl-shadow-sm);
+}
+
+.fdl-viewtoggle__on,
+.fdl-viewtoggle__off {
+  font: inherit;
+  font-size: var(--afl-text-lg);
+  cursor: pointer;
+  border: 0;
+  padding: var(--afl-space-2) var(--afl-space-5);
+  color: var(--afl-text-inverse);
+}
+
+.fdl-viewtoggle__on {
+  background: var(--afl-gov-navy);
+  font-weight: var(--afl-weight-bold);
+}
+
+.fdl-viewtoggle__off {
+  background: var(--afl-gov-blue);
+}
+
+.fdl-viewtoggle__off:hover {
+  background: var(--afl-gov-navy);
+}
+
+.fdl-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  white-space: nowrap;
+}
+
+.fdl-links__row {
+  color: var(--afl-n-800);
+}
+
+/* The superscripted application numbers FDALabel puts after each registry. */
+.fdl-links__num {
+  font-size: var(--afl-text-xs);
+  vertical-align: super;
+  margin-right: 0.15rem;
+}
+
+.fdl-th {
+  font: inherit;
+  font-weight: var(--afl-weight-medium);
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.fdl-th:hover {
+  color: var(--afl-info-700);
+}
+
+.fdl-th__caret {
+  color: var(--afl-n-800);
+}
+
+.fdl-td--strong {
+  font-weight: var(--afl-weight-bold);
+}
+
+.fdl-td--accent {
+  font-weight: var(--afl-weight-bold);
+  color: var(--afl-success-700);
+}
+
 /* ---- Results -------------------------------------------------------------- */
 
 .fdl-results {
@@ -526,6 +635,12 @@
   padding: var(--afl-space-3) var(--afl-space-4);
   border-bottom: 1px solid var(--afl-border);
   background: var(--afl-bg-sunken);
+}
+
+.fdl-results__bar--bottom {
+  border-bottom: 0;
+  border-top: 1px solid var(--afl-border);
+  border-radius: 0 0 var(--afl-radius-md) var(--afl-radius-md);
 }
 
 .fdl-results__count {
@@ -548,7 +663,24 @@
 }
 
 .fdl-tablewrap {
+  /* Wide result sets scroll inside the table, never the page. */
   overflow-x: auto;
+  border: 1px solid var(--afl-border-strong);
+  border-radius: var(--afl-radius-md) var(--afl-radius-md) 0 0;
+  background: var(--afl-bg-surface);
+}
+
+.fdl-table thead th {
+  background: var(--afl-gov-tint);
+  color: var(--afl-n-900);
+  font-size: var(--afl-text-md);
+  font-weight: var(--afl-weight-bold);
+  border-bottom: 1px solid var(--afl-border-strong);
+  white-space: normal;
+}
+
+.fdl-table tbody tr:nth-child(even) {
+  background: var(--afl-n-50);
 }
 
 .fdl-table {

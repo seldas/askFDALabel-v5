@@ -265,16 +265,26 @@ def _sections_exists(tsquery_sql, section_filters, bag):
 # ---------------------------------------------------------------------------
 
 def _c_value_list(criterion, key, bag, warnings):
-    """Labeling Types / Application Types / Routes — all `; `-joined columns."""
+    """
+    Labeling Types / Application Types / Routes — all `; `-joined columns.
+
+    The match is against individual list *elements*, not the joined string. A
+    plain ILIKE '%NDA%' over "ANDA; NDA authorized generic" is true for all
+    three marketing categories, so selecting NDA would silently return every
+    ANDA label. Splitting first makes "NDA" mean the category NDA.
+
+    A value containing % is still treated as a pattern, but scoped to one
+    element — that is how the quick picks match doc_type variants
+    ("%HUMAN PRESCRIPTION%") without also matching neighbouring entries.
+    """
     column = _LIST_COLUMNS[key]
     values = _as_list(criterion.get('values'))
     if not values:
         return None
-    # A value may arrive as an exact option from /options or as a quick-pick
-    # pattern; wrapping both in wildcards makes the two behave identically
-    # against a joined column.
-    patterns = [v if '%' in v else f'%{v}%' for v in values]
-    return _like_any([column], patterns, bag)
+    return (
+        f"EXISTS (SELECT 1 FROM unnest(string_to_array({column}, ';')) AS item "
+        f'WHERE btrim(item) ILIKE ANY ({bag.add(values)}))'
+    )
 
 
 def _c_product_name(criterion, bag, warnings):
@@ -515,8 +525,31 @@ def _compile_criterion(criterion, bag, warnings, expand_meddra):
 SELECT_COLUMNS = """
     s.set_id, s.spl_id, s.product_names, s.generic_names, s.manufacturer,
     s.appr_num, s.ndc_codes, s.revised_date, s.market_categories, s.doc_type,
-    s.active_ingredients, s.dosage_forms, s.routes, s.epc, s.is_rld, s.is_rs
+    s.active_ingredients, s.dosage_forms, s.routes, s.epc, s.is_rld, s.is_rs,
+    s.initial_approval_year
 """
+
+# Sortable result columns, keyed by the token the client sends. Whitelisted
+# because the value is interpolated into ORDER BY, not bound as a parameter.
+SORT_COLUMNS = {
+    'product': 's.product_names',
+    'generic': 's.generic_names',
+    'manufacturer': 's.manufacturer',
+    'appr_num': 's.appr_num',
+    'market_category': 's.market_categories',
+    'doc_type': 's.doc_type',
+    'dosage_form': 's.dosage_forms',
+    'route': 's.routes',
+    'revised_date': 's.revised_date',
+    'approval_year': 's.initial_approval_year',
+}
+
+
+def order_by_sql(sort, direction):
+    """ORDER BY for a whitelisted sort token, always tie-broken on set_id."""
+    column = SORT_COLUMNS.get(sort or '', 's.revised_date')
+    descending = str(direction or 'desc').lower() != 'asc'
+    return f"{column} {'DESC' if descending else 'ASC'} NULLS LAST, s.set_id"
 
 
 def compile_where(query, expand_meddra=None):
