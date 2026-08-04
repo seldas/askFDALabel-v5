@@ -99,7 +99,7 @@ export default function LabelLayout({
   const isStale = data?.openfda_status === 'Archived' || data?.is_latest === false;
   const [companyModalOpen, setCompanyModalOpen] = useState(false);
 
-  const hideCrumbsAndTools = activeToolId === 'label-examine' || activeToolId === 'label-faers';
+  const hideCrumbsAndTools = activeToolId !== 'label-reader';
 
   return (
     <div className="afl-label-shell">
