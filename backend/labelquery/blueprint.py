@@ -227,6 +227,39 @@ def options():
         return jsonify({'error': str(e)}), 500
 
 
+@labelquery_bp.route('/suggest/product_name', methods=['GET'])
+def suggest_product_name():
+    """Autocomplete for product names (trade or generic). Requires >= 4 characters to minimize DB load."""
+    q = (request.args.get('q') or '').strip()
+    field = (request.args.get('field') or 'any').lower()
+    if len(q) < 4:
+        return jsonify({'suggestions': []})
+
+    try:
+        pattern = f"%{q}%"
+        if field == 'trade':
+            col_sql = "s.product_names"
+        elif field == 'generic':
+            col_sql = "s.generic_names"
+        else:
+            col_sql = "COALESCE(s.product_names, '') || '; ' || COALESCE(s.generic_names, '')"
+
+        sql = f"""
+            SELECT DISTINCT value FROM (
+                SELECT TRIM(unnest(string_to_array({col_sql}, ';'))) AS value
+                FROM labeling.sum_spl s
+                WHERE s.is_latest = TRUE AND ({col_sql} ILIKE %(pattern)s)
+            ) t
+            WHERE value ILIKE %(pattern)s AND value <> ''
+            ORDER BY value ASC
+            LIMIT 30;
+        """
+        rows = _rows(sql, {'pattern': pattern})
+        return jsonify({'suggestions': [r['value'] for r in rows]})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @labelquery_bp.route('/suggest/pharm_class', methods=['GET'])
 def suggest_pharm_class():
     q = (request.args.get('q') or '').strip()

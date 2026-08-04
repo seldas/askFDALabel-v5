@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { Chips, ListAdder, type Option, QuickPicks, Select, TokenInput } from './controls';
+import { AutoCompleteInput, Chips, ListAdder, type Option, QuickPicks, Select, TokenInput } from './controls';
 import { CRITERION_DEFS, type Criterion, type CriterionValue } from './types';
 
 export interface OptionLists {
@@ -98,6 +98,19 @@ export function CriterionCard({
     [v.level],
   );
 
+  const fetchProductName = useCallback(
+    async (q: string) => {
+      if (q.length < 4) return [];
+      const res = await fetch(
+        `/api/labelquery/suggest/product_name?q=${encodeURIComponent(q)}&field=${v.field || 'any'}`,
+      );
+      if (!res.ok) return [];
+      const json = await res.json();
+      return json.suggestions || [];
+    },
+    [v.field],
+  );
+
   const body = useMemo(() => {
     switch (criterion.type) {
       case 'labelingType':
@@ -126,7 +139,7 @@ export function CriterionCard({
 
       case 'productName':
         return (
-          <div className="fdl-row">
+          <div className="fdl-row" style={{ position: 'relative' }}>
             <Select
               ariaLabel="Name field"
               value={v.field || 'any'}
@@ -148,12 +161,12 @@ export function CriterionCard({
                 { value: 'notContains', label: 'does not contain' },
               ]}
             />
-            <input
-              className="fdl-input fdl-input--grow"
-              type="text"
+            <AutoCompleteInput
               value={v.text || ''}
-              placeholder="Enter any part(s) of product name"
-              onChange={(e) => set({ text: e.target.value })}
+              onChange={(text) => set({ text })}
+              placeholder="Enter product name (type 4+ chars for suggestions)"
+              fetchSuggestions={fetchProductName}
+              minChars={4}
             />
           </div>
         );

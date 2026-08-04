@@ -205,13 +205,26 @@ export default function Header({
           </svg>
         </a>
 
-        <h1 className="header-title">
+        <h1 className="header-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
           <a
             href={process.env.NEXT_PUBLIC_DASHBOARD_BASE || '/fdalabel-v3'}
             style={{ color: "inherit", textDecoration: "none" }}
           >
-            AskFDALabel
+            FDALabel - V3.0
           </a>
+          <span style={{
+            fontSize: '0.65rem',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            backgroundColor: 'rgba(239, 68, 68, 0.2)',
+            color: '#f87171',
+            padding: '2px 8px',
+            borderRadius: '12px',
+            lineHeight: '1.2',
+            letterSpacing: '0.05em'
+          }}>
+            alpha
+          </span>
         </h1>
       </div>
 
@@ -522,7 +535,7 @@ export default function Header({
             className={cx('dropdown-trigger header-chip', activeDropdown === 'updates' && 'active')}
             onClick={() => setActiveDropdown(activeDropdown === 'updates' ? null : 'updates')}
             aria-label="About"
-            title="About AskFDALabel"
+            title="About FDALabel"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
               <circle cx="12" cy="12" r="10"></circle>
@@ -544,14 +557,24 @@ export default function Header({
               borderRadius: '16px',
               textAlign: 'center'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
-                <img src={withAppBase("/fdalabel-v3_icon.svg")} alt="Logo" style={{ height: '48px' }} />
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <span>FDALabel - V3.0</span>
+                <span style={{ 
+                  fontSize: '0.65rem', 
+                  fontWeight: 700, 
+                  textTransform: 'uppercase', 
+                  backgroundColor: '#fee2e2', 
+                  color: '#dc2626', 
+                  padding: '2px 8px', 
+                  borderRadius: '12px',
+                  lineHeight: '1.2',
+                  letterSpacing: '0.05em'
+                }}>
+                  alpha
+                </span>
               </div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b', marginBottom: '12px' }}>
-                AskFDALabel Suite
-              </div>
-              <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.6, marginBottom: '0' }}>
-                A next-generation AI-powered platform for scientific drug label intelligence. Features comprehensive integration with MedDRA classification and a vast repository of human drug labels.
+              <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.6, marginBottom: '12px' }}>
+                FDALabel new version with AI capabilities.
               </div>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
                 &copy; {new Date().getFullYear()} FDA/NCTR

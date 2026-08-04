@@ -251,3 +251,88 @@ export function Select({
     </select>
   );
 }
+
+/**
+ * Single-line text input with async autocomplete suggestions (starts at minChars).
+ */
+export function AutoCompleteInput({
+  value,
+  onChange,
+  placeholder,
+  fetchSuggestions,
+  minChars = 4,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  fetchSuggestions?: (q: string) => Promise<string[]>;
+  minChars?: number;
+}) {
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!fetchSuggestions || value.trim().length < minChars) {
+      setSuggestions([]);
+      setOpen(false);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const next = await fetchSuggestions(value.trim());
+        if (!cancelled) {
+          setSuggestions(next);
+          setOpen(next.length > 0);
+        }
+      } catch {
+        if (!cancelled) setSuggestions([]);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [value, fetchSuggestions, minChars]);
+
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
+
+  const selectSuggestion = (s: string) => {
+    onChange(s);
+    setOpen(false);
+  };
+
+  return (
+    <div style={{ position: 'relative', flex: 1, minWidth: '200px' }} ref={boxRef}>
+      <input
+        className="fdl-input fdl-input--grow"
+        style={{ width: '100%' }}
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => {
+          if (value.trim().length >= minChars && suggestions.length > 0) setOpen(true);
+        }}
+      />
+      {open && suggestions.length > 0 ? (
+        <ul className="fdl-suggestions">
+          {suggestions.map((s) => (
+            <li key={s}>
+              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => selectSuggestion(s)}>
+                {s}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
