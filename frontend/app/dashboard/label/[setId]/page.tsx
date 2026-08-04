@@ -16,6 +16,7 @@ import LabelView from './label';
 
 // Shared Types
 import { TOCItem } from './types';
+import { ProductSpecsTable } from './examine';
 
 function TOCItemComponent({
   item,
@@ -437,6 +438,7 @@ function LabelContent() {
   const [exportFormat, setExportFormat] = useState<'html' | 'xml' | 'text'>('html');
   const [ndcModalOpen, setNdcModalOpen] = useState(false);
   const [companyModalOpen, setCompanyModalOpen] = useState(false);
+  const [productSpecsModalOpen, setProductSpecsModalOpen] = useState(false);
 
   // New Favorite/Project states
   const [isFavoriteAny, setIsFavoriteAny] = useState(false);
@@ -758,6 +760,19 @@ function LabelContent() {
 
             <div className="function-tabs-bar" style={{ width: '100%', padding: '0 0 20px 0', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px' }}>
                 <div className="label-toolbar">
+                  {/* Product Specifications — pop window to the left of AI Chat */}
+                  <button
+                    id="product-specs-btn"
+                    className="label-tool-btn label-tool-specs"
+                    onClick={() => setProductSpecsModalOpen(true)}
+                    title="View Product Specifications table for this label"
+                    style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', color: '#1d4ed8', border: '1px solid #93c5fd', fontWeight: 800 }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                    <span>Product Specifications</span>
+                    <svg className="pop-indicator" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px', verticalAlign: 'middle' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                  </button>
+
                   {/* Chat — always available */}
                   <button
                     id="chat-bubble"
@@ -838,6 +853,40 @@ function LabelContent() {
                   </button>
                 </div>
             </div>
+
+      {/* Product Specifications Modal Dialog */}
+      {productSpecsModalOpen && (
+        <div
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+          onClick={() => setProductSpecsModalOpen(false)}
+        >
+          <div
+            style={{ background: '#ffffff', borderRadius: '16px', width: '90%', maxWidth: '1000px', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #cbd5e1', overflow: 'hidden' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '1.2rem' }}>📦</span> Product Specifications
+                </h2>
+                <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                  Structured product registration &amp; packaging specifications extracted from the SPL XML document.
+                </p>
+              </div>
+              <button
+                onClick={() => setProductSpecsModalOpen(false)}
+                style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '6px 14px', cursor: 'pointer', fontWeight: 800, color: '#475569', fontSize: '0.85rem' }}
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+              <ProductSpecsTable productData={data?.product_data || []} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hidden Data for JS */}
       <div id="xml-content" style={{ display: 'none' }}>{data.label_xml_raw}</div>

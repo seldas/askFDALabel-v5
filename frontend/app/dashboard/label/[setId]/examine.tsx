@@ -83,7 +83,7 @@ function IngredientsList({ ingredients }: { ingredients: ProductData['ingredient
   );
 }
 
-function ProductSpecsTable({ productData }: { productData: ProductData[] }) {
+export function ProductSpecsTable({ productData }: { productData: ProductData[] }) {
   if (!productData || productData.length === 0) {
     return (
       <div style={{
@@ -214,7 +214,6 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
         }
         setResult(d);
         if (selectedPromptId === 'custom' && d.prompt_id) {
-          // Re-fetch prompts to display the newly saved custom question in the list
           fetch(withApiBase(`/api/dashboard/examine/prompts?set_id=${setId}`))
             .then(r2 => r2.json())
             .then(d2 => {
@@ -231,10 +230,13 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
 
   return (
     <div>
-      <div style={{ marginBottom: '16px' }}>
-        <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--afl-n-900)', letterSpacing: '-0.01em' }}>Clinical Query Engine</h3>
-        <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--afl-n-500)' }}>
-          Select a pre-defined or custom question and the AI will analyze the labeling document to generate a clinical summary. Answers are cached per label version.
+      <div style={{ marginBottom: '20px' }}>
+        <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: 'var(--afl-n-900)', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: '4px', height: '24px', background: 'var(--afl-info-700)', borderRadius: '2px' }} />
+          Task-Specific Summarization
+        </h2>
+        <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: 'var(--afl-n-500)', lineHeight: 1.5 }}>
+          Select a pre-defined or custom task question and the AI will analyze the labeling document to generate a structured task summary.
         </p>
       </div>
       <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', flexWrap: 'wrap' as const, marginBottom: '16px' }}>
@@ -318,7 +320,7 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
             {loading ? (
               <><span style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.4)', borderTop: '2px solid var(--afl-n-0)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />Analyzing…</>
             ) : (
-              <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Examine</>
+              <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Run Summarization</>
             )}
           </button>
           {result && (
@@ -413,33 +415,9 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
 export default function ExamineView({ activeTab, setId, productData }: ExamineViewProps) {
   if (activeTab !== 'examine-view') return null;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', padding: '4px 0', animation: 'fadeIn 0.25s ease' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '4px 0', animation: 'fadeIn 0.25s ease' }}>
       <style>{`@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }`}</style>
-      <section>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-          <div style={{ width: '4px', height: '20px', background: 'var(--afl-info-700)', borderRadius: '2px' }} />
-          <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--afl-n-900)', letterSpacing: '-0.01em' }}>
-            Product &amp; Registration Specifications
-          </h2>
-          {productData.length > 0 && (
-            <span style={{ background: 'var(--afl-info-50)', color: 'var(--afl-info-700)', border: '1px solid var(--afl-info-100)', borderRadius: '20px', padding: '2px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
-              {productData.length} product{productData.length !== 1 ? 's' : ''}
-            </span>
-          )}
-        </div>
-        <p style={{ margin: '0 0 14px', fontSize: '0.78rem', color: 'var(--afl-n-500)', lineHeight: 1.5 }}>
-          Structured product registration data extracted from the Structured Product Labeling (SPL) XML —
-          specifically the <code style={{ background: 'var(--afl-n-100)', padding: '1px 5px', borderRadius: '4px', fontSize: '0.74rem', fontFamily: 'ui-monospace, monospace' }}>48780-1</code> product data section.
-        </p>
-        <ProductSpecsTable productData={productData} />
-      </section>
-      <div style={{ borderTop: '1px solid var(--afl-n-100)' }} />
-      <section>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-          <div style={{ width: '4px', height: '20px', background: 'var(--afl-success-700)', borderRadius: '2px' }} />
-        </div>
-        <ClinicalQueryEngine setId={setId} />
-      </section>
+      <ClinicalQueryEngine setId={setId} />
     </div>
   );
 }
