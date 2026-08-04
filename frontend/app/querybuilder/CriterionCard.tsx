@@ -182,6 +182,14 @@ export function CriterionCard({
 
       case 'labelingSection': {
         const sections: string[] = v.sections || [];
+        const available = list.filter((o) => !sections.includes(o.value));
+        const groupedMap = new Map<string, typeof list>();
+        for (const opt of available) {
+          const g = opt.group || 'Other Sections';
+          if (!groupedMap.has(g)) groupedMap.set(g, []);
+          groupedMap.get(g)!.push(opt);
+        }
+
         return (
           <>
             <div className="fdl-row">
@@ -211,13 +219,16 @@ export function CriterionCard({
                 }}
               >
                 <option value="">{options.loading ? 'Loading…' : ''}</option>
-                {list
-                  .filter((o) => !sections.includes(o.value))
-                  .map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label || o.value}
-                    </option>
-                  ))}
+                {Array.from(groupedMap.entries()).map(([groupLabel, opts]) => (
+                  <optgroup key={groupLabel} label={groupLabel}>
+                    {opts.map((o) => (
+                      <option key={`${groupLabel}-${o.value}`} value={o.value}>
+                        {(o.label || o.value) +
+                          (o.count !== undefined ? ` (${o.count.toLocaleString()} labeling)` : '')}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
             </div>
             <Chips

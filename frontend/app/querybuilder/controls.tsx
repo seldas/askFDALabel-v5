@@ -16,6 +16,7 @@ export interface Option {
   value: string;
   label?: string;
   count?: number;
+  group?: string;
 }
 
 /** Removable chips for whatever the user has picked so far. */
