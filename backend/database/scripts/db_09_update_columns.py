@@ -235,22 +235,30 @@ def execute_batch_update(meta_batch):
                 ) ON COMMIT DROP;
             """)
 
-            rows_to_insert = [
-                (
-                    m['spl_id'],
+            # Deduplicate by spl_id to handle multiple XML/ZIP files containing the same SPL UUID
+            dedup_spl = {}
+            for m in meta_batch:
+                spl_id = m['spl_id']
+                dedup_spl[spl_id] = (
+                    spl_id,
                     m['doc_type'],
                     m['market_categories'],
                     m['appr_num'],
                     m['active_ingredients']
                 )
-                for m in meta_batch
-            ]
+
+            rows_to_insert = list(dedup_spl.values())
 
             execute_values(
                 cur,
                 """
                 INSERT INTO tmp_spl_update (spl_id, doc_type, market_categories, appr_num, active_ingredients)
-                VALUES %s;
+                VALUES %s
+                ON CONFLICT (spl_id) DO UPDATE SET
+                    doc_type = EXCLUDED.doc_type,
+                    market_categories = EXCLUDED.market_categories,
+                    appr_num = EXCLUDED.appr_num,
+                    active_ingredients = EXCLUDED.active_ingredients;
                 """,
                 rows_to_insert,
                 page_size=2000
@@ -270,16 +278,19 @@ def execute_batch_update(meta_batch):
             updated_sum_spl = cur.rowcount
 
             # 2. Upsert active ingredients map / UNII
-            ingr_rows = []
+            ingr_dedup = {}
             for m in meta_batch:
                 for item in m.get('ingr_map', []):
-                    ingr_rows.append((
+                    key = (item['spl_id'], item['substance_name'].upper())
+                    ingr_dedup[key] = (
                         item['spl_id'],
                         item['set_id'],
                         item['substance_name'],
                         item['unii'],
                         item['is_active']
-                    ))
+                    )
+
+            ingr_rows = list(ingr_dedup.values())
 
             if ingr_rows:
                 execute_values(
