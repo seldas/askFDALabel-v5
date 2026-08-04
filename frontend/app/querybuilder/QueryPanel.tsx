@@ -41,15 +41,17 @@ export function QueryPanel({
         <div key={group.uid}>
           {gi > 0 ? <div className="fdl-or">OR</div> : null}
           <div className="fdl-group">
-            <button
-              type="button"
-              className="fdl-group__x"
-              onClick={() => replaceGroup(gi, null)}
-              aria-label="Remove this group of criteria"
-              title="Remove this group"
-            >
-              ×
-            </button>
+            {gi > 0 && (
+              <button
+                type="button"
+                className="fdl-group__x"
+                onClick={() => replaceGroup(gi, null)}
+                aria-label="Remove this group of criteria"
+                title="Remove this group"
+              >
+                ×
+              </button>
+            )}
 
             {group.criteria.map((criterion, ci) => (
               <div key={criterion.uid} className="fdl-cardrow">
