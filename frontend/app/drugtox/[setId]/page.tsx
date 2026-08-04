@@ -30,7 +30,7 @@ import Header from "../../components/Header";
 import { useUser } from '../../context/UserContext';
 import { API_BASE, withDashboardBase, withAppBase } from '../../utils/appPaths';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -137,7 +137,9 @@ const tabs = [
 
 export default function DrugToxDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const setId = params.setId as string;
+  const agentParam = searchParams.get('agent') || searchParams.get('tox') || searchParams.get('type');
   const theme = useTheme();
   
   const [detail, setDetail] = useState<DrugDetail | null>(null);
@@ -148,12 +150,41 @@ export default function DrugToxDetailPage() {
   const [instructionsExpanded, setInstructionsExpanded] = useState(true);
 
   // Generative AI States
-  const [activeTox, setActiveTox] = useState<string | null>(null);
+  const [activeTox, setActiveTox] = useState<string | null>(agentParam ? agentParam.toLowerCase() : null);
   const [reportData, setReportData] = useState<Record<string, string | null>>({ dili: null, dict: null, diri: null, pgx: null });
   const [reportToxClass, setReportToxClass] = useState<Record<string, string | null>>({ dili: null, dict: null, diri: null, pgx: null });
   const [rawReportData, setRawReportData] = useState<Record<string, string | null>>({ dili: null, dict: null, diri: null, pgx: null });
   const [showRaw, setShowRaw] = useState<Record<string, boolean>>({ dili: false, dict: false, diri: false, pgx: false });
   const [reportLoading, setReportLoading] = useState<Record<string, boolean>>({ dili: false, dict: false, diri: false, pgx: false });
+
+  const generateReport = async (toxType: string) => {
+    setActiveTox(toxType);
+    if (reportData[toxType] || reportLoading[toxType]) return;
+
+    setReportLoading(prev => ({ ...prev, [toxType]: true }));
+    try {
+      const endpoint = toxType === 'pgx' ? 'pgx/assess' : `${toxType}/assess`;
+      const res = await axios.get(`${BACKEND_API_PREFIX}/dashboard/${endpoint}/${setId}`);
+      
+      let markdownContent = '';
+      if (toxType === 'pgx') {
+        markdownContent = res.data.biomarkers?.length > 0 
+          ? res.data.biomarkers.map((b: any) => `**${b.biomarker}**: ${b.summary}`).join('\n\n')
+          : "No PGx biomarkers found.";
+      } else {
+        markdownContent = res.data.assessment_report || "No significant toxicity signals found in the label.";
+      }
+      
+      setReportData(prev => ({ ...prev, [toxType]: markdownContent }));
+      setReportToxClass(prev => ({ ...prev, [toxType]: res.data.toxicity_class || null }));
+      setRawReportData(prev => ({ ...prev, [toxType]: res.data.raw_response || null }));
+    } catch (err) {
+      console.error(`Error generating ${toxType} report:`, err);
+      setReportData(prev => ({ ...prev, [toxType]: "Failed to generate report." }));
+    } finally {
+      setReportLoading(prev => ({ ...prev, [toxType]: false }));
+    }
+  };
 
   useEffect(() => {
     if (!setId) return;
@@ -201,34 +232,15 @@ export default function DrugToxDetailPage() {
       });
   }, [setId]);
 
-  const generateReport = async (toxType: string) => {
-    setActiveTox(toxType);
-    if (reportData[toxType] || reportLoading[toxType]) return;
-
-    setReportLoading(prev => ({ ...prev, [toxType]: true }));
-    try {
-      const endpoint = toxType === 'pgx' ? 'pgx/assess' : `${toxType}/assess`;
-      const res = await axios.get(`${BACKEND_API_PREFIX}/dashboard/${endpoint}/${setId}`);
-      
-      let markdownContent = '';
-      if (toxType === 'pgx') {
-        markdownContent = res.data.biomarkers?.length > 0 
-          ? res.data.biomarkers.map((b: any) => `**${b.biomarker}**: ${b.summary}`).join('\\n\\n')
-          : "No PGx biomarkers found.";
-      } else {
-        markdownContent = res.data.assessment_report || "No significant toxicity signals found in the label.";
+  useEffect(() => {
+    if (agentParam && setId) {
+      const normalized = agentParam.toLowerCase();
+      if (['dili', 'dict', 'diri', 'pgx'].includes(normalized)) {
+        setActiveTox(normalized);
+        generateReport(normalized);
       }
-      
-      setReportData(prev => ({ ...prev, [toxType]: markdownContent }));
-      setReportToxClass(prev => ({ ...prev, [toxType]: res.data.toxicity_class || null }));
-      setRawReportData(prev => ({ ...prev, [toxType]: res.data.raw_response || null }));
-    } catch (err) {
-      console.error(`Error generating ${toxType} report:`, err);
-      setReportData(prev => ({ ...prev, [toxType]: "Failed to generate report." }));
-    } finally {
-      setReportLoading(prev => ({ ...prev, [toxType]: false }));
     }
-  };
+  }, [agentParam, setId]);
 
   const getToxColor = (toxClass: string) => {
     if (!toxClass) return 'default';
