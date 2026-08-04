@@ -13,16 +13,16 @@ const backendHost = process.env.HOST || 'localhost';
 const backendPort = process.env.BACKEND_PORT || 8842;
 const BACKEND = process.env.BACKEND_URL ?? `http://${backendHost}:${backendPort}`;
 
-// App Base Path (e.g. /askfdalabel)
+// App Base Path (e.g. /fdalabel-v3)
 const appBase = process.env.NEXT_PUBLIC_APP_BASE?.trim() || 
                 process.env.NEXT_PUBLIC_DASHBOARD_BASE?.trim() || 
-                '/askfdalabel';
+                '/fdalabel-v3';
 const normalizedAppBase = appBase === '/' ? '' : appBase.replace(/\/$/, '');
 const basePath = normalizedAppBase === '' ? undefined : normalizedAppBase;
 const assetPath = normalizedAppBase === '' ? undefined : normalizedAppBase;
 
-// API Base Path (e.g. /askfdalabel_api)
-const apiBase = process.env.NEXT_PUBLIC_API_BASE?.trim() || '/askfdalabel_api';
+// API Base Path (e.g. /fdalabel-v3_api)
+const apiBase = process.env.NEXT_PUBLIC_API_BASE?.trim() || '/fdalabel-v3_api';
 const normalizedApiBase = apiBase === '/' ? '' : apiBase.replace(/\/$/, '');
 
 const nextConfig: NextConfig = {

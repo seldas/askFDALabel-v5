@@ -1,6 +1,6 @@
 @echo off
 echo ===================================================
-echo askFDALabel: Loading Docker Images (Windows)
+echo fdalabel-v3: Loading Docker Images (Windows)
 echo ===================================================
 echo.
 
@@ -47,7 +47,7 @@ echo [INFO] No specific target requested. Checking for all available image archi
 set LOADED_ANY=0
 
 for %%i in (backend frontend nginx db redis) do (
-    if exist "deploy\askfdalabel-%%i.tar.gz" (
+    if exist "deploy\fdalabel-v3-%%i.tar.gz" (
         set LOADED_ANY=1
         call :LOAD_IMAGE %%i
     )
@@ -60,8 +60,8 @@ goto FINISH
 
 :LOAD_IMAGE
 set IMG=%1
-set ARCHIVE_GZ=deploy\askfdalabel-%IMG%.tar.gz
-set ARCHIVE_TAR=deploy\askfdalabel-%IMG%.tar
+set ARCHIVE_GZ=deploy\fdalabel-v3-%IMG%.tar.gz
+set ARCHIVE_TAR=deploy\fdalabel-v3-%IMG%.tar
 
 echo [INFO] Loading '%IMG%' image from %ARCHIVE_GZ%...
 if exist "C:\Program Files\Git\usr\bin\tar.exe" (

@@ -1,6 +1,6 @@
 @echo off
 echo ===================================================
-echo askFDALabel: Packaging Docker Images (Windows)
+echo fdalabel-v3: Packaging Docker Images (Windows)
 echo ===================================================
 echo.
 
@@ -22,8 +22,8 @@ if %ERRORLEVEL% neq 0 (
 
 echo.
 echo Tagging images for production...
-docker tag ankane/pgvector:latest askfdalabel-db:latest
-docker tag redis:alpine askfdalabel-redis:latest
+docker tag ankane/pgvector:latest fdalabel-v3-db:latest
+docker tag redis:alpine fdalabel-v3-redis:latest
 
 echo.
 echo 2. Generating production docker-compose.yml configuration...
@@ -44,18 +44,18 @@ if %ERRORLEVEL% neq 0 (
 echo.
 echo 4. Saving all Docker images to separate archives...
 echo This may take several minutes...
-docker save askfdalabel-backend:latest -o deploy\askfdalabel-backend.tar
-docker save askfdalabel-frontend:latest -o deploy\askfdalabel-frontend.tar
-docker save askfdalabel-nginx:latest -o deploy\askfdalabel-nginx.tar
-docker save askfdalabel-db:latest -o deploy\askfdalabel-db.tar
-docker save askfdalabel-redis:latest -o deploy\askfdalabel-redis.tar
+docker save fdalabel-v3-backend:latest -o deploy\fdalabel-v3-backend.tar
+docker save fdalabel-v3-frontend:latest -o deploy\fdalabel-v3-frontend.tar
+docker save fdalabel-v3-nginx:latest -o deploy\fdalabel-v3-nginx.tar
+docker save fdalabel-v3-db:latest -o deploy\fdalabel-v3-db.tar
+docker save fdalabel-v3-redis:latest -o deploy\fdalabel-v3-redis.tar
 
 echo.
 echo 5. Compressing archives using native Windows tar...
 for %%i in (backend frontend nginx db redis) do (
-    if exist "deploy\askfdalabel-%%i.tar" (
-        tar -czf deploy\askfdalabel-%%i.tar.gz -C deploy askfdalabel-%%i.tar
-        del deploy\askfdalabel-%%i.tar
+    if exist "deploy\fdalabel-v3-%%i.tar" (
+        tar -czf deploy\fdalabel-v3-%%i.tar.gz -C deploy fdalabel-v3-%%i.tar
+        del deploy\fdalabel-v3-%%i.tar
     )
 )
 
@@ -63,7 +63,7 @@ echo.
 echo ===================================================
 echo Packaging successful!
 echo Transfer the following files to the target no-outbound environment:
-echo - deploy\askfdalabel-*.tar.gz
+echo - deploy\fdalabel-v3-*.tar.gz
 echo - .env
 echo - start_server.py
 echo - deploy\load_images.bat

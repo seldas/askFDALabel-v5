@@ -19,8 +19,8 @@ const appendBase = (path: string, base: string) => {
   return `${base}${normalizedPath}`;
 };
 
-export const APP_BASE = normalizeBasePath(process.env.NEXT_PUBLIC_APP_BASE, "/askfdalabel");
-export const API_BASE = normalizeBasePath(process.env.NEXT_PUBLIC_API_BASE, "/askfdalabel_api");
+export const APP_BASE = normalizeBasePath(process.env.NEXT_PUBLIC_APP_BASE, "/fdalabel-v3");
+export const API_BASE = normalizeBasePath(process.env.NEXT_PUBLIC_API_BASE, "/fdalabel-v3_api");
 export const DASHBOARD_BASE = normalizeBasePath(
   process.env.NEXT_PUBLIC_DASHBOARD_BASE ?? APP_BASE,
   APP_BASE,

@@ -37,7 +37,7 @@ def favicon():
 @main_bp.route('/')
 def index():
     """ Redirects to the Next.js dashboard. """
-    base = current_app.config.get('FRONTEND_BASE_PATH', '/askfdalabel')
+    base = current_app.config.get('FRONTEND_BASE_PATH', '/fdalabel-v3')
     return redirect(f"{base}/dashboard")
 
 @main_bp.route('/upload_label', methods=['POST'])

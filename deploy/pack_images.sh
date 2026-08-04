@@ -2,7 +2,7 @@
 set -e
 
 echo "==================================================="
-echo "askFDALabel: Packaging Docker Images (Linux/Unix)"
+echo "fdalabel-v3: Packaging Docker Images (Linux/Unix)"
 echo "==================================================="
 echo
 
@@ -15,8 +15,8 @@ docker pull ankane/pgvector:latest
 docker pull redis:alpine
 
 echo "Tagging images for production..."
-docker tag ankane/pgvector:latest askfdalabel-db:latest
-docker tag redis:alpine askfdalabel-redis:latest
+docker tag ankane/pgvector:latest fdalabel-v3-db:latest
+docker tag redis:alpine fdalabel-v3-redis:latest
 
 echo
 echo "2. Generating production docker-compose.yml configuration..."
@@ -28,11 +28,11 @@ docker compose build
 
 echo
 echo "4. Saving and compressing Docker images to separate archives..."
-docker save askfdalabel-backend:latest | gzip > deploy/askfdalabel-backend.tar.gz
-docker save askfdalabel-frontend:latest | gzip > deploy/askfdalabel-frontend.tar.gz
-docker save askfdalabel-nginx:latest | gzip > deploy/askfdalabel-nginx.tar.gz
-docker save askfdalabel-db:latest | gzip > deploy/askfdalabel-db.tar.gz
-docker save askfdalabel-redis:latest | gzip > deploy/askfdalabel-redis.tar.gz
+docker save fdalabel-v3-backend:latest | gzip > deploy/fdalabel-v3-backend.tar.gz
+docker save fdalabel-v3-frontend:latest | gzip > deploy/fdalabel-v3-frontend.tar.gz
+docker save fdalabel-v3-nginx:latest | gzip > deploy/fdalabel-v3-nginx.tar.gz
+docker save fdalabel-v3-db:latest | gzip > deploy/fdalabel-v3-db.tar.gz
+docker save fdalabel-v3-redis:latest | gzip > deploy/fdalabel-v3-redis.tar.gz
 
 echo
 print_success() {
@@ -40,7 +40,7 @@ print_success() {
   echo "Packaging successful!"
   echo "Transfer the following files/folders"
   echo "to the target no-outbound environment:"
-  echo "- deploy/askfdalabel-*.tar.gz"
+  echo "- deploy/fdalabel-v3-*.tar.gz"
   echo "- .env"
   echo "- start_server.py"
   echo "- deploy/load_images.sh"

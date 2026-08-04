@@ -123,4 +123,4 @@ class Config:
     FDALABEL_PSW = FDALabel_PSW
 
     # Frontend base path for redirects
-    FRONTEND_BASE_PATH = os.getenv('FRONTEND_BASE_PATH', '/askfdalabel').rstrip('/')
+    FRONTEND_BASE_PATH = os.getenv('FRONTEND_BASE_PATH', '/fdalabel-v3').rstrip('/')

@@ -93,7 +93,7 @@ def sync_schema():
                 pg_pass = pg_pass or 'afd_password'
                 pg_host = pg_host or 'db'
                 pg_port = pg_port or '5432'
-                pg_db = pg_db or 'askfdalabel'
+                pg_db = pg_db or 'fdalabel-v3'
                 env_url = f"postgresql://{pg_user}:{pg_pass}@{pg_host}:{pg_port}/{pg_db}"
         
         default_prompt = f" [default: {env_url}]" if env_url else ""

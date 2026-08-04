@@ -75,7 +75,7 @@ def dict_to_yaml(data, indent=0):
                     lines.append(f"{spacer}- {item_str}")
     return "\n".join(lines)
 
-def generate_compose_dict(mode, efficient, local_db, rapid=False):
+def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=False):
     """Builds the dictionary representation of docker-compose based on options."""
     services = {}
 
@@ -102,7 +102,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False):
             "shm_size": "256mb" if efficient else "1gb",
             "volumes": ["./database/pgdata:/var/lib/postgresql/data"],
             "environment": {
-                "POSTGRES_DB": "${PG_DATABASE:-askfdalabel}",
+                "POSTGRES_DB": "${PG_DATABASE:-fdalabel-v3}",
                 "POSTGRES_USER": "${PG_USERNAME:-afd_user}",
                 "POSTGRES_PASSWORD": "${PG_PASSWORD:-afd_password}"
             },
@@ -133,7 +133,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False):
     # 3. Backend Service
     backend_env = {
         "FLASK_ENV": "development" if mode == "dev" else "production",
-        "DATABASE_URL": "postgresql://${PG_USERNAME:-afd_user}:${PG_PASSWORD:-afd_password}@${PG_HOST:-db}:${PG_PORT:-5432}/${PG_DATABASE:-askfdalabel}",
+        "DATABASE_URL": "postgresql://${PG_USERNAME:-afd_user}:${PG_PASSWORD:-afd_password}@${PG_HOST:-db}:${PG_PORT:-5432}/${PG_DATABASE:-fdalabel-v3}",
         "BACKEND_PORT": 8842,
         "HOST": "0.0.0.0",
         "CELERY_BROKER_URL": "redis://redis:6379/0",
@@ -215,7 +215,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False):
         "env_file": ["./.env"],
         "environment": {
             "FLASK_ENV": "production",
-            "DATABASE_URL": "postgresql://${PG_USERNAME:-afd_user}:${PG_PASSWORD:-afd_password}@${PG_HOST:-db}:${PG_PORT:-5432}/${PG_DATABASE:-askfdalabel}",
+            "DATABASE_URL": "postgresql://${PG_USERNAME:-afd_user}:${PG_PASSWORD:-afd_password}@${PG_HOST:-db}:${PG_PORT:-5432}/${PG_DATABASE:-fdalabel-v3}",
             "CELERY_BROKER_URL": "redis://redis:6379/0",
             "CELERY_RESULT_BACKEND": "redis://redis:6379/0"
         },
@@ -230,7 +230,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False):
         "BACKEND_PORT": 8842,
         "HOST": "0.0.0.0",
         "FRONTEND_PORT": 8841,
-        "FRONTEND_BASE_PATH": "/askfdalabel"
+        "FRONTEND_BASE_PATH": "/fdalabel-v3"
     }
     if mode == "dev":
         frontend_env["NODE_ENV"] = "development"
@@ -254,7 +254,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False):
         "environment": frontend_env,
         "volumes": frontend_volumes,
         "healthcheck": {
-            "test": ["CMD-SHELL", "curl -f http://localhost:8841/askfdalabel/ || exit 1"],
+            "test": ["CMD-SHELL", "curl -f http://localhost:8841/fdalabel-v3/ || exit 1"],
             "interval": "30s",
             "timeout": "10s",
             "retries": 5,
@@ -284,8 +284,8 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False):
 
     services["frontend"] = frontend_service
 
-    # 6. Nginx Service (Production/Efficient Only)
-    if mode == "prod" and not rapid:
+    # 6. Nginx Service
+    if include_nginx:
         nginx_service = {
             "image": "fdalabel-v3-nginx:latest",
             "build": {
@@ -296,7 +296,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False):
             "depends_on": ["frontend", "backend"],
             "ports": ["80:80", "443:443"],
             "healthcheck": {
-                "test": ["CMD-SHELL", "curl -f http://localhost/askfdalabel/ || exit 1"],
+                "test": ["CMD-SHELL", "curl -f http://localhost/fdalabel-v3/ || exit 1"],
                 "interval": "30s",
                 "timeout": "5s",
                 "retries": 5,
@@ -354,7 +354,7 @@ def check_and_prepare_image(image_name, base_image):
     return False
 
 def main():
-    parser = argparse.ArgumentParser(description="askFDALabel Stack Orchestrator & Config Generator")
+    parser = argparse.ArgumentParser(description="fdalabel-v3 Stack Orchestrator & Config Generator")
     parser.add_argument("--mode", choices=["dev", "prod"], default="dev",
                         help="Deployment mode: 'dev' for local hot-reloaded development, 'prod' for production (default: 'dev')")
     parser.add_argument("--efficient", action="store_true",
@@ -369,6 +369,8 @@ def main():
                         help="Generate docker-compose.yml but do not execute any docker compose commands")
     parser.add_argument("--rapid", action="store_true",
                         help="Start in rapid mode: no NGINX, no build, uses remote database by default")
+    parser.add_argument("--nginx", action="store_true",
+                        help="Force include and start Nginx service (under deploy/nginx) in the stack")
 
     args = parser.parse_args()
 
@@ -391,14 +393,17 @@ def main():
         else:
             local_db_active = True # Default fallback
 
+    include_nginx = args.nginx or (args.mode == "prod" and not args.rapid)
+
     print(f"Generating Docker Compose configuration...")
     print(f"  Mode:       {args.mode.upper()}")
     print(f"  Rapid:      {args.rapid}")
     print(f"  Efficient:  {args.efficient}")
     print(f"  Local DB:   {local_db_active}")
+    print(f"  Nginx:      {include_nginx}")
 
     # Generate dictionary structure
-    compose_dict = generate_compose_dict(args.mode, args.efficient, local_db_active, args.rapid)
+    compose_dict = generate_compose_dict(args.mode, args.efficient, local_db_active, args.rapid, include_nginx)
     
     # Convert to YAML format
     yaml_content = "# Generated dynamically by start_server.py. Do not edit directly.\n"

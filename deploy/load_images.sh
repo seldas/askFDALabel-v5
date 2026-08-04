@@ -2,7 +2,7 @@
 set -e
 
 echo "==================================================="
-echo "askFDALabel: Loading Docker Images (Linux/Unix)"
+echo "fdalabel-v3: Loading Docker Images (Linux/Unix)"
 echo "==================================================="
 echo
 
@@ -38,7 +38,7 @@ if [ -n "$SPECIFIED_TARGET" ]; then
 else
     # Default: Load all images whose archives are present
     for img in "${ALL_IMAGES[@]}"; do
-        ARCHIVE_GZ="deploy/askfdalabel-$img.tar.gz"
+        ARCHIVE_GZ="deploy/fdalabel-v3-$img.tar.gz"
         if [ -f "$ARCHIVE_GZ" ]; then
             IMAGES_TO_LOAD+=("$img")
         fi
@@ -54,7 +54,7 @@ echo "[INFO] Target images to load: ${IMAGES_TO_LOAD[*]}"
 echo
 
 for img in "${IMAGES_TO_LOAD[@]}"; do
-    ARCHIVE_GZ="deploy/askfdalabel-$img.tar.gz"
+    ARCHIVE_GZ="deploy/fdalabel-v3-$img.tar.gz"
     if [ -f "$ARCHIVE_GZ" ]; then
         echo "[INFO] Loading '$img' image from $ARCHIVE_GZ..."
         gunzip -c "$ARCHIVE_GZ" | docker load
