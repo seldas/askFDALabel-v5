@@ -138,16 +138,21 @@ function ExportSectionItem({
 
 function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
   const brandName = data?.brand_name || data?.drug_name || 'this product';
+  const [favoriteToolIds, setFavoriteToolIds] = useState<string[]>([]);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-  const [favoriteToolIds, setFavoriteToolIds] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return ['label-faers', 'label-tox'];
+  useEffect(() => {
     try {
-      const saved = localStorage.getItem('askfdalabel_favorite_tools');
-      return saved ? JSON.parse(saved) : ['label-faers', 'label-tox'];
-    } catch {
-      return ['label-faers', 'label-tox'];
+      const stored = localStorage.getItem('askfdalabel_favorite_tools');
+      if (stored) {
+        setFavoriteToolIds(JSON.parse(stored));
+      } else {
+        setFavoriteToolIds(['label-faers', 'label-tox']);
+      }
+    } catch (e) {
+      console.error('Failed to load favorite tools:', e);
     }
-  });
+  }, []);
 
   const toggleFavoriteTool = (toolId: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -156,7 +161,9 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
       const next = prev.includes(toolId) ? prev.filter((id) => id !== toolId) : [...prev, toolId];
       try {
         localStorage.setItem('askfdalabel_favorite_tools', JSON.stringify(next));
-      } catch {}
+      } catch (err) {
+        console.error('Failed to save favorite tools:', err);
+      }
       return next;
     });
   };
@@ -306,12 +313,17 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
         {sortedTools.map((t) => {
           const isFav = favoriteToolIds.includes(t.id);
+          const isHovered = hoveredId === t.id;
+          const isFeatured = isFav || isHovered;
+
           return (
             <a
               key={t.id}
               href={t.href}
               target="_blank"
               rel="noopener noreferrer"
+              onMouseEnter={() => setHoveredId(t.id)}
+              onMouseLeave={() => setHoveredId(null)}
               className="toolbox-card"
               style={{
                 display: 'flex',
@@ -319,14 +331,24 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
                 justifyContent: 'space-between',
                 padding: '22px',
                 borderRadius: '16px',
-                background: t.cardBg,
-                backgroundSize: t.bgSize,
-                border: isFav ? `2.5px solid ${t.accentColor}` : `1.5px solid ${t.cardBorder}`,
-                boxShadow: isFav ? `0 6px 20px ${t.accentColor}35` : t.cardShadow,
-                backdropFilter: 'blur(8px)',
+                background: isFeatured ? t.cardBg : '#f8fafc',
+                backgroundSize: isFeatured ? t.bgSize : 'auto',
+                border: isFav 
+                  ? `2.5px solid ${t.accentColor}` 
+                  : isHovered 
+                    ? `1.5px solid ${t.cardBorder}` 
+                    : '1.5px solid #e2e8f0',
+                boxShadow: isFav 
+                  ? `0 6px 20px ${t.accentColor}35` 
+                  : isHovered 
+                    ? t.cardShadow 
+                    : 'none',
+                opacity: isFeatured ? 1 : 0.55,
+                filter: isFeatured ? 'none' : 'grayscale(85%)',
+                backdropFilter: isFeatured ? 'blur(8px)' : 'none',
                 textDecoration: 'none',
                 position: 'relative',
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
               <div>
