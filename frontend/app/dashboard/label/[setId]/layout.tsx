@@ -99,17 +99,21 @@ export default function LabelLayout({
   const isStale = data?.openfda_status === 'Archived' || data?.is_latest === false;
   const [companyModalOpen, setCompanyModalOpen] = useState(false);
 
+  const isExaminePage = activeToolId === 'label-examine';
+
   return (
     <div className="afl-label-shell">
       <Header activeApp="dashboard" />
 
       <div className="afl-label-shell__scroll">
         <div className="afl-label-shell__inner">
-          <nav className="afl-label-crumbs">
-            <Link href="/dashboard">Dashboard</Link>
-            <span aria-hidden="true">›</span>
-            <span className="afl-label-crumbs__current">{title}</span>
-          </nav>
+          {!isExaminePage && (
+            <nav className="afl-label-crumbs">
+              <Link href="/dashboard">Dashboard</Link>
+              <span aria-hidden="true">›</span>
+              <span className="afl-label-crumbs__current">{title}</span>
+            </nav>
+          )}
 
           {error ? (
             <div className="afl-label-alert" role="alert">
@@ -222,9 +226,11 @@ export default function LabelLayout({
             </div>
           )}
 
-          <div className="afl-label-tools">
-            <LabelToolStrip setId={setId} activeToolId={activeToolId} />
-          </div>
+          {!isExaminePage && (
+            <div className="afl-label-tools">
+              <LabelToolStrip setId={setId} activeToolId={activeToolId} />
+            </div>
+          )}
 
           <div className="afl-label-content">
             <LabelContextProvider value={ctx}>{children}</LabelContextProvider>
