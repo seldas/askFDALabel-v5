@@ -183,9 +183,6 @@ export default function HomePage() {
             Local DB
           </button>
         </div>
-        {!oracleAvailable && capReady && (
-          <span className="fdl-db-note">(Local only)</span>
-        )}
       </div>
 
       <button type="button" className="fdl-btn fdl-btn--search" onClick={runSearch}>
