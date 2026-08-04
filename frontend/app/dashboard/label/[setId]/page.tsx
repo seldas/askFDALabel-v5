@@ -168,6 +168,10 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
       blurb: 'Adverse event reports and MedDRA term profile for this product.',
       iconId: 'pulse',
       href: labelRoute(setId, 'faers'),
+      badgeBg: 'linear-gradient(135deg, rgba(2, 132, 199, 0.12) 0%, rgba(56, 189, 248, 0.22) 100%)',
+      badgeColor: '#0284c7',
+      badgeBorder: '1px solid rgba(2, 132, 199, 0.25)',
+      accentColor: '#0284c7',
     },
     {
       id: 'label-tox-dili',
@@ -175,6 +179,10 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
       blurb: 'Drug-Induced Liver Injury risk assessment & signal detection.',
       iconId: 'flask',
       href: withAppBase(`/drugtox/${setId}?agent=dili`),
+      badgeBg: 'linear-gradient(135deg, rgba(8, 145, 178, 0.14) 0%, rgba(6, 182, 212, 0.24) 100%)',
+      badgeColor: '#0891b2',
+      badgeBorder: '1px solid rgba(8, 145, 178, 0.28)',
+      accentColor: '#0891b2',
     },
     {
       id: 'label-tox-dict',
@@ -182,6 +190,10 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
       blurb: 'Drug-Induced Cardiotoxicity risk assessment & signal detection.',
       iconId: 'flask',
       href: withAppBase(`/drugtox/${setId}?agent=dict`),
+      badgeBg: 'linear-gradient(135deg, rgba(225, 29, 72, 0.14) 0%, rgba(244, 63, 94, 0.24) 100%)',
+      badgeColor: '#e11d48',
+      badgeBorder: '1px solid rgba(225, 29, 72, 0.28)',
+      accentColor: '#e11d48',
     },
     {
       id: 'label-tox-diri',
@@ -189,6 +201,10 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
       blurb: 'Drug-Induced Renal Injury risk assessment & signal detection.',
       iconId: 'flask',
       href: withAppBase(`/drugtox/${setId}?agent=diri`),
+      badgeBg: 'linear-gradient(135deg, rgba(217, 119, 6, 0.14) 0%, rgba(245, 158, 11, 0.24) 100%)',
+      badgeColor: '#d97706',
+      badgeBorder: '1px solid rgba(217, 119, 6, 0.28)',
+      accentColor: '#d97706',
     },
     {
       id: 'label-tox-pgx',
@@ -196,6 +212,10 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
       blurb: 'Pharmacogenomic biomarker associations & genetic variant guidance.',
       iconId: 'flask',
       href: withAppBase(`/drugtox/${setId}?agent=pgx`),
+      badgeBg: 'linear-gradient(135deg, rgba(124, 58, 237, 0.14) 0%, rgba(168, 85, 247, 0.24) 100%)',
+      badgeColor: '#7c3aed',
+      badgeBorder: '1px solid rgba(124, 58, 237, 0.28)',
+      accentColor: '#7c3aed',
     },
     {
       id: 'label-examine',
@@ -203,6 +223,10 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
       blurb: 'Run clinical prompt templates against this label.',
       iconId: 'microscope',
       href: labelRoute(setId, 'examine'),
+      badgeBg: 'linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(52, 211, 153, 0.24) 100%)',
+      badgeColor: '#059669',
+      badgeBorder: '1px solid rgba(16, 185, 129, 0.28)',
+      accentColor: '#059669',
     },
     {
       id: 'label-deepdive',
@@ -210,6 +234,10 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
       blurb: 'Compare this label against its pharmacologic class peers.',
       iconId: 'compare',
       href: labelRoute(setId, 'deepdive'),
+      badgeBg: 'linear-gradient(135deg, rgba(79, 70, 229, 0.14) 0%, rgba(129, 140, 248, 0.24) 100%)',
+      badgeColor: '#4f46e5',
+      badgeBorder: '1px solid rgba(79, 70, 229, 0.28)',
+      accentColor: '#4f46e5',
     },
     {
       id: 'labelcomp',
@@ -217,6 +245,10 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
       blurb: 'Side-by-side section diff of up to four labels.',
       iconId: 'compare',
       href: withAppBase(`/labelcomp?set_ids=${setId}`),
+      badgeBg: 'linear-gradient(135deg, rgba(217, 70, 239, 0.14) 0%, rgba(240, 171, 252, 0.24) 100%)',
+      badgeColor: '#c026d3',
+      badgeBorder: '1px solid rgba(217, 70, 239, 0.28)',
+      accentColor: '#c026d3',
     },
   ];
 
@@ -252,22 +284,34 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
               style={{
                 display: 'flex',
                 flexDirection: 'column',
-                justify: 'space-between',
+                justifyContent: 'space-between',
                 padding: '20px',
-                borderRadius: '14px',
+                borderRadius: '16px',
                 background: '#ffffff',
-                border: isFav ? '2px solid #3b82f6' : '1px solid #e2e8f0',
-                boxShadow: isFav ? '0 4px 14px rgba(59, 130, 246, 0.12)' : '0 2px 8px rgba(0,0,0,0.04)',
+                border: isFav ? `2px solid ${t.accentColor}` : '1px solid #e2e8f0',
+                boxShadow: isFav ? `0 4px 16px ${t.accentColor}25` : '0 2px 8px rgba(0,0,0,0.04)',
                 textDecoration: 'none',
                 position: 'relative',
-                transition: 'all 0.2s ease',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', borderRadius: '10px', background: isFav ? '#eff6ff' : '#f8fafc', color: isFav ? '#2563eb' : '#0284c7' }}>
-                      <ToolIcon id={t.iconId as any} size={20} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      width: '42px', 
+                      height: '42px', 
+                      borderRadius: '12px', 
+                      background: t.badgeBg, 
+                      color: t.badgeColor,
+                      border: t.badgeBorder,
+                      boxShadow: `0 2px 8px ${t.badgeColor}20`,
+                      backdropFilter: 'blur(4px)'
+                    }}>
+                      <ToolIcon id={t.iconId as any} size={22} />
                     </span>
                     <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#0f172a' }}>
                       {t.name}
@@ -291,11 +335,11 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
                     {isFav ? '★' : '☆'}
                   </button>
                 </div>
-                <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 16px 0', lineHeight: 1.45 }}>
+                <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 16px 0', lineHeight: 1.5 }}>
                   {t.blurb}
                 </p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 700, color: '#2563eb' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 800, color: t.accentColor }}>
                 Open Tool <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
               </div>
             </a>
