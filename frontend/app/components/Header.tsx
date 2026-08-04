@@ -213,82 +213,6 @@ export default function Header({
             AskFDALabel
           </a>
         </h1>
-
-        <div className="custom-dropdown" onClick={(e) => e.stopPropagation()}>
-          <button 
-            className={cx('header-updates-btn', activeDropdown === 'updates' && 'active')}
-            onClick={() => setActiveDropdown(activeDropdown === 'updates' ? null : 'updates')}
-            aria-label="About"
-            title="About AskFDALabel"
-            style={{
-              marginLeft: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '6px',
-              borderRadius: '8px',
-              color: 'rgba(255, 255, 255, 0.7)',
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="16" x2="12" y2="12"></line>
-              <line x1="12" y1="8" x2="12.01" y2="8"></line>
-            </svg>
-          </button>
-
-          {activeDropdown === 'updates' && (
-            <div className="dropdown-menu" style={{ 
-              width: '320px', 
-              left: 0, 
-              right: 'auto',
-              padding: '1.5rem',
-              backgroundColor: '#ffffff',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-              border: '1px solid #e2e8f0',
-              borderRadius: '16px',
-              textAlign: 'center'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
-                <img src={withAppBase("/askfdalabel_icon.svg")} alt="Logo" style={{ height: '48px' }} />
-              </div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b', marginBottom: '12px' }}>
-                AskFDALabel Suite
-              </div>
-              <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.6, marginBottom: '16px' }}>
-                A next-generation AI-powered platform for scientific drug label intelligence. Features comprehensive integration with MedDRA classification and a vast repository of human drug labels.
-              </div>
-              <div style={{ marginBottom: '16px' }}>
-                <a 
-                  href="https://github.com/seldas/askFDALabel-Suite" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '0.85rem',
-                    color: '#3b82f6',
-                    textDecoration: 'none',
-                    fontWeight: 600
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-                  </svg>
-                  View on GitHub
-                </a>
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
-                &copy; {new Date().getFullYear()} FDA/NCTR
-              </div>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Mobile Toggle Button */}
@@ -314,119 +238,113 @@ export default function Header({
         )}
       </button>
 
-      {/* Right: User & Resources Controls */}
+      {/* Right Controls: 1. Resources, 2. User Panel, 3. About */}
       <div className={cx('header-controls', mobileMenuOpen && 'open')}>
 
-        {/* Resources Dropdown moved to right side */}
+        {/* 1. Resources Dropdown */}
         <div
-          className="hp-nav-dropdown"
-          onMouseEnter={() => setActiveDropdown('nav')}
-          onMouseLeave={() => setActiveDropdown(null)}
-          style={{ position: 'relative' }}
+          className="custom-dropdown"
+          onClick={(e) => e.stopPropagation()}
         >
           <button
-            className={cx('hp-nav-item', (resolvedActiveApp === 'fdalabel' || resolvedActiveApp === 'device' || resolvedActiveApp === 'localquery' || resolvedActiveApp === 'drugtox') && 'is-active')}
-            aria-current={(resolvedActiveApp === 'fdalabel' || resolvedActiveApp === 'device' || resolvedActiveApp === 'localquery' || resolvedActiveApp === 'drugtox') ? 'page' : undefined}
-            onClick={(e) => e.preventDefault()}
-            style={{ fontWeight: 700 }}
+            className={cx('dropdown-trigger header-chip', activeDropdown === 'nav' && 'active')}
+            onClick={() => setActiveDropdown(activeDropdown === 'nav' ? null : 'nav')}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            Resources <span className="dropdown-caret">▼</span>
+            <span style={{ fontWeight: 800 }}>Resources</span>
+            <span className="caret">▼</span>
           </button>
 
-          <div className={cx('hp-dropdown-content', activeDropdown === 'nav' && 'visible')} style={{ minWidth: '250px', right: 0, left: 'auto' }}>
-            <div className="dropdown-section-label" style={{ padding: '8px 12px 4px', fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>
-              FDALabel
+          {activeDropdown === 'nav' && (
+            <div className="dropdown-menu" style={{ minWidth: '250px', right: 0, left: 'auto' }}>
+              <div className="dropdown-section-label" style={{ padding: '8px 12px 4px', fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>
+                FDALabel
+              </div>
+
+              {(() => {
+                const localquery = getTool('localquery')!;
+                return isToolAvailable(localquery, GLOBAL_CTX, capabilities) ? (
+                  <Link
+                    href={localquery.href(GLOBAL_CTX)}
+                    className={cx('hp-dropdown-item', resolvedActiveApp === 'localquery' && 'is-active')}
+                    onClick={handleNavClick}
+                  >
+                    <span className="hp-dropdown-icon">
+                      <ToolIcon id={localquery.iconId} size={18} />
+                    </span>
+                    <div>
+                      <div className="dropdown-title" style={{ fontWeight: 800 }}>{localquery.name}</div>
+                      <div style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 500 }}>{localquery.blurb}</div>
+                    </div>
+                  </Link>
+                ) : null;
+              })()}
+
+              {(['fdalabel-fda', 'fdalabel-cder', 'fdalabel-public'] as const).map((toolId) => {
+                const tool = getTool(toolId)!;
+                if (!isToolAvailable(tool, GLOBAL_CTX, capabilities)) return null;
+                return (
+                  <a
+                    key={toolId}
+                    href={tool.href(GLOBAL_CTX)}
+                    target={tool.target ?? '_blank'}
+                    rel="noopener noreferrer"
+                    className="hp-dropdown-item"
+                    onClick={handleNavClick}
+                  >
+                    <span className="hp-dropdown-icon">
+                      <ToolIcon id={tool.iconId} size={18} />
+                    </span>
+                    <div>
+                      <div className="dropdown-title">{tool.name.replace('FDALabel (', '').replace(')', '')} version</div>
+                    </div>
+                  </a>
+                );
+              })}
+
+              <div className="dropdown-section-label" style={{ padding: '8px 12px 4px', fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>
+                Others
+              </div>
+
+              {(() => {
+                const drugtox = getTool('drugtox');
+                if (!drugtox || !isToolAvailable(drugtox, GLOBAL_CTX, capabilities)) return null;
+                return (
+                  <a
+                    href={drugtox.href(GLOBAL_CTX)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cx('hp-dropdown-item', resolvedActiveApp === 'drugtox' && 'is-active')}
+                    onClick={handleNavClick}
+                  >
+                    <span className="hp-dropdown-icon">
+                      <ToolIcon id={drugtox.iconId} size={18} />
+                    </span>
+                    <div>
+                      <div className="dropdown-title" style={{ fontWeight: 800 }}>askDrugTox</div>
+                      <div style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 500 }}>{drugtox.blurb}</div>
+                    </div>
+                  </a>
+                );
+              })()}
+
+              {(() => {
+                const webtest = getTool('webtest')!;
+                return (
+                  <Link
+                    href={webtest.href(GLOBAL_CTX)}
+                    className={cx('hp-dropdown-item', resolvedActiveApp === 'webtest' && 'is-active')}
+                    onClick={handleNavClick}
+                  >
+                    <ToolIcon id={webtest.iconId} size={16} />
+                    <div>
+                      <div className="dropdown-title">{webtest.name}</div>
+                      <div className="dropdown-subtitle">{webtest.blurb}</div>
+                    </div>
+                  </Link>
+                );
+              })()}
             </div>
-
-            {(() => {
-              const localquery = getTool('localquery')!;
-              return isToolAvailable(localquery, GLOBAL_CTX, capabilities) ? (
-                <Link
-                  href={localquery.href(GLOBAL_CTX)}
-                  className={cx('hp-dropdown-item', resolvedActiveApp === 'localquery' && 'is-active')}
-                  onClick={handleNavClick}
-                >
-                  <span className="hp-dropdown-icon">
-                    <ToolIcon id={localquery.iconId} size={18} />
-                  </span>
-                  <div>
-                    <div className="dropdown-title" style={{ fontWeight: 800 }}>{localquery.name}</div>
-                    <div style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 500 }}>{localquery.blurb}</div>
-                  </div>
-                </Link>
-              ) : null;
-            })()}
-
-            {(['fdalabel-fda', 'fdalabel-cder', 'fdalabel-public'] as const).map((toolId) => {
-              const tool = getTool(toolId)!;
-              if (!isToolAvailable(tool, GLOBAL_CTX, capabilities)) return null;
-              return (
-                <a
-                  key={toolId}
-                  href={tool.href(GLOBAL_CTX)}
-                  target={tool.target ?? '_blank'}
-                  rel="noopener noreferrer"
-                  className="hp-dropdown-item"
-                  onClick={handleNavClick}
-                >
-                  <span className="hp-dropdown-icon">
-                    <ToolIcon id={tool.iconId} size={18} />
-                  </span>
-                  <div>
-                    <div className="dropdown-title">{tool.name.replace('FDALabel (', '').replace(')', '')} version</div>
-                  </div>
-                </a>
-              );
-            })}
-
-            <div className="dropdown-section-label" style={{ padding: '8px 12px 4px', fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>
-              Others
-            </div>
-
-            {(() => {
-              const drugtox = getTool('drugtox');
-              if (!drugtox || !isToolAvailable(drugtox, GLOBAL_CTX, capabilities)) return null;
-              return (
-                <a
-                  href={drugtox.href(GLOBAL_CTX)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cx('hp-dropdown-item', resolvedActiveApp === 'drugtox' && 'is-active')}
-                  onClick={handleNavClick}
-                >
-                  <span className="hp-dropdown-icon">
-                    <ToolIcon id={drugtox.iconId} size={18} />
-                  </span>
-                  <div>
-                    <div className="dropdown-title" style={{ fontWeight: 800 }}>askDrugTox</div>
-                    <div style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 500 }}>{drugtox.blurb}</div>
-                  </div>
-                </a>
-              );
-            })()}
-
-            {(() => {
-              const webtest = getTool('webtest')!;
-              return (
-                <Link
-                  href={webtest.href(GLOBAL_CTX)}
-                  className={cx('hp-dropdown-item', resolvedActiveApp === 'webtest' && 'is-active')}
-                  onClick={handleNavClick}
-                >
-                  <ToolIcon id={webtest.iconId} size={16} />
-                  <div>
-                    <div className="dropdown-title">{webtest.name}</div>
-                    <div className="dropdown-subtitle">{webtest.blurb}</div>
-                  </div>
-                </Link>
-              );
-            })()}
-
-          </div>
+          )}
         </div>
 
         {loading ? (
@@ -506,7 +424,7 @@ export default function Header({
               </div>
             )}
 
-            {/* User Settings Dropdown */}
+            {/* 2. User Panel Dropdown */}
             <div className="custom-dropdown" onClick={(e) => e.stopPropagation()}>
               <button 
                 className={cx('dropdown-trigger header-chip', activeDropdown === 'user' && 'active')} 
@@ -518,7 +436,7 @@ export default function Header({
               </button>
 
               {activeDropdown === 'user' && (
-                <div className="dropdown-menu">
+                <div className="dropdown-menu" style={{ right: 0, left: 'auto' }}>
                   <div className="account-block">
                     <div className="account-label">ACCOUNT</div>
                     <div className="account-name">{session.username}</div>
@@ -564,6 +482,72 @@ export default function Header({
             </button>
           </div>
         )}
+
+        {/* 3. About Dropdown */}
+        <div className="custom-dropdown" onClick={(e) => e.stopPropagation()}>
+          <button 
+            className={cx('dropdown-trigger header-chip', activeDropdown === 'updates' && 'active')}
+            onClick={() => setActiveDropdown(activeDropdown === 'updates' ? null : 'updates')}
+            aria-label="About"
+            title="About AskFDALabel"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span style={{ fontWeight: 800 }}>About</span>
+          </button>
+
+          {activeDropdown === 'updates' && (
+            <div className="dropdown-menu" style={{ 
+              width: '320px', 
+              right: 0, 
+              left: 'auto',
+              padding: '1.5rem',
+              backgroundColor: '#ffffff',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              border: '1px solid #e2e8f0',
+              borderRadius: '16px',
+              textAlign: 'center'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+                <img src={withAppBase("/askfdalabel_icon.svg")} alt="Logo" style={{ height: '48px' }} />
+              </div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b', marginBottom: '12px' }}>
+                AskFDALabel Suite
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.6, marginBottom: '16px' }}>
+                A next-generation AI-powered platform for scientific drug label intelligence. Features comprehensive integration with MedDRA classification and a vast repository of human drug labels.
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <a 
+                  href="https://github.com/seldas/askFDALabel-Suite" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '0.85rem',
+                    color: '#3b82f6',
+                    textDecoration: 'none',
+                    fontWeight: 600
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
+                  </svg>
+                  View on GitHub
+                </a>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
+                &copy; {new Date().getFullYear()} FDA/NCTR
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
       <style jsx>{`
         @keyframes modalEnter {
