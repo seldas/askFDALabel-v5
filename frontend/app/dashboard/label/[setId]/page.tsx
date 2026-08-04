@@ -623,6 +623,8 @@ function LabelContent() {
       alert("Failed to export MedDRA profile.");
     }
   };
+
+  return (
     <>
       {/*
         The page-level chrome — Header, breadcrumb, and the drug title/badges —
