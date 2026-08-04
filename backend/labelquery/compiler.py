@@ -240,6 +240,12 @@ def _tsquery_sql(mode, text, bag):
         return None
     if mode == 'advanced':
         return f"to_tsquery('english', {bag.add(_advanced_tsquery_expression(text))})"
+    
+    words = text.split()
+    if len(words) == 1 and re.match(r'^\w+$', words[0]):
+        prefix_expr = f"{words[0]}:*"
+        return f"to_tsquery('english', {bag.add(prefix_expr)})"
+
     # Simple search is FDALabel's exact-phrase mode.
     return f"phraseto_tsquery('english', {bag.add(text)})"
 
@@ -339,13 +345,50 @@ def _c_full_text(criterion, bag, warnings):
 
 
 def _c_labeling_section(criterion, bag, warnings):
-    sections = _as_list(criterion.get('sections'))
-    tsquery = _tsquery_sql(criterion.get('mode') or 'simple', criterion.get('text'), bag)
-    if not tsquery and not sections:
+    raw_sections = _as_list(criterion.get('sections'))
+    text = (criterion.get('text') or '').strip()
+    mode = criterion.get('mode') or 'simple'
+
+    if not text and not raw_sections:
         return None
-    # Blank text with a section chosen is FDALabel's "check for presence of a
-    # labeling section" behaviour.
-    return _sections_exists(tsquery, sections, bag)
+
+    is_product_title = any(s in ('SPLTITLE', 'Product Title') for s in raw_sections)
+    is_approval_year = any(s in ('43683-2', 'Initial U.S. Approval [4 Digit Year]') for s in raw_sections)
+    other_sections = [s for s in raw_sections if s not in ('SPLTITLE', 'Product Title', '43683-2', 'Initial U.S. Approval [4 Digit Year]')]
+
+    preds = []
+
+    # 1. Virtual Section: Product Title
+    if is_product_title:
+        if text:
+            p_val = bag.add(f'%{text}%')
+            preds.append(f"(s.product_names ILIKE {p_val} OR s.generic_names ILIKE {p_val})")
+        else:
+            preds.append("(s.product_names IS NOT NULL AND s.product_names <> '')")
+
+    # 2. Virtual Section: Initial U.S. Approval
+    if is_approval_year:
+        if text and text.isdigit():
+            p_val = bag.add(int(text))
+            preds.append(f"(s.initial_approval_year = {p_val})")
+        elif text:
+            p_val = bag.add(f'%{text}%')
+            preds.append(f"(CAST(s.initial_approval_year AS TEXT) ILIKE {p_val})")
+        else:
+            preds.append("(s.initial_approval_year IS NOT NULL)")
+
+    # 3. LOINC & Section Title Sections
+    if other_sections or (not is_product_title and not is_approval_year):
+        tsquery = _tsquery_sql(mode, text, bag)
+        sec_pred = _sections_exists(tsquery, other_sections if other_sections else None, bag)
+        if sec_pred:
+            preds.append(sec_pred)
+
+    if not preds:
+        return None
+    if len(preds) == 1:
+        return preds[0]
+    return '(' + ' OR '.join(preds) + ')'
 
 
 def _c_market_status(criterion, bag, warnings):
