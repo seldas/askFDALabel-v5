@@ -118,6 +118,7 @@ export default function ManagementPage() {
   const [pendingUpdateStats, setPendingUpdateStats] = useState<any>(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const [completedUpdateTask, setCompletedUpdateTask] = useState<any>(null);
+  const [dbStatus, setDbStatus] = useState<Record<string, any>>({});
   const [selectedLogs, setSelectedLogs] = useState<string | null>(null);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
