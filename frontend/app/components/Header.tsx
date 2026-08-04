@@ -306,6 +306,39 @@ export default function Header({
               </div>
 
               {(() => {
+                const searchTool = getTool('search');
+                if (!searchTool || !isToolAvailable(searchTool, GLOBAL_CTX, capabilities)) return null;
+                return (
+                  <Link
+                    href={searchTool.href(GLOBAL_CTX)}
+                    className={cx('hp-dropdown-item', resolvedActiveApp === 'search' && 'is-active')}
+                    onClick={handleNavClick}
+                  >
+                    <span className="hp-dropdown-icon">
+                      <ToolIcon id={searchTool.iconId} size={18} />
+                    </span>
+                    <div style={{ flex: 1 }}>
+                      <div className="dropdown-title" style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>LabelChat</span>
+                        <span style={{
+                          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                          color: '#ffffff',
+                          fontSize: '0.6rem',
+                          fontWeight: 800,
+                          padding: '1px 5px',
+                          borderRadius: '4px',
+                          letterSpacing: '0.05em',
+                          lineHeight: 1.2,
+                          display: 'inline-block'
+                        }}>BETA</span>
+                      </div>
+                      <div style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 500 }}>{searchTool.blurb}</div>
+                    </div>
+                  </Link>
+                );
+              })()}
+
+              {(() => {
                 const drugtox = getTool('drugtox');
                 if (!drugtox || !isToolAvailable(drugtox, GLOBAL_CTX, capabilities)) return null;
                 return (

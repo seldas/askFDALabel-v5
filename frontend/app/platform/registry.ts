@@ -150,7 +150,7 @@ const LABEL_TOOLS: ToolDef[] = [
 const PLATFORM_TOOLS: ToolDef[] = [
   {
     id: 'search',
-    name: 'AI Chat',
+    name: 'LabelChat',
     blurb: 'Ask questions across all labels and get grounded answers.',
     iconId: 'chat',
     kind: 'embedded',
