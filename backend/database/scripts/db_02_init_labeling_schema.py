@@ -83,6 +83,28 @@ def create_query_indexes(cursor):
     )
 
 
+def ensure_search_indexes():
+    """
+    Ensures all trigram, FTS (search_vector GIN), and column indexes exist for fast search queries.
+    Idempotent and safe to run post-sync in db_07 and db_08.
+    """
+    print("Ensuring search indexes (trigram GIN, FTS search_vector, B-Tree) exist in PostgreSQL...")
+    conn = PGUtils.get_connection()
+    try:
+        conn.autocommit = True
+        with conn.cursor() as cursor:
+            # 1. Trigram and column indexes
+            create_query_indexes(cursor)
+            
+            # 2. Full-Text Search GIN index on spl_sections.search_vector
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_spl_sections_fts ON labeling.spl_sections USING GIN (search_vector);")
+            print("[SUCCESS] All search indexes verified and ensured.")
+    except Exception as e:
+        print(f"[WARN] Failed to ensure search indexes: {e}")
+    finally:
+        conn.close()
+
+
 def init_labeling_schema():
     print("Initializing 'labeling' schema in PostgreSQL...")
     PGUtils.create_schema('labeling')

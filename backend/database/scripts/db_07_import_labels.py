@@ -771,6 +771,14 @@ def sync_from_storage(storage_dir, num_workers=4, force=False, refresh_existing=
     refresh_version_lineage()
     refresh_epc_mappings()
     refresh_query_options_cache()
+    try:
+        try:
+            from db_02_init_labeling_schema import ensure_search_indexes
+        except ImportError:
+            from database.scripts.db_02_init_labeling_schema import ensure_search_indexes
+        ensure_search_indexes()
+    except Exception as e:
+        print(f"[WARN] Failed to ensure search indexes post-sync: {e}")
 
 
 def refresh_query_options_cache():

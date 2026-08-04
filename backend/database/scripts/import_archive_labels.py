@@ -575,6 +575,18 @@ def sync_from_storage(storage_dir, num_workers=4, force=False, refresh_existing=
     refresh_version_lineage()
     refresh_epc_mappings()
 
+    try:
+        try:
+            from db_07_import_labels import refresh_query_options_cache
+            from db_02_init_labeling_schema import ensure_search_indexes
+        except ImportError:
+            from database.scripts.db_07_import_labels import refresh_query_options_cache
+            from database.scripts.db_02_init_labeling_schema import ensure_search_indexes
+        refresh_query_options_cache()
+        ensure_search_indexes()
+    except Exception as e:
+        print(f"[WARN] Failed to refresh options cache or search indexes post-sync: {e}")
+
 
 def main():
     parser = argparse.ArgumentParser(
