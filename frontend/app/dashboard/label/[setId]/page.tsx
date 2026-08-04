@@ -612,94 +612,29 @@ function LabelContent() {
         table of contents, and the label body.
       */}
 
-            {/* DRUG ACTIONS + METADATA */}
-            <div className="label-header" style={{ 
-                marginBottom: '20px', 
-                background: (data?.openfda_status === 'Archived' || data?.is_latest === false) ? '#fdfbf7' : 'white', 
-                padding: '24px', 
-                borderRadius: '16px', 
-                boxShadow: (data?.openfda_status === 'Archived' || data?.is_latest === false) ? '0 4px 20px rgba(60,45,30,0.04)' : '0 4px 20px rgba(0,0,0,0.04)', 
-                border: (data?.openfda_status === 'Archived' || data?.is_latest === false) ? '1px solid #dcd3bf' : '1px solid #f1f5f9' 
+            <div className="function-content-area" style={{ 
+                flex: 1, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                minHeight: 0,
+                background: '#ffffff',
+                borderRadius: '16px',
+                border: '1px solid #cbd5e1',
+                boxShadow: '0 4px 20px rgba(15, 23, 42, 0.05)',
+                padding: '16px',
+                marginBottom: '20px'
             }}>
-                <div className="label-meta-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px' }}>
-                    {data.has_boxed_warning && (
-                    <div className="meta-item" style={{ gridColumn: '1 / -1', backgroundColor: '#fff1f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span style={{ fontSize: '1.5rem', color: '#e11d48' }}>{"\u26A0"}</span>
-                        <div>
-                            <span style={{ display: 'block', fontSize: '0.7rem', color: '#e11d48', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Clinical Alert</span>
-                            <span style={{ fontWeight: 700, color: '#9f1239', fontSize: '0.95rem' }}>Boxed Warning Information Present</span>
-                        </div>
-                    </div>
-                    )}
-                    <div className="meta-item">
-                        <span style={{ display: 'block', fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.1em', marginBottom: '4px' }}>Manufacturer</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontWeight: 700, color: '#334155', fontSize: '0.9rem' }}>{data.manufacturer_name || 'N/A'}</span>
-                          {data.companies && data.companies.length > 0 && (
-                            <button 
-                              onClick={() => setCompanyModalOpen(true)} 
-                              style={{ background: '#f1f5f9', border: 'none', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', color: '#64748b' }}
-                            >
-                              DETAILS
-                            </button>
-                          )}
-                        </div>
-                    </div>
-                    <div className="meta-item">
-                        <span style={{ display: 'block', fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.1em', marginBottom: '4px' }}>Market Category</span>
-                        <span style={{ fontWeight: 700, color: '#334155', fontSize: '0.9rem' }}>{data.metadata?.market_category || data.document_type || 'N/A'}</span>
-                    </div>
-                    <div className="meta-item">
-                        <span style={{ display: 'block', fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.1em', marginBottom: '4px' }}>Set ID</span>
-                        <span style={{ fontWeight: 700, color: '#334155', fontFamily: 'ui-monospace, monospace', fontSize: '0.78rem' }}>{data.set_id || 'N/A'}</span>
-                    </div>
-                    <div className="meta-item">
-                        <span style={{ display: 'block', fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.1em', marginBottom: '4px' }}>Application No.</span>
-                        <span style={{ fontWeight: 700, color: '#334155', fontSize: '0.9rem', fontFamily: 'ui-monospace, monospace' }}>{data.application_number || 'N/A'}</span>
-                    </div>
-                </div>
+                <div id="top-annotations-container" className="top-annotations-container"></div>
+                {/*
+                  FAERS, Deep Dive and Examine are their own routes now. They
+                  used to be mounted here alongside the reader and hidden with
+                  an activeTab check, so every tool's scripts and effects ran on
+                  every view.
+                */}
+                <LabelView data={data} activeTab={activeTab} tocCollapsed={tocCollapsed} setTocCollapsed={setTocCollapsed} expandedSections={expandedSections} toggleSection={toggleSection} TOCItemComponent={TOCItemComponent} />
 
-                {data.product_data && data.product_data.length > 0 && (
-                   <div style={{ marginTop: '24px', borderTop: '1px solid #f1f5f9', paddingTop: '20px' }}>
-                      <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '12px', 
-                          padding: '12px 18px', 
-                          background: '#f8fafc', 
-                          border: '1px solid #e2e8f0', 
-                          borderRadius: '12px', 
-                          fontSize: '0.85rem', 
-                          color: '#475569',
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-                      }}>
-                         <span style={{ fontSize: '1.2rem', color: '#64748b' }}>ℹ️</span>
-                         <span style={{ lineHeight: '1.5' }}>
-                           Detailed technical product specifications, registration data, and inactive ingredients are available. Check the{' '}
-                           <Link
-                             href={labelRoute(setId, 'examine')}
-                             style={{
-                               color: '#1e40af',
-                               textDecoration: 'underline',
-                               fontWeight: 700,
-                               transition: 'color 0.2s ease'
-                             }}
-                           >
-                             Examine page
-                           </Link>{' '}
-                           for more product information.
-                         </span>
-                      </div>
-                   </div>
-                )}
             </div>
 
-            {/*
-              The tool tab list moved to the shell's registry-driven tool strip
-              (platform/ToolLauncher). These contextual buttons stay with the
-              reader — they act on the label body, and the legacy scripts bind
-              to them by id.
-            */}
             <div className="function-tabs-bar" style={{ width: '100%', padding: '0 0 20px 0', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px' }}>
                 <div className="label-toolbar">
                   {/* Chat — always available */}
@@ -781,18 +716,6 @@ function LabelContent() {
                     <svg className="pop-indicator" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px', verticalAlign: 'middle' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                   </button>
                 </div>
-            </div>
-
-            <div className="function-content-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                <div id="top-annotations-container" className="top-annotations-container"></div>
-                {/*
-                  FAERS, Deep Dive and Examine are their own routes now. They
-                  used to be mounted here alongside the reader and hidden with
-                  an activeTab check, so every tool's scripts and effects ran on
-                  every view.
-                */}
-                <LabelView data={data} activeTab={activeTab} tocCollapsed={tocCollapsed} setTocCollapsed={setTocCollapsed} expandedSections={expandedSections} toggleSection={toggleSection} TOCItemComponent={TOCItemComponent} />
-
             </div>
 
       {/* Hidden Data for JS */}
