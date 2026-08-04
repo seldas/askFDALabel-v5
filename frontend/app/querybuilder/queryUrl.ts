@@ -56,6 +56,11 @@ export function decodeQuery(encoded: string | null): WireQuery | null {
 }
 
 /** App-relative results URL; the base path is applied by the caller's link. */
-export function resultsPath(query: WireQuery): string {
-  return `/labelquery?${QUERY_PARAM}=${encodeQuery(query)}`;
+export function resultsPath(query: WireQuery, targetDb: 'oracle' | 'local' = 'oracle'): string {
+  const params = new URLSearchParams();
+  params.set(QUERY_PARAM, encodeQuery(query));
+  if (targetDb) {
+    params.set('target_db', targetDb);
+  }
+  return `/labelquery?${params.toString()}`;
 }

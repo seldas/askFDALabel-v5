@@ -29,6 +29,7 @@ const PAGE_SIZE = 50;
 function ResultsPage() {
   const searchParams = useSearchParams();
   const encoded = searchParams.get(QUERY_PARAM);
+  const targetDb = searchParams.get('target_db') || 'oracle';
 
   const query = useMemo<WireQuery | null>(() => decodeQuery(encoded), [encoded]);
 
@@ -72,6 +73,7 @@ function ResultsPage() {
             offset,
             sort: sortState.sort,
             dir: sortState.dir,
+            target_db: targetDb,
           }),
         });
         const json = await res.json();

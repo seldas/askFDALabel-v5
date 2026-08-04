@@ -21,6 +21,7 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import StartPage from './components/StartPage';
 import { useUser } from './context/UserContext';
+import { useCapabilities } from './platform/capabilities';
 import { Page } from './platform/primitives';
 import { withAppBase } from './utils/appPaths';
 import { AiIntentPanel } from './querybuilder/AiIntentPanel';
@@ -49,12 +50,23 @@ const EMPTY_OPTIONS: OptionLists = {
 
 export default function HomePage() {
   const { session, loading, refreshSession, openAuthModal } = useUser();
+  const { capabilities, ready: capReady } = useCapabilities();
   const isAuthed = Boolean(session?.is_authenticated);
+
+  const oracleAvailable = capReady && Boolean(capabilities.isInternal || capabilities.fdaAccessible || capabilities.cderAccessible);
+  const [targetDb, setTargetDb] = useState<'oracle' | 'local'>('oracle');
 
   const [query, setQuery] = useState<LabelQuery>(makeEmptyQuery);
   const [options, setOptions] = useState<OptionLists>(EMPTY_OPTIONS);
   const [error, setError] = useState<string | null>(null);
   const [hasSaved, setHasSaved] = useState(false);
+
+  // Auto-switch to local DB if Oracle is unavailable in this environment
+  useEffect(() => {
+    if (capReady && !oracleAvailable) {
+      setTargetDb('local');
+    }
+  }, [capReady, oracleAvailable]);
 
   useEffect(() => {
     setHasSaved(Boolean(window.localStorage.getItem(LAST_QUERY_KEY)));
@@ -90,27 +102,17 @@ export default function HomePage() {
     };
   }, [isAuthed]);
 
-  /*
-   * Results open in their own window, as FDALabel does — the builder stays put
-   * so the criteria that produced a result set are still on screen to refine.
-   * The query rides in the URL because a new window cannot read this one's state.
-   *
-   * withAppBase is required, not decorative: window.open sidesteps both Next's
-   * automatic basePath handling (which only covers Link and the router) and
-   * FetchPrefix, whose rewriter passes through any route outside /api and its
-   * hardcoded module list. Without it the new window lands on a 404.
-   */
   const runSearch = useCallback(() => {
     setError(null);
     try {
       const wire = toWire(query);
       window.localStorage.setItem(LAST_QUERY_KEY, JSON.stringify(wire));
       setHasSaved(true);
-      window.open(withAppBase(resultsPath(wire)), '_blank', 'noopener');
+      window.open(withAppBase(resultsPath(wire, targetDb)), '_blank', 'noopener');
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [query]);
+  }, [query, targetDb]);
 
   const restoreLast = useCallback(() => {
     const raw = window.localStorage.getItem(LAST_QUERY_KEY);
@@ -157,6 +159,35 @@ export default function HomePage() {
       <button type="button" className="fdl-link" onClick={clearAll}>
         Clear All
       </button>
+
+      {/* Target DB Switch (Oracle vs Local) */}
+      <div
+        className="fdl-target-db-container"
+        title={!oracleAvailable ? "Oracle FDALabel DB is unavailable in public environment (locked to Local DB)" : "Switch search target database"}
+      >
+        <span className="fdl-target-db-label">DB:</span>
+        <div className="fdl-target-db-pills">
+          <button
+            type="button"
+            className={`fdl-target-db-pill ${targetDb === 'oracle' ? 'active' : ''}`}
+            onClick={() => oracleAvailable && setTargetDb('oracle')}
+            disabled={!oracleAvailable}
+          >
+            Oracle FDALabel
+          </button>
+          <button
+            type="button"
+            className={`fdl-target-db-pill ${targetDb === 'local' ? 'active' : ''}`}
+            onClick={() => setTargetDb('local')}
+          >
+            Local DB
+          </button>
+        </div>
+        {!oracleAvailable && capReady && (
+          <span className="fdl-db-note">(Local only)</span>
+        )}
+      </div>
+
       <button type="button" className="fdl-btn fdl-btn--search" onClick={runSearch}>
         Search »
       </button>

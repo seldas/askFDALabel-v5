@@ -20,13 +20,79 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--afl-space-5);
+  gap: var(--afl-space-4);
   padding: var(--afl-space-4) 0;
+  flex-wrap: wrap;
 }
 
 .fdl-actions--bottom {
   border-top: 1px solid var(--afl-border);
   margin-top: var(--afl-space-5);
+}
+
+/* ---- Target DB Toggle (Oracle vs Local) ----------------------------- */
+
+.fdl-target-db-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  padding: 3px 8px;
+  border-radius: 20px;
+  border: 1px solid #cbd5e1;
+}
+
+.fdl-target-db-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fdl-target-db-pills {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: #e2e8f0;
+  padding: 2px;
+  border-radius: 16px;
+}
+
+.fdl-target-db-pill {
+  padding: 4px 12px;
+  border-radius: 14px;
+  border: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: transparent;
+  color: #64748b;
+  transition: all 0.2s ease;
+  line-height: 1.2;
+}
+
+.fdl-target-db-pill:hover:not(:disabled) {
+  color: #1e293b;
+}
+
+.fdl-target-db-pill.active {
+  background: #ffffff;
+  color: #2563eb;
+  font-weight: 800;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.fdl-target-db-pill:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.fdl-db-note {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-weight: 600;
+  font-style: italic;
 }
 
 /* ---- Group ---------------------------------------------------------------- */
