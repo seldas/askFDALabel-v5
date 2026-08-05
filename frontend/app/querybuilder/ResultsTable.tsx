@@ -317,18 +317,6 @@ const BASIC_COLUMNS: ColumnDef[] = [
 
 const EXPANDED_COLUMNS: ColumnDef[] = [
   LINKS_COLUMN,
-  {
-    key: 'set_id',
-    header: 'Set ID',
-    sort: 'set_id',
-    render: (row) => <code className="fdl-code-sm">{row.set_id}</code>,
-  },
-  {
-    key: 'spl_id',
-    header: 'SPL ID',
-    sort: 'spl_id',
-    render: (row) => <code className="fdl-code-sm">{row.spl_id}</code>,
-  },
   { key: 'type', header: 'Labeling Type', sort: 'doc_type', render: (row) => row.doc_type || '' },
   {
     key: 'dosage',
@@ -633,11 +621,6 @@ export function ResultsTable({
                                   <dd>{(row.revised_date || '').replace(/-/g, '/') || '—'}</dd>
                                 </dl>
                               </div>
-                            </div>
-
-                            <div className="fdl-label-card__footer">
-                              <span className="fdl-label-card__footer-head">Quick Links:</span>
-                              <LinksCell row={row} />
                             </div>
                           </div>
                         </td>

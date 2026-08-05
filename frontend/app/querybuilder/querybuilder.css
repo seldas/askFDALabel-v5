@@ -1072,11 +1072,15 @@
 }
 
 .fdl-label-card {
+  position: sticky;
+  left: var(--afl-space-3);
+  max-width: min(860px, calc(100vw - 50px));
+  box-sizing: border-box;
   background: #ffffff;
   border: 1px solid var(--afl-border-strong);
   border-radius: var(--afl-radius-lg);
   padding: var(--afl-space-4);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .fdl-label-card__header {
@@ -1133,8 +1137,8 @@
 
 .fdl-label-card__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: var(--afl-space-4);
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--afl-space-3);
 }
 
 .fdl-card-section {
