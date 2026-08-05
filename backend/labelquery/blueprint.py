@@ -361,6 +361,32 @@ def _capabilities():
             # Assume supported on probe failure: a warning that the data is
             # missing is worse than none if the column is really there.
             _capability_cache['unii'] = True
+
+    if 'full_fts' not in _capability_cache:
+        # Can free text use the document-level vector on sum_spl, or does it
+        # have to go the old way, through spl_sections?
+        #
+        # This has to be all-or-nothing. A partially populated column can't be
+        # mixed with a per-row fallback: `IS NULL` is not GIN-indexable, so an
+        # OR would cost a sequential scan on every search, and the two paths
+        # search different text (the document vector also covers product and
+        # manufacturer names) — the same query would apply different rules to
+        # different labels.
+        #
+        # Unpopulated on a fresh column, so it stays False until
+        # db_10_populate_full_search_vector.py (or a post-import refresh) has
+        # finished. Restart the app afterwards to re-probe.
+        try:
+            rows = _rows(
+                'SELECT 1 FROM labeling.sum_spl '
+                'WHERE full_search_vector IS NULL LIMIT 1'
+            )
+            _capability_cache['full_fts'] = not rows
+        except Exception:
+            # Column missing entirely (database predates it) — take the
+            # section path, which works everywhere.
+            _capability_cache['full_fts'] = False
+
     return dict(_capability_cache)
 
 

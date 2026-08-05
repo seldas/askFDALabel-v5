@@ -15,9 +15,22 @@ Only Postgres is supported here. The Oracle paths in FDALabelDBService exist for
 the internal FDA deployment; this builder is deliberately local-only, which is
 also the only mode where ``labeling.spl_sections.search_vector`` exists.
 
-Free text runs against that generated TSVECTOR column, so anything text-shaped
+Free text runs against a generated TSVECTOR column, so anything text-shaped
 (full text, labeling sections, MedDRA terms) shares ``_tsquery_sql`` rather than
 falling back to ILIKE over content_xml, which would be a sequential scan.
+
+Which column depends on the criterion. A section-scoped search has to stay on
+``spl_sections.search_vector`` -- the scope *is* the row. An unscoped full-text
+search instead probes ``sum_spl.full_search_vector``, one document-level vector
+per label, which turns a scan-and-dedup over every section of every candidate
+into a single indexed lookup. That column is only trustworthy once it is fully
+populated, so the caller passes ``capabilities['full_fts']`` to say whether this
+deployment has it; see ``labelquery.blueprint._capabilities``.
+
+Section predicates come back separately from relational ones so the caller can
+run them as a CTE, but that split can only represent ``(R1 OR R2) AND
+(S1 OR S2)``. When the criteria tree means something else, compilation falls
+back to inline correlated EXISTS -- see :func:`_split_is_faithful`.
 """
 
 import re
@@ -840,64 +853,132 @@ def _section_criterion_clause(criterion, bag, warnings, expand_meddra):
     return None
 
 
-def compile_where(query, expand_meddra=None, capabilities=None):
-    """
-    Turns a criteria tree into ``(where_sql, section_where_sql, params, warnings)``.
-    """
-    bag = _ParamBag()
-    warnings = []
-    capabilities = capabilities or {}
+SECTION_CRITERION_TYPES = ('fullText', 'labelingSection', 'meddra')
 
-    relational_groups = []
-    section_groups = []
+VIRTUAL_SECTIONS = (
+    'SPLTITLE', 'Product Title',
+    '43683-2', 'Initial U.S. Approval [4 Digit Year]',
+)
+
+
+def _has_virtual_section(query):
+    """
+    Whether any Labeling Section criterion names a sum_spl-backed pseudo-section.
+
+    Those can't be expressed on the section side, and selecting several sections
+    means "any of them" -- an OR that a split across the two halves would turn
+    into an AND. Compiling such a criterion whole, on the relational side, is the
+    only way to keep the OR.
+    """
+    for group in (query.get('groups') or []):
+        for criterion in (group.get('criteria') or []):
+            if criterion.get('type') != 'labelingSection':
+                continue
+            sections = _as_list((criterion.get('value') or {}).get('sections'))
+            if any(s in VIRTUAL_SECTIONS for s in sections):
+                return True
+    return False
+
+
+def _compile_groups(query, bag, warnings, expand_meddra, capabilities, inline_sections):
+    """
+    Compiles each group to ``(relational_sql, section_sql)``, either of which may
+    be None.
+
+    With ``inline_sections`` the section criteria compile to correlated EXISTS
+    predicates on the relational side instead, which keeps a group's criteria in
+    one boolean expression. See :func:`compile_where` for when that is required.
+    """
+    compiled = []
 
     for group in (query.get('groups') or []):
         r_clauses = []
         s_clauses = []
+
         for criterion in (group.get('criteria') or []):
             ctype = criterion.get('type')
             cval = criterion.get('value') or {}
 
-            # Handle virtual sections in relational query
-            if ctype == 'labelingSection':
-                raw_sections = _as_list(cval.get('sections'))
-                is_product_title = any(s in ('SPLTITLE', 'Product Title') for s in raw_sections)
-                is_approval_year = any(s in ('43683-2', 'Initial U.S. Approval [4 Digit Year]') for s in raw_sections)
-                text = (cval.get('text') or '').strip()
-                if is_product_title:
-                    if text:
-                        p_val = bag.add(f'%{text}%')
-                        r_clauses.append(f"(s.product_names ILIKE {p_val} OR s.generic_names ILIKE {p_val})")
-                    else:
-                        r_clauses.append("(s.product_names IS NOT NULL AND s.product_names <> '')")
-                if is_approval_year:
-                    if text and text.isdigit():
-                        p_val = bag.add(int(text))
-                        r_clauses.append(f"(s.initial_approval_year = {p_val})")
-                    elif text:
-                        p_val = bag.add(f'%{text}%')
-                        r_clauses.append(f"(CAST(s.initial_approval_year AS TEXT) ILIKE {p_val})")
-                    else:
-                        r_clauses.append("(s.initial_approval_year IS NOT NULL)")
-
-            if ctype == 'fullText':
+            if ctype == 'fullText' and capabilities.get('full_fts'):
+                # One indexed probe per label against the document-level vector,
+                # instead of scanning and de-duplicating N section rows.
+                #
+                # Whether that column is fully populated is decided once per
+                # process by the caller, never per row: `full_search_vector IS
+                # NULL` is not GIN-indexable, so OR-ing a fallback in here would
+                # push the planner onto a sequential scan of sum_spl and defeat
+                # the index this clause exists to use.
                 tsquery = _tsquery_sql(cval.get('mode') or 'simple', cval.get('text'), bag)
                 if tsquery:
-                    # Leverage document-level TSVECTOR on sum_spl if populated, fallback to spl_sections if unpopulated
-                    r_clauses.append(f"(s.full_search_vector @@ {tsquery} OR (s.full_search_vector IS NULL AND EXISTS (SELECT 1 FROM labeling.spl_sections sec WHERE sec.spl_id = s.spl_id AND sec.search_vector @@ {tsquery})))")
-            elif ctype in ('labelingSection', 'meddra'):
-                sec_clause = _section_criterion_clause(criterion, bag, warnings, expand_meddra)
-                if sec_clause:
-                    s_clauses.append(sec_clause)
+                    r_clauses.append(f'(s.full_search_vector @@ {tsquery})')
+
+            elif ctype in SECTION_CRITERION_TYPES:
+                if inline_sections:
+                    pred = _compile_criterion(criterion, bag, warnings, expand_meddra, capabilities)
+                    if pred:
+                        r_clauses.append(pred)
+                else:
+                    sec_clause = _section_criterion_clause(criterion, bag, warnings, expand_meddra)
+                    if sec_clause:
+                        s_clauses.append(sec_clause)
+
             else:
                 rel_clause = _compile_criterion(criterion, bag, warnings, expand_meddra, capabilities)
                 if rel_clause:
                     r_clauses.append(rel_clause)
 
-        if r_clauses:
-            relational_groups.append('(' + ' AND '.join(r_clauses) + ')')
-        if s_clauses:
-            section_groups.append('(' + ' AND '.join(s_clauses) + ')')
+        compiled.append((
+            '(' + ' AND '.join(r_clauses) + ')' if r_clauses else None,
+            '(' + ' AND '.join(s_clauses) + ')' if s_clauses else None,
+        ))
+
+    return compiled
+
+
+def _split_is_faithful(compiled):
+    """
+    Whether the caller's two-part query preserves the criteria tree's meaning.
+
+    The relational and section halves are handed to the caller separately and
+    recombined as ``(R1 OR R2 ...) AND (S1 OR S2 ...)``, but the tree means
+    ``(R1 AND S1) OR (R2 AND S2) ...``. Those agree only when at most one group
+    contributes, or when every contributing group sits entirely on one side --
+    otherwise the split silently ANDs criteria the user asked to OR.
+    """
+    contributing = [(r, s) for r, s in compiled if r or s]
+    if len(contributing) <= 1:
+        return True
+    return all(s is None for _, s in contributing) or all(r is None for r, _ in contributing)
+
+
+def compile_where(query, expand_meddra=None, capabilities=None):
+    """
+    Turns a criteria tree into ``(where_sql, section_where_sql, params, warnings)``.
+
+    ``section_where_sql`` is None when every predicate fits in ``where_sql``.
+    """
+    capabilities = capabilities or {}
+
+    bag = _ParamBag()
+    warnings = []
+    inline_sections = _has_virtual_section(query)
+    compiled = _compile_groups(
+        query, bag, warnings, expand_meddra, capabilities, inline_sections
+    )
+
+    if not inline_sections and not _split_is_faithful(compiled):
+        # Recompile from scratch -- the discarded pass wrote into `bag`, and the
+        # inline form is a different set of parameters, not an addition to it.
+        # Correlated EXISTS costs more than the section CTE, but it is the only
+        # form that keeps each group's criteria in one expression.
+        bag = _ParamBag()
+        warnings = []
+        compiled = _compile_groups(
+            query, bag, warnings, expand_meddra, capabilities, inline_sections=True
+        )
+
+    relational_groups = [r for r, _ in compiled if r]
+    section_groups = [s for _, s in compiled if s]
 
     relational_where = ['s.is_latest = TRUE']
     if relational_groups:

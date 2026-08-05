@@ -659,7 +659,12 @@ def _flush_batches(meta_batch, ingr_batch, sect_batch, reload_spl_ids):
                     is_rs = EXCLUDED.is_rs,
                     local_path = EXCLUDED.local_path,
                     effective_time_raw = EXCLUDED.effective_time_raw,
-                    version_number = EXCLUDED.version_number
+                    version_number = EXCLUDED.version_number,
+                    -- Invalidate rather than recompute: the sections this label's
+                    -- vector is built from are rewritten later in this same flush,
+                    -- so the rebuild has to wait for refresh_full_search_vector().
+                    -- Without this a re-imported label keeps its pre-import text.
+                    full_search_vector = NULL
             """
             meta_rows = [[d[c] for c in meta_cols] for d in meta_batch]
             execute_values(cur, meta_sql, meta_rows, page_size=300)
@@ -919,24 +924,27 @@ def refresh_epc_mappings():
 
 
 def refresh_full_search_vector():
-    print("Updating missing document-level full_search_vector in PostgreSQL...")
+    """
+    Rebuilds document-level vectors for labels imported or re-imported this run.
+
+    Batched rather than one statement over the whole table: a single UPDATE would
+    hold one transaction open across every new label, and one oversized label
+    would roll back all of them. `_flush_batches` nulls the column on re-import,
+    so a label whose sections changed is picked up here too.
+    """
+    print("Updating document-level full_search_vector in PostgreSQL...")
     try:
-        PGUtils.execute_query("""
-            UPDATE labeling.sum_spl s
-            SET full_search_vector = 
-                to_tsvector('english', 
-                    coalesce(s.product_names, '') || ' ' || 
-                    coalesce(s.generic_names, '') || ' ' || 
-                    coalesce(s.active_ingredients, '') || ' ' ||
-                    coalesce(s.manufacturer, '')
-                ) || coalesce((
-                    SELECT to_tsvector('english', string_agg(coalesce(sec.content_xml, ''), ' '))
-                    FROM labeling.spl_sections sec
-                    WHERE sec.spl_id = s.spl_id
-                ), to_tsvector('english', ''))
-            WHERE s.full_search_vector IS NULL;
-        """)
-        print("[SUCCESS] full_search_vector updated for newly imported labels.")
+        from fts_vector import populate_full_search_vector
+    except ImportError:
+        from database.scripts.fts_vector import populate_full_search_vector
+
+    try:
+        populated, skipped = populate_full_search_vector()
+        if skipped:
+            print(f"[WARN] {len(skipped)} label(s) could not be vectorized; "
+                  f"full-text search stays on the per-section fallback path.")
+        else:
+            print(f"[SUCCESS] full_search_vector updated for {populated:,} label(s).")
     except Exception as e:
         print(f"[WARN] Failed to refresh full_search_vector: {e}")
 
