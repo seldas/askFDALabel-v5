@@ -194,16 +194,101 @@ def _compile_meddra(value, bag, expand_meddra=None):
     terms = _as_list(value.get('terms')) or _split_terms(value.get('text'))
     if not terms:
         return None
-    
-    # We query druglabel.SPL_SEC_MEDDRA_LLT_OCC by set_id / llt_code if LLT codes available
-    clauses = []
+
+    level = (value.get('level') or 'pt').lower()
+    sections = _as_list(value.get('sections'))
+
+    # Section filter inside SPL_SEC_MEDDRA_LLT_OCC if specified
+    sec_clause = ""
+    if sections:
+        sec_params = [bag.add(s) for s in sections]
+        sec_clause = f" AND occ.SEC_TYPE_CODE IN ({', '.join(sec_params)})"
+
+    term_clauses = []
     for term in terms:
-        p = bag.add(f'%{term.upper()}%')
-        clauses.append(
-            'EXISTS (SELECT 1 FROM druglabel.SPL_SEC_MEDDRA_LLT_OCC occ WHERE occ.SET_ID = s.SET_ID '
-            f'AND (UPPER(occ.LLT_CODE) LIKE {p} OR UPPER(occ.SEC_TYPE_CODE) LIKE {p}))'
+        t_clean = str(term).strip()
+        if not t_clean:
+            continue
+
+        if t_clean.isdigit():
+            # Numeric MedDRA Code
+            code_num = int(t_clean)
+            p_code = bag.add(code_num)
+            if level == 'llt':
+                llt_subquery = f"SELECT {p_code} FROM DUAL"
+            elif level == 'pt':
+                llt_subquery = f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt WHERE llt.PT_CODE = {p_code}"
+            elif level == 'hlt':
+                llt_subquery = (
+                    f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+                    f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
+                    f"WHERE mh.HLT_CODE = {p_code}"
+                )
+            elif level == 'hlgt':
+                llt_subquery = (
+                    f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+                    f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
+                    f"WHERE mh.HLGT_CODE = {p_code}"
+                )
+            elif level == 'soc':
+                llt_subquery = (
+                    f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+                    f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
+                    f"WHERE mh.SOC_CODE = {p_code}"
+                )
+            else:
+                llt_subquery = (
+                    f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+                    f"LEFT JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
+                    f"WHERE llt.LLT_CODE = {p_code} OR llt.PT_CODE = {p_code} "
+                    f"OR mh.HLT_CODE = {p_code} OR mh.HLGT_CODE = {p_code} OR mh.SOC_CODE = {p_code}"
+                )
+        else:
+            # Text MedDRA term
+            p_pattern = bag.add(f"%{t_clean.upper()}%")
+            if level == 'llt':
+                llt_subquery = f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt WHERE UPPER(llt.LLT_NAME) LIKE {p_pattern}"
+            elif level == 'pt':
+                llt_subquery = (
+                    f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+                    f"JOIN meddra.preferred_term pt ON pt.PT_CODE = llt.PT_CODE "
+                    f"WHERE UPPER(pt.PT_NAME) LIKE {p_pattern}"
+                )
+            elif level == 'hlt':
+                llt_subquery = (
+                    f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+                    f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
+                    f"WHERE UPPER(mh.HLT_NAME) LIKE {p_pattern}"
+                )
+            elif level == 'hlgt':
+                llt_subquery = (
+                    f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+                    f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
+                    f"WHERE UPPER(mh.HLGT_NAME) LIKE {p_pattern}"
+                )
+            elif level == 'soc':
+                llt_subquery = (
+                    f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+                    f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
+                    f"WHERE UPPER(mh.SOC_NAME) LIKE {p_pattern} OR UPPER(mh.SOC_ABBREV) LIKE {p_pattern}"
+                )
+            else:
+                llt_subquery = (
+                    f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+                    f"LEFT JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
+                    f"WHERE UPPER(llt.LLT_NAME) LIKE {p_pattern} "
+                    f"OR UPPER(mh.PT_NAME) LIKE {p_pattern} "
+                    f"OR UPPER(mh.HLT_NAME) LIKE {p_pattern} "
+                    f"OR UPPER(mh.HLGT_NAME) LIKE {p_pattern} "
+                    f"OR UPPER(mh.SOC_NAME) LIKE {p_pattern}"
+                )
+
+        term_clauses.append(
+            f"EXISTS (SELECT 1 FROM druglabel.SPL_SEC_MEDDRA_LLT_OCC occ "
+            f"WHERE occ.SET_ID = s.SET_ID{sec_clause} AND occ.LLT_CODE IN ({llt_subquery}))"
         )
-    return '(' + ' OR '.join(clauses) + ')'
+
+    return '(' + ' OR '.join(term_clauses) + ')' if term_clauses else None
 
 
 def _compile_pharm_class(value, bag):

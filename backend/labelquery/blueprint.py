@@ -319,23 +319,41 @@ _MEDDRA_LEVELS = {
     'soc': ('meddra_soc', 'soc_name'),
 }
 
+_ORACLE_MEDDRA_LEVELS = {
+    'llt': ('meddra.low_level_term', 'LLT_NAME'),
+    'pt': ('meddra.preferred_term', 'PT_NAME'),
+    'hlt': ('meddra.high_level_term', 'HLT_NAME'),
+    'hlgt': ('meddra.high_level_grouping_term', 'HLGT_NAME'),
+    'soc': ('meddra.soc_term', 'SOC_NAME'),
+}
+
 
 @labelquery_bp.route('/suggest/meddra', methods=['GET'])
 def suggest_meddra():
     q = (request.args.get('q') or '').strip()
     level = (request.args.get('level') or 'pt').lower()
+    target_db = (request.args.get('target_db') or request.args.get('targetDb') or 'local').lower()
     if len(q) < 2 or level not in _MEDDRA_LEVELS:
         return jsonify({'suggestions': []})
-    table, column = _MEDDRA_LEVELS[level]
+
     try:
-        rows = _rows(
-            f"""
-            SELECT DISTINCT {column} AS name FROM public.{table}
-            WHERE {column} ILIKE %(q)s ORDER BY name LIMIT 30
-            """,
-            {'q': f'%{q}%'},
-        )
-        return jsonify({'suggestions': [r['name'] for r in rows]})
+        if target_db == 'oracle':
+            table, column = _ORACLE_MEDDRA_LEVELS[level]
+            sql = f"SELECT DISTINCT {column} AS name FROM {table} WHERE UPPER({column}) LIKE :q ORDER BY name FETCH NEXT 30 ROWS ONLY"
+            from dashboard.services.fdalabel_db import FDALabelDBService
+            oracle_rows = FDALabelDBService.execute_oracle_query(sql, {'q': f'%{q.upper()}%'})
+            suggestions = [r.get('NAME') or r.get('name') for r in oracle_rows if r and (r.get('NAME') or r.get('name'))]
+            return jsonify({'suggestions': suggestions})
+        else:
+            table, column = _MEDDRA_LEVELS[level]
+            rows = _rows(
+                f"""
+                SELECT DISTINCT {column} AS name FROM public.{table}
+                WHERE {column} ILIKE %(q)s ORDER BY name LIMIT 30
+                """,
+                {'q': f'%{q}%'},
+            )
+            return jsonify({'suggestions': [r['name'] for r in rows]})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

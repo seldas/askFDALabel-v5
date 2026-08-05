@@ -49,11 +49,13 @@ export function CriterionCard({
   onChange,
   onRemove,
   options,
+  targetDb = 'local',
 }: {
   criterion: Criterion;
   onChange: (value: CriterionValue) => void;
   onRemove: () => void;
   options: OptionLists;
+  targetDb?: 'local' | 'oracle';
 }) {
   const def = CRITERION_DEFS[criterion.type];
   const v = criterion.value as Record<string, any>;
@@ -89,13 +91,13 @@ export function CriterionCard({
   const fetchMeddra = useCallback(
     async (q: string) => {
       const res = await fetch(
-        `/api/labelquery/suggest/meddra?q=${encodeURIComponent(q)}&level=${v.level || 'pt'}`,
+        `/api/labelquery/suggest/meddra?q=${encodeURIComponent(q)}&level=${v.level || 'pt'}&target_db=${targetDb}`,
       );
       if (!res.ok) return [];
       const json = await res.json();
       return json.suggestions || [];
     },
-    [v.level],
+    [v.level, targetDb],
   );
 
   const fetchProductName = useCallback(

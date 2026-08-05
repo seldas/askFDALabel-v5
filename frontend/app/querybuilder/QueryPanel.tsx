@@ -22,10 +22,12 @@ export function QueryPanel({
   query,
   onChange,
   options,
+  targetDb = 'local',
 }: {
   query: LabelQuery;
   onChange: (query: LabelQuery) => void;
   options: OptionLists;
+  targetDb?: 'local' | 'oracle';
 }) {
   const replaceGroup = (index: number, group: CriteriaGroup | null) => {
     const groups = query.groups.slice();
@@ -38,10 +40,10 @@ export function QueryPanel({
   return (
     <>
       {query.groups.map((group, gi) => (
-        <div key={group.uid}>
-          {gi > 0 ? <div className="fdl-or">OR</div> : null}
-          <div className="fdl-group">
-            {gi > 0 && (
+        <div key={group.uid} className="fdl-group">
+          {gi > 0 && <span className="fdl-or">OR</span>}
+          <div className="fdl-group__card">
+            {query.groups.length > 1 && (
               <button
                 type="button"
                 className="fdl-group__x"
@@ -61,6 +63,7 @@ export function QueryPanel({
                 <CriterionCard
                   criterion={criterion}
                   options={options}
+                  targetDb={targetDb}
                   onChange={(value) => {
                     const criteria = group.criteria.slice();
                     criteria.splice(ci, 1, { ...criterion, value });
