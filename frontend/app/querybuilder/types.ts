@@ -55,6 +55,14 @@ export interface QuickPick {
    * containing `%` is a LIKE pattern within a single element.
    */
   value: string;
+  /**
+   * Targets on which this pick can never match, and why.
+   *
+   * The CDER-CBER rollup contains human labeling only, so offering "Animal Rx"
+   * against it produces a confident zero rather than an error — the pick is
+   * disabled there instead, with the reason on the tooltip.
+   */
+  unavailableOn?: { targets: TargetDb[]; reason: string };
 }
 
 export interface CriterionDef {
@@ -79,6 +87,17 @@ export const uid = () => `c${Date.now().toString(36)}${(counter += 1).toString(3
  * so those quick picks are exact — which is what keeps NDA off ANDA. The
  * dropdown below each row offers exact values pulled live from the database.
  */
+/*
+ * Shared by the animal labeling picks. Only the CDER-CBER rollup excludes them
+ * structurally — 'All' reads the raw SUM_SPL, and the local import contains
+ * whatever SPL archives were loaded, so neither can be ruled out from here.
+ */
+const NON_HUMAN_UNAVAILABLE = {
+  targets: ['oracle'] as TargetDb[],
+  reason:
+    'The CDER-CBER version covers human labeling only. Switch the database to "All" to search animal labeling.',
+};
+
 export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
   labelingType: {
     type: 'labelingType',
@@ -86,8 +105,8 @@ export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
     shortTitle: 'Labeling Types',
     optionsKey: 'labelingTypes',
     quickPicks: [
-      { label: 'Animal Rx', value: '%ANIMAL%PRESCRIPTION%' },
-      { label: 'Animal OTC', value: '%ANIMAL%OTC%' },
+      { label: 'Animal Rx', value: '%ANIMAL%PRESCRIPTION%', unavailableOn: NON_HUMAN_UNAVAILABLE },
+      { label: 'Animal OTC', value: '%ANIMAL%OTC%', unavailableOn: NON_HUMAN_UNAVAILABLE },
       { label: 'Human Rx', value: '%HUMAN PRESCRIPTION%' },
       { label: 'Human OTC', value: '%HUMAN OTC%' },
       { label: 'Vaccine', value: '%VACCINE%' },
@@ -269,7 +288,7 @@ export const isOracleTarget = (t: TargetDb) => t === 'oracle' || t === 'oracle_a
 
 export const TARGET_DB_LABELS: Record<TargetDb, string> = {
   local: 'Local DB',
-  oracle: 'Human',
+  oracle: 'CDER-CBER ver.',
   oracle_all: 'All',
 };
 

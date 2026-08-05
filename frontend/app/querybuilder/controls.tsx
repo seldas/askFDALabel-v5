@@ -55,16 +55,24 @@ export function QuickPicks({
   selected,
   onToggle,
   prompt = 'Choose one or more:',
+  reasonFor,
 }: {
   picks: Array<{ label: string; value: string }>;
   selected: string[];
   onToggle: (value: string) => void;
   prompt?: string;
+  /** Reason a pick cannot match on the current target, or null when it can. */
+  reasonFor?: (value: string) => string | null;
 }) {
   return (
     <div className="fdl-quickpicks">
       <span className="fdl-quickpicks__prompt">{prompt}</span>
-      {picks.map((p) => (
+      {picks.map((p) => {
+        // A pick already chosen stays enabled even when unavailable, so the
+        // only way to clear it does not disappear along with its target.
+        const reason = reasonFor?.(p.value) ?? null;
+        const blocked = Boolean(reason) && !selected.includes(p.value);
+        return (
         <button
           key={p.value}
           type="button"
@@ -72,11 +80,14 @@ export function QuickPicks({
             selected.includes(p.value) ? 'fdl-link fdl-link--on' : 'fdl-link'
           }
           aria-pressed={selected.includes(p.value)}
+          disabled={blocked}
+          title={reason ?? undefined}
           onClick={() => onToggle(p.value)}
         >
           {p.label}
         </button>
-      ))}
+        );
+      })}
     </div>
   );
 }

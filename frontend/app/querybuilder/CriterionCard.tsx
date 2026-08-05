@@ -142,6 +142,14 @@ export function CriterionCard({
 
   const list = def.optionsKey ? options[def.optionsKey] : [];
 
+  const quickPickReason = useCallback(
+    (value: string) => {
+      const gate = def.quickPicks?.find((p) => p.value === value)?.unavailableOn;
+      return gate && gate.targets.includes(targetDb) ? gate.reason : null;
+    },
+    [def.quickPicks, targetDb],
+  );
+
   const fetchPharmClass = useCallback(
     async (q: string) => {
       const res = await fetch(
@@ -188,7 +196,12 @@ export function CriterionCard({
         return (
           <>
             {def.quickPicks ? (
-              <QuickPicks picks={def.quickPicks} selected={values} onToggle={toggle} />
+              <QuickPicks
+                picks={def.quickPicks}
+                selected={values}
+                onToggle={toggle}
+                reasonFor={quickPickReason}
+              />
             ) : null}
             <ListAdder
               options={list}
@@ -570,6 +583,7 @@ export function CriterionCard({
     fetchProductName,
     hierarchies,
     list,
+    quickPickReason,
     llts,
     options.loading,
     set,

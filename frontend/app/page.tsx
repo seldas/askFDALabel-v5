@@ -33,6 +33,7 @@ import {
   fromWire,
   type LabelQuery,
   makeEmptyQuery,
+  TARGET_DB_LABELS,
   type TargetDb,
   toWire,
   type WireQuery,
@@ -176,7 +177,7 @@ export default function HomePage() {
             onClick={() => setTargetDb('local')}
             title="Local PostgreSQL import"
           >
-            Local DB
+            {TARGET_DB_LABELS.local}
           </button>
           {/* Human and All are the same Oracle database; they differ only in
             * which summary table the query is based on. */}
@@ -185,9 +186,9 @@ export default function HomePage() {
             className={`fdl-target-db-pill ${targetDb === 'oracle' ? 'active' : ''}`}
             onClick={() => oracleAvailable && setTargetDb('oracle')}
             disabled={!oracleAvailable}
-            title="Oracle FDALabel — human labeling only (DGV_SUM_RX_SPL)"
+            title="Oracle FDALabel, CDER/CBER scope — human labeling only (DGV_SUM_RX_SPL). Animal labeling is not in this table."
           >
-            Human
+            {TARGET_DB_LABELS.oracle}
           </button>
           <button
             type="button"
@@ -196,7 +197,7 @@ export default function HomePage() {
             disabled={!oracleAvailable}
             title="Oracle FDALabel — all labeling, including animal and non-Rx (SUM_SPL)"
           >
-            All
+            {TARGET_DB_LABELS.oracle_all}
           </button>
         </div>
       </div>
