@@ -725,28 +725,26 @@ def _c_oracle_only(value, warnings, label, key):
 
 
 def _c_application_type(value, bag, warnings):
-    values = _as_list(value.get('values'))
-    if not values:
-        return None
-    clauses = []
-    for v in values:
-        v_clean = v.strip()
-        if not v_clean:
-            continue
-        p_exact = bag.add(v_clean)
-        p_pattern = bag.add(f'%{v_clean}%')
-        p_appr_prefix = bag.add(f'{v_clean.upper()} %')
+    """
+    Disabled against the local import.
 
-        clause = f"""(
-            (s.market_categories ILIKE {p_pattern} AND EXISTS (
-                SELECT 1 FROM unnest(string_to_array(s.market_categories, ';')) AS item
-                WHERE btrim(item) ILIKE {p_exact} OR btrim(item) ILIKE {p_pattern}
-            ))
-            OR s.appr_num ILIKE {p_appr_prefix}
-            OR s.appr_num ILIKE {p_pattern}
-        )"""
-        clauses.append(clause)
-    return '(' + ' OR '.join(clauses) + ')' if clauses else None
+    The dropdown counts come from exact element matches on market_categories,
+    but the predicate this replaced also matched on substrings and on appr_num,
+    so "NDA" picked up "ANDA" and "NDA authorized generic" as well as every
+    appr_num containing the letters. The dropdown offered 307 and the search
+    returned 1991, which is 307 plus the 1685 ANDAs. Counts and results
+    disagreeing that badly is worse than not offering the filter, so it is off
+    here until the matching is tightened -- dropping the substring and appr_num
+    arms is most of it. The Oracle targets are unaffected; see git history for
+    the predicate.
+    """
+    if not _as_list(value.get('values')):
+        return None
+    warnings.append(
+        'Application Types / Marketing Categories is currently unavailable for the '
+        'local database and was ignored. Use an Oracle target for this filter.'
+    )
+    return None
 
 
 def _compile_criterion(criterion, bag, warnings, expand_meddra, capabilities):

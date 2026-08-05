@@ -1227,8 +1227,9 @@ Rules:
 _TRANSLATE_SCOPE_NOTES = {
     'local': """
 Target database: LOCAL import (PostgreSQL).
-- "deaSchedule" and "activeMoiety" are NOT available. Do not emit them; put the
-  requirement in "notes" instead.
+- "deaSchedule", "activeMoiety" and "applicationType" are NOT available. Do not
+  emit them; put the requirement in "notes" instead. (applicationType is off
+  here because its counts and its results disagree on this import.)
 - "chemicalStructure" is not available on any target. Never emit it.
 """,
     'oracle': """
@@ -1249,7 +1250,7 @@ Target database: FDALabel Oracle, full FDA scope.
 #: Criteria that cannot be evaluated per target. Mirrors CRITERION_SUPPORT in
 #: frontend/app/querybuilder/types.ts -- keep the two in step.
 _TARGET_UNSUPPORTED = {
-    'local': {'deaSchedule', 'activeMoiety', 'chemicalStructure'},
+    'local': {'deaSchedule', 'activeMoiety', 'applicationType', 'chemicalStructure'},
     'oracle': {'chemicalStructure'},
     'oracle_all': {'chemicalStructure'},
 }

@@ -309,7 +309,17 @@ export const TARGET_DB_LABELS: Record<TargetDb, string> = {
 export const CRITERION_SUPPORT: Partial<Record<CriterionType, TargetDb[]>> = {
   deaSchedule: ['oracle', 'oracle_all'],
   activeMoiety: ['oracle', 'oracle_all'],
+  applicationType: ['oracle', 'oracle_all'],
   chemicalStructure: [],
+};
+
+/**
+ * Overrides the generated wording in `unsupportedReason` where "the other
+ * database has it" is not the useful explanation.
+ */
+export const CRITERION_UNAVAILABLE_REASON: Partial<Record<CriterionType, string>> = {
+  applicationType:
+    'Application Types / Marketing Categories is currently not available for the Local DB.',
 };
 
 export function isCriterionSupported(type: CriterionType, targetDb: TargetDb): boolean {
@@ -320,6 +330,8 @@ export function isCriterionSupported(type: CriterionType, targetDb: TargetDb): b
 /** Why a criterion is unavailable, or null when it is fine. Shown verbatim. */
 export function unsupportedReason(type: CriterionType, targetDb: TargetDb): string | null {
   if (isCriterionSupported(type, targetDb)) return null;
+  const override = CRITERION_UNAVAILABLE_REASON[type];
+  if (override) return override;
   const { shortTitle } = CRITERION_DEFS[type];
   const support = CRITERION_SUPPORT[type] ?? [];
   if (support.length === 0) {
