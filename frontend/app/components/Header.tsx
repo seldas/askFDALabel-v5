@@ -638,15 +638,15 @@ export default function Header({
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                   <span>FDA Bioinformatics Tools ↗</span>
                 </a>
-                <a
-                  href="https://nctr-crs.fda.gov/fdalabel/ui/contact"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                  <span>Contact FDALabel ↗</span>
-                </a>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '0.78rem', marginTop: '2px' }}>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>Report Technical Problems:</span>
+                  <a
+                    href="mailto:NCTRBioinformaticsSupport@fda.hhs.gov"
+                    style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'underline', wordBreak: 'break-all' }}
+                  >
+                    NCTRBioinformaticsSupport@fda.hhs.gov
+                  </a>
+                </div>
                 <Link
                   href="/disclaimer"
                   onClick={() => setActiveDropdown(null)}

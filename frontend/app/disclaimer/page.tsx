@@ -120,9 +120,7 @@ export default function DisclaimerPage() {
                 <span>🌐</span> FDA Bioinformatics Tools Page ↗
               </a>
               <a
-                href="https://nctr-crs.fda.gov/fdalabel/ui/contact"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="mailto:NCTRBioinformaticsSupport@fda.hhs.gov"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -137,7 +135,7 @@ export default function DisclaimerPage() {
                   boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
                 }}
               >
-                <span>✉️</span> Contact FDALabel ↗
+                <span>✉️</span> Report Technical Problems: NCTRBioinformaticsSupport@fda.hhs.gov
               </a>
             </div>
           </section>
