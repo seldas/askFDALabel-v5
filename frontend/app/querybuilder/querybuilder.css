@@ -1030,7 +1030,7 @@
 }
 
 /* --- Row Expand Button & Code Cell --- */
-.fdl-row-expand-btn {
+.fdl-tr-expand-btn {
   background: none;
   border: none;
   color: var(--afl-text-tertiary);
@@ -1041,12 +1041,16 @@
   transition: transform 0.15s ease, color 0.15s ease;
 }
 
-.fdl-row:hover .fdl-row-expand-btn {
+.fdl-tr:hover .fdl-tr-expand-btn {
   color: var(--afl-brand-600);
 }
 
-.fdl-row-expand-btn.active {
+.fdl-tr-expand-btn.active {
   color: var(--afl-brand-600);
+}
+
+.fdl-tr--expanded {
+  background-color: #f1f5f9;
 }
 
 .fdl-code-sm {

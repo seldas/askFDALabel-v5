@@ -497,7 +497,7 @@ export function ResultsTable({
                 return (
                   <Fragment key={rowId}>
                     <tr
-                      className={`fdl-row ${isExpanded ? 'fdl-row--expanded' : ''}`}
+                      className={`fdl-tr ${isExpanded ? 'fdl-tr--expanded' : ''}`}
                       onClick={() => toggleRow(rowId)}
                       style={{ cursor: 'pointer' }}
                     >
@@ -509,7 +509,7 @@ export function ResultsTable({
                       >
                         <button
                           type="button"
-                          className={`fdl-row-expand-btn ${isExpanded ? 'active' : ''}`}
+                          className={`fdl-tr-expand-btn ${isExpanded ? 'active' : ''}`}
                           title={isExpanded ? 'Collapse drug card' : 'Expand drug card'}
                         >
                           {isExpanded ? '▼' : '▶'}
