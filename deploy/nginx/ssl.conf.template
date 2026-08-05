@@ -9,6 +9,10 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers on;
 
+    # Saving a query as a task POSTs the result rows themselves, which is ~1.5 MB
+    # at the 3,000-row cap -- past nginx's 1 MB default.
+    client_max_body_size 16m;
+
     location = / {
         return 302 /fdalabel-v3/;
     }

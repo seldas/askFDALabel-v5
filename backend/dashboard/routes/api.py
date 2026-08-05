@@ -1818,12 +1818,56 @@ def favorite_all():
         'project_id': target_project.id
     })
 
+#: Query-result row keys -> Favorite column, most specific alias first.
+#
+# Two shapes reach this: the raw labelquery/execute row (Postgres column names,
+# also what the Oracle compiler aliases to) and the fda_client dict. Either can
+# be the source, so both spellings are accepted per field.
+_TASK_LABEL_FIELDS = {
+    'brand_name':         ('brand_name', 'product_names', 'PRODUCT_NAMES'),
+    'generic_name':       ('generic_name', 'generic_names', 'GENERIC_NAMES'),
+    'manufacturer_name':  ('manufacturer_name', 'manufacturer', 'MANUFACTURER'),
+    'market_category':    ('market_category', 'market_categories', 'MARKET_CATEGORIES'),
+    'application_number': ('application_number', 'appr_num', 'APPR_NUM'),
+    'ndc':                ('ndc', 'ndc_codes', 'NDC_CODES'),
+    'effective_time':     ('effective_time', 'revised_date', 'REVISED_DATE'),
+    'active_ingredients': ('active_ingredients', 'ACTIVE_INGREDIENTS'),
+    'labeling_type':      ('labeling_type', 'doc_type', 'DOC_TYPE'),
+    'dosage_forms':       ('dosage_forms', 'DOSAGE_FORMS'),
+    'routes':             ('routes', 'ROUTES'),
+    'epc':                ('epc', 'EPC'),
+}
+
+
+def _favorite_fields_from_row(row):
+    """Favorite column values for one query-result row, blanks normalized to 'n/a'."""
+    out = {}
+    for column, aliases in _TASK_LABEL_FIELDS.items():
+        value = None
+        for alias in aliases:
+            if row.get(alias) not in (None, ''):
+                value = row[alias]
+                break
+        if value is None:
+            out[column] = 'n/a'
+        elif isinstance(value, str):
+            out[column] = value
+        else:
+            out[column] = str(value)
+    return out
+
+
 @api_bp.route('/create_task_from_query', methods=['POST'])
 @login_required
 def create_task_from_query():
     data = request.json or {}
     title = (data.get('title') or '').strip()
     set_ids = data.get('set_ids') or []
+    # The caller sends the rows it already displayed. Re-querying by set_id would
+    # go to the local Postgres import regardless of which database produced the
+    # results, so anything the local import does not carry -- product name,
+    # manufacturer, effective time -- came back blank on Oracle-sourced results.
+    labels = data.get('labels') or []
 
     if not title:
         title = f"Query Task - {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}"
@@ -1831,8 +1875,23 @@ def create_task_from_query():
     if Project.query.filter_by(owner_id=current_user.id).count() >= 100:
         return jsonify({'error': 'Task limit reached (Max 100). Cannot create new task.'}), 403
 
+    supplied = {}
+    if isinstance(labels, list):
+        for row in labels:
+            if not isinstance(row, dict):
+                continue
+            sid = str(row.get('set_id') or row.get('SET_ID') or '').strip()
+            if sid:
+                supplied[sid] = row
+
     if isinstance(set_ids, list):
-        set_ids = [str(sid).strip() for sid in set_ids if str(sid).strip()][:3000]
+        set_ids = [str(sid).strip() for sid in set_ids if str(sid).strip()]
+    else:
+        set_ids = []
+    if not set_ids:
+        # Rows alone are a complete request; the id list is redundant with them.
+        set_ids = list(supplied.keys())
+    set_ids = list(dict.fromkeys(set_ids))[:3000]
 
     new_project = Project(title=title, owner_id=current_user.id)
     db.session.add(new_project)
@@ -1840,31 +1899,28 @@ def create_task_from_query():
 
     added_count = 0
     if set_ids:
-        from dashboard.services.fda_client import find_labels_by_set_ids
-        labels, _ = find_labels_by_set_ids(set_ids, skip=0, limit=3000)
-        label_map = {l['set_id']: l for l in labels} if labels else {}
+        # Only ids the caller could not describe need a lookup.
+        missing = [sid for sid in set_ids if sid not in supplied]
+        if missing:
+            from dashboard.services.fda_client import find_labels_by_set_ids
+            fetched, _ = find_labels_by_set_ids(missing, skip=0, limit=3000)
+            for label in (fetched or []):
+                sid = str(label.get('set_id') or '').strip()
+                if sid:
+                    supplied[sid] = label
 
         fav_objects = []
         for set_id in set_ids:
-            label = label_map.get(set_id, {})
-            brand = label.get('brand_name') or 'n/a'
-            manufacturer = label.get('manufacturer_name') or 'n/a'
-            generic = label.get('generic_name') or 'n/a'
-            appr = label.get('application_number') or 'n/a'
-            mkt = label.get('market_category') or 'n/a'
+            fields = _favorite_fields_from_row(supplied.get(set_id) or {})
 
             new_fav = Favorite(
                 user_id=current_user.id,
                 project_id=new_project.id,
                 set_id=set_id,
-                brand_name=brand,
-                generic_name=generic,
-                manufacturer_name=manufacturer,
-                market_category=mkt,
-                application_number=appr,
                 fdalabel_link=f"https://nctr-crs.fda.gov/fdalabel/ui/search/spl/{set_id}",
                 dailymed_spl_link=f"https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid={set_id}",
-                dailymed_pdf_link=f"https://dailymed.nlm.nih.gov/dailymed/getpdf.cfm?setid={set_id}"
+                dailymed_pdf_link=f"https://dailymed.nlm.nih.gov/dailymed/getpdf.cfm?setid={set_id}",
+                **fields
             )
             fav_objects.append(new_fav)
             added_count += 1

@@ -264,10 +264,10 @@ function ResultsPage() {
     setError(null);
     try {
       const totalCount = data?.total || 0;
-      let targetSetIds = (data?.results || []).map((r) => r.set_id);
+      let targetRows: any[] = data?.results || [];
 
-      // If total results exceed loaded page size, fetch full list of set_ids up to 3,000
-      if (query && totalCount > targetSetIds.length) {
+      // If total results exceed loaded page size, fetch the full result set up to 3,000
+      if (query && totalCount > targetRows.length) {
         try {
           const fetchRes = await fetch('/api/labelquery/execute', {
             method: 'POST',
@@ -284,20 +284,42 @@ function ResultsPage() {
           if (fetchRes.ok) {
             const fetchJson = await fetchRes.json();
             if (fetchJson.results?.length) {
-              targetSetIds = fetchJson.results.map((r: any) => r.set_id);
+              targetRows = fetchJson.results;
             }
           }
         } catch (e) {
-          console.error('Failed to fetch set_ids for task', e);
+          console.error('Failed to fetch results for task', e);
         }
       }
+
+      // Send the rows themselves, not just the ids. The task fills its columns
+      // from these: looking them up again server-side would hit the local
+      // Postgres import even when these results came from Oracle, which is
+      // where the blank product name / manufacturer / effective time came from.
+      const labels = targetRows
+        .filter((r) => r?.set_id)
+        .map((r) => ({
+          set_id: r.set_id,
+          product_names: r.product_names,
+          generic_names: r.generic_names,
+          manufacturer: r.manufacturer,
+          market_categories: r.market_categories,
+          appr_num: r.appr_num,
+          ndc_codes: r.ndc_codes,
+          revised_date: r.revised_date,
+          active_ingredients: r.active_ingredients,
+          doc_type: r.doc_type,
+          dosage_forms: r.dosage_forms,
+          routes: r.routes,
+          epc: r.epc,
+        }));
 
       const res = await fetch('/api/dashboard/create_task_from_query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: taskTitleInput.trim(),
-          set_ids: targetSetIds,
+          labels,
           target_db: targetDb,
         }),
       });
