@@ -1812,6 +1812,65 @@ def favorite_all():
         'project_id': target_project.id
     })
 
+@api_bp.route('/create_task_from_query', methods=['POST'])
+@login_required
+def create_task_from_query():
+    data = request.json or {}
+    title = (data.get('title') or '').strip()
+    set_ids = data.get('set_ids') or []
+
+    if not title:
+        title = f"Query Task - {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}"
+
+    if Project.query.filter_by(owner_id=current_user.id).count() >= 100:
+        return jsonify({'error': 'Task limit reached (Max 100). Cannot create new task.'}), 403
+
+    if isinstance(set_ids, list):
+        set_ids = [str(sid).strip() for sid in set_ids if str(sid).strip()][:3000]
+
+    new_project = Project(title=title, owner_id=current_user.id)
+    db.session.add(new_project)
+    db.session.commit()
+
+    added_count = 0
+    if set_ids:
+        from dashboard.services.fda_client import find_labels_by_set_ids
+        labels, _ = find_labels_by_set_ids(set_ids, skip=0, limit=3000)
+        label_map = {l['set_id']: l for l in labels} if labels else {}
+
+        for set_id in set_ids:
+            label = label_map.get(set_id, {})
+            brand = label.get('brand_name') or 'n/a'
+            manufacturer = label.get('manufacturer_name') or 'n/a'
+            generic = label.get('generic_name') or 'n/a'
+            appr = label.get('application_number') or 'n/a'
+            mkt = label.get('market_category') or 'n/a'
+
+            new_fav = Favorite(
+                user_id=current_user.id,
+                project_id=new_project.id,
+                set_id=set_id,
+                brand_name=brand,
+                generic_name=generic,
+                manufacturer_name=manufacturer,
+                market_category=mkt,
+                application_number=appr,
+                fdalabel_link=f"https://nctr-crs.fda.gov/fdalabel/ui/search/spl/{set_id}",
+                dailymed_spl_link=f"https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid={set_id}",
+                dailymed_pdf_link=f"https://dailymed.nlm.nih.gov/dailymed/getpdf.cfm?setid={set_id}"
+            )
+            db.session.add(new_fav)
+            added_count += 1
+
+        db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'project_id': new_project.id,
+        'project_title': new_project.title,
+        'added_count': added_count
+    })
+
 @api_bp.route('/my_labelings', methods=['GET'])
 @login_required
 def get_my_labelings():

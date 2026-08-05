@@ -10,9 +10,11 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { Page } from '../platform/primitives';
+import { useUser } from '../context/UserContext';
 import {
   ResultsTable,
   type LabelRow,
@@ -73,6 +75,7 @@ function ResultsPage() {
   const searchParams = useSearchParams();
   const encoded = searchParams.get(QUERY_PARAM);
   const targetDb = searchParams.get('target_db') || 'oracle';
+  const { session, openAuthModal } = useUser();
 
   const query = useMemo<WireQuery | null>(() => decodeQuery(encoded), [encoded]);
 
@@ -85,6 +88,25 @@ function ResultsPage() {
   const [sortState, setSortState] = useState<SortState>({ sort: 'revised_date', dir: 'desc' });
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
+
+  // Task creation and Export menu states
+  const [exportOpen, setExportOpen] = useState(false);
+  const [is3000WarningOpen, setIs3000WarningOpen] = useState(false);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [taskTitleInput, setTaskTitleInput] = useState('');
+  const [taskSaving, setTaskSaving] = useState(false);
+  const [taskSuccessMsg, setTaskSuccessMsg] = useState<{ title: string; count: number; id: number } | null>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('.fdl-export-dropdown')) {
+        setExportOpen(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   // A changed query means the old page number is meaningless.
   useEffect(() => {
@@ -170,8 +192,7 @@ function ResultsPage() {
     setSortState((prev) =>
       prev.sort === sort
         ? { sort, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
-        : // Dates are most useful newest-first; names A–Z.
-          { sort, dir: sort === 'revised_date' || sort === 'approval_year' ? 'desc' : 'asc' },
+        : { sort, dir: 'asc' },
     );
   }, []);
 
@@ -208,7 +229,7 @@ function ResultsPage() {
         setDownloading(null);
       }
     },
-    [downloading, query, sortState],
+    [downloading, query, sortState, targetDb],
   );
 
   const copyPermalink = useCallback(async () => {
@@ -220,6 +241,84 @@ function ResultsPage() {
       setError('Could not copy the link. Copy it from the address bar instead.');
     }
   }, []);
+
+  const handleInitiateTaskCreation = () => {
+    if (!session?.is_authenticated) {
+      if (openAuthModal) openAuthModal('login');
+      else setError('Please sign in to save query results as a task.');
+      return;
+    }
+    const totalCount = data?.total || 0;
+    setTaskTitleInput(summarizeQuery(query));
+
+    if (totalCount > 3000) {
+      setIs3000WarningOpen(true);
+    } else {
+      setIsTaskModalOpen(true);
+    }
+  };
+
+  const handleSaveTask = async () => {
+    if (!taskTitleInput.trim() || taskSaving) return;
+    setTaskSaving(true);
+    setError(null);
+    try {
+      const totalCount = data?.total || 0;
+      let targetSetIds = (data?.results || []).map((r) => r.set_id);
+
+      // If total results exceed loaded page size, fetch full list of set_ids up to 3,000
+      if (query && totalCount > targetSetIds.length) {
+        try {
+          const fetchRes = await fetch('/api/labelquery/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query,
+              limit: Math.min(totalCount, 3000),
+              offset: 0,
+              sort: sortState.sort,
+              dir: sortState.dir,
+              target_db: targetDb,
+            }),
+          });
+          if (fetchRes.ok) {
+            const fetchJson = await fetchRes.json();
+            if (fetchJson.results?.length) {
+              targetSetIds = fetchJson.results.map((r: any) => r.set_id);
+            }
+          }
+        } catch (e) {
+          console.error('Failed to fetch set_ids for task', e);
+        }
+      }
+
+      const res = await fetch('/api/dashboard/create_task_from_query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: taskTitleInput.trim(),
+          set_ids: targetSetIds,
+          target_db: targetDb,
+        }),
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.error || 'Failed to create task.');
+      }
+
+      setIsTaskModalOpen(false);
+      setTaskSuccessMsg({
+        title: resData.project_title,
+        count: resData.added_count,
+        id: resData.project_id,
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to save task.');
+    } finally {
+      setTaskSaving(false);
+    }
+  };
 
   const rows: LabelRow[] = data?.results || [];
   const total = data?.total || 0;
@@ -263,33 +362,196 @@ function ResultsPage() {
             </button>
           </div>
 
-          <div className="fdl-resultshead__tools">
-            <span>
-              Download Full Results (
-              <button
-                type="button"
-                className="fdl-link"
-                disabled={!query || downloading !== null}
-                onClick={() => download('csv')}
-              >
-                {downloading === 'csv' ? 'CSV…' : 'CSV'}
-              </button>
-              {' | '}
-              <button
-                type="button"
-                className="fdl-link"
-                disabled={!query || downloading !== null}
-                onClick={() => download('xlsx')}
-              >
-                {downloading === 'xlsx' ? 'Excel…' : 'Excel'}
-              </button>
-              )
-            </span>
-            <button type="button" className="fdl-link" onClick={copyPermalink}>
-              {copied ? 'Link copied' : 'View Query (permanent link)'}
+          {/* Unified Export Dropdown Button */}
+          <div className="fdl-export-dropdown" style={{ position: 'relative', display: 'inline-block' }}>
+            <button
+              type="button"
+              className="fdl-btn fdl-btn--export"
+              onClick={() => setExportOpen((prev) => !prev)}
+              disabled={!query || downloading !== null}
+              style={{
+                background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '8px 18px',
+                fontWeight: 700,
+                fontSize: '0.88rem',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 2px 6px rgba(15, 23, 42, 0.2)',
+              }}
+            >
+              <span>Export</span>
+              <span style={{ fontSize: '0.7rem' }}>▼</span>
             </button>
+
+            {exportOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 'calc(100% + 6px)',
+                  background: '#ffffff',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5e1',
+                  boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.2)',
+                  minWidth: '240px',
+                  zIndex: 1000,
+                  padding: '6px',
+                }}
+              >
+                <button
+                  type="button"
+                  disabled={downloading !== null}
+                  onClick={() => { setExportOpen(false); download('csv'); }}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: '#1e293b',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <span style={{ fontSize: '1rem' }}>📄</span>
+                  <span>{downloading === 'csv' ? 'Exporting CSV…' : 'Export as CSV'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={downloading !== null}
+                  onClick={() => { setExportOpen(false); download('xlsx'); }}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: '#1e293b',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <span style={{ fontSize: '1rem' }}>📊</span>
+                  <span>{downloading === 'xlsx' ? 'Exporting Excel…' : 'Export as Excel (.xlsx)'}</span>
+                </button>
+
+                <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0' }} />
+
+                <button
+                  type="button"
+                  onClick={() => { setExportOpen(false); copyPermalink(); }}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: '#1e293b',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <span style={{ fontSize: '1rem' }}>🔗</span>
+                  <span>{copied ? 'Link Copied!' : 'Copy Permanent Link'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setExportOpen(false); handleInitiateTaskCreation(); }}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: '#2563eb',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <span style={{ fontSize: '1rem' }}>📋</span>
+                  <span>Save Query Results as Task</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Task Creation Success Banner */}
+        {taskSuccessMsg && (
+          <div
+            style={{
+              background: '#ecfdf5',
+              border: '1px solid #a7f3d0',
+              color: '#065f46',
+              padding: '12px 18px',
+              borderRadius: '10px',
+              marginBottom: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.1)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '1.2rem', fontWeight: 800 }}>✓</span>
+              <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>
+                Task <strong>"{taskSuccessMsg.title}"</strong> created with{' '}
+                <strong>{taskSuccessMsg.count.toLocaleString()}</strong> labeling record(s)!
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Link
+                href={`/dashboard?projectId=${taskSuccessMsg.id}`}
+                style={{
+                  background: '#059669',
+                  color: '#ffffff',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                }}
+              >
+                View Task in Dashboard →
+              </Link>
+              <button
+                type="button"
+                onClick={() => setTaskSuccessMsg(null)}
+                style={{ background: 'none', border: 'none', color: '#047857', cursor: 'pointer', fontWeight: 800, fontSize: '1rem' }}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
 
         {error ? (
           <div className="fdl-error-box">
@@ -328,46 +590,291 @@ function ResultsPage() {
             <ResultsTable rows={rows} view={view} sortState={sortState} onSort={onSort} />
             <div className="fdl-results__bar fdl-results__bar--bottom">
               <span className="fdl-results__count">
-                Showing {(offset + 1).toLocaleString()}–{to.toLocaleString()} of{' '}
-                {browsable.toLocaleString()}
-                {data?.capped ? ` most recent (of ${total.toLocaleString()} matching)` : ''}
+                Showing {offset + 1}–{to} of {browsable.toLocaleString()}
               </span>
-              <span className="fdl-results__pager">
+              <div className="fdl-pager">
                 <button
                   type="button"
-                  className="fdl-btn fdl-btn--quiet"
-                  disabled={busy || offset === 0}
+                  className="fdl-btn fdl-btn--ghost"
+                  disabled={offset === 0}
                   onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
                 >
                   ‹ Previous
                 </button>
                 <button
                   type="button"
-                  className="fdl-btn fdl-btn--quiet"
-                  disabled={busy || to >= browsable}
+                  className="fdl-btn fdl-btn--ghost"
+                  disabled={to >= browsable}
                   onClick={() => setOffset(offset + PAGE_SIZE)}
                 >
                   Next ›
                 </button>
-              </span>
+              </div>
             </div>
           </>
-        ) : !busy && !error ? (
-          <p className="fdl-note">
-            No labels matched. Go back to the query builder and loosen a criterion.
-          </p>
+        ) : !busy ? (
+          <div className="fdl-empty">
+            <p>No labeling matched your criteria.</p>
+          </div>
         ) : null}
       </main>
+
+      {/* Customized Result Truncation Warning Modal (>3000 results) */}
+      {is3000WarningOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '1rem',
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '520px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+              border: '1px solid #cbd5e1',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '10px',
+                  background: '#fef3c7',
+                  color: '#d97706',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.25rem',
+                  fontWeight: 800,
+                }}
+              >
+                ⚠️
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
+                  Result Limit Truncation Notice
+                </h3>
+                <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>
+                  Query results exceed task capacity limit
+                </span>
+              </div>
+            </div>
+
+            <p style={{ margin: '0 0 20px 0', fontSize: '0.9rem', color: '#334155', lineHeight: 1.55 }}>
+              This search query returned <strong>{(data?.total || 0).toLocaleString()}</strong> labeling results. Tasks support a maximum of <strong>3,000</strong> items. Only the first <strong>3,000</strong> results will be saved into the task.
+            </p>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setIs3000WarningOpen(false)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  color: '#475569',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIs3000WarningOpen(false);
+                  setIsTaskModalOpen(true);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#2563eb',
+                  color: '#ffffff',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 6px rgba(37, 99, 235, 0.3)',
+                }}
+              >
+                Proceed & Save (First 3,000)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Customized Task Creation Modal */}
+      {isTaskModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '1rem',
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '500px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+              border: '1px solid #cbd5e1',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  background: '#eff6ff',
+                  color: '#2563eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.2rem',
+                }}
+              >
+                📋
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
+                  Save Query Results as Task
+                </h3>
+                <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>
+                  Organize query set into My Dashboard tasks
+                </span>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                Task Title
+              </label>
+              <input
+                type="text"
+                value={taskTitleInput}
+                onChange={(e) => setTaskTitleInput(e.target.value)}
+                placeholder="e.g. Full Text: aspirin"
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.9rem',
+                  background: '#f8fafc',
+                  color: '#0f172a',
+                  fontWeight: 600,
+                }}
+              />
+            </div>
+
+            <div
+              style={{
+                background: '#f1f5f9',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                color: '#475569',
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <span>Records to be saved:</span>
+              <strong style={{ color: '#1d4ed8' }}>
+                {Math.min(data?.total || 0, 3000).toLocaleString()} labeling record(s)
+              </strong>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                disabled={taskSaving}
+                onClick={() => setIsTaskModalOpen(false)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  color: '#475569',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={taskSaving || !taskTitleInput.trim()}
+                onClick={handleSaveTask}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#2563eb',
+                  color: '#ffffff',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: taskSaving ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 2px 6px rgba(37, 99, 235, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                {taskSaving ? 'Saving Task…' : 'Create & Save Task'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </Page>
   );
 }
 
-export default function LabelQueryResultsPage() {
-  // useSearchParams needs a Suspense boundary to keep the route prerenderable.
+export default function ResultsPageWrapper() {
   return (
-    <Suspense fallback={null}>
+    <Suspense
+      fallback={
+        <Page>
+          <Header />
+          <main className="fdl-shell fdl-shell--results">
+            <div className="fdl-empty">
+              <p>Loading results…</p>
+            </div>
+          </main>
+          <Footer />
+        </Page>
+      }
+    >
       <ResultsPage />
     </Suspense>
   );
