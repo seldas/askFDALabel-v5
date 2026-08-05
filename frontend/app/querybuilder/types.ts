@@ -128,7 +128,7 @@ export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
       // and the quick pick means all of them.
       { label: 'OTC Monograph Drug', value: '%OTC monograph%' },
     ],
-    defaultValue: () => ({ values: [] }),
+    defaultValue: () => ({ values: [], isRldRs: false, excludeRepackager: false }),
   },
   productName: {
     type: 'productName',
@@ -153,7 +153,7 @@ export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
     type: 'marketStatus',
     title: 'Market Status',
     shortTitle: 'Market Status',
-    defaultValue: () => ({ values: [] }),
+    defaultValue: () => ({ status: '', startDateMin: '', startDateMax: '', values: [] }),
   },
   meddra: {
     type: 'meddra',

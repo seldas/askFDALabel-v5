@@ -1177,10 +1177,8 @@ Allowed "type" values and the exact shape of their "value":
                        "op": "contains"|"startsWith"|"equals"|"notContains",
                        "text": "metformin"}
 - "fullText"          {"mode": "simple"|"advanced", "text": "hepatic failure"}
-- "labelingSection"   {"mode": "simple"|"advanced",
-                       "text": "DILI OR hepatotoxicity OR \"liver function test\" OR \"acute liver failure\"",
-                       "sections": ["BOXED WARNING", "WARNINGS AND PRECAUTIONS", "ADVERSE REACTIONS"]}
-- "marketStatus"      {"values": ["rld"]}          // rld, rs, marketed, discontinued
+- "applicationType"   {"values": ["NDA"], "isRldRs": false, "excludeRepackager": true}
+- "marketStatus"      {"status": "active", "startDateMin": "2020-01-01", "startDateMax": "2023-12-31"} // status: active|completed|discontinued, plus optional startDateMin/Max
 - "deaSchedule"       {"values": ["CII"]}          // CI, CII, CIII, CIV, CV -- Oracle only
 - "activeMoiety"      {"op": "equals"|"startsWith"|"contains", "terms": ["Amphetamine"]}  // Oracle only; the active part of the molecule, so it catches salts
 - "meddra"            {"level": "pt"|"llt", "terms": ["Hepatic failure"]}

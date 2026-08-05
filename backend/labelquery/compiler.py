@@ -515,26 +515,34 @@ def _c_labeling_section(criterion, bag, warnings):
 
 
 def _c_market_status(criterion, bag, warnings):
+    status = (criterion.get('status') or '').strip().lower()
+    min_date = (criterion.get('startDateMin') or '').replace('-', '').strip()
+    max_date = (criterion.get('startDateMax') or '').replace('-', '').strip()
     values = {v.lower() for v in _as_list(criterion.get('values'))}
-    if not values:
+
+    if not status and not min_date and not max_date and not values:
         return None
+
     alts = []
     if 'rld' in values:
         alts.append('s.is_rld = 1')
     if 'rs' in values:
         alts.append('s.is_rs = 1')
-    if 'marketed' in values or 'discontinued' in values:
-        # Marketing status is Orange Book's, not the SPL's; match on the
-        # application number the label carries.
-        wanted = []
-        if 'marketed' in values:
-            wanted.extend(['RX', 'OTC'])
-        if 'discontinued' in values:
-            wanted.append('DISCN')
+
+    if status == 'active' or 'marketed' in values:
         alts.append(
-            'EXISTS (SELECT 1 FROM public.orange_book ob WHERE '
-            f's.appr_num ILIKE \'%%\' || ob.appl_no || \'%%\' AND ob.type = ANY({bag.add(wanted)}))'
+            "EXISTS (SELECT 1 FROM public.orange_book ob WHERE s.appr_num ILIKE '%%' || ob.appl_no || '%%' AND ob.type = ANY('{RX,OTC}'))"
         )
+    elif status in ('completed', 'discontinued') or 'discontinued' in values:
+        alts.append(
+            "EXISTS (SELECT 1 FROM public.orange_book ob WHERE s.appr_num ILIKE '%%' || ob.appl_no || '%%' AND ob.type = 'DISCN')"
+        )
+
+    if min_date or max_date:
+        warnings.append(
+            'Start Date range filtering for Market Status is available on Oracle targets and was ignored for local queries.'
+        )
+
     if not alts:
         return None
     return '(' + ' OR '.join(alts) + ')'
@@ -707,26 +715,25 @@ def _c_oracle_only(value, warnings, label, key):
 
 
 def _c_application_type(value, bag, warnings):
-    """
-    Disabled against the local import.
+    values = _as_list(value.get('values'))
+    is_rld_rs = bool(value.get('isRldRs') or value.get('rld_rs'))
+    exclude_repackager = bool(value.get('excludeRepackager') or value.get('exclude_repackager'))
 
-    The dropdown counts come from exact element matches on market_categories,
-    but the predicate this replaced also matched on substrings and on appr_num,
-    so "NDA" picked up "ANDA" and "NDA authorized generic" as well as every
-    appr_num containing the letters. The dropdown offered 307 and the search
-    returned 1991, which is 307 plus the 1685 ANDAs. Counts and results
-    disagreeing that badly is worse than not offering the filter, so it is off
-    here until the matching is tightened -- dropping the substring and appr_num
-    arms is most of it. The Oracle targets are unaffected; see git history for
-    the predicate.
-    """
-    if not _as_list(value.get('values')):
+    preds = []
+    if is_rld_rs:
+        preds.append('(s.is_rld = 1 OR s.is_rs = 1)')
+
+    if exclude_repackager:
+        preds.append("(UPPER(s.marketing_category) NOT LIKE '%REPACK%' AND UPPER(s.marketing_category) NOT LIKE '%REPACKAG%')")
+
+    if values:
+        warnings.append(
+            'Application Types / Marketing Categories category dropdown search is currently unavailable for the local database and was ignored. Use an Oracle target for category filters.'
+        )
+
+    if not preds:
         return None
-    warnings.append(
-        'Application Types / Marketing Categories is currently unavailable for the '
-        'local database and was ignored. Use an Oracle target for this filter.'
-    )
-    return None
+    return '(' + ' AND '.join(preds) + ')'
 
 
 def _compile_criterion(criterion, bag, warnings, expand_meddra, capabilities):

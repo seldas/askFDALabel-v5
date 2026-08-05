@@ -190,7 +190,6 @@ export function CriterionCard({
   const body = useMemo(() => {
     switch (criterion.type) {
       case 'labelingType':
-      case 'applicationType':
       case 'route':
       case 'dosageForm':
         return (
@@ -216,6 +215,54 @@ export function CriterionCard({
                 def.quickPicks?.find((p) => p.value === value)?.label || value
               }
             />
+          </>
+        );
+
+      case 'applicationType':
+        return (
+          <>
+            {def.quickPicks ? (
+              <QuickPicks
+                picks={def.quickPicks}
+                selected={values}
+                onToggle={toggle}
+                reasonFor={quickPickReason}
+              />
+            ) : null}
+            <ListAdder
+              options={list}
+              selected={values}
+              loading={options.loading}
+              onAdd={(value) => set({ values: [...values, value] })}
+            />
+            <Chips
+              values={values}
+              onRemove={(value) => set({ values: values.filter((x: string) => x !== value) })}
+              labelFor={(value) =>
+                def.quickPicks?.find((p) => p.value === value)?.label || value
+              }
+            />
+            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={!!v.isRldRs}
+                  onChange={(e) => set({ isRldRs: e.target.checked })}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#2563eb' }}
+                />
+                <span>RLD / RS (Reference Listed Drug / Reference Standard)</span>
+              </label>
+
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={!!v.excludeRepackager}
+                  onChange={(e) => set({ excludeRepackager: e.target.checked })}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#2563eb' }}
+                />
+                <span>Exclude repacker and repackaging</span>
+              </label>
+            </div>
           </>
         );
 
@@ -340,20 +387,91 @@ export function CriterionCard({
         );
       }
 
-      case 'marketStatus':
+      case 'marketStatus': {
+        const currentStatus = v.status || (values?.[0] ?? '');
+        const startDateMin = v.startDateMin || '';
+        const startDateMax = v.startDateMax || '';
+
         return (
-          <QuickPicks
-            prompt="Choose one or more:"
-            picks={[
-              { label: 'Reference Listed Drug (RLD)', value: 'rld' },
-              { label: 'Reference Standard (RS)', value: 'rs' },
-              { label: 'Marketed', value: 'marketed' },
-              { label: 'Discontinued', value: 'discontinued' },
-            ]}
-            selected={values}
-            onToggle={toggle}
-          />
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center', paddingTop: '4px', paddingBottom: '4px' }}>
+            {/* Status Dropdown */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '0.88rem', fontWeight: 600, color: '#334155' }}>Status</label>
+              <select
+                className="fdl-select"
+                value={currentStatus}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  set({ status: val, values: val ? [val] : [] });
+                }}
+                style={{
+                  height: '34px',
+                  padding: '0 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.88rem',
+                  background: '#ffffff',
+                  minWidth: '130px',
+                }}
+              >
+                <option value="">-- Select --</option>
+                <option value="active">active</option>
+                <option value="completed">completed</option>
+                <option value="discontinued">discontinued</option>
+              </select>
+            </div>
+
+            {/* Start Date Min & Max Panel (Styled exactly like attached screenshot) */}
+            <div
+              style={{
+                background: '#e2e8f0',
+                padding: '12px 18px',
+                borderRadius: '12px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                border: '1px solid #cbd5e1',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>Start Date, Min 📅</span>
+                <input
+                  type="date"
+                  value={startDateMin}
+                  onChange={(e) => set({ startDateMin: e.target.value })}
+                  style={{
+                    height: '30px',
+                    padding: '0 8px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.85rem',
+                    background: '#ffffff',
+                    color: '#0f172a',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>Start Date, Max 📅</span>
+                <input
+                  type="date"
+                  value={startDateMax}
+                  onChange={(e) => set({ startDateMax: e.target.value })}
+                  style={{
+                    height: '30px',
+                    padding: '0 8px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.85rem',
+                    background: '#ffffff',
+                    color: '#0f172a',
+                  }}
+                />
+              </div>
+            </div>
+          </div>
         );
+      }
 
       case 'meddra': {
         const currentLevel = (v.level || 'pt').toLowerCase();

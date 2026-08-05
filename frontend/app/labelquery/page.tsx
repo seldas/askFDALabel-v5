@@ -48,12 +48,21 @@ function summarizeQuery(query: WireQuery | null): string {
         parts.push(`MedDRA (${c.level || 'PT'}): ${termsStr}`);
       } else if (c.type === 'labelingType' && c.values?.length) {
         parts.push(`Label Type: ${c.values.join(', ')}`);
-      } else if (c.type === 'applicationType' && c.values?.length) {
-        parts.push(`App Type: ${c.values.join(', ')}`);
+      } else if (c.type === 'applicationType') {
+        const appParts = [];
+        if (c.values?.length) appParts.push(c.values.join(', '));
+        if (c.isRldRs) appParts.push('RLD/RS');
+        if (c.excludeRepackager) appParts.push('Excl. Repackager');
+        if (appParts.length) parts.push(`App Type: ${appParts.join('; ')}`);
       } else if (c.type === 'route' && c.values?.length) {
         parts.push(`Route: ${c.values.join(', ')}`);
-      } else if (c.type === 'marketStatus' && c.values?.length) {
-        parts.push(`Market Status: ${c.values.join(', ')}`);
+      } else if (c.type === 'marketStatus') {
+        const msParts = [];
+        if (c.status) msParts.push(c.status);
+        if (c.startDateMin) msParts.push(`Min: ${c.startDateMin}`);
+        if (c.startDateMax) msParts.push(`Max: ${c.startDateMax}`);
+        if (c.values?.length) msParts.push(c.values.join(', '));
+        if (msParts.length) parts.push(`Market Status: ${msParts.join(' ')}`);
       }
     }
   }

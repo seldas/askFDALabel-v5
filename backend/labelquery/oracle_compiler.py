@@ -122,19 +122,38 @@ def _compile_labeling_type(value, bag):
 
 def _compile_application_type(value, bag):
     values = _as_list(value.get('values'))
-    if not values:
+    is_rld_rs = bool(value.get('isRldRs') or value.get('rld_rs'))
+    exclude_repackager = bool(value.get('excludeRepackager') or value.get('exclude_repackager'))
+
+    if not values and not is_rld_rs and not exclude_repackager:
         return None
+
     clauses = []
-    for v in values:
-        v_clean = v.strip().upper()
-        if not v_clean:
-            continue
-        p_contain = bag.add(f'%{v_clean}%')
-        p_prefix = bag.add(f'{v_clean} %')
+    if values:
+        app_clauses = []
+        for v in values:
+            v_clean = v.strip().upper()
+            if not v_clean:
+                continue
+            p_contain = bag.add(f'%{v_clean}%')
+            p_prefix = bag.add(f'{v_clean} %')
+            app_clauses.append(
+                f"(UPPER(s.MARKET_CATEGORIES) LIKE {p_contain} OR UPPER(s.APPR_NUM) LIKE {p_prefix} OR UPPER(s.APPR_NUM) LIKE {p_contain})"
+            )
+        if app_clauses:
+            clauses.append('(' + ' OR '.join(app_clauses) + ')')
+
+    if is_rld_rs:
         clauses.append(
-            f"(UPPER(s.MARKET_CATEGORIES) LIKE {p_contain} OR UPPER(s.APPR_NUM) LIKE {p_prefix} OR UPPER(s.APPR_NUM) LIKE {p_contain})"
+            "EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND (rld.REFERENCE_DRUG = 'Y' OR rld.REFERENCE_STANDARD = 'Y'))"
         )
-    return '(' + ' OR '.join(clauses) + ')' if clauses else None
+
+    if exclude_repackager:
+        clauses.append(
+            "(UPPER(s.MARKET_CATEGORIES) NOT LIKE '%REPACK%' AND UPPER(s.MARKET_CATEGORIES) NOT LIKE '%REPACKAG%')"
+        )
+
+    return '(' + ' AND '.join(clauses) + ')' if clauses else None
 
 
 def _compile_route(value, bag):
@@ -286,42 +305,55 @@ def _compile_product_name(value, bag):
 
 
 def _compile_market_status(value, bag):
+    status = (value.get('status') or '').strip().lower()
+    min_date = (value.get('startDateMin') or '').replace('-', '').strip()
+    max_date = (value.get('startDateMax') or '').replace('-', '').strip()
     values = {v.lower() for v in _as_list(value.get('values'))}
-    if not values:
+
+    conds = []
+
+    # Status filter
+    if status == 'active' or 'marketed' in values:
+        conds.append(
+            "(mkt.HIGH_DATE IS NULL OR mkt.HIGH_DATE >= TO_CHAR(SYSDATE, 'YYYYMMDD') OR UPPER(mkt.MARKET_STATUS) LIKE '%ACTIVE%')"
+        )
+    elif status in ('completed', 'discontinued') or 'discontinued' in values:
+        conds.append(
+            "((mkt.HIGH_DATE IS NOT NULL AND mkt.HIGH_DATE < TO_CHAR(SYSDATE, 'YYYYMMDD')) OR UPPER(mkt.MARKET_STATUS) LIKE '%COMPLETED%' OR UPPER(mkt.MARKET_STATUS) LIKE '%DISCONTINUED%')"
+        )
+    elif status:
+        p_st = bag.add(f'%{status.upper()}%')
+        conds.append(f"UPPER(mkt.MARKET_STATUS) LIKE {p_st}")
+
+    # Start Date Min / Max (against LOW_DATE in PROD_MKT_ACT)
+    if min_date:
+        p_min = bag.add(min_date)
+        conds.append(f"mkt.LOW_DATE >= {p_min}")
+    if max_date:
+        p_max = bag.add(max_date)
+        conds.append(f"mkt.LOW_DATE <= {p_max}")
+
+    rld_rs_cond = None
+    if 'rld' in values or 'rs' in values:
+        alts = []
+        if 'rld' in values:
+            alts.append("rld.REFERENCE_DRUG = 'Y'")
+        if 'rs' in values:
+            alts.append("rld.REFERENCE_STANDARD = 'Y'")
+        rld_rs_cond = f"EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND ({' OR '.join(alts)}))"
+
+    if not conds and not rld_rs_cond:
         return None
-    alts = []
-    if 'rld' in values:
-        alts.append(
-            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND rld.REFERENCE_DRUG = \'Y\')'
+
+    res = []
+    if conds:
+        res.append(
+            f"EXISTS (SELECT 1 FROM druglabel.PROD_MKT_ACT mkt WHERE mkt.SPL_ID = s.SPL_ID AND {' AND '.join(conds)})"
         )
-    if 'rs' in values:
-        alts.append(
-            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND rld.REFERENCE_STANDARD = \'Y\')'
-        )
-    # Marketed vs discontinued comes from the marketing-act end date on
-    # PROD_MKT_ACT, not from SUM_SPL_RLD_RS -- an APPL_NO merely says the
-    # product has an application, which every RLD and every ANDA also has, so
-    # the old shared clause returned the same rows for both and neither meant
-    # "marketed". HIGH_DATE is the marketing end date, stored as a VARCHAR2
-    # holding an SPL YYYYMMDD string, which compares correctly lexically.
-    #
-    # A product is discontinued when its marketing period has closed, and
-    # marketed when at least one product on the label has not. Labels carry
-    # multiple products, so these are not complements: a label with one
-    # withdrawn and one active product satisfies both.
-    if 'marketed' in values:
-        alts.append(
-            'EXISTS (SELECT 1 FROM druglabel.PROD_MKT_ACT mkt WHERE mkt.SPL_ID = s.SPL_ID '
-            "AND (mkt.HIGH_DATE IS NULL OR mkt.HIGH_DATE >= TO_CHAR(SYSDATE, 'YYYYMMDD')))"
-        )
-    if 'discontinued' in values:
-        alts.append(
-            'EXISTS (SELECT 1 FROM druglabel.PROD_MKT_ACT mkt WHERE mkt.SPL_ID = s.SPL_ID '
-            "AND mkt.HIGH_DATE IS NOT NULL AND mkt.HIGH_DATE < TO_CHAR(SYSDATE, 'YYYYMMDD'))"
-        )
-    if not alts:
-        return None
-    return '(' + ' OR '.join(alts) + ')'
+    if rld_rs_cond:
+        res.append(rld_rs_cond)
+
+    return '(' + ' AND '.join(res) + ')' if res else None
 
 
 def _compile_meddra(value, bag, expand_meddra=None):
