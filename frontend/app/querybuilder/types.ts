@@ -322,6 +322,27 @@ export const CRITERION_UNAVAILABLE_REASON: Partial<Record<CriterionType, string>
     'Application Types / Marketing Categories is currently not available for the Local DB.',
 };
 
+/**
+ * Criteria whose card is hidden outright on a target that cannot evaluate them,
+ * rather than shown with a banner.
+ *
+ * Only for criteria the builder adds by default: an unusable card the user
+ * never asked for is clutter, and Application Types is in the starting group.
+ * A criterion the user added themselves keeps its card and its banner, because
+ * silently removing what someone typed is worse than showing it struck out.
+ *
+ * The criterion stays in the query while hidden. Dropping it would discard the
+ * selections on a target switch, and the compiler already ignores it with a
+ * warning; switching back brings the card and its values back intact.
+ */
+export const CRITERION_HIDDEN_WHEN_UNAVAILABLE: CriterionType[] = ['applicationType'];
+
+export function isCriterionHidden(type: CriterionType, targetDb: TargetDb): boolean {
+  return (
+    CRITERION_HIDDEN_WHEN_UNAVAILABLE.includes(type) && !isCriterionSupported(type, targetDb)
+  );
+}
+
 export function isCriterionSupported(type: CriterionType, targetDb: TargetDb): boolean {
   const support = CRITERION_SUPPORT[type];
   return support === undefined || support.includes(targetDb);

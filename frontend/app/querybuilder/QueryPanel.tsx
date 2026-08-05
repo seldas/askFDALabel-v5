@@ -11,6 +11,7 @@ import {
   ADD_MORE_ORDER,
   CRITERION_DEFS,
   type CriteriaGroup,
+  isCriterionHidden,
   type CriterionType,
   type LabelQuery,
   makeCriterion,
@@ -57,37 +58,46 @@ export function QueryPanel({
               </button>
             )}
 
-            {group.criteria.map((criterion, ci) => (
-              <div key={criterion.uid} className="fdl-cardrow">
-                <span className="fdl-amp" aria-hidden="true">
-                  {ci > 0 ? '&' : ''}
-                </span>
-                <CriterionCard
-                  criterion={criterion}
-                  options={options}
-                  targetDb={targetDb}
-                  onChange={(value) => {
-                    const criteria = group.criteria.slice();
-                    criteria.splice(ci, 1, { ...criterion, value });
-                    replaceGroup(gi, { ...group, criteria });
-                  }}
-                  onRemove={() =>
-                    replaceGroup(gi, {
-                      ...group,
-                      criteria: group.criteria.filter((c) => c.uid !== criterion.uid),
-                    })
-                  }
-                />
-              </div>
-            ))}
+            {/* Hidden criteria stay in `group.criteria` and keep their values;
+              * only the card is withheld. Edits are addressed by uid rather
+              * than by index, since the rendered position no longer matches
+              * the position in the query. */}
+            {group.criteria
+              .filter((criterion) => !isCriterionHidden(criterion.type, targetDb))
+              .map((criterion, visibleIndex) => (
+                <div key={criterion.uid} className="fdl-cardrow">
+                  <span className="fdl-amp" aria-hidden="true">
+                    {visibleIndex > 0 ? '&' : ''}
+                  </span>
+                  <CriterionCard
+                    criterion={criterion}
+                    options={options}
+                    targetDb={targetDb}
+                    onChange={(value) =>
+                      replaceGroup(gi, {
+                        ...group,
+                        criteria: group.criteria.map((c) =>
+                          c.uid === criterion.uid ? { ...c, value } : c,
+                        ),
+                      })
+                    }
+                    onRemove={() =>
+                      replaceGroup(gi, {
+                        ...group,
+                        criteria: group.criteria.filter((c) => c.uid !== criterion.uid),
+                      })
+                    }
+                  />
+                </div>
+              ))}
 
             <div className="fdl-addmore">
               <span className="fdl-addmore__label">Add more criteria:</span>
               {ADD_MORE_ORDER.map((type: CriterionType, i) => {
-                /* Disabled, not hidden: a criterion vanishing from the row on a
-                 * target switch reads as a bug, and the tooltip is where the
-                 * reason belongs. Cards already on the page stay editable and
-                 * carry their own banner. */
+                /* The row entry stays put and goes disabled, even for criteria
+                 * whose card is hidden above: it is the only place left that
+                 * explains why the card is gone, and an entry vanishing from
+                 * the row too would just read as a bug. */
                 const reason = unsupportedReason(type, targetDb);
                 return (
                   <span key={type} className="fdl-addmore__item">
