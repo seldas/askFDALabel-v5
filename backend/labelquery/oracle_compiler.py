@@ -321,7 +321,7 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
     p_limit = bag.add(limit)
 
     if text_clauses:
-        # Phase 1: Candidate Isolation CTE -> Phase 2: Oracle Text CONTAINS on candidate set
+        # Phase 1: Candidate Isolation CTE -> Phase 2: CONTAINS text search -> Phase 3: Paged RLD lookup
         text_where = ' AND '.join(text_clauses)
         sql = f"""
         WITH candidate_labels AS (
@@ -330,30 +330,51 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
                    s.DOCUMENT_TYPE, s.ACT_INGR_NAMES, s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC
             FROM druglabel.DGV_SUM_RX_SPL s
             WHERE {relational_where}
+        ),
+        matched_sections AS (
+            SELECT /*+ LEADING(c sec) USE_NL(sec) */ DISTINCT
+                   c.SPL_ID, c.SET_ID, c.PRODUCT_NAMES, c.PRODUCT_NORMD_GENERIC_NAMES, c.MANUFACTURER,
+                   c.APPR_NUM, c.NDC_CODES, c.EFF_TIME, c.MARKET_CATEGORIES, c.DOCUMENT_TYPE,
+                   c.ACT_INGR_NAMES, c.DOSAGE_FORMS, c.ROUTES, c.EPC
+            FROM candidate_labels c
+            INNER JOIN druglabel.SPL_SEC sec ON sec.SPL_ID = c.SPL_ID
+            WHERE {text_where}
+        ),
+        paged_matched AS (
+            SELECT m.*
+            FROM matched_sections m
+            ORDER BY m.EFF_TIME DESC NULLS LAST
+            OFFSET {p_offset} ROWS FETCH NEXT {p_limit} ROWS ONLY
         )
-        SELECT /*+ LEADING(c sec) USE_NL(sec) */
-            c.SET_ID, c.SPL_ID, c.PRODUCT_NAMES, c.PRODUCT_NORMD_GENERIC_NAMES, c.MANUFACTURER,
-            c.APPR_NUM, c.NDC_CODES, c.EFF_TIME as REVISED_DATE, c.MARKET_CATEGORIES, c.DOCUMENT_TYPE,
-            c.ACT_INGR_NAMES, c.DOSAGE_FORMS, c.ROUTES, c.EPC,
-            (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = c.SPL_ID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD
-        FROM candidate_labels c
-        INNER JOIN druglabel.SPL_SEC sec ON sec.SPL_ID = c.SPL_ID
-        WHERE {text_where}
-        ORDER BY c.EFF_TIME DESC NULLS LAST
-        OFFSET {p_offset} ROWS FETCH NEXT {p_limit} ROWS ONLY
+        SELECT p.SET_ID, p.SPL_ID, p.PRODUCT_NAMES, p.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
+               p.MANUFACTURER, p.APPR_NUM, p.NDC_CODES, p.EFF_TIME as REVISED_DATE,
+               p.MARKET_CATEGORIES, p.DOCUMENT_TYPE, p.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
+               p.DOSAGE_FORMS, p.ROUTES, p.EPC,
+               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD
+        FROM paged_matched p
         """
     else:
-        # Fast Relational Only Query
+        # Fast Relational Only Query -> Paged RLD lookup
         sql = f"""
-        SELECT s.SET_ID, s.SPL_ID, s.PRODUCT_NAMES, s.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
-               s.AUTHOR_ORG_NORMD_NAME as MANUFACTURER, s.APPR_NUM, s.NDC_CODES, s.EFF_TIME as REVISED_DATE,
-               s.MARKET_CATEGORIES, s.DOCUMENT_TYPE, s.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
-               s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC,
-               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD
-        FROM druglabel.DGV_SUM_RX_SPL s
-        WHERE {relational_where}
-        ORDER BY s.EFF_TIME DESC NULLS LAST
-        OFFSET {p_offset} ROWS FETCH NEXT {p_limit} ROWS ONLY
+        WITH candidate_labels AS (
+            SELECT /*+ INLINE NO_MERGE */ s.SPL_ID, s.SET_ID, s.TITLE, s.PRODUCT_NAMES, s.PRODUCT_NORMD_GENERIC_NAMES,
+                   s.AUTHOR_ORG_NORMD_NAME as MANUFACTURER, s.APPR_NUM, s.NDC_CODES, s.EFF_TIME, s.MARKET_CATEGORIES,
+                   s.DOCUMENT_TYPE, s.ACT_INGR_NAMES, s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC
+            FROM druglabel.DGV_SUM_RX_SPL s
+            WHERE {relational_where}
+        ),
+        paged_candidates AS (
+            SELECT c.*
+            FROM candidate_labels c
+            ORDER BY c.EFF_TIME DESC NULLS LAST
+            OFFSET {p_offset} ROWS FETCH NEXT {p_limit} ROWS ONLY
+        )
+        SELECT p.SET_ID, p.SPL_ID, p.PRODUCT_NAMES, p.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
+               p.MANUFACTURER, p.APPR_NUM, p.NDC_CODES, p.EFF_TIME as REVISED_DATE,
+               p.MARKET_CATEGORIES, p.DOCUMENT_TYPE, p.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
+               p.DOSAGE_FORMS, p.ROUTES, p.EPC,
+               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD
+        FROM paged_candidates p
         """
 
     return sql.strip(), bag.params, warnings

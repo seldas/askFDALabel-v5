@@ -29,18 +29,54 @@ class FDALabelDBService:
             return None
 
     @classmethod
-    def get_connection(cls, force_local=False):
+    def get_oracle_connection(cls):
+        """Attempts connection directly to Oracle DB without checking labeling_source setting or falling back."""
+        if not ORACLE_AVAILABLE:
+            return None
+        user = current_app.config.get('FDALabel_USER') or current_app.config.get('FDALABEL_USER') or os.getenv('FDALabel_USER') or os.getenv('FDALABEL_USER')
+        psw = (current_app.config.get('FDALabel_PASSWORD') or current_app.config.get('FDALabel_PSW') or 
+               current_app.config.get('FDALABEL_PASSWORD') or current_app.config.get('FDALABEL_PSW') or
+               os.getenv('FDALabel_PASSWORD') or os.getenv('FDALabel_PSW') or
+               os.getenv('FDALABEL_PASSWORD') or os.getenv('FDALABEL_PSW'))
+        
+        from dashboard.services.env_service import EnvService
+        oracle_env = EnvService.get_setting("oracle_db_env") or "tst"
+        
+        if oracle_env == "dev":
+            host = os.getenv('FDALABEL_DEV_HOST') or current_app.config.get('FDALABEL_DEV_HOST') or os.getenv('FDALabel_HOST') or os.getenv('FDALabel_SERV') or os.getenv('FDALABEL_HOST')
+            port = os.getenv('FDALABEL_DEV_PORT') or current_app.config.get('FDALABEL_DEV_PORT') or os.getenv('FDALabel_PORT') or os.getenv('FDALABEL_PORT')
+            service = os.getenv('FDALABEL_DEV_SERVICE') or current_app.config.get('FDALABEL_DEV_SERVICE') or os.getenv('FDALabel_SERVICE') or os.getenv('FDALabel_APP') or os.getenv('FDALABEL_SERVICE')
+        else:
+            host = os.getenv('FDALABEL_TST_HOST') or current_app.config.get('FDALABEL_TST_HOST') or os.getenv('FDALabel_HOST') or os.getenv('FDALabel_SERV') or os.getenv('FDALABEL_HOST')
+            port = os.getenv('FDALABEL_TST_PORT') or current_app.config.get('FDALABEL_TST_PORT') or os.getenv('FDALabel_PORT') or os.getenv('FDALABEL_PORT')
+            service = os.getenv('FDALABEL_TST_SERVICE') or current_app.config.get('FDALABEL_TST_SERVICE') or os.getenv('FDALabel_SERVICE') or os.getenv('FDALabel_APP') or os.getenv('FDALABEL_SERVICE')
+        
+        try:
+            if psw and host and port and service:
+                dsnStr = oracledb.makedsn(host, port, service)
+                connection = oracledb.connect(user=user, password=psw, dsn=dsnStr)
+                cls._db_type = 'oracle'
+                return connection
+        except Exception as e:
+            print(f"  [!] Direct Oracle Connection Exception ({oracle_env}): {e}")
+        return None
+
+    @classmethod
+    def get_connection(cls, force_local=False, force_oracle=False):
         """
         Establishes a DB connection.
 
         Priority:
-          1. force_local=True  → always use local Postgres, never Oracle.
-          2. EnvService labeling_source == 'local'  → same as force_local.
-          3. Otherwise try Oracle; fall back to Postgres on failure.
-
-        _db_type is cached after the first successful connection so it stays
-        consistent within a running server process.
+          1. force_oracle=True → attempt direct Oracle connection.
+          2. force_local=True  → always use local Postgres, never Oracle.
+          3. EnvService labeling_source == 'local'  → same as force_local.
+          4. Otherwise try Oracle; fall back to Postgres on failure.
         """
+        if force_oracle:
+            conn = cls.get_oracle_connection()
+            if conn:
+                return conn
+
         # ── Respect the labeling_source system setting ──────────────────────
         if not force_local:
             from dashboard.services.env_service import EnvService
@@ -49,38 +85,9 @@ class FDALabelDBService:
                 force_local = True   # PG only — skip Oracle entirely
 
         if not force_local:
-            if not ORACLE_AVAILABLE:
-                print("  [d] Oracle library (oracledb) is not available.")
-            else:
-                user = current_app.config.get('FDALabel_USER') or current_app.config.get('FDALABEL_USER') or os.getenv('FDALabel_USER') or os.getenv('FDALABEL_USER')
-                psw = (current_app.config.get('FDALabel_PASSWORD') or current_app.config.get('FDALabel_PSW') or 
-                       current_app.config.get('FDALABEL_PASSWORD') or current_app.config.get('FDALABEL_PSW') or
-                       os.getenv('FDALabel_PASSWORD') or os.getenv('FDALabel_PSW') or
-                       os.getenv('FDALABEL_PASSWORD') or os.getenv('FDALABEL_PSW'))
-                
-                from dashboard.services.env_service import EnvService
-                oracle_env = EnvService.get_setting("oracle_db_env") or "tst"
-                
-                if oracle_env == "dev":
-                    host = os.getenv('FDALABEL_DEV_HOST') or current_app.config.get('FDALABEL_DEV_HOST') or os.getenv('FDALabel_HOST') or os.getenv('FDALabel_SERV') or os.getenv('FDALABEL_HOST')
-                    port = os.getenv('FDALABEL_DEV_PORT') or current_app.config.get('FDALABEL_DEV_PORT') or os.getenv('FDALabel_PORT') or os.getenv('FDALABEL_PORT')
-                    service = os.getenv('FDALABEL_DEV_SERVICE') or current_app.config.get('FDALABEL_DEV_SERVICE') or os.getenv('FDALabel_SERVICE') or os.getenv('FDALabel_APP') or os.getenv('FDALABEL_SERVICE')
-                else:
-                    host = os.getenv('FDALABEL_TST_HOST') or current_app.config.get('FDALABEL_TST_HOST') or os.getenv('FDALabel_HOST') or os.getenv('FDALabel_SERV') or os.getenv('FDALABEL_HOST')
-                    port = os.getenv('FDALABEL_TST_PORT') or current_app.config.get('FDALABEL_TST_PORT') or os.getenv('FDALabel_PORT') or os.getenv('FDALABEL_PORT')
-                    service = os.getenv('FDALABEL_TST_SERVICE') or current_app.config.get('FDALABEL_TST_SERVICE') or os.getenv('FDALabel_SERVICE') or os.getenv('FDALabel_APP') or os.getenv('FDALABEL_SERVICE')
-                
-                print(f"  [d] Oracle Config ({oracle_env}): host={host}, port={port}, service={service}, user={user}, has_password={bool(psw)}")
-                try:
-                    if psw and host and port and service:
-                        dsnStr = oracledb.makedsn(host, port, service)
-                        connection = oracledb.connect(user=user, password=psw, dsn=dsnStr)
-                        cls._db_type = 'oracle'
-                        return connection
-                    else:
-                        print(f"  [d] Oracle config parameters ({oracle_env}) are incomplete in current_app.config/env.")
-                except Exception as e:
-                    print(f"  [!] Oracle Connection Exception ({oracle_env}): {e}")
+            conn = cls.get_oracle_connection()
+            if conn:
+                return conn
 
         # Fallback to Postgres
         conn = cls.get_postgres_connection()
