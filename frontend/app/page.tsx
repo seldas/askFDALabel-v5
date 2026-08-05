@@ -44,6 +44,7 @@ const EMPTY_OPTIONS: OptionLists = {
   labelingTypes: [],
   applicationTypes: [],
   routes: [],
+  dosageForms: [],
   sections: [],
   loading: true,
 };
@@ -88,6 +89,7 @@ export default function HomePage() {
           labelingTypes: json.labelingTypes || [],
           applicationTypes: json.applicationTypes || [],
           routes: json.routes || [],
+          dosageForms: json.dosageForms || [],
           sections: json.sections || [],
           loading: false,
         });

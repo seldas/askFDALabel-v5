@@ -701,6 +701,26 @@ def _c_chemical_structure(criterion, bag, warnings):
     return None
 
 
+def _c_oracle_only(value, warnings, label, key):
+    """
+    A criterion the FDALabel Oracle database can answer but the local import
+    cannot: labeling.sum_spl carries no DEA schedule and no active-moiety
+    breakdown, and db_07_import_labels does not derive either from the SPL XML.
+
+    Ignoring it silently would widen the result set without saying so, so this
+    warns instead. Compiling it away is still the right call -- raising would
+    reject a query that runs fine against Oracle, and target_db is the user's
+    switch, not the criterion's.
+    """
+    if not _as_list(value.get(key)):
+        return None
+    warnings.append(
+        f'{label} is only available against the FDALabel Oracle database; '
+        'the criterion was ignored for this local search.'
+    )
+    return None
+
+
 def _c_application_type(value, bag, warnings):
     values = _as_list(value.get('values'))
     if not values:
@@ -750,6 +770,10 @@ def _compile_criterion(criterion, bag, warnings, expand_meddra, capabilities):
         return _c_identifier(value, bag, warnings, capabilities.get('unii', True))
     if ctype == 'chemicalStructure':
         return _c_chemical_structure(value, bag, warnings)
+    if ctype == 'deaSchedule':
+        return _c_oracle_only(value, warnings, 'DEA schedule search', 'values')
+    if ctype == 'activeMoiety':
+        return _c_oracle_only(value, warnings, 'Active moiety search', 'terms')
 
     raise QueryCompileError(f'Unknown criterion type: {ctype!r}')
 

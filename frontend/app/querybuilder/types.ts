@@ -19,6 +19,9 @@ export type CriterionType =
   | 'meddra'
   | 'chemicalStructure'
   | 'route'
+  | 'dosageForm'
+  | 'deaSchedule'
+  | 'activeMoiety'
   | 'pharmClass'
   | 'identifier';
 
@@ -61,7 +64,7 @@ export interface CriterionDef {
   shortTitle: string;
   quickPicks?: QuickPick[];
   /** Which /api/labelquery/options list feeds this card's dropdown. */
-  optionsKey?: 'labelingTypes' | 'applicationTypes' | 'routes' | 'sections';
+  optionsKey?: 'labelingTypes' | 'applicationTypes' | 'routes' | 'dosageForms' | 'sections';
   defaultValue: () => CriterionValue;
 }
 
@@ -160,6 +163,52 @@ export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
       { label: 'Topical', value: 'TOPICAL' },
     ],
     defaultValue: () => ({ values: [] }),
+  },
+  dosageForm: {
+    type: 'dosageForm',
+    title: 'Dosage Form(s)',
+    shortTitle: 'Dosage Form(s)',
+    optionsKey: 'dosageForms',
+    /*
+     * Exact values, like routes and marketing categories: NCI dosage-form terms
+     * are a controlled vocabulary. "TABLET" must not sweep in "TABLET, FILM
+     * COATED" or "TABLET, EXTENDED RELEASE" — those are separate picks in the
+     * dropdown below, which is fed live from the database.
+     */
+    quickPicks: [
+      { label: 'Capsule', value: 'CAPSULE' },
+      { label: 'Cream', value: 'CREAM' },
+      { label: 'Injection', value: 'INJECTION' },
+      { label: 'Injection, Solution', value: 'INJECTION, SOLUTION' },
+      { label: 'Solution', value: 'SOLUTION' },
+      { label: 'Tablet', value: 'TABLET' },
+      { label: 'Tablet, Film Coated', value: 'TABLET, FILM COATED' },
+    ],
+    defaultValue: () => ({ values: [] }),
+  },
+  deaSchedule: {
+    type: 'deaSchedule',
+    title: 'DEA Schedule',
+    shortTitle: 'DEA Schedule',
+    /*
+     * The SPL acceptable terms, not roman-numeral prose: PROD_DEA stores
+     * "CII", never "Schedule II". Oracle only — the local import derives no
+     * DEA data, and the compiler warns rather than silently widening.
+     */
+    quickPicks: [
+      { label: 'CI — Schedule I', value: 'CI' },
+      { label: 'CII — Schedule II', value: 'CII' },
+      { label: 'CIII — Schedule III', value: 'CIII' },
+      { label: 'CIV — Schedule IV', value: 'CIV' },
+      { label: 'CV — Schedule V', value: 'CV' },
+    ],
+    defaultValue: () => ({ values: [] }),
+  },
+  activeMoiety: {
+    type: 'activeMoiety',
+    title: 'Active Moiety',
+    shortTitle: 'Active Moiety',
+    defaultValue: () => ({ op: 'equals', terms: [] }),
   },
   pharmClass: {
     type: 'pharmClass',

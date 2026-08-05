@@ -138,6 +138,103 @@ def _compile_route(value, bag):
     return '(' + ' OR '.join(clauses) + ')'
 
 
+def _compile_dosage_form(value, bag):
+    """
+    Dosage form, against the normalized SUM_SPL_DOSAGEFORM rather than the
+    delimited DOSAGE_FORMS rollup column.
+
+    The UI sends NCI SPL acceptable terms ("TABLET, FILM COATED"), so the term
+    column is matched exactly -- a substring match would make "TABLET" swallow
+    every coated, chewable and extended-release variant. NCIT_FORM_CODE is
+    accepted too, since it is the leading edge of PK_SUMSPLDFORM after SPL_ID
+    and callers may hold a code rather than a term.
+    """
+    values = _as_list(value.get('values'))
+    if not values:
+        return None
+    clauses = []
+    for v in values:
+        p = bag.add(v.upper())
+        clauses.append(
+            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_DOSAGEFORM df '
+            f'WHERE df.SPL_ID = s.SPL_ID AND (UPPER(df.PRODUCT_DOSAGE_FORM_TERM) = {p} '
+            f'OR UPPER(df.PRODUCT_NCIT_FORM_CODE) = {p}))'
+        )
+    return '(' + ' OR '.join(clauses) + ')'
+
+
+def _compile_dea_schedule(value, bag):
+    """
+    DEA controlled-substance schedule, via PROD_DEA joined to DEA_SCHEDULE.
+
+    PROD_DEA is per-product and its PK leads with PRODUCT_ID, so SPL_ID is not
+    an indexed access path here -- but the table is small relative to SPL_SEC
+    and the EXISTS stops at the first hit.
+
+    Both the NCIT code and the SPL acceptable term ("CII", "CIII") are matched,
+    since the UI sends terms and callers integrating programmatically may hold
+    codes. NCIT_DEA_NAME on PROD_DEA carries the term directly, which avoids
+    the join to DEA_SCHEDULE in the common case.
+    """
+    values = _as_list(value.get('values'))
+    if not values:
+        return None
+    clauses = []
+    for v in values:
+        p = bag.add(v.upper())
+        clauses.append(
+            'EXISTS (SELECT 1 FROM druglabel.PROD_DEA dea '
+            f'WHERE dea.SPL_ID = s.SPL_ID AND (UPPER(dea.NCIT_DEA_NAME) = {p} '
+            f'OR UPPER(dea.NCIT_DEA_CODE) = {p}))'
+        )
+    return '(' + ' OR '.join(clauses) + ')'
+
+
+def _compile_active_moiety(value, bag):
+    """
+    Active moiety, which is not the same thing as active ingredient: the moiety
+    is the therapeutically active part of the molecule, so a search for
+    "amphetamine" catches its salts where an ingredient search would not.
+
+    SUM_SPL_ACT_MOIETY_NAME and _UNII are the only two tables in DRUGLABEL
+    indexed name-first (IX_SUMSPLACTMOIETYNAME_SPLID is on
+    (ACTIVE_MOIETY_NAME, SPL_ID)), so an equality or prefix predicate on the
+    name is an index range scan rather than a table scan. A bare 'contains'
+    would throw that away, so it is only used when the caller asks for it.
+    """
+    terms = _as_list(value.get('terms')) or _split_terms(value.get('text'))
+    if not terms:
+        return None
+    op = value.get('op') or 'equals'
+
+    clauses = []
+    for term in terms:
+        t = term.strip().upper()
+        if not t:
+            continue
+        if _UNII_RE.match(t):
+            p = bag.add(t)
+            clauses.append(
+                'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_ACT_MOIETY_UNII mu '
+                f'WHERE mu.SPL_ID = s.SPL_ID AND UPPER(mu.ACTIVE_MOIETY_UNII) = {p})'
+            )
+            continue
+        if op == 'contains':
+            p = bag.add(f'%{t}%')
+            pred = f'UPPER(mn.ACTIVE_MOIETY_NAME) LIKE {p}'
+        elif op == 'startsWith':
+            p = bag.add(f'{t}%')
+            pred = f'UPPER(mn.ACTIVE_MOIETY_NAME) LIKE {p}'
+        else:
+            p = bag.add(t)
+            pred = f'UPPER(mn.ACTIVE_MOIETY_NAME) = {p}'
+        clauses.append(
+            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_ACT_MOIETY_NAME mn '
+            f'WHERE mn.SPL_ID = s.SPL_ID AND {pred})'
+        )
+    return '(' + ' OR '.join(clauses) + ')' if clauses else None
+
+
 def _compile_product_name(value, bag):
     field = value.get('field') or 'any'
     op = value.get('op') or 'contains'
@@ -187,9 +284,26 @@ def _compile_market_status(value, bag):
         alts.append(
             'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND rld.REFERENCE_STANDARD = \'Y\')'
         )
-    if 'marketed' in values or 'discontinued' in values:
+    # Marketed vs discontinued comes from the marketing-act end date on
+    # PROD_MKT_ACT, not from SUM_SPL_RLD_RS -- an APPL_NO merely says the
+    # product has an application, which every RLD and every ANDA also has, so
+    # the old shared clause returned the same rows for both and neither meant
+    # "marketed". HIGH_DATE is the marketing end date, stored as a VARCHAR2
+    # holding an SPL YYYYMMDD string, which compares correctly lexically.
+    #
+    # A product is discontinued when its marketing period has closed, and
+    # marketed when at least one product on the label has not. Labels carry
+    # multiple products, so these are not complements: a label with one
+    # withdrawn and one active product satisfies both.
+    if 'marketed' in values:
         alts.append(
-            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND rld.APPL_NO IS NOT NULL)'
+            'EXISTS (SELECT 1 FROM druglabel.PROD_MKT_ACT mkt WHERE mkt.SPL_ID = s.SPL_ID '
+            "AND (mkt.HIGH_DATE IS NULL OR mkt.HIGH_DATE >= TO_CHAR(SYSDATE, 'YYYYMMDD')))"
+        )
+    if 'discontinued' in values:
+        alts.append(
+            'EXISTS (SELECT 1 FROM druglabel.PROD_MKT_ACT mkt WHERE mkt.SPL_ID = s.SPL_ID '
+            "AND mkt.HIGH_DATE IS NOT NULL AND mkt.HIGH_DATE < TO_CHAR(SYSDATE, 'YYYYMMDD'))"
         )
     if not alts:
         return None
@@ -298,13 +412,54 @@ def _compile_meddra(value, bag, expand_meddra=None):
 
 
 def _compile_pharm_class(value, bag):
+    """
+    Pharmacologic class.
+
+    EPC is denormalized onto the summary row, so it stays a direct match on
+    s.EPC. The other three class types are not: MoA, PE and CS live in NDF-RT,
+    reached by SPL -> active ingredient UNII -> NDF-RT concept:
+
+        SUM_SPL_ACT_INGR_UNII (SPL_ID, UNII)     PK, indexed
+          -> INGR_NDFRT_CONCEPT (INGR_UNII, NDFRT_NUI)  PK, indexed
+          -> NDFRT_CONCEPT (NUI, NAME, CAT)             PK on NUI
+
+    NDFRT_CONCEPT.CAT holds the class type. Its exact vocabulary is not in the
+    schema dump, so CAT is matched with LIKE against the tokens the Postgres
+    side uses in substance_indexing.indexing_type ('EPC', 'MoA', 'PE',
+    'Chemical'), which is the same source vocabulary. Verify against
+    `SELECT DISTINCT CAT FROM DRUGLABEL.NDFRT_CONCEPT` before relying on the
+    class-type filter; an unmatched CAT narrows results rather than widening
+    them, so a mismatch fails closed.
+    """
     terms = _as_list(value.get('terms')) or _split_terms(value.get('text'))
     if not terms:
         return None
+
+    class_type = (value.get('classType') or 'any').lower()
+
+    # 'any' keeps the historical behaviour: EPC only, no NDF-RT join.
+    if class_type in ('any', 'epc'):
+        clauses = []
+        for t in terms:
+            p = bag.add(f'%{t.upper()}%')
+            clauses.append(f'UPPER(s.EPC) LIKE {p}')
+        return '(' + ' OR '.join(clauses) + ')'
+
+    cat_token = {'moa': 'MOA', 'pe': 'PE', 'cs': 'CHEMICAL'}.get(class_type)
+    if not cat_token:
+        return None
+    p_cat = bag.add(f'%{cat_token}%')
+
     clauses = []
     for t in terms:
         p = bag.add(f'%{t.upper()}%')
-        clauses.append(f'UPPER(s.EPC) LIKE {p}')
+        clauses.append(
+            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_ACT_INGR_UNII ai '
+            'JOIN druglabel.INGR_NDFRT_CONCEPT inc ON inc.INGR_UNII = ai.UNII '
+            'JOIN druglabel.NDFRT_CONCEPT nc ON nc.NUI = inc.NDFRT_NUI '
+            f'WHERE ai.SPL_ID = s.SPL_ID AND UPPER(nc.NAME) LIKE {p} '
+            f'AND UPPER(nc.CAT) LIKE {p_cat})'
+        )
     return '(' + ' OR '.join(clauses) + ')'
 
 
@@ -407,6 +562,15 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
             elif ctype == 'route':
                 c = _compile_route(cval, bag)
                 if c: group_relational.append(c)
+            elif ctype == 'dosageForm':
+                c = _compile_dosage_form(cval, bag)
+                if c: group_relational.append(c)
+            elif ctype == 'deaSchedule':
+                c = _compile_dea_schedule(cval, bag)
+                if c: group_relational.append(c)
+            elif ctype == 'activeMoiety':
+                c = _compile_active_moiety(cval, bag)
+                if c: group_relational.append(c)
             elif ctype == 'productName':
                 c = _compile_product_name(cval, bag)
                 if c: group_relational.append(c)
@@ -422,6 +586,15 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
             elif ctype == 'identifier':
                 c = _compile_identifier(cval, bag)
                 if c: group_relational.append(c)
+            elif ctype == 'chemicalStructure':
+                # DRUGLABEL has UNII_CHEM_STRUCT(UNII, SMILES) but no structure
+                # cartridge, so substructure matching is not available here.
+                warnings.append(
+                    'Chemical structure search is not available against the FDALabel Oracle '
+                    'database; this criterion was ignored.'
+                )
+            else:
+                warnings.append(f'Unsupported criterion "{ctype}" was ignored.')
 
         if group_relational:
             relational_clauses.append('(' + ' AND '.join(group_relational) + ')')

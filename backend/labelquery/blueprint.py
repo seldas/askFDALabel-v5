@@ -965,6 +965,7 @@ Allowed "type" values and the exact shape of their "value":
 - "labelingType"      {"values": ["HUMAN PRESCRIPTION DRUG LABEL"]}
 - "applicationType"   {"values": ["NDA"]}          // ANDA, BLA, NDA, NDA authorized generic, OTC monograph drug
 - "route"             {"values": ["ORAL"]}
+- "dosageForm"        {"values": ["TABLET, FILM COATED"]}   // exact NCI SPL term; "TABLET" does not match "TABLET, FILM COATED"
 - "productName"       {"field": "any"|"trade"|"generic",
                        "op": "contains"|"startsWith"|"equals"|"notContains",
                        "text": "metformin"}
@@ -973,6 +974,8 @@ Allowed "type" values and the exact shape of their "value":
                        "text": "DILI OR hepatotoxicity OR \"liver function test\" OR \"acute liver failure\"",
                        "sections": ["BOXED WARNING", "WARNINGS AND PRECAUTIONS", "ADVERSE REACTIONS"]}
 - "marketStatus"      {"values": ["rld"]}          // rld, rs, marketed, discontinued
+- "deaSchedule"       {"values": ["CII"]}          // CI, CII, CIII, CIV, CV -- Oracle only
+- "activeMoiety"      {"op": "equals"|"startsWith"|"contains", "terms": ["Amphetamine"]}  // Oracle only; the active part of the molecule, so it catches salts
 - "meddra"            {"level": "pt"|"llt"|"hlt"|"hlgt"|"soc", "terms": ["Hepatic failure", "Hepatotoxicity", "Drug-induced liver injury", "Acute hepatic failure"]}
 - "pharmClass"        {"classType": "any"|"epc"|"moa"|"pe"|"cs", "terms": ["Kinase Inhibitor"]}
 - "identifier"        {"text": "NDA 021436", "ingredientType": "active"|"inactive"|"both"}
@@ -992,7 +995,7 @@ Rules:
 _ALLOWED_TYPES = {
     'labelingType', 'applicationType', 'route', 'productName', 'fullText',
     'labelingSection', 'marketStatus', 'meddra', 'pharmClass', 'identifier',
-    'chemicalStructure', 'dosageForm',
+    'chemicalStructure', 'dosageForm', 'deaSchedule', 'activeMoiety',
 }
 
 

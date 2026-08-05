@@ -17,6 +17,7 @@ export interface OptionLists {
   labelingTypes: Option[];
   applicationTypes: Option[];
   routes: Option[];
+  dosageForms: Option[];
   sections: Option[];
   loading: boolean;
 }
@@ -142,6 +143,7 @@ export function CriterionCard({
       case 'labelingType':
       case 'applicationType':
       case 'route':
+      case 'dosageForm':
         return (
           <>
             {def.quickPicks ? (
@@ -372,6 +374,56 @@ export function CriterionCard({
               This deployment has no chemical structure index, so a structure entered here is
               ignored when the search runs. Use Pharmacologic Class(es) or the ingredient UNII in
               Identifiers instead.
+            </p>
+          </>
+        );
+
+      case 'deaSchedule':
+        return (
+          <>
+            <QuickPicks picks={def.quickPicks!} selected={values} onToggle={toggle} />
+            <Chips
+              values={values}
+              onRemove={(value) => set({ values: values.filter((x: string) => x !== value) })}
+              labelFor={(value) => def.quickPicks?.find((p) => p.value === value)?.label || value}
+            />
+            {targetDb !== 'oracle' ? (
+              <p className="fdl-note">
+                DEA schedule is only available against the FDALabel Oracle database. This criterion
+                will be ignored for a local search.
+              </p>
+            ) : null}
+          </>
+        );
+
+      case 'activeMoiety':
+        return (
+          <>
+            <div className="fdl-row">
+              <Select
+                ariaLabel="Match type"
+                value={v.op || 'equals'}
+                onChange={(op) => set({ op })}
+                options={[
+                  { value: 'equals', label: 'is exactly' },
+                  { value: 'startsWith', label: 'starts with' },
+                  { value: 'contains', label: 'contains' },
+                ]}
+              />
+              <div className="fdl-row__grow">
+                <TokenInput
+                  placeholder="Enter active moiety name(s) or UNII code(s)"
+                  values={v.terms || []}
+                  onChange={(terms) => set({ terms })}
+                />
+              </div>
+            </div>
+            <p className="fdl-note">
+              The active moiety is the therapeutically active part of the molecule, so a search for
+              amphetamine also returns its salts — which an active ingredient search does not.
+              {targetDb !== 'oracle'
+                ? ' Only available against the FDALabel Oracle database; ignored for a local search.'
+                : ' "is exactly" and "starts with" use an index; "contains" does not.'}
             </p>
           </>
         );
