@@ -358,6 +358,100 @@ def suggest_meddra():
         return jsonify({'error': str(e)}), 500
 
 
+@labelquery_bp.route('/meddra/hierarchy', methods=['GET'])
+def get_meddra_hierarchy():
+    term = (request.args.get('term') or '').strip()
+    level = (request.args.get('level') or 'pt').lower()
+    target_db = (request.args.get('target_db') or request.args.get('targetDb') or 'local').lower()
+    if not term:
+        return jsonify({'term': term, 'path': [], 'formatted': ''})
+
+    try:
+        if target_db == 'oracle':
+            from dashboard.services.fdalabel_db import FDALabelDBService
+            if level == 'llt':
+                sql = """
+                    SELECT mh.SOC_NAME, mh.HLGT_NAME, mh.HLT_NAME, mh.PT_NAME, llt.LLT_NAME
+                    FROM meddra.low_level_term llt
+                    JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE AND mh.PRIMARY_SOC_FG = 'Y'
+                    WHERE UPPER(llt.LLT_NAME) = :t
+                    FETCH NEXT 1 ROWS ONLY
+                """
+            else:
+                sql = """
+                    SELECT mh.SOC_NAME, mh.HLGT_NAME, mh.HLT_NAME, mh.PT_NAME
+                    FROM meddra.meddra_hierarchy mh
+                    WHERE UPPER(mh.PT_NAME) = :t AND mh.PRIMARY_SOC_FG = 'Y'
+                    FETCH NEXT 1 ROWS ONLY
+                """
+            oracle_rows = FDALabelDBService.execute_oracle_query(sql, {'t': term.upper()})
+            if not oracle_rows:
+                # Retry without PRIMARY_SOC_FG filter
+                if level == 'llt':
+                    sql = """
+                        SELECT mh.SOC_NAME, mh.HLGT_NAME, mh.HLT_NAME, mh.PT_NAME, llt.LLT_NAME
+                        FROM meddra.low_level_term llt
+                        JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE
+                        WHERE UPPER(llt.LLT_NAME) LIKE :t
+                        FETCH NEXT 1 ROWS ONLY
+                    """
+                else:
+                    sql = """
+                        SELECT mh.SOC_NAME, mh.HLGT_NAME, mh.HLT_NAME, mh.PT_NAME
+                        FROM meddra.meddra_hierarchy mh
+                        WHERE UPPER(mh.PT_NAME) LIKE :t
+                        FETCH NEXT 1 ROWS ONLY
+                    """
+                oracle_rows = FDALabelDBService.execute_oracle_query(sql, {'t': f'%{term.upper()}%'})
+
+            if oracle_rows:
+                r = oracle_rows[0]
+                cols = ['SOC_NAME', 'HLGT_NAME', 'HLT_NAME', 'PT_NAME']
+                if level == 'llt' and ('LLT_NAME' in r or 'llt_name' in r):
+                    cols.append('LLT_NAME')
+                path = [r.get(c) or r.get(c.lower()) for c in cols if r.get(c) or r.get(c.lower())]
+                formatted = ' → '.join(path)
+                return jsonify({'term': term, 'level': level, 'path': path, 'formatted': formatted})
+        else:
+            # Local PostgreSQL
+            if level == 'llt':
+                sql = """
+                    SELECT s.soc_name, g.hlgt_name, t.hlt_name, p.pt_name, l.llt_name
+                    FROM public.meddra_llt l
+                    JOIN public.meddra_pt p ON p.pt_code = l.pt_code
+                    JOIN public.meddra_mdhier h ON h.pt_code = p.pt_code
+                    JOIN public.meddra_soc s ON s.soc_code = h.soc_code
+                    JOIN public.meddra_hlgt g ON g.hlgt_code = h.hlgt_code
+                    JOIN public.meddra_hlt t ON t.hlt_code = h.hlt_code
+                    WHERE LOWER(l.llt_name) = LOWER(%(t)s)
+                    LIMIT 1
+                """
+            else:
+                sql = """
+                    SELECT s.soc_name, g.hlgt_name, t.hlt_name, p.pt_name
+                    FROM public.meddra_pt p
+                    JOIN public.meddra_mdhier h ON h.pt_code = p.pt_code
+                    JOIN public.meddra_soc s ON s.soc_code = h.soc_code
+                    JOIN public.meddra_hlgt g ON g.hlgt_code = h.hlgt_code
+                    JOIN public.meddra_hlt t ON t.hlt_code = h.hlt_code
+                    WHERE LOWER(p.pt_name) = LOWER(%(t)s)
+                    LIMIT 1
+                """
+            rows = _rows(sql, {'t': term})
+            if rows:
+                r = rows[0]
+                cols = ['soc_name', 'hlgt_name', 'hlt_name', 'pt_name']
+                if level == 'llt' and 'llt_name' in r:
+                    cols.append('llt_name')
+                path = [r[c] for c in cols if r.get(c)]
+                formatted = ' → '.join(path)
+                return jsonify({'term': term, 'level': level, 'path': path, 'formatted': formatted})
+
+        return jsonify({'term': term, 'level': level, 'path': [term], 'formatted': term})
+    except Exception as e:
+        return jsonify({'term': term, 'level': level, 'path': [term], 'formatted': term, 'error': str(e)})
+
+
 _capability_cache = {}
 
 

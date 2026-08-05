@@ -1230,3 +1230,32 @@
     justify-content: space-between;
   }
 }
+
+.fdl-meddra-hierarchies {
+  margin-top: var(--afl-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--afl-surface-subtle);
+  border: 1px solid var(--afl-border);
+  border-radius: var(--afl-radius-md);
+  padding: var(--afl-space-2) var(--afl-space-3);
+  font-size: var(--afl-text-xs);
+}
+
+.fdl-meddra-hier-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  line-height: 1.4;
+}
+
+.fdl-meddra-hier-term {
+  color: var(--afl-brand-800);
+}
+
+.fdl-meddra-hier-path {
+  color: var(--afl-text-secondary);
+}
+

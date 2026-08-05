@@ -9,7 +9,7 @@
  * sync, so what the card shows is what the query contains.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AutoCompleteInput, Chips, ListAdder, type Option, QuickPicks, Select, TokenInput } from './controls';
 import { CRITERION_DEFS, type Criterion, type CriterionValue } from './types';
 
@@ -59,6 +59,30 @@ export function CriterionCard({
 }) {
   const def = CRITERION_DEFS[criterion.type];
   const v = criterion.value as Record<string, any>;
+
+  const [hierarchies, setHierarchies] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (criterion.type !== 'meddra' || !v.terms || v.terms.length === 0) return;
+    const level = (v.level || 'pt').toLowerCase();
+    v.terms.forEach(async (t: string) => {
+      const key = `${level}:${t}`;
+      if (hierarchies[key]) return;
+      try {
+        const res = await fetch(
+          `/api/labelquery/meddra/hierarchy?term=${encodeURIComponent(t)}&level=${level}&target_db=${targetDb}`,
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data.formatted) {
+            setHierarchies((prev) => ({ ...prev, [key]: data.formatted }));
+          }
+        }
+      } catch {
+        // ignore fetch error
+      }
+    });
+  }, [criterion.type, v.terms, v.level, targetDb, hierarchies]);
 
   const set = useCallback(
     (patch: Record<string, unknown>) => onChange({ ...v, ...patch }),
@@ -275,7 +299,9 @@ export function CriterionCard({
           />
         );
 
-      case 'meddra':
+      case 'meddra': {
+        const currentLevel = (v.level || 'pt').toLowerCase();
+        const terms = v.terms || [];
         return (
           <>
             <div className="fdl-row">
@@ -284,27 +310,41 @@ export function CriterionCard({
                 value={v.level || 'pt'}
                 onChange={(level) => set({ level })}
                 options={[
-                  { value: 'llt', label: 'Lowest Level Term (LLT)' },
                   { value: 'pt', label: 'Preferred Term (PT)' },
-                  { value: 'hlt', label: 'High Level Term (HLT)' },
-                  { value: 'hlgt', label: 'High Level Group Term (HLGT)' },
-                  { value: 'soc', label: 'System Organ Class (SOC)' },
+                  { value: 'llt', label: 'Lowest Level Term (LLT)' },
                 ]}
               />
               <div className="fdl-row__grow">
                 <TokenInput
                   placeholder="Begin entering a MedDRA term, then select from suggestions that appear"
-                  values={v.terms || []}
-                  onChange={(terms) => set({ terms })}
+                  values={terms}
+                  onChange={(newTerms) => set({ terms: newTerms })}
                   fetchSuggestions={fetchMeddra}
                 />
               </div>
             </div>
+            {terms.length > 0 && (
+              <div className="fdl-meddra-hierarchies">
+                {terms.map((t: string) => {
+                  const key = `${currentLevel}:${t}`;
+                  const path = hierarchies[key];
+                  return (
+                    <div key={t} className="fdl-meddra-hier-item">
+                      <span className="fdl-meddra-hier-term">• <strong>{t}</strong> ({currentLevel.toUpperCase()}):</span>
+                      <span className="fdl-meddra-hier-path">
+                        {path || 'Loading hierarchy…'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             <p className="fdl-note">
-              Terms at or above the Preferred Term level (PT, HLT, HLGT, SOC) are expanded to their Lowest Level Terms (LLTs) when querying labeling occurrences.
+              Search by Preferred Term (PT) or Lowest Level Term (LLT). Selecting a PT automatically maps down to all its descendant Lowest Level Terms (LLTs) in labeling.
             </p>
           </>
         );
+      }
 
       case 'chemicalStructure':
         return (
