@@ -16,7 +16,7 @@ DEFAULT_CONFIG = {
     "external_pg_user": "",
     "external_pg_password": "",
     "external_pg_database": "",
-    "oracle_db_env": "tst",          # 'dev' or 'tst'
+    "oracle_db_env": "dev",          # 'dev' or 'tst'
     "ai_model_provider": os.getenv("DEFAULT_AI_MODEL", "elsa"),   # 'gemini', 'elsa', 'customized'
     "custom_llm_url": "",
     "custom_llm_key": ""
