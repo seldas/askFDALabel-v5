@@ -764,36 +764,143 @@ def order_by_sql(sort, direction):
     )
 
 
+def _section_criterion_clause(criterion, bag, warnings, expand_meddra):
+    ctype = criterion.get('type')
+    value = criterion.get('value') or {}
+    
+    if ctype == 'fullText':
+        tsquery = _tsquery_sql(value.get('mode') or 'simple', value.get('text'), bag)
+        if not tsquery:
+            return None
+        return f'sec.search_vector @@ {tsquery}'
+
+    if ctype == 'labelingSection':
+        raw_sections = _as_list(value.get('sections'))
+        text = (value.get('text') or '').strip()
+        mode = value.get('mode') or 'simple'
+        
+        # Exclude virtual sections handled at sum_spl level
+        other_sections = [s for s in raw_sections if s not in ('SPLTITLE', 'Product Title', '43683-2', 'Initial U.S. Approval [4 Digit Year]')]
+        tsquery = _tsquery_sql(mode, text, bag)
+        
+        conds = []
+        if tsquery:
+            conds.append(f'sec.search_vector @@ {tsquery}')
+        if other_sections:
+            loincs_set = set()
+            for f in other_sections:
+                if re.match(r'^[\d.\-]+$', f):
+                    loincs_set.add(f)
+                else:
+                    clean = re.sub(r'^[0-9]+(\.[0-9]+)*\s*', '', f).strip().upper()
+                    if clean in TITLE_TO_LOINCS:
+                        for l in TITLE_TO_LOINCS[clean]:
+                            loincs_set.add(l)
+                    else:
+                        for key, l_list in TITLE_TO_LOINCS.items():
+                            if clean and (clean in key or key in clean):
+                                for l in l_list:
+                                    loincs_set.add(l)
+            loincs = list(loincs_set)
+            if loincs:
+                conds.append(f'sec.loinc_code = ANY({bag.add(loincs)})')
+
+        if not conds:
+            return None
+        return '(' + ' AND '.join(conds) + ')'
+
+    if ctype == 'meddra':
+        terms = _as_list(value.get('terms')) or _split_terms(value.get('text'))
+        if not terms:
+            return None
+        level = (value.get('level') or 'pt').lower()
+        if expand_meddra and level != 'pt':
+            expanded = expand_meddra(level, terms)
+            if expanded:
+                terms = expanded
+        tsquery = _tsquery_union(terms, bag)
+        if not tsquery:
+            return None
+        sec_list = _as_list(value.get('sections'))
+        conds = [f'sec.search_vector @@ {tsquery}']
+        if sec_list:
+            loincs_set = set()
+            for f in sec_list:
+                if re.match(r'^[\d.\-]+$', f):
+                    loincs_set.add(f)
+                else:
+                    clean = re.sub(r'^[0-9]+(\.[0-9]+)*\s*', '', f).strip().upper()
+                    if clean in TITLE_TO_LOINCS:
+                        for l in TITLE_TO_LOINCS[clean]:
+                            loincs_set.add(l)
+            if loincs_set:
+                conds.append(f'sec.loinc_code = ANY({bag.add(list(loincs_set))})')
+        return '(' + ' AND '.join(conds) + ')'
+
+    return None
+
+
 def compile_where(query, expand_meddra=None, capabilities=None):
     """
-    Turns a criteria tree into ``(where_sql, params, warnings)``.
-
-    `expand_meddra(level, terms) -> [pt_names]` and `capabilities` are injected
-    rather than imported so the compiler stays free of DB access and stays
-    unit-testable. `capabilities` reports what this deployment's data actually
-    supports (currently just `unii`), so a criterion backed by an unpopulated
-    column can warn instead of returning a misleading empty result.
+    Turns a criteria tree into ``(where_sql, section_where_sql, params, warnings)``.
     """
     bag = _ParamBag()
     warnings = []
-    group_clauses = []
     capabilities = capabilities or {}
 
-    for group in (query.get('groups') or []):
-        criterion_clauses = []
-        for criterion in (group.get('criteria') or []):
-            clause = _compile_criterion(criterion, bag, warnings, expand_meddra, capabilities)
-            if clause:
-                criterion_clauses.append(clause)
-        if criterion_clauses:
-            group_clauses.append('(' + ' AND '.join(criterion_clauses) + ')')
+    relational_groups = []
+    section_groups = []
 
-    # Only the current version of each SPL set, matching every other label query
-    # in the app.
-    where = ['s.is_latest = TRUE']
-    if group_clauses:
-        where.append('(' + ' OR '.join(group_clauses) + ')')
-    else:
+    for group in (query.get('groups') or []):
+        r_clauses = []
+        s_clauses = []
+        for criterion in (group.get('criteria') or []):
+            ctype = criterion.get('type')
+            cval = criterion.get('value') or {}
+
+            # Handle virtual sections in relational query
+            if ctype == 'labelingSection':
+                raw_sections = _as_list(cval.get('sections'))
+                is_product_title = any(s in ('SPLTITLE', 'Product Title') for s in raw_sections)
+                is_approval_year = any(s in ('43683-2', 'Initial U.S. Approval [4 Digit Year]') for s in raw_sections)
+                text = (cval.get('text') or '').strip()
+                if is_product_title:
+                    if text:
+                        p_val = bag.add(f'%{text}%')
+                        r_clauses.append(f"(s.product_names ILIKE {p_val} OR s.generic_names ILIKE {p_val})")
+                    else:
+                        r_clauses.append("(s.product_names IS NOT NULL AND s.product_names <> '')")
+                if is_approval_year:
+                    if text and text.isdigit():
+                        p_val = bag.add(int(text))
+                        r_clauses.append(f"(s.initial_approval_year = {p_val})")
+                    elif text:
+                        p_val = bag.add(f'%{text}%')
+                        r_clauses.append(f"(CAST(s.initial_approval_year AS TEXT) ILIKE {p_val})")
+                    else:
+                        r_clauses.append("(s.initial_approval_year IS NOT NULL)")
+
+            if ctype in ('fullText', 'labelingSection', 'meddra'):
+                sec_clause = _section_criterion_clause(criterion, bag, warnings, expand_meddra)
+                if sec_clause:
+                    s_clauses.append(sec_clause)
+            else:
+                rel_clause = _compile_criterion(criterion, bag, warnings, expand_meddra, capabilities)
+                if rel_clause:
+                    r_clauses.append(rel_clause)
+
+        if r_clauses:
+            relational_groups.append('(' + ' AND '.join(r_clauses) + ')')
+        if s_clauses:
+            section_groups.append('(' + ' AND '.join(s_clauses) + ')')
+
+    relational_where = ['s.is_latest = TRUE']
+    if relational_groups:
+        relational_where.append('(' + ' OR '.join(relational_groups) + ')')
+
+    section_where = '(' + ' OR '.join(section_groups) + ')' if section_groups else None
+
+    if not relational_groups and not section_groups:
         warnings.append('No criteria were filled in; showing the most recent labels.')
 
-    return ' AND '.join(where), bag.params, warnings
+    return ' AND '.join(relational_where), section_where, bag.params, warnings

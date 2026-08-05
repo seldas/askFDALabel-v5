@@ -499,7 +499,7 @@ def execute():
                 conn.close()
 
     try:
-        where, params, warnings = compile_where(
+        relational_where, section_where, params, warnings = compile_where(
             query, expand_meddra=_expand_meddra, capabilities=_capabilities()
         )
     except QueryCompileError as e:
@@ -515,27 +515,52 @@ def execute():
         page_params = dict(params)
         page_params['_limit'] = limit
         page_params['_offset'] = offset
-        with conn.cursor() as cur:
-            cur.execute(
-                f"""
-                WITH matched AS MATERIALIZED (
-                    SELECT s.spl_id, {sort_column} AS sort_key, s.set_id
-                    FROM labeling.sum_spl s
-                    WHERE {where}
-                ),
-                page AS (
-                    SELECT spl_id FROM matched
-                    ORDER BY sort_key {sort_dir} NULLS LAST, set_id
-                    LIMIT %(_limit)s OFFSET %(_offset)s
-                )
-                SELECT t.n AS total_count, {SELECT_COLUMNS}
-                FROM (SELECT COUNT(*) AS n FROM matched) t
-                LEFT JOIN page ON TRUE
-                LEFT JOIN labeling.sum_spl s ON s.spl_id = page.spl_id
-                ORDER BY {order_by}
-                """,
-                page_params,
+
+        if section_where:
+            sql = f"""
+            WITH section_candidates AS (
+                SELECT DISTINCT sec.spl_id
+                FROM labeling.spl_sections sec
+                WHERE {section_where}
+            ),
+            matched AS MATERIALIZED (
+                SELECT s.spl_id, {sort_column} AS sort_key, s.set_id
+                FROM labeling.sum_spl s
+                INNER JOIN section_candidates sc ON sc.spl_id = s.spl_id
+                WHERE {relational_where}
+            ),
+            page AS (
+                SELECT spl_id FROM matched
+                ORDER BY sort_key {sort_dir} NULLS LAST, set_id
+                LIMIT %(_limit)s OFFSET %(_offset)s
             )
+            SELECT t.n AS total_count, {SELECT_COLUMNS}
+            FROM (SELECT COUNT(*) AS n FROM matched) t
+            LEFT JOIN page ON TRUE
+            LEFT JOIN labeling.sum_spl s ON s.spl_id = page.spl_id
+            ORDER BY {order_by}
+            """
+        else:
+            sql = f"""
+            WITH matched AS MATERIALIZED (
+                SELECT s.spl_id, {sort_column} AS sort_key, s.set_id
+                FROM labeling.sum_spl s
+                WHERE {relational_where}
+            ),
+            page AS (
+                SELECT spl_id FROM matched
+                ORDER BY sort_key {sort_dir} NULLS LAST, set_id
+                LIMIT %(_limit)s OFFSET %(_offset)s
+            )
+            SELECT t.n AS total_count, {SELECT_COLUMNS}
+            FROM (SELECT COUNT(*) AS n FROM matched) t
+            LEFT JOIN page ON TRUE
+            LEFT JOIN labeling.sum_spl s ON s.spl_id = page.spl_id
+            ORDER BY {order_by}
+            """
+
+        with conn.cursor() as cur:
+            cur.execute(sql, page_params)
             rows = [dict(r) for r in cur.fetchall()]
 
         total = rows[0]['total_count'] if rows else 0
