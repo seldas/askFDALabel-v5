@@ -168,7 +168,7 @@ const Header: React.FC = () => {
                 <div style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 500 }}>Side-by-side analysis</div>
               </div>
             </Link>
-            <Link href="/drugtox" className="hp-dropdown-item">
+            <Link href="/drugtox" target="_blank" rel="noopener noreferrer" className="hp-dropdown-item">
               <span className="hp-dropdown-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2v8"></path><path d="M14 2v8"></path><path d="M8.5 15c.7 0 1.3-.5 1.5-1.2l.5-2.3c.2-.7.8-1.2 1.5-1.2s1.3.5 1.5 1.2l.5 2.3c.2.7.8 1.2 1.5 1.2"></path><path d="M6 18h12"></path><path d="M6 22h12"></path><circle cx="12" cy="13" r="10"></circle></svg>
               </span>
@@ -177,7 +177,15 @@ const Header: React.FC = () => {
                 <div style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 500 }}>Toxicity profile tracking</div>
               </div>
             </Link>
-
+            <Link href="/disclaimer" className="hp-dropdown-item">
+              <span className="hp-dropdown-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </span>
+              <div>
+                <div style={{ fontWeight: 800 }}>Disclaimer</div>
+                <div style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 500 }}>FDA medical & legal notice</div>
+              </div>
+            </Link>
           </div>
         </div>
       </nav>

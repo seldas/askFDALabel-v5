@@ -567,6 +567,19 @@ export default function Header({
           </div>
         )}
 
+        {/* Disclaimer Link in Header */}
+        <Link 
+          href="/disclaimer"
+          className="header-chip"
+          title="FDALabel Disclaimer"
+          style={{ textDecoration: 'none', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 800 }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <span>Disclaimer</span>
+        </Link>
+
         {/* 3. About Dropdown */}
         <div className="custom-dropdown" onClick={(e) => e.stopPropagation()}>
           <button 
@@ -585,7 +598,7 @@ export default function Header({
 
           {activeDropdown === 'updates' && (
             <div className="dropdown-menu" style={{ 
-              width: '320px', 
+              width: '340px', 
               right: 0, 
               left: 'auto',
               padding: '1.5rem',
@@ -611,9 +624,39 @@ export default function Header({
                   alpha
                 </span>
               </div>
-              <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.6, marginBottom: '12px' }}>
-                FDALabel new version with AI capabilities.
+              <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.6, marginBottom: '14px' }}>
+                FDALabel web application for search, customization, and analysis of drug labeling metadata.
               </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.82rem', marginBottom: '16px', textAlign: 'left', padding: '10px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                <a
+                  href="https://www.fda.gov/ScienceResearch/BioinformaticsTools/ucm289739.htm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                  <span>FDA Bioinformatics Tools ↗</span>
+                </a>
+                <a
+                  href="https://nctr-crs.fda.gov/fdalabel/ui/contact"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                  <span>Contact FDALabel ↗</span>
+                </a>
+                <Link
+                  href="/disclaimer"
+                  onClick={() => setActiveDropdown(null)}
+                  style={{ color: '#475569', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span>FDALabel Disclaimer</span>
+                </Link>
+              </div>
+
               <div style={{ fontSize: '0.75rem', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
                 &copy; {new Date().getFullYear()} FDA/NCTR
               </div>
