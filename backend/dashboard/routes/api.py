@@ -1838,6 +1838,7 @@ def create_task_from_query():
         labels, _ = find_labels_by_set_ids(set_ids, skip=0, limit=3000)
         label_map = {l['set_id']: l for l in labels} if labels else {}
 
+        fav_objects = []
         for set_id in set_ids:
             label = label_map.get(set_id, {})
             brand = label.get('brand_name') or 'n/a'
@@ -1859,9 +1860,10 @@ def create_task_from_query():
                 dailymed_spl_link=f"https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid={set_id}",
                 dailymed_pdf_link=f"https://dailymed.nlm.nih.gov/dailymed/getpdf.cfm?setid={set_id}"
             )
-            db.session.add(new_fav)
+            fav_objects.append(new_fav)
             added_count += 1
 
+        db.session.add_all(fav_objects)
         db.session.commit()
 
     return jsonify({

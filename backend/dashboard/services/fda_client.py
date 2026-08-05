@@ -56,13 +56,8 @@ def find_labels(query_term, skip=0, limit=10, use_local_db=False):
 
 def find_labels_by_set_ids(terms_list, skip=0, limit=10, use_local_db=False):
     if not terms_list: return [], 0
-    if FDALabelDBService.check_connectivity():
-        all_results = []
-        for tid in terms_list:
-             res = FDALabelDBService.search_labels(tid, limit=1, force_local=use_local_db)
-             if res: all_results.extend(res)
-        return all_results[skip:skip+limit], len(all_results)
-    return [], 0
+    all_results = FDALabelDBService.get_labels_by_set_ids_bulk(terms_list, force_local=use_local_db)
+    return all_results[skip:skip+limit], len(all_results)
 
 def get_label_metadata(set_id, import_id=None, spl_id=None, use_local_db=False):
     if import_id:

@@ -402,6 +402,86 @@ class FDALabelDBService:
         return results
 
     @classmethod
+    def get_labels_by_set_ids_bulk(cls, set_ids, force_local=False):
+        if not set_ids:
+            return []
+        if not cls.check_connectivity():
+            return []
+        conn = cls.get_connection(force_local=force_local)
+        if not conn:
+            return []
+
+        clean_ids = list(dict.fromkeys([str(s).strip() for s in set_ids if str(s).strip()]))
+        if not clean_ids:
+            return []
+
+        results = []
+        CHUNK_SIZE = 500
+        try:
+            cursor = conn.cursor()
+            for i in range(0, len(clean_ids), CHUNK_SIZE):
+                chunk = clean_ids[i:i + CHUNK_SIZE]
+                if cls._db_type == 'oracle':
+                    bind_names = [f":id_{j}" for j in range(len(chunk))]
+                    params = {f"id_{j}": chunk[j] for j in range(len(chunk))}
+                    sql = f"""
+                        SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, 
+                               MARKET_CATEGORIES, APPR_NUM, NDC_CODES, EFF_TIME, ACT_INGR_NAMES, 
+                               DOCUMENT_TYPE as LABELING_TYPE, DOSAGE_FORMS,
+                               ROUTES_OF_ADMINISTRATION as ROUTES, EPC
+                        FROM druglabel.DGV_SUM_SPL
+                        WHERE SET_ID IN ({','.join(bind_names)})
+                    """
+                    cursor.execute(sql, params)
+                    for r in cursor.fetchall():
+                        results.append({
+                            'set_id': r[0],
+                            'brand_name': (r[1] or "").replace(';', ', '),
+                            'generic_name': (r[2] or "").replace(';', ', '),
+                            'manufacturer_name': r[3] or "n/a",
+                            'market_category': r[4] or "n/a",
+                            'application_number': (r[5] or "")[:50] or "n/a",
+                            'ndc': r[6] or "n/a",
+                            'effective_time': r[7] or "n/a",
+                            'active_ingredients': r[8] or "n/a",
+                            'labeling_type': r[9] or "n/a",
+                            'dosage_forms': r[10] or "n/a",
+                            'routes': r[11] or "n/a",
+                            'epc': r[12] or "n/a",
+                        })
+                else:
+                    schema = "labeling."
+                    sql = f"""
+                        SELECT set_id, product_names, generic_names, manufacturer, market_categories, appr_num,
+                               ndc_codes, revised_date, active_ingredients, doc_type, dosage_forms, routes, epc
+                        FROM {schema}sum_spl
+                        WHERE set_id IN %s
+                    """
+                    cursor.execute(sql, (tuple(chunk),))
+                    for r in cursor.fetchall():
+                        results.append({
+                            'set_id': r['set_id'] if isinstance(r, dict) else r[0],
+                            'brand_name': ((r.get('product_names') if isinstance(r, dict) else r[1]) or "").replace(';', ', '),
+                            'generic_name': ((r.get('generic_names') if isinstance(r, dict) else r[2]) or "").replace(';', ', '),
+                            'manufacturer_name': (r.get('manufacturer') if isinstance(r, dict) else r[3]) or "n/a",
+                            'market_category': (r.get('market_categories') if isinstance(r, dict) else r[4]) or "n/a",
+                            'application_number': ((r.get('appr_num') if isinstance(r, dict) else r[5]) or "")[:50] or "n/a",
+                            'ndc': (r.get('ndc_codes') if isinstance(r, dict) else r[6]) or "n/a",
+                            'effective_time': str((r.get('revised_date') if isinstance(r, dict) else r[7]) or "n/a"),
+                            'active_ingredients': (r.get('active_ingredients') if isinstance(r, dict) else r[8]) or "n/a",
+                            'labeling_type': (r.get('doc_type') if isinstance(r, dict) else r[9]) or "n/a",
+                            'dosage_forms': (r.get('dosage_forms') if isinstance(r, dict) else r[10]) or "n/a",
+                            'routes': (r.get('routes') if isinstance(r, dict) else r[11]) or "n/a",
+                            'epc': (r.get('epc') if isinstance(r, dict) else r[12]) or "n/a",
+                        })
+            cursor.close()
+        except Exception as e:
+            print(f"Bulk Fetch Error: {e}")
+        finally:
+            conn.close()
+        return results
+
+    @classmethod
     def search_labels_with_count(cls, query, skip=0, limit=10, force_local=False):
         """
         Efficient search that returns (results_list, total_count).
