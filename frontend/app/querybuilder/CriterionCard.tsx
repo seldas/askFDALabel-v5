@@ -231,7 +231,9 @@ export function CriterionCard({
                   }
                 }}
               >
-                <option value="">{options.loading ? 'Loading…' : ''}</option>
+                <option value="">
+                  {options.loading ? 'Loading sections…' : '-- Select a section --'}
+                </option>
                 {Array.from(groupedMap.entries()).map(([groupLabel, opts]) => (
                   <optgroup key={groupLabel} label={groupLabel}>
                     {opts.map((o) => (

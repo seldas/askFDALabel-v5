@@ -102,6 +102,12 @@ export function ListAdder({
 }) {
   const id = useId();
   const available = options.filter((o) => !selected.includes(o.value));
+  const placeholderText = loading
+    ? 'Loading list…'
+    : options.length > 0 && available.length === 0
+    ? '(All options selected)'
+    : '-- Select from list --';
+
   return (
     <div className="fdl-listadder">
       <label className="fdl-listadder__label" htmlFor={id}>
@@ -111,15 +117,16 @@ export function ListAdder({
         id={id}
         className="fdl-select fdl-select--wide"
         value=""
-        disabled={loading}
+        disabled={loading || (options.length > 0 && available.length === 0)}
         onChange={(e) => {
           if (e.target.value) onAdd(e.target.value);
         }}
       >
-        <option value="">{loading ? 'Loading…' : ''}</option>
+        <option value="">{placeholderText}</option>
         {available.map((o) => (
           <option key={o.value} value={o.value}>
-            {(o.label || o.value) + (o.count ? ` (${o.count.toLocaleString()})` : '')}
+            {(o.label || o.value) +
+              (o.count !== undefined && o.count !== null ? ` (${o.count.toLocaleString()})` : '')}
           </option>
         ))}
       </select>
