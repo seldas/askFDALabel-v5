@@ -553,6 +553,24 @@ def _capabilities():
     return dict(_capability_cache)
 
 
+#: target_db values that mean Oracle. 'oracle_all' additionally widens the base
+#: table from the human-only rollup to the raw one; see _oracle_base_table.
+_ORACLE_TARGETS = ('oracle', 'fdalabel', 'oracle_all')
+
+
+def _oracle_base_table(target_db):
+    """
+    Which summary rollup an Oracle query is based on.
+
+    'oracle' keeps DGV_SUM_RX_SPL, the curated human-labeling subset that
+    FDALabel itself presents. 'oracle_all' uses the raw SUM_SPL, which is the
+    only one that has animal and other non-human labeling in it -- searching for
+    those against the curated table returned zero rows.
+    """
+    from .oracle_compiler import BASE_TABLE_ALL, BASE_TABLE_HUMAN
+    return BASE_TABLE_ALL if str(target_db or '').lower() == 'oracle_all' else BASE_TABLE_HUMAN
+
+
 def _expand_meddra(level, terms):
     """
     Resolves a MedDRA selection to the term names actually written in label
@@ -625,11 +643,11 @@ def execute():
 
     # Target database selection: check explicit target_db payload first
     target_db = str(payload.get('target_db') or payload.get('source') or '').lower()
-    use_oracle = (target_db in ('oracle', 'fdalabel')) or (target_db != 'local' and FDALabelDBService.is_internal())
+    use_oracle = (target_db in _ORACLE_TARGETS) or (target_db != 'local' and FDALabelDBService.is_internal())
 
     if use_oracle:
         conn = FDALabelDBService.get_oracle_connection()
-        if not conn and target_db in ('oracle', 'fdalabel'):
+        if not conn and target_db in _ORACLE_TARGETS:
             return jsonify({
                 'error': 'Target database requested is Oracle, but Oracle DB connection failed. Please verify Oracle host/VPN or credentials.',
                 'results': [],
@@ -647,7 +665,8 @@ def execute():
                     limit=limit,
                     offset=offset,
                     expand_meddra=_expand_meddra,
-                    capabilities=_capabilities()
+                    capabilities=_capabilities(),
+                    base_table=_oracle_base_table(target_db),
                 )
             except OracleQueryCompileError as e:
                 conn.close()
@@ -847,7 +866,7 @@ EXPORT_COLUMNS = [
 
 def _export_rows(query, sort, direction, target_db=None):
     target_str = str(target_db or '').lower()
-    use_oracle = (target_str in ('oracle', 'fdalabel')) or (target_str != 'local' and FDALabelDBService.is_internal())
+    use_oracle = (target_str in _ORACLE_TARGETS) or (target_str != 'local' and FDALabelDBService.is_internal())
 
     if use_oracle:
         conn = FDALabelDBService.get_oracle_connection()
@@ -862,7 +881,8 @@ def _export_rows(query, sort, direction, target_db=None):
                 limit=None,
                 offset=0,
                 expand_meddra=_expand_meddra,
-                capabilities=_capabilities()
+                capabilities=_capabilities(),
+                base_table=_oracle_base_table(target_str),
             )
             cur = conn.cursor()
             cur.execute(sql, params)

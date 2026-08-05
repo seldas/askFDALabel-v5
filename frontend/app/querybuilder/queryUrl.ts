@@ -10,7 +10,7 @@
  * and, unlike raw JSON in a query string, safe from proxies that re-encode `%`.
  */
 
-import type { WireQuery } from './types';
+import type { TargetDb, WireQuery } from './types';
 
 export const QUERY_PARAM = 'q';
 
@@ -56,7 +56,7 @@ export function decodeQuery(encoded: string | null): WireQuery | null {
 }
 
 /** App-relative results URL; the base path is applied by the caller's link. */
-export function resultsPath(query: WireQuery, targetDb: 'oracle' | 'local' = 'oracle'): string {
+export function resultsPath(query: WireQuery, targetDb: TargetDb = 'oracle'): string {
   const params = new URLSearchParams();
   params.set(QUERY_PARAM, encodeQuery(query));
   if (targetDb) {

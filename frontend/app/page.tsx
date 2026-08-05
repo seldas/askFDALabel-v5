@@ -33,6 +33,7 @@ import {
   fromWire,
   type LabelQuery,
   makeEmptyQuery,
+  type TargetDb,
   toWire,
   type WireQuery,
 } from './querybuilder/types';
@@ -55,7 +56,7 @@ export default function HomePage() {
   const isAuthed = Boolean(session?.is_authenticated);
 
   const oracleAvailable = capReady && Boolean(capabilities.isInternal || capabilities.fdaAccessible || capabilities.cderAccessible);
-  const [targetDb, setTargetDb] = useState<'oracle' | 'local'>('oracle');
+  const [targetDb, setTargetDb] = useState<TargetDb>('oracle');
 
   const [query, setQuery] = useState<LabelQuery>(makeEmptyQuery);
   const [options, setOptions] = useState<OptionLists>(EMPTY_OPTIONS);
@@ -171,18 +172,31 @@ export default function HomePage() {
         <div className="fdl-target-db-pills">
           <button
             type="button"
+            className={`fdl-target-db-pill ${targetDb === 'local' ? 'active' : ''}`}
+            onClick={() => setTargetDb('local')}
+            title="Local PostgreSQL import"
+          >
+            Local DB
+          </button>
+          {/* Human and All are the same Oracle database; they differ only in
+            * which summary table the query is based on. */}
+          <button
+            type="button"
             className={`fdl-target-db-pill ${targetDb === 'oracle' ? 'active' : ''}`}
             onClick={() => oracleAvailable && setTargetDb('oracle')}
             disabled={!oracleAvailable}
+            title="Oracle FDALabel — human labeling only (DGV_SUM_RX_SPL)"
           >
-            Oracle FDALabel
+            Human
           </button>
           <button
             type="button"
-            className={`fdl-target-db-pill ${targetDb === 'local' ? 'active' : ''}`}
-            onClick={() => setTargetDb('local')}
+            className={`fdl-target-db-pill ${targetDb === 'oracle_all' ? 'active' : ''}`}
+            onClick={() => oracleAvailable && setTargetDb('oracle_all')}
+            disabled={!oracleAvailable}
+            title="Oracle FDALabel — all labeling, including animal and non-Rx (SUM_SPL)"
           >
-            Local DB
+            All
           </button>
         </div>
       </div>

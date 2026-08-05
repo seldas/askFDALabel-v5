@@ -32,6 +32,20 @@ _APPL_PREFIXES = ('ANADA', 'ANDA', 'NADA', 'BLA', 'NDA')
 _PREFIXED_APPL_RE = re.compile(r'^(' + '|'.join(_APPL_PREFIXES) + r')[\s-]*(\d{3,6})$', re.I)
 
 
+# The two summary rollups a query can be based on.
+#
+# DGV_SUM_RX_SPL is a curated subset: human labeling only. Anything else --
+# animal Rx and OTC above all -- is simply absent from it, so a labelingType
+# filter for those matched nothing and the search returned zero rows with no
+# explanation. SUM_SPL is the raw rollup and carries everything.
+#
+# The substitution is safe: every column this compiler reads exists on both.
+# SUM_SPL additionally has ACT_MOIETY_NAMES/_UNIIS and MEDDRA_SUPPORTED, and
+# DGV_SUM_RX_SPL additionally has FORMAT_GROUP; none of those are read here.
+BASE_TABLE_HUMAN = 'druglabel.DGV_SUM_RX_SPL'
+BASE_TABLE_ALL = 'druglabel.SUM_SPL'
+
+
 class OracleQueryCompileError(ValueError):
     """Raised for a criterion the Oracle compiler cannot compile into valid SQL."""
 
@@ -503,12 +517,19 @@ def _compile_identifier(value, bag):
     return '(' + ' OR '.join(alts) + ')'
 
 
-def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0, expand_meddra=None, capabilities=None):
+def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0, expand_meddra=None,
+                         capabilities=None, base_table=BASE_TABLE_HUMAN):
     """
     Compiles an FDALabel criteria tree into an Oracle SQL query with candidate isolation.
-    
+
+    ``base_table`` selects the summary rollup the query is based on -- see
+    BASE_TABLE_HUMAN and BASE_TABLE_ALL. Both expose every column read here, so
+    it is a straight substitution.
+
     Returns: (sql_statement, parameters_dict, warnings_list)
     """
+    if base_table not in (BASE_TABLE_HUMAN, BASE_TABLE_ALL):
+        raise OracleQueryCompileError(f'Unknown base table: {base_table!r}')
     bag = OracleParamBag()
     warnings = []
 
@@ -681,7 +702,7 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
                    s.NDC_CODES, s.EFF_TIME, s.MARKET_CATEGORIES, s.DOCUMENT_TYPE, s.ACT_INGR_NAMES,
                    s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC, s.ACT_INGR_UNIIS,
                    COUNT(*) OVER () AS TOTAL_COUNT
-            FROM druglabel.DGV_SUM_RX_SPL s
+            FROM {base_table} s
             WHERE {where_sql}
         )
         SELECT p.SET_ID, p.SPL_GUID as SPL_ID, p.PRODUCT_NAMES, p.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,

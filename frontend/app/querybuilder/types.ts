@@ -254,7 +254,24 @@ export const ADD_MORE_ORDER: CriterionType[] = [
   'identifier',
 ];
 
-export type TargetDb = 'local' | 'oracle';
+/*
+ * Search target.
+ *
+ * The two Oracle values hit the same database and differ only in the summary
+ * table the compiler bases on. 'oracle' uses DGV_SUM_RX_SPL, which is a curated
+ * subset -- it excludes animal and other non-human labeling, so an "Animal Rx"
+ * search against it returns nothing. 'oracle_all' uses the raw SUM_SPL, which
+ * covers everything. Both expose every column the compiler reads.
+ */
+export type TargetDb = 'local' | 'oracle' | 'oracle_all';
+
+export const isOracleTarget = (t: TargetDb) => t === 'oracle' || t === 'oracle_all';
+
+export const TARGET_DB_LABELS: Record<TargetDb, string> = {
+  local: 'Local DB',
+  oracle: 'Human',
+  oracle_all: 'All',
+};
 
 /*
  * Which backends can actually evaluate a criterion.
@@ -271,8 +288,8 @@ export type TargetDb = 'local' | 'oracle';
  * saved queries and the AI translator can both still produce one.
  */
 export const CRITERION_SUPPORT: Partial<Record<CriterionType, TargetDb[]>> = {
-  deaSchedule: ['oracle'],
-  activeMoiety: ['oracle'],
+  deaSchedule: ['oracle', 'oracle_all'],
+  activeMoiety: ['oracle', 'oracle_all'],
   chemicalStructure: [],
 };
 
@@ -289,7 +306,7 @@ export function unsupportedReason(type: CriterionType, targetDb: TargetDb): stri
   if (support.length === 0) {
     return `${shortTitle} needs a chemical structure index that neither database has. This criterion will be ignored.`;
   }
-  const only = support.includes('oracle') ? 'FDALabel Oracle' : 'local';
+  const only = support.some(isOracleTarget) ? 'FDALabel Oracle' : 'local';
   return `${shortTitle} is only available against the ${only} database. This criterion will be ignored for the current target.`;
 }
 
