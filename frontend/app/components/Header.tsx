@@ -294,7 +294,37 @@ export default function Header({
 
               {(['fdalabel-fda', 'fdalabel-cder', 'fdalabel-public'] as const).map((toolId) => {
                 const tool = getTool(toolId)!;
-                if (!isToolAvailable(tool, GLOBAL_CTX, capabilities)) return null;
+                const available = isToolAvailable(tool, GLOBAL_CTX, capabilities);
+                if (!available) {
+                  return (
+                    <div
+                      key={toolId}
+                      className="hp-dropdown-item is-disabled"
+                      style={{
+                        opacity: 0.45,
+                        cursor: 'not-allowed',
+                        userSelect: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '8px 12px',
+                      }}
+                      title="Disabled — Requires ELSA_API_NAME configured in .env for internal FDA network access"
+                    >
+                      <span className="hp-dropdown-icon" style={{ filter: 'grayscale(1)' }}>
+                        <ToolIcon id={tool.iconId} size={18} />
+                      </span>
+                      <div>
+                        <div className="dropdown-title" style={{ color: '#94a3b8', textDecoration: 'line-through' }}>
+                          {tool.name.replace('FDALabel (', '').replace(')', '')} version
+                        </div>
+                        <div style={{ fontSize: '0.62rem', color: '#94a3b8', fontWeight: 600 }}>
+                          (Disabled - Internal Only)
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
                 return (
                   <a
                     key={toolId}

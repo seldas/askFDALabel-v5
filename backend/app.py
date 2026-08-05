@@ -48,11 +48,13 @@ def create_unified_app():
     def check_fdalabel():
         from flask import current_app
         allow_local = current_app.config.get('LOCAL_QUERY', True)
+        elsa_api = (os.environ.get('ELSA_API_NAME') or current_app.config.get('ELSA_API_NAME') or '').strip()
+        has_elsa = bool(elsa_api)
         
         return jsonify({
-            "isInternal": False,
-            "fdaAccessible": True,
-            "cderAccessible": True,
+            "isInternal": has_elsa,
+            "fdaAccessible": has_elsa,
+            "cderAccessible": has_elsa,
             "localAccessible": allow_local,
             "allowLocalQuery": allow_local
         })
