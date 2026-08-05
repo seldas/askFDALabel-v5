@@ -34,40 +34,8 @@ def _record_usage(user, model_name, input_tokens, output_tokens):
         logger.error(f"Failed to record token usage: {e}")
         db.session.rollback()
 
-_is_internal_env_cached = None
-
 def _check_is_internal():
-    global _is_internal_env_cached
-    if _is_internal_env_cached is not None:
-        return _is_internal_env_cached
-    
-    try:
-        from dashboard.services.fdalabel_db import FDALabelDBService
-        if FDALabelDBService.is_internal():
-            _is_internal_env_cached = True
-            return True
-    except Exception:
-        pass
-        
-    try:
-        import requests
-        r = requests.head("https://fdalabel.fda.gov/fdalabel/ui/search", timeout=1.5, verify=False)
-        if r.status_code < 400:
-            _is_internal_env_cached = True
-            return True
-    except Exception:
-        pass
-        
-    try:
-        import requests
-        r = requests.head("https://fdalabel.fda.gov/fdalabel-r/ui/search", timeout=1.5, verify=False)
-        if r.status_code < 400:
-            _is_internal_env_cached = True
-            return True
-    except Exception:
-        pass
-        
-    _is_internal_env_cached = False
+    """Retired: network probe disabled. AI Chat and local queries consistently use local DB."""
     return False
 
 class AIClientFactory:

@@ -68,28 +68,15 @@ class FDALabelDBService:
 
         Priority:
           1. force_oracle=True → attempt direct Oracle connection.
-          2. force_local=True  → always use local Postgres, never Oracle.
-          3. EnvService labeling_source == 'local'  → same as force_local.
-          4. Otherwise try Oracle; fall back to Postgres on failure.
+          2. Default → always use local Postgres DB.
         """
         if force_oracle:
             conn = cls.get_oracle_connection()
             if conn:
+                cls._db_type = 'oracle'
                 return conn
 
-        # ── Respect the labeling_source system setting ──────────────────────
-        if not force_local:
-            from dashboard.services.env_service import EnvService
-            labeling_source = EnvService.get_setting("labeling_source") or "local"
-            if labeling_source == "local":
-                force_local = True   # PG only — skip Oracle entirely
-
-        if not force_local:
-            conn = cls.get_oracle_connection()
-            if conn:
-                return conn
-
-        # Fallback to Postgres
+        # Local Postgres DB is the default across the app
         conn = cls.get_postgres_connection()
         if conn:
             cls._db_type = 'postgres'
@@ -99,10 +86,10 @@ class FDALabelDBService:
     def is_available(cls):
         if cls._is_connected is not None:
             return cls._is_connected
-        conn = cls.get_connection()
+        conn = cls.get_postgres_connection()
         if conn:
             cls._is_connected = True
-            # _db_type is already set by get_connection()
+            cls._db_type = 'postgres'
             conn.close()
         else:
             cls._is_connected = False
@@ -110,17 +97,18 @@ class FDALabelDBService:
 
     @classmethod
     def reset_cache(cls):
-        """Clears the cached connection state (useful after env setting changes)."""
+        """Clears the cached connection state."""
         cls._is_connected = None
         cls._db_type = None
 
     @classmethod
     def is_internal(cls):
-        return cls.is_available() and cls._db_type == 'oracle'
+        """Retired: internal auto-switching is disabled; explicit target_db switch is used instead."""
+        return False
 
     @classmethod
     def is_local(cls):
-        return cls.is_available() and cls._db_type == 'postgres'
+        return True
 
     @classmethod
     def check_connectivity(cls):

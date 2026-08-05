@@ -46,27 +46,13 @@ def create_unified_app():
     
     @app.route('/api/check-fdalabel', methods=['POST'])
     def check_fdalabel():
-        from dashboard.services.env_service import EnvService
         from flask import current_app
-        from dashboard.services.ai_handler import _check_is_internal
-        
-        label_src = EnvService.get_setting("labeling_source")
         allow_local = current_app.config.get('LOCAL_QUERY', True)
         
-        is_internal = _check_is_internal()
-        
-        # Enforce FDALabel accessibility by labeling_source or internal network presence
-        if label_src == "fdalabel" or is_internal:
-            fda_accessible = True
-            cder_accessible = True
-        else:
-            fda_accessible = False
-            cder_accessible = False
-
         return jsonify({
-            "isInternal": fda_accessible or cder_accessible,
-            "fdaAccessible": fda_accessible,
-            "cderAccessible": cder_accessible,
+            "isInternal": False,
+            "fdaAccessible": True,
+            "cderAccessible": True,
             "localAccessible": allow_local,
             "allowLocalQuery": allow_local
         })
