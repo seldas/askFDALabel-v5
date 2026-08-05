@@ -6,7 +6,7 @@ Enforces a 5-tier relational candidate isolation strategy:
    SPL_PROD, SUM_SPL_GEN_PROD_ACT_INGR_UNII, SUM_SPL_RLD_RS) and precomputed MedDRA 
    occurrences (SPL_SEC_MEDDRA_LLT_OCC) evaluate inside a candidate CTE.
 2. Full-text search (CONTAINS over SPL_SEC.CONTENT_XML) evaluates ONLY against candidate 
-   SPL_IDs, preventing expensive domain index scans across the full database.
+   SPL_GUIDs, preventing expensive domain index scans across the full database.
 """
 
 import re
@@ -126,7 +126,7 @@ def _compile_route(value, bag):
         p = bag.add(f'%{v.upper()}%')
         clauses.append(
             'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_ROUTE r '
-            f'WHERE r.SPL_ID = s.SPL_ID AND (UPPER(r.ROUTE_SPL_ACCEPTABLE_TERM) LIKE {p} '
+            f'WHERE r.SPL_GUID = s.SPL_GUID AND (UPPER(r.ROUTE_SPL_ACCEPTABLE_TERM) LIKE {p} '
             f'OR UPPER(r.NCIT_ROUTE_OF_ADMIN_CODE) LIKE {p}))'
         )
     return '(' + ' OR '.join(clauses) + ')'
@@ -159,11 +159,11 @@ def _compile_product_name(value, bag):
 
         if op == 'notContains':
             clauses.append(
-                'NOT EXISTS (SELECT 1 FROM druglabel.SPL_PROD p WHERE p.SPL_ID = s.SPL_ID AND ' + sub + ')'
+                'NOT EXISTS (SELECT 1 FROM druglabel.SPL_PROD p WHERE p.SPL_GUID = s.SPL_GUID AND ' + sub + ')'
             )
         else:
             clauses.append(
-                'EXISTS (SELECT 1 FROM druglabel.SPL_PROD p WHERE p.SPL_ID = s.SPL_ID AND ' + sub + ')'
+                'EXISTS (SELECT 1 FROM druglabel.SPL_PROD p WHERE p.SPL_GUID = s.SPL_GUID AND ' + sub + ')'
             )
     return '(' + ' AND '.join(clauses) + ')'
 
@@ -175,15 +175,15 @@ def _compile_market_status(value, bag):
     alts = []
     if 'rld' in values:
         alts.append(
-            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND rld.REFERENCE_DRUG = \'Y\')'
+            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_GUID = s.SPL_GUID AND rld.REFERENCE_DRUG = \'Y\')'
         )
     if 'rs' in values:
         alts.append(
-            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND rld.REFERENCE_STANDARD = \'Y\')'
+            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_GUID = s.SPL_GUID AND rld.REFERENCE_STANDARD = \'Y\')'
         )
     if 'marketed' in values or 'discontinued' in values:
         alts.append(
-            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND rld.APPL_NO IS NOT NULL)'
+            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_GUID = s.SPL_GUID AND rld.APPL_NO IS NOT NULL)'
         )
     if not alts:
         return None
@@ -311,7 +311,7 @@ def _compile_identifier(value, bag):
         token_str = token.strip()
         if _UUID_RE.match(token_str):
             p = bag.add(token_str)
-            alts.append(f'(s.SET_ID = {p} OR s.SPL_ID = {p})')
+            alts.append(f'(s.SET_ID = {p} OR s.SPL_GUID = {p})')
         elif _NDC_RE.match(token_str):
             parts = token_str.split('-')
             base = parts[0] + parts[1]
@@ -321,7 +321,7 @@ def _compile_identifier(value, bag):
             p = bag.add(token_str.upper())
             alts.append(
                 'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_GEN_PROD_ACT_INGR_UNII ing '
-                f'WHERE ing.SPL_ID = s.SPL_ID AND UPPER(ing.UNII) = {p})'
+                f'WHERE ing.SPL_GUID = s.SPL_GUID AND UPPER(ing.UNII) = {p})'
             )
         elif _PREFIXED_APPL_RE.match(token_str):
             kind, number = _PREFIXED_APPL_RE.match(token_str).groups()
@@ -335,7 +335,7 @@ def _compile_identifier(value, bag):
             alts.append(f'(s.APPR_NUM LIKE {p1} OR s.APPR_NUM LIKE {p2})')
         else:
             p = bag.add(f'%{token_str.upper()}%')
-            alts.append(f'(UPPER(s.SET_ID) LIKE {p} OR UPPER(s.SPL_ID) LIKE {p} OR UPPER(s.APPR_NUM) LIKE {p})')
+            alts.append(f'(UPPER(s.SET_ID) LIKE {p} OR UPPER(s.SPL_GUID) LIKE {p} OR UPPER(s.APPR_NUM) LIKE {p})')
 
     if not alts:
         return None
@@ -441,7 +441,7 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
         'revised_date': 'EFF_TIME',
         'approval_year': 'EFF_TIME',
         'set_id': 'SET_ID',
-        'spl_id': 'SPL_ID',
+        'spl_id': 'SPL_GUID',
         'epc': 'EPC',
         'unii': 'ACT_INGR_UNIIS',
     }
@@ -454,7 +454,7 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
         text_where = ' AND '.join(text_clauses)
         sql = f"""
         WITH candidate_labels AS (
-            SELECT /*+ INLINE NO_MERGE */ s.SPL_ID, s.SET_ID, s.TITLE, s.PRODUCT_NAMES, s.PRODUCT_NORMD_GENERIC_NAMES,
+            SELECT /*+ INLINE NO_MERGE */ s.SPL_GUID, s.SET_ID, s.TITLE, s.PRODUCT_NAMES, s.PRODUCT_NORMD_GENERIC_NAMES,
                    s.AUTHOR_ORG_NORMD_NAME as MANUFACTURER, s.APPR_NUM, s.NDC_CODES, s.EFF_TIME, s.MARKET_CATEGORIES,
                    s.DOCUMENT_TYPE, s.ACT_INGR_NAMES, s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC,
                    s.ACT_INGR_UNIIS
@@ -463,11 +463,11 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
         ),
         matched_sections AS (
             SELECT /*+ LEADING(c sec) USE_NL(sec) */ DISTINCT
-                   c.SPL_ID, c.SET_ID, c.PRODUCT_NAMES, c.PRODUCT_NORMD_GENERIC_NAMES, c.MANUFACTURER,
+                   c.SPL_GUID, c.SET_ID, c.PRODUCT_NAMES, c.PRODUCT_NORMD_GENERIC_NAMES, c.MANUFACTURER,
                    c.APPR_NUM, c.NDC_CODES, c.EFF_TIME, c.MARKET_CATEGORIES, c.DOCUMENT_TYPE,
                    c.ACT_INGR_NAMES, c.DOSAGE_FORMS, c.ROUTES, c.EPC, c.ACT_INGR_UNIIS
             FROM candidate_labels c
-            INNER JOIN druglabel.SPL_SEC sec ON sec.SPL_ID = c.SPL_ID
+            INNER JOIN druglabel.SPL_SEC sec ON sec.SPL_GUID = c.SPL_GUID
             WHERE {text_where}
         ),
         total_cnt AS (
@@ -479,11 +479,11 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
             {order_clause}
             {fetch_clause}
         )
-        SELECT p.SET_ID, p.SPL_ID, p.PRODUCT_NAMES, p.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
+        SELECT p.SET_ID, p.SPL_GUID as SPL_ID, p.PRODUCT_NAMES, p.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
                p.MANUFACTURER, p.APPR_NUM, p.NDC_CODES, p.EFF_TIME as REVISED_DATE,
                p.MARKET_CATEGORIES, p.DOCUMENT_TYPE, p.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
                p.DOSAGE_FORMS, p.ROUTES, p.EPC,
-               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD,
+               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_GUID = p.SPL_GUID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD,
                t.total_count,
                p.ACT_INGR_UNIIS as ACTIVE_UNIIS
         FROM total_cnt t
@@ -493,7 +493,7 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
         # Fast Relational Only Query -> Total Count & Paged RLD lookup
         sql = f"""
         WITH candidate_labels AS (
-            SELECT /*+ INLINE NO_MERGE */ s.SPL_ID, s.SET_ID, s.TITLE, s.PRODUCT_NAMES, s.PRODUCT_NORMD_GENERIC_NAMES,
+            SELECT /*+ INLINE NO_MERGE */ s.SPL_GUID, s.SET_ID, s.TITLE, s.PRODUCT_NAMES, s.PRODUCT_NORMD_GENERIC_NAMES,
                    s.AUTHOR_ORG_NORMD_NAME as MANUFACTURER, s.APPR_NUM, s.NDC_CODES, s.EFF_TIME, s.MARKET_CATEGORIES,
                    s.DOCUMENT_TYPE, s.ACT_INGR_NAMES, s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC,
                    s.ACT_INGR_UNIIS
@@ -509,11 +509,11 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
             {order_clause}
             {fetch_clause}
         )
-        SELECT p.SET_ID, p.SPL_ID, p.PRODUCT_NAMES, p.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
+        SELECT p.SET_ID, p.SPL_GUID as SPL_ID, p.PRODUCT_NAMES, p.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
                p.MANUFACTURER, p.APPR_NUM, p.NDC_CODES, p.EFF_TIME as REVISED_DATE,
                p.MARKET_CATEGORIES, p.DOCUMENT_TYPE, p.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
                p.DOSAGE_FORMS, p.ROUTES, p.EPC,
-               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD,
+               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_GUID = p.SPL_GUID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD,
                t.total_count,
                p.ACT_INGR_UNIIS as ACTIVE_UNIIS
         FROM total_cnt t

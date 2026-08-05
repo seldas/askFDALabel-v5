@@ -197,7 +197,7 @@ class FDALabelDBService:
                     # Oracle: CONTAINS uses explicit AND operators
                     oracle_term = " AND ".join([f"{{{term}}}" for term in ae_terms])  # Wrap in braces to handle spaces in terms
                     params[key] = oracle_term
-                    ae_subquery = f"EXISTS (SELECT 1 FROM druglabel.SPL_SEC s JOIN druglabel.DGV_SUM_SPL r ON s.SPL_ID = r.SPL_ID WHERE r.SET_ID = druglabel.DGV_SUM_SPL.SET_ID AND CONTAINS(s.CONTENT_XML, :ae_combined) > 0)"
+                    ae_subquery = f"EXISTS (SELECT 1 FROM druglabel.SPL_SEC s JOIN druglabel.DGV_SUM_SPL r ON s.SPL_GUID = r.SPL_GUID WHERE r.SET_ID = druglabel.DGV_SUM_SPL.SET_ID AND CONTAINS(s.CONTENT_XML, :ae_combined) > 0)"
                 
                 where_clauses.append(ae_subquery)
 
@@ -225,7 +225,7 @@ class FDALabelDBService:
                     where_clauses.append("is_rld = 1")
                 else:
                     # RLD check for Oracle (using subquery check as seen in select logic)
-                    where_clauses.append(f"EXISTS (SELECT 1 FROM druglabel.sum_spl_rld rld WHERE rld.SPL_ID = {schema}{table}.SPL_ID)")
+                    where_clauses.append(f"EXISTS (SELECT 1 FROM druglabel.sum_spl_rld rld WHERE rld.SPL_GUID = {schema}{table}.SPL_GUID)")
 
             if is_pg:
                 where_clauses.append("is_latest = TRUE")
@@ -248,7 +248,7 @@ class FDALabelDBService:
                 sql = f"""
                     SELECT * FROM (
                         SELECT set_id, {c_prod}, {c_gen}, {c_mfg}, appr_num, {c_ndc}, 
-                               {c_date}, market_categories, {c_type}, (SELECT COUNT(*) FROM druglabel.sum_spl_rld rld WHERE rld.SPL_ID = {schema}{table}.SPL_ID) as is_rld, ACT_INGR_NAMES as active_ingredients,
+                               {c_date}, market_categories, {c_type}, (SELECT COUNT(*) FROM druglabel.sum_spl_rld rld WHERE rld.SPL_GUID = {schema}{table}.SPL_GUID) as is_rld, ACT_INGR_NAMES as active_ingredients,
                                dosage_forms, ROUTES_OF_ADMINISTRATION as routes, epc
                         FROM {schema}{table}
                         {count_where}
@@ -550,10 +550,10 @@ class FDALabelDBService:
             cursor = conn.cursor()
             if cls._db_type == 'oracle':
                 if spl_id:
-                    sql = "SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, MARKET_CATEGORIES, APPR_NUM, NDC_CODES, EFF_TIME, ACT_INGR_NAMES, LABELING_TYPE, DOSAGE_FORMS, ROUTES, EPC, (SELECT COUNT(*) FROM druglabel.sum_spl_rld rld WHERE rld.SPL_ID = s.SPL_ID) as IS_RLD, 0 as IS_LATEST FROM druglabel.DGV_SUM_SPL s WHERE s.SPL_ID = :sid"
+                    sql = "SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, MARKET_CATEGORIES, APPR_NUM, NDC_CODES, EFF_TIME, ACT_INGR_NAMES, LABELING_TYPE, DOSAGE_FORMS, ROUTES, EPC, (SELECT COUNT(*) FROM druglabel.sum_spl_rld rld WHERE rld.SPL_GUID = s.SPL_GUID) as IS_RLD, 0 as IS_LATEST FROM druglabel.DGV_SUM_SPL s WHERE s.SPL_GUID = :sid"
                     cursor.execute(sql, {"sid": spl_id})
                 else:
-                    sql = "SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, MARKET_CATEGORIES, APPR_NUM, NDC_CODES, EFF_TIME, ACT_INGR_NAMES, LABELING_TYPE, DOSAGE_FORMS, ROUTES, EPC, (SELECT COUNT(*) FROM druglabel.sum_spl_rld rld WHERE rld.SPL_ID = s.SPL_ID) as IS_RLD, 1 as IS_LATEST FROM druglabel.DGV_SUM_SPL s WHERE s.SET_ID = :sid ORDER BY EFF_TIME DESC"
+                    sql = "SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, MARKET_CATEGORIES, APPR_NUM, NDC_CODES, EFF_TIME, ACT_INGR_NAMES, LABELING_TYPE, DOSAGE_FORMS, ROUTES, EPC, (SELECT COUNT(*) FROM druglabel.sum_spl_rld rld WHERE rld.SPL_GUID = s.SPL_GUID) as IS_RLD, 1 as IS_LATEST FROM druglabel.DGV_SUM_SPL s WHERE s.SET_ID = :sid ORDER BY EFF_TIME DESC"
                     cursor.execute(sql, {"sid": set_id})
                 r = cursor.fetchone()
                 if r:
@@ -676,7 +676,7 @@ class FDALabelDBService:
             cursor = conn.cursor()
             if cls._db_type == 'oracle':
                 if spl_id:
-                    sql = "SELECT s.spl_xml FROM druglabel.spl s JOIN druglabel.sum_spl l ON s.set_id = l.set_id WHERE l.spl_id = :sid"
+                    sql = "SELECT s.spl_xml FROM druglabel.spl s JOIN druglabel.sum_spl l ON s.set_id = l.set_id WHERE l.spl_guid = :sid"
                     cursor.execute(sql, {"sid": spl_id})
                 else:
                     sql = "SELECT s.spl_xml FROM druglabel.spl s JOIN druglabel.sum_spl l ON s.set_id = l.set_id WHERE l.set_id = :sid ORDER BY l.eff_time DESC"
@@ -750,11 +750,11 @@ class FDALabelDBService:
             cursor = conn.cursor()
             q = f"%{query_term}%"
             if cls._db_type == 'oracle':
-                # Priority 1: SPL ID match
-                spl_where = ["UPPER(SPL_ID) = UPPER(:sid)"]
+                # Priority 1: SPL GUID match
+                spl_where = ["UPPER(SPL_GUID) = UPPER(:sid)"]
                 if human_rx_only: spl_where.append("DOCUMENT_TYPE_LOINC_CODE IN ('34391-3', '48401-4', '48402-2')")
-                if rld_only: spl_where.append("EXISTS (SELECT 1 FROM druglabel.sum_spl_rld rld WHERE rld.SPL_ID = druglabel.DGV_SUM_SPL.SPL_ID)")
-                sql_spl = f"SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, APPR_NUM, NDC_CODES, EFF_TIME, MARKET_CATEGORIES, DOCUMENT_TYPE, SPL_ID FROM druglabel.DGV_SUM_SPL WHERE {' AND '.join(spl_where)}"
+                if rld_only: spl_where.append("EXISTS (SELECT 1 FROM druglabel.sum_spl_rld rld WHERE rld.SPL_GUID = druglabel.DGV_SUM_SPL.SPL_GUID)")
+                sql_spl = f"SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, APPR_NUM, NDC_CODES, EFF_TIME, MARKET_CATEGORIES, DOCUMENT_TYPE, SPL_GUID as SPL_ID FROM druglabel.DGV_SUM_SPL WHERE {' AND '.join(spl_where)}"
                 cursor.execute(sql_spl, {"sid": query_term})
                 rows = cursor.fetchall()
                 
@@ -763,8 +763,8 @@ class FDALabelDBService:
                     where = ["(UPPER(PRODUCT_NAMES) LIKE UPPER(:q) OR UPPER(PRODUCT_NORMD_GENERIC_NAMES) LIKE UPPER(:q) OR UPPER(ACT_INGR_NAMES) LIKE UPPER(:q) OR UPPER(SET_ID) = UPPER(:sid) OR UPPER(APPR_NUM) LIKE UPPER(:q))"]
                     params = {"q": q, "sid": query_term}
                     if human_rx_only: where.append("DOCUMENT_TYPE_LOINC_CODE IN ('34391-3', '48401-4', '48402-2')")
-                    if rld_only: where.append("EXISTS (SELECT 1 FROM druglabel.sum_spl_rld rld WHERE rld.SPL_ID = druglabel.DGV_SUM_SPL.SPL_ID)")
-                    sql = f"SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, APPR_NUM, NDC_CODES, EFF_TIME, MARKET_CATEGORIES, DOCUMENT_TYPE, SPL_ID FROM druglabel.DGV_SUM_SPL WHERE {' AND '.join(where)} ORDER BY EFF_TIME DESC"
+                    if rld_only: where.append("EXISTS (SELECT 1 FROM druglabel.sum_spl_rld rld WHERE rld.SPL_GUID = druglabel.DGV_SUM_SPL.SPL_GUID)")
+                    sql = f"SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, APPR_NUM, NDC_CODES, EFF_TIME, MARKET_CATEGORIES, DOCUMENT_TYPE, SPL_GUID as SPL_ID FROM druglabel.DGV_SUM_SPL WHERE {' AND '.join(where)} ORDER BY EFF_TIME DESC"
                     cursor.execute(sql, params)
                     rows = cursor.fetchall()
             else:
@@ -892,9 +892,9 @@ class FDALabelDBService:
             if cls._db_type == 'oracle':
                 where = []
                 if human_rx_only: where.append("DOCUMENT_TYPE_LOINC_CODE IN ('34391-3', '48401-4', '48402-2')")
-                if rld_only: where.append("EXISTS (SELECT 1 FROM druglabel.sum_spl_rld rld WHERE rld.SPL_ID = druglabel.DGV_SUM_SPL.SPL_ID)")
+                if rld_only: where.append("EXISTS (SELECT 1 FROM druglabel.sum_spl_rld rld WHERE rld.SPL_GUID = druglabel.DGV_SUM_SPL.SPL_GUID)")
                 w_stmt = f"WHERE {' AND '.join(where)}" if where else ""
-                sql = f"SELECT * FROM (SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, APPR_NUM, NDC_CODES, EFF_TIME, MARKET_CATEGORIES, DOCUMENT_TYPE, SPL_ID FROM druglabel.DGV_SUM_SPL {w_stmt} ORDER BY DBMS_RANDOM.VALUE) WHERE ROWNUM <= :limit"
+                sql = f"SELECT * FROM (SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, APPR_NUM, NDC_CODES, EFF_TIME, MARKET_CATEGORIES, DOCUMENT_TYPE, SPL_GUID as SPL_ID FROM druglabel.DGV_SUM_SPL {w_stmt} ORDER BY DBMS_RANDOM.VALUE) WHERE ROWNUM <= :limit"
                 cursor.execute(sql, {"limit": limit})
             else:
                 schema = "labeling."
@@ -967,7 +967,7 @@ class FDALabelDBService:
                 for chunk in cls._chunk(list(set_ids), n=900):
                     binds = {f"sid{i}": v for i, v in enumerate(chunk)}
                     in_clause = ", ".join([f":sid{i}" for i in range(len(chunk))])
-                    sql = f"SELECT SET_ID, SPL_ID, DOCUMENT_TYPE, DOCUMENT_TYPE_LOINC_CODE FROM druglabel.DGV_SUM_SPL WHERE SET_ID IN ({in_clause})"
+                    sql = f"SELECT SET_ID, SPL_GUID as SPL_ID, DOCUMENT_TYPE, DOCUMENT_TYPE_LOINC_CODE FROM druglabel.DGV_SUM_SPL WHERE SET_ID IN ({in_clause})"
                     cursor.execute(sql, binds)
                     for set_id, spl_id, doc_type, doc_loinc in cursor.fetchall():
                         out[str(set_id)] = {"spl_id": spl_id, "document_type": doc_type, "document_type_loinc_code": doc_loinc}
