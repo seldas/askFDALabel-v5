@@ -145,7 +145,9 @@ def init_labeling_schema():
             cursor.execute("ALTER TABLE labeling.sum_spl ADD COLUMN IF NOT EXISTS is_latest BOOLEAN DEFAULT FALSE;")
             cursor.execute("ALTER TABLE labeling.sum_spl ADD COLUMN IF NOT EXISTS version_number INTEGER;")
             cursor.execute("ALTER TABLE labeling.sum_spl ADD COLUMN IF NOT EXISTS parent_spl_id TEXT;")
+            cursor.execute("ALTER TABLE labeling.sum_spl ADD COLUMN IF NOT EXISTS full_search_vector TSVECTOR;")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_sum_spl_set_id ON labeling.sum_spl(set_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_sum_spl_full_fts ON labeling.sum_spl USING GIN (full_search_vector);")
 
             # 1.1 create history table:
             cursor.execute("""

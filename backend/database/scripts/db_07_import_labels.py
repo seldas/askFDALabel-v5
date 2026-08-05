@@ -784,6 +784,7 @@ def sync_from_storage(storage_dir, num_workers=4, force=False, refresh_existing=
     print(f"\nFinished Sync. Imported: {processed}, Skipped: {skipped}, Failed: {failed}")
     refresh_version_lineage()
     refresh_epc_mappings()
+    refresh_full_search_vector()
     refresh_query_options_cache()
     try:
         try:
@@ -915,6 +916,29 @@ def refresh_epc_mappings():
         FROM agg_epc a
         WHERE s.spl_id = a.spl_id;
     """)
+
+
+def refresh_full_search_vector():
+    print("Updating missing document-level full_search_vector in PostgreSQL...")
+    try:
+        PGUtils.execute_query("""
+            UPDATE labeling.sum_spl s
+            SET full_search_vector = 
+                to_tsvector('english', 
+                    coalesce(s.product_names, '') || ' ' || 
+                    coalesce(s.generic_names, '') || ' ' || 
+                    coalesce(s.active_ingredients, '') || ' ' ||
+                    coalesce(s.manufacturer, '')
+                ) || coalesce((
+                    SELECT to_tsvector('english', string_agg(coalesce(sec.content_xml, ''), ' '))
+                    FROM labeling.spl_sections sec
+                    WHERE sec.spl_id = s.spl_id
+                ), to_tsvector('english', ''))
+            WHERE s.full_search_vector IS NULL;
+        """)
+        print("[SUCCESS] full_search_vector updated for newly imported labels.")
+    except Exception as e:
+        print(f"[WARN] Failed to refresh full_search_vector: {e}")
 
 
 def main():

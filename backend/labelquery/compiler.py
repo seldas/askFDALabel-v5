@@ -880,7 +880,12 @@ def compile_where(query, expand_meddra=None, capabilities=None):
                     else:
                         r_clauses.append("(s.initial_approval_year IS NOT NULL)")
 
-            if ctype in ('fullText', 'labelingSection', 'meddra'):
+            if ctype == 'fullText':
+                tsquery = _tsquery_sql(cval.get('mode') or 'simple', cval.get('text'), bag)
+                if tsquery:
+                    # Leverage document-level TSVECTOR on sum_spl if populated, fallback to spl_sections if unpopulated
+                    r_clauses.append(f"(s.full_search_vector @@ {tsquery} OR (s.full_search_vector IS NULL AND EXISTS (SELECT 1 FROM labeling.spl_sections sec WHERE sec.spl_id = s.spl_id AND sec.search_vector @@ {tsquery})))")
+            elif ctype in ('labelingSection', 'meddra'):
                 sec_clause = _section_criterion_clause(criterion, bag, warnings, expand_meddra)
                 if sec_clause:
                     s_clauses.append(sec_clause)
