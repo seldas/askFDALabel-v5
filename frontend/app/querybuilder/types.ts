@@ -95,7 +95,7 @@ export const uid = () => `c${Date.now().toString(36)}${(counter += 1).toString(3
 const NON_HUMAN_UNAVAILABLE = {
   targets: ['oracle'] as TargetDb[],
   reason:
-    'The CDER-CBER version covers human labeling only. Switch the database to "All" to search animal labeling.',
+    'The CDER-CBER version covers human labeling only. Switch the database to "FDA ver." to search animal labeling.',
 };
 
 export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
@@ -289,7 +289,7 @@ export const isOracleTarget = (t: TargetDb) => t === 'oracle' || t === 'oracle_a
 export const TARGET_DB_LABELS: Record<TargetDb, string> = {
   local: 'Local DB',
   oracle: 'CDER-CBER ver.',
-  oracle_all: 'All',
+  oracle_all: 'FDA ver.',
 };
 
 /*

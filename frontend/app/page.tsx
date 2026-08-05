@@ -76,14 +76,20 @@ export default function HomePage() {
   }, []);
 
   /* Dropdown contents come from the live database, so a deployment with a
-   * partial label import offers only what it actually has. */
+   * partial label import offers only what it actually has.
+   *
+   * Refetched on every target change: the lists describe the database being
+   * searched, and the Oracle scopes and the local import do not hold the same
+   * vocabularies. Marked loading first so the previous target's options cannot
+   * be offered as though they belonged to the new one. */
   useEffect(() => {
     if (!isAuthed) return;
     let cancelled = false;
+    setOptions((prev) => ({ ...prev, loading: true }));
 
     (async () => {
       try {
-        const res = await fetch('/api/labelquery/options');
+        const res = await fetch(`/api/labelquery/options?target_db=${targetDb}`);
         const json = await res.json();
         if (cancelled) return;
         if (!res.ok) throw new Error(json.error || 'Failed to load options');
@@ -104,7 +110,7 @@ export default function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthed]);
+  }, [isAuthed, targetDb]);
 
   const runSearch = useCallback(() => {
     setError(null);

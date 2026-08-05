@@ -180,10 +180,124 @@ SECTION_TAXONOMY = [
 ]
 
 
+#: Oracle keeps the dropdown vocabularies precomputed, one pair of count tables
+#: per scope. The DGV_ copies are the CDER-CBER curated numbers; the plain ones
+#: are the full FDA set. Shapes match column for column except the document-type
+#: pair, which carries an extra FORMAT dimension on the DGV side and has to be
+#: summed over it -- hence a query per scope rather than a table-name swap.
+#:
+#: "COUNT" is quoted throughout: it is a column name here, and unquoted it parses
+#: as the aggregate function.
+_ORACLE_OPTION_QUERIES = {
+    'oracle': {
+        'labelingTypes': """
+            SELECT dt.LOINC_NAME AS name, SUM(c.COUNTS) AS n
+            FROM druglabel.DGV_FORMAT_DOCUMENT_TYPE_COUNT c
+            JOIN druglabel.DOCUMENT_TYPE dt ON dt.LOINC_CODE = c.CODE
+            WHERE dt.LOINC_NAME IS NOT NULL
+            GROUP BY dt.LOINC_NAME
+            ORDER BY 2 DESC
+        """,
+        'applicationTypes': """
+            SELECT mc.SPL_ACCEPTABLE_TERM AS name, c."COUNT" AS n
+            FROM druglabel.DGV_MARKETING_CAT_COUNT c
+            JOIN druglabel.MARKETING_CATEGORY mc ON mc.NCI_THESAURUS_CODE = c.CODE
+            WHERE mc.SPL_ACCEPTABLE_TERM IS NOT NULL
+            ORDER BY c."COUNT" DESC
+        """,
+        'routes': """
+            SELECT SPL_ACCEPTABLE_TERM AS name, "COUNT" AS n
+            FROM druglabel.DGV_ROUTE_OF_ADMIN_COUNT
+            WHERE SPL_ACCEPTABLE_TERM IS NOT NULL
+            ORDER BY "COUNT" DESC
+        """,
+    },
+    'oracle_all': {
+        'labelingTypes': """
+            SELECT dt.LOINC_NAME AS name, c."COUNT" AS n
+            FROM druglabel.DOCUMENT_TYPE_COUNT c
+            JOIN druglabel.DOCUMENT_TYPE dt ON dt.LOINC_CODE = c.CODE
+            WHERE dt.LOINC_NAME IS NOT NULL
+            ORDER BY c."COUNT" DESC
+        """,
+        'applicationTypes': """
+            SELECT mc.SPL_ACCEPTABLE_TERM AS name, c."COUNT" AS n
+            FROM druglabel.MARKETING_CAT_COUNT c
+            JOIN druglabel.MARKETING_CATEGORY mc ON mc.NCI_THESAURUS_CODE = c.CODE
+            WHERE mc.SPL_ACCEPTABLE_TERM IS NOT NULL
+            ORDER BY c."COUNT" DESC
+        """,
+        'routes': """
+            SELECT SPL_ACCEPTABLE_TERM AS name, "COUNT" AS n
+            FROM druglabel.ROUTE_OF_ADMIN_COUNT
+            WHERE SPL_ACCEPTABLE_TERM IS NOT NULL
+            ORDER BY "COUNT" DESC
+        """,
+    },
+}
+
+#: Dosage form has no count table on either scope, so the controlled vocabulary
+#: is served without counts rather than aggregating SUM_SPL_DOSAGEFORM per
+#: request. Same list for both scopes: it is a code list, not a label rollup.
+_ORACLE_DOSAGE_FORM_QUERY = """
+    SELECT SPL_ACCEPTABLE_TERM AS name, 0 AS n
+    FROM druglabel.DOSAGE_FORM
+    WHERE SPL_ACCEPTABLE_TERM IS NOT NULL
+    ORDER BY SPL_ACCEPTABLE_TERM
+"""
+
+
+def _oracle_options(target_db):
+    """
+    Dropdown vocabularies for an Oracle scope, or None if Oracle is unreachable.
+
+    Returning None rather than raising lets the caller fall back to the local
+    lists: a panel with the wrong dropdowns still works, where a panel with none
+    does not. The response says which source it used so the difference is
+    visible rather than silent.
+    """
+    from dashboard.services.fdalabel_db import FDALabelDBService
+
+    queries = _ORACLE_OPTION_QUERIES.get(target_db) or _ORACLE_OPTION_QUERIES['oracle']
+    out = {}
+    for key, sql in list(queries.items()) + [('dosageForms', _ORACLE_DOSAGE_FORM_QUERY)]:
+        rows = FDALabelDBService.execute_oracle_query(sql)
+        if not rows and key == 'labelingTypes':
+            # The first query coming back empty means no connection, not an
+            # empty dictionary -- these tables are never unpopulated.
+            return None
+        out[key] = [
+            {'value': r.get('NAME') or r.get('name'), 'count': int(r.get('N') or r.get('n') or 0)}
+            for r in rows
+            if (r.get('NAME') or r.get('name'))
+        ]
+    return out
+
+
 @labelquery_bp.route('/options', methods=['GET'])
 def options():
-    """Every dropdown the panel needs, served instantly from the pre-computed stats cache."""
+    """
+    Every dropdown the panel needs.
+
+    Served from whichever database the panel is pointed at: the dropdowns used
+    to come from the local import regardless of target, so against Oracle they
+    offered whatever this deployment happened to have loaded.
+    """
+    target_db = (request.args.get('target_db') or request.args.get('targetDb') or 'local').lower()
     try:
+        if target_db in _ORACLE_TARGETS:
+            oracle = _oracle_options(target_db)
+            if oracle is not None:
+                return jsonify({
+                    **oracle,
+                    'sections': [
+                        {'value': code_or_val, 'label': label, 'group': group, 'count': default_count}
+                        for group, label, code_or_val, default_count in SECTION_TAXONOMY
+                    ],
+                    'source': target_db,
+                })
+            # Fall through to the local lists, flagged below.
+
         cache_rows = []
         try:
             cache_rows = _rows("SELECT category, key_name, item_count FROM labeling.query_options_cache ORDER BY item_count DESC")
@@ -226,6 +340,11 @@ def options():
             'routes': grouped.get('routes', []),
             'dosageForms': grouped.get('dosageForms', []),
             'sections': sections,
+            # 'local' when that is what was asked for; when an Oracle scope was
+            # asked for and this is the answer, Oracle was unreachable and these
+            # lists describe a different database than the one being searched.
+            'source': 'local',
+            'requested': target_db,
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
