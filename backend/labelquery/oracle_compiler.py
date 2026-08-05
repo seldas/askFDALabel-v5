@@ -1,12 +1,18 @@
 """
 Compiles an FDALabel-style criteria tree into high-performance Oracle SQL.
 
-Enforces a 5-tier relational candidate isolation strategy:
+Enforces a two-phase candidate isolation strategy:
 1. Relational filters (summary & normalized tables like DGV_SUM_RX_SPL, SUM_SPL_ROUTE,
-   SPL_PROD, SUM_SPL_GEN_PROD_ACT_INGR_UNII, SUM_SPL_RLD_RS) and precomputed MedDRA 
+   SPL_PROD, SUM_SPL_GEN_PROD_ACT_INGR_UNII, SUM_SPL_RLD_RS) and precomputed MedDRA
    occurrences (SPL_SEC_MEDDRA_LLT_OCC) evaluate inside a candidate CTE.
-2. Full-text search (CONTAINS over SPL_SEC.CONTENT_XML) evaluates ONLY against candidate 
-   SPL_GUIDs, preventing expensive domain index scans across the full database.
+2. Full-text search (CONTAINS over SPL_SEC.CONTENT_XML) is driven by the CTX domain
+   index and hash-joined back to the candidate set.
+
+Join key: every detail table in DRUGLABEL keys on SPL_ID (NUMBER). SPL_GUID exists
+only on the five summary rollups (DGV_SUM_RX_SPL, DGV_SUM_SPL, DGV_SUM_SPL_PROD,
+SUM_SPL, SUM_SPL_GEN_PROD), so it can never appear in a join predicate against
+SPL_SEC, SPL_PROD, SUM_SPL_ROUTE, SUM_SPL_RLD_RS or the SUM_SPL_* detail tables.
+It is the external identifier only, projected as SPL_ID in the result set.
 """
 
 import re
@@ -126,7 +132,7 @@ def _compile_route(value, bag):
         p = bag.add(f'%{v.upper()}%')
         clauses.append(
             'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_ROUTE r '
-            f'WHERE r.SPL_GUID = s.SPL_GUID AND (UPPER(r.ROUTE_SPL_ACCEPTABLE_TERM) LIKE {p} '
+            f'WHERE r.SPL_ID = s.SPL_ID AND (UPPER(r.ROUTE_SPL_ACCEPTABLE_TERM) LIKE {p} '
             f'OR UPPER(r.NCIT_ROUTE_OF_ADMIN_CODE) LIKE {p}))'
         )
     return '(' + ' OR '.join(clauses) + ')'
@@ -159,11 +165,11 @@ def _compile_product_name(value, bag):
 
         if op == 'notContains':
             clauses.append(
-                'NOT EXISTS (SELECT 1 FROM druglabel.SPL_PROD p WHERE p.SPL_GUID = s.SPL_GUID AND ' + sub + ')'
+                'NOT EXISTS (SELECT 1 FROM druglabel.SPL_PROD p WHERE p.SPL_ID = s.SPL_ID AND ' + sub + ')'
             )
         else:
             clauses.append(
-                'EXISTS (SELECT 1 FROM druglabel.SPL_PROD p WHERE p.SPL_GUID = s.SPL_GUID AND ' + sub + ')'
+                'EXISTS (SELECT 1 FROM druglabel.SPL_PROD p WHERE p.SPL_ID = s.SPL_ID AND ' + sub + ')'
             )
     return '(' + ' AND '.join(clauses) + ')'
 
@@ -175,15 +181,15 @@ def _compile_market_status(value, bag):
     alts = []
     if 'rld' in values:
         alts.append(
-            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_GUID = s.SPL_GUID AND rld.REFERENCE_DRUG = \'Y\')'
+            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND rld.REFERENCE_DRUG = \'Y\')'
         )
     if 'rs' in values:
         alts.append(
-            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_GUID = s.SPL_GUID AND rld.REFERENCE_STANDARD = \'Y\')'
+            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND rld.REFERENCE_STANDARD = \'Y\')'
         )
     if 'marketed' in values or 'discontinued' in values:
         alts.append(
-            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_GUID = s.SPL_GUID AND rld.APPL_NO IS NOT NULL)'
+            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND rld.APPL_NO IS NOT NULL)'
         )
     if not alts:
         return None
@@ -321,7 +327,7 @@ def _compile_identifier(value, bag):
             p = bag.add(token_str.upper())
             alts.append(
                 'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_GEN_PROD_ACT_INGR_UNII ing '
-                f'WHERE ing.SPL_GUID = s.SPL_GUID AND UPPER(ing.UNII) = {p})'
+                f'WHERE ing.SPL_ID = s.SPL_ID AND UPPER(ing.UNII) = {p})'
             )
         elif _PREFIXED_APPL_RE.match(token_str):
             kind, number = _PREFIXED_APPL_RE.match(token_str).groups()
@@ -350,9 +356,12 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
     """
     bag = OracleParamBag()
     warnings = []
-    
+
     relational_clauses = []
     text_clauses = []
+    # Oracle requires every CONTAINS in a statement to carry a distinct label;
+    # reusing one raises ORA-29900. Two full-text criteria is enough to hit it.
+    contains_label = 0
 
     for group in (query.get('groups') or []):
         group_relational = []
@@ -369,7 +378,8 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
                 
                 if text_query:
                     p = bag.add(text_query)
-                    clause = f'CONTAINS(sec.CONTENT_XML, {p}, 1) > 0'
+                    contains_label += 1
+                    clause = f'CONTAINS(sec.CONTENT_XML, {p}, {contains_label}) > 0'
                     if sections:
                         sec_loincs_set = set()
                         for s in sections:
@@ -449,75 +459,76 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
     sort_dir = 'ASC' if str(direction).lower() == 'asc' else 'DESC'
     order_clause = f"ORDER BY {sort_column_name} {sort_dir} NULLS LAST"
 
+    # SPL_ID is carried through every CTE because it is the only key the detail
+    # tables share with the summary rollup; SPL_GUID exists on DGV_SUM_RX_SPL and
+    # four sibling rollups, and on nothing else. It is projected as SPL_ID at the
+    # very end because the application's "spl_id" is the GUID.
+    # MATERIALIZE only pays for itself in the text branch, where candidate_labels
+    # is read twice. The relational-only branch reads it once, so forcing a temp
+    # table write there would just add a round trip through TEMP.
+    cte_hint = '/*+ MATERIALIZE */ ' if text_clauses else ''
+    candidate_cte = f"""SELECT {cte_hint}s.SPL_ID, s.SPL_GUID, s.SET_ID, s.TITLE, s.PRODUCT_NAMES,
+                   s.PRODUCT_NORMD_GENERIC_NAMES, s.AUTHOR_ORG_NORMD_NAME as MANUFACTURER, s.APPR_NUM,
+                   s.NDC_CODES, s.EFF_TIME, s.MARKET_CATEGORIES, s.DOCUMENT_TYPE, s.ACT_INGR_NAMES,
+                   s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC, s.ACT_INGR_UNIIS
+            FROM druglabel.DGV_SUM_RX_SPL s
+            WHERE {relational_where}"""
+
+    select_list = """SELECT p.SET_ID, p.SPL_GUID as SPL_ID, p.PRODUCT_NAMES, p.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
+               p.MANUFACTURER, p.APPR_NUM, p.NDC_CODES, p.EFF_TIME as REVISED_DATE,
+               p.MARKET_CATEGORIES, p.DOCUMENT_TYPE, p.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
+               p.DOSAGE_FORMS, p.ROUTES, p.EPC,
+               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD,
+               p.TOTAL_COUNT,
+               p.ACT_INGR_UNIIS as ACTIVE_UNIIS"""
+
     if text_clauses:
-        # Phase 1: Candidate Isolation CTE -> Phase 2: CONTAINS text search -> Phase 3: Total Count & Paged RLD lookup
+        # Phase 1: relational candidate isolation -> Phase 2: Oracle Text match -> Phase 3: page.
+        #
+        # SPL_SEC carries no index on SPL_ID (only PK_SPLSEC on ID), so a
+        # candidate-driven nested loop full-scans the largest table in the
+        # database once per candidate row. The CTX index on CONTENT_XML has to
+        # drive instead, hashing back to the candidates -- hence LEADING(sec c).
+        #
+        # Only SPL_ID is deduplicated. The previous DISTINCT spanned fifteen
+        # VARCHAR2(4000) columns, sorting ~60KB rows to remove duplicates that a
+        # single NUMBER identifies just as well.
         text_where = ' AND '.join(text_clauses)
         sql = f"""
         WITH candidate_labels AS (
-            SELECT /*+ INLINE NO_MERGE */ s.SPL_GUID, s.SET_ID, s.TITLE, s.PRODUCT_NAMES, s.PRODUCT_NORMD_GENERIC_NAMES,
-                   s.AUTHOR_ORG_NORMD_NAME as MANUFACTURER, s.APPR_NUM, s.NDC_CODES, s.EFF_TIME, s.MARKET_CATEGORIES,
-                   s.DOCUMENT_TYPE, s.ACT_INGR_NAMES, s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC,
-                   s.ACT_INGR_UNIIS
-            FROM druglabel.DGV_SUM_RX_SPL s
-            WHERE {relational_where}
+            {candidate_cte}
         ),
-        matched_sections AS (
-            SELECT /*+ LEADING(c sec) USE_NL(sec) */ DISTINCT
-                   c.SPL_GUID, c.SET_ID, c.PRODUCT_NAMES, c.PRODUCT_NORMD_GENERIC_NAMES, c.MANUFACTURER,
-                   c.APPR_NUM, c.NDC_CODES, c.EFF_TIME, c.MARKET_CATEGORIES, c.DOCUMENT_TYPE,
-                   c.ACT_INGR_NAMES, c.DOSAGE_FORMS, c.ROUTES, c.EPC, c.ACT_INGR_UNIIS
-            FROM candidate_labels c
-            INNER JOIN druglabel.SPL_SEC sec ON sec.SPL_GUID = c.SPL_GUID
+        matched_ids AS (
+            SELECT /*+ LEADING(sec c) USE_HASH(c) */ DISTINCT sec.SPL_ID
+            FROM druglabel.SPL_SEC sec
+            INNER JOIN candidate_labels c ON c.SPL_ID = sec.SPL_ID
             WHERE {text_where}
         ),
-        total_cnt AS (
-            SELECT COUNT(*) AS total_count FROM matched_sections
-        ),
-        paged_matched AS (
-            SELECT m.*
-            FROM matched_sections m
-            {order_clause}
-            {fetch_clause}
+        matched AS (
+            SELECT c.*, COUNT(*) OVER () AS TOTAL_COUNT
+            FROM candidate_labels c
+            INNER JOIN matched_ids m ON m.SPL_ID = c.SPL_ID
         )
-        SELECT p.SET_ID, p.SPL_GUID as SPL_ID, p.PRODUCT_NAMES, p.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
-               p.MANUFACTURER, p.APPR_NUM, p.NDC_CODES, p.EFF_TIME as REVISED_DATE,
-               p.MARKET_CATEGORIES, p.DOCUMENT_TYPE, p.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
-               p.DOSAGE_FORMS, p.ROUTES, p.EPC,
-               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_GUID = p.SPL_GUID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD,
-               t.total_count,
-               p.ACT_INGR_UNIIS as ACTIVE_UNIIS
-        FROM total_cnt t
-        LEFT JOIN paged_matched p ON 1=1
+        {select_list}
+        FROM matched p
+        {order_clause}
+        {fetch_clause}
         """
     else:
-        # Fast Relational Only Query -> Total Count & Paged RLD lookup
+        # Fast relational-only query. COUNT(*) OVER () totals the match set in the
+        # same pass that produces the page, rather than building it twice.
         sql = f"""
         WITH candidate_labels AS (
-            SELECT /*+ INLINE NO_MERGE */ s.SPL_GUID, s.SET_ID, s.TITLE, s.PRODUCT_NAMES, s.PRODUCT_NORMD_GENERIC_NAMES,
-                   s.AUTHOR_ORG_NORMD_NAME as MANUFACTURER, s.APPR_NUM, s.NDC_CODES, s.EFF_TIME, s.MARKET_CATEGORIES,
-                   s.DOCUMENT_TYPE, s.ACT_INGR_NAMES, s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC,
-                   s.ACT_INGR_UNIIS
-            FROM druglabel.DGV_SUM_RX_SPL s
-            WHERE {relational_where}
+            {candidate_cte}
         ),
-        total_cnt AS (
-            SELECT COUNT(*) AS total_count FROM candidate_labels
-        ),
-        paged_candidates AS (
-            SELECT c.*
+        matched AS (
+            SELECT c.*, COUNT(*) OVER () AS TOTAL_COUNT
             FROM candidate_labels c
-            {order_clause}
-            {fetch_clause}
         )
-        SELECT p.SET_ID, p.SPL_GUID as SPL_ID, p.PRODUCT_NAMES, p.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
-               p.MANUFACTURER, p.APPR_NUM, p.NDC_CODES, p.EFF_TIME as REVISED_DATE,
-               p.MARKET_CATEGORIES, p.DOCUMENT_TYPE, p.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
-               p.DOSAGE_FORMS, p.ROUTES, p.EPC,
-               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_GUID = p.SPL_GUID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD,
-               t.total_count,
-               p.ACT_INGR_UNIIS as ACTIVE_UNIIS
-        FROM total_cnt t
-        LEFT JOIN paged_candidates p ON 1=1
+        {select_list}
+        FROM matched p
+        {order_clause}
+        {fetch_clause}
         """
 
     return sql.strip(), bag.params, warnings
