@@ -545,7 +545,10 @@ def _c_meddra(criterion, bag, warnings, expand_meddra=None):
     if not terms:
         return None
     level = (criterion.get('level') or 'pt').lower()
-    if expand_meddra and level != 'pt':
+    # Every level expands, PT included: labels write the LLT, so a PT that is
+    # not resolved to its descendants matches only the labels that happen to
+    # use the PT's own wording. LLT is already the leaf and expands to itself.
+    if expand_meddra and level != 'llt':
         expanded = expand_meddra(level, terms)
         if expanded:
             terms = expanded
@@ -882,10 +885,18 @@ def _section_criterion_clause(criterion, bag, warnings, expand_meddra):
         if not terms:
             return None
         level = (value.get('level') or 'pt').lower()
-        if expand_meddra and level != 'pt':
+        # Same rule as _c_meddra: everything above LLT expands down to the LLTs,
+        # because that is the wording labels actually use. These two paths are
+        # both live -- this one runs whenever the query splits into a section
+        # half -- so a change to one is wrong unless it is made to both.
+        if expand_meddra and level != 'llt':
             expanded = expand_meddra(level, terms)
             if expanded:
                 terms = expanded
+            else:
+                warnings.append(
+                    f'No MedDRA {level.upper()} terms matched; searched the text as entered.'
+                )
         tsquery = _tsquery_union(terms, bag)
         if not tsquery:
             return None

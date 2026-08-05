@@ -62,6 +62,32 @@ class FDALabelDBService:
         return None
 
     @classmethod
+    def execute_oracle_query(cls, sql, params=None):
+        """
+        Runs one read-only statement against Oracle and returns a list of dicts
+        keyed by the column names Oracle reports -- upper case unless the SELECT
+        quoted an alias.
+
+        Callers read both cases (`r.get('NAME') or r.get('name')`) because that
+        is not worth depending on. Returns [] when Oracle is unreachable rather
+        than raising, so a caller that has a local fallback can take it; a
+        failed statement still raises, since that is a bug rather than a
+        deployment state.
+        """
+        conn = cls.get_oracle_connection()
+        if not conn:
+            return []
+        try:
+            cursor = conn.cursor()
+            cursor.execute(sql, params or {})
+            columns = [d[0] for d in cursor.description]
+            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            cursor.close()
+            return rows
+        finally:
+            conn.close()
+
+    @classmethod
     def get_connection(cls, force_local=False, force_oracle=False):
         """
         Establishes a DB connection.

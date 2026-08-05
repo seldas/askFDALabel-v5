@@ -72,12 +72,19 @@ export function CriterionCard({
   const unavailable = unsupportedReason(criterion.type, targetDb);
 
   const [hierarchies, setHierarchies] = useState<Record<string, string>>({});
+  /* LLT names under each selected PT, keyed `${level}:${term}`. A PT searches
+   * its descendants, so showing them is the only way to see how wide a pick
+   * really is before running it. */
+  const [llts, setLlts] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     if (criterion.type !== 'meddra' || !v.terms || v.terms.length === 0) return;
     const level = (v.level || 'pt').toLowerCase();
     v.terms.forEach(async (t: string) => {
-      const key = `${level}:${t}`;
+      // targetDb is part of the key: the two databases answer this from
+      // different MedDRA dictionaries, so a cached answer from one is not an
+      // answer for the other.
+      const key = `${targetDb}:${level}:${t}`;
       if (hierarchies[key]) return;
       try {
         const res = await fetch(
@@ -94,6 +101,30 @@ export function CriterionCard({
       }
     });
   }, [criterion.type, v.terms, v.level, targetDb, hierarchies]);
+
+  useEffect(() => {
+    // Only a PT has LLTs below it; at LLT level the term is already the leaf.
+    if (criterion.type !== 'meddra' || (v.level || 'pt').toLowerCase() !== 'pt') return;
+    if (!v.terms || v.terms.length === 0) return;
+    v.terms.forEach(async (t: string) => {
+      const key = `${targetDb}:pt:${t}`;
+      // `in`, not truthiness: an empty array is truthy, so `if (llts[key])`
+      // would treat "no LLTs found" as "not fetched yet" and refetch forever.
+      if (key in llts) return;
+      try {
+        const res = await fetch(
+          `/api/labelquery/meddra/llts?term=${encodeURIComponent(t)}&target_db=${targetDb}`,
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data.llts)) {
+          setLlts((prev) => ({ ...prev, [key]: data.llts }));
+        }
+      } catch {
+        // ignore fetch error
+      }
+    });
+  }, [criterion.type, v.terms, v.level, targetDb, llts]);
 
   const set = useCallback(
     (patch: Record<string, unknown>) => onChange({ ...v, ...patch }),
@@ -338,14 +369,26 @@ export function CriterionCard({
             {terms.length > 0 && (
               <div className="fdl-meddra-hierarchies">
                 {terms.map((t: string) => {
-                  const key = `${currentLevel}:${t}`;
-                  const path = hierarchies[key];
+                  const path = hierarchies[`${targetDb}:${currentLevel}:${t}`];
+                  const childLlts = currentLevel === 'pt' ? llts[`${targetDb}:pt:${t}`] : undefined;
                   return (
                     <div key={t} className="fdl-meddra-hier-item">
                       <span className="fdl-meddra-hier-term">• <strong>{t}</strong> ({currentLevel.toUpperCase()}):</span>
                       <span className="fdl-meddra-hier-path">
                         {path || 'Loading hierarchy…'}
                       </span>
+                      {/* Runs on after the PT rather than onto its own lines:
+                        * this is a footnote about what the PT covers, not a
+                        * second list to read down. */}
+                      {childLlts && childLlts.length > 0 ? (
+                        <span className="fdl-meddra-llts">
+                          {' '}
+                          <span className="fdl-meddra-llts__label">
+                            searches {childLlts.length} LLT{childLlts.length === 1 ? '' : 's'}:
+                          </span>{' '}
+                          {childLlts.join(', ')}
+                        </span>
+                      ) : null}
                     </div>
                   );
                 })}
@@ -524,9 +567,13 @@ export function CriterionCard({
     def,
     fetchMeddra,
     fetchPharmClass,
+    fetchProductName,
+    hierarchies,
     list,
+    llts,
     options.loading,
     set,
+    targetDb,
     toggle,
     v,
     values,

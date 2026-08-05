@@ -1274,3 +1274,17 @@
   color: var(--afl-text-secondary);
 }
 
+/* The LLTs a PT expands to. `flex-basis: 100%` drops the run of terms onto its
+ * own wrapped line within the same item rather than starting a new bullet —
+ * it belongs to the PT above it, and a long PT can carry dozens of LLTs. */
+.fdl-meddra-llts {
+  flex-basis: 100%;
+  color: var(--afl-text-secondary);
+  opacity: 0.9;
+}
+
+.fdl-meddra-llts__label {
+  color: var(--afl-brand-800);
+  font-weight: var(--afl-weight-bold);
+}
+

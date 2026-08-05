@@ -452,6 +452,57 @@ def get_meddra_hierarchy():
         return jsonify({'term': term, 'level': level, 'path': [term], 'formatted': term, 'error': str(e)})
 
 
+@labelquery_bp.route('/meddra/llts', methods=['GET'])
+def get_meddra_llts():
+    """
+    Every Lowest Level Term under one Preferred Term.
+
+    This is what a PT selection actually searches for: label text writes the
+    LLT, not the PT, so a PT is only a handle for its descendants. The panel
+    shows them so the breadth of a PT pick is visible before the search runs.
+
+    Names only, on both targets. Oracle matches LLT_CODE rather than text when
+    it compiles the query -- see _compile_meddra -- but a code is not something
+    a reviewer can check, so the code stays server-side and the name is what
+    gets displayed.
+    """
+    term = (request.args.get('term') or '').strip()
+    target_db = (request.args.get('target_db') or request.args.get('targetDb') or 'local').lower()
+    if not term:
+        return jsonify({'term': term, 'llts': []})
+
+    try:
+        if target_db == 'oracle':
+            from dashboard.services.fdalabel_db import FDALabelDBService
+            rows = FDALabelDBService.execute_oracle_query(
+                """
+                SELECT DISTINCT llt.LLT_NAME AS name
+                FROM meddra.low_level_term llt
+                JOIN meddra.preferred_term pt ON pt.PT_CODE = llt.PT_CODE
+                WHERE UPPER(pt.PT_NAME) = :t
+                ORDER BY name
+                """,
+                {'t': term.upper()},
+            )
+            llts = [r.get('NAME') or r.get('name') for r in rows if r.get('NAME') or r.get('name')]
+        else:
+            rows = _rows(
+                """
+                SELECT DISTINCT l.llt_name AS name
+                FROM public.meddra_llt l
+                JOIN public.meddra_pt p ON p.pt_code = l.pt_code
+                WHERE LOWER(p.pt_name) = LOWER(%(t)s)
+                ORDER BY name
+                """,
+                {'t': term},
+            )
+            llts = [r['name'] for r in rows if r.get('name')]
+
+        return jsonify({'term': term, 'llts': llts, 'count': len(llts)})
+    except Exception as e:
+        return jsonify({'term': term, 'llts': [], 'count': 0, 'error': str(e)})
+
+
 _capability_cache = {}
 
 
@@ -504,43 +555,54 @@ def _capabilities():
 
 def _expand_meddra(level, terms):
     """
-    Resolves a non-PT MedDRA selection down to the PT names actually used in
-    label text. Passed into the compiler so it stays DB-free.
+    Resolves a MedDRA selection to the term names actually written in label
+    text. Passed into the compiler so it stays DB-free.
+
+    Label prose writes the Lowest Level Term, not the grouping above it, so
+    every level expands *downward* to LLTs. A PT is a handle for its
+    descendants: picking "Hepatic failure" has to match a label that says
+    "Liver failure", and matching the PT string alone silently misses it.
 
     Returns [] when nothing could be expanded — an empty MedDRA dictionary is a
     common deployment state, and the caller has to be able to tell that apart
     from a real expansion so it can say the search fell back to literal text.
     """
     level = (level or 'pt').lower()
-    if level == 'pt' or not terms:
+    if not terms:
         return list(terms)
-    column = {
-        'llt': 'llt_name',
-        'hlt': 'hlt_name',
-        'hlgt': 'hlgt_name',
-        'soc': 'soc_name',
-    }.get(level)
-    if not column:
-        return []
 
     if level == 'llt':
+        # Already the leaf level; nothing below it to reach.
+        return list(terms)
+
+    if level == 'pt':
         sql = """
-            SELECT DISTINCT p.pt_name AS name
+            SELECT DISTINCT l.llt_name AS name
             FROM public.meddra_llt l JOIN public.meddra_pt p ON p.pt_code = l.pt_code
-            WHERE l.llt_name = ANY(%(terms)s)
+            WHERE p.pt_name = ANY(%(terms)s)
         """
     else:
+        column = {
+            'hlt': 'hlt_name',
+            'hlgt': 'hlgt_name',
+            'soc': 'soc_name',
+        }.get(level)
+        if not column:
+            return []
         sql = f"""
-            SELECT DISTINCT h.pt_name AS name
-            FROM public.meddra_mdhier h WHERE h.{column} = ANY(%(terms)s)
+            SELECT DISTINCT l.llt_name AS name
+            FROM public.meddra_mdhier h
+            JOIN public.meddra_llt l ON l.pt_code = h.pt_code
+            WHERE h.{column} = ANY(%(terms)s)
         """
     try:
         rows = _rows(sql, {'terms': list(terms)})
     except Exception:
         return []
-    # Keep the originals too: a SOC name can itself appear in label prose.
+    # Keep the originals too: the selected term can itself appear in prose, and
+    # a PT name is usually also an LLT under itself, so this costs nothing.
     names = [r['name'] for r in rows if r['name']]
-    return (names + list(terms))[:200] if names else []
+    return (names + list(terms))[:400] if names else []
 
 
 # ---------------------------------------------------------------------------
