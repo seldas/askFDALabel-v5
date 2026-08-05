@@ -758,6 +758,10 @@ SORT_COLUMNS = {
     'route': 's.routes',
     'revised_date': 's.revised_date',
     'approval_year': 's.initial_approval_year',
+    'set_id': 's.set_id',
+    'spl_id': 's.spl_id',
+    'epc': 's.epc',
+    'unii': 'active_uniis',
 }
 
 

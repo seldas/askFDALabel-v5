@@ -10,7 +10,7 @@
  */
 
 import Link from 'next/link';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { labelRoute } from '../platform/context';
 
 export interface LabelRow {
@@ -317,6 +317,18 @@ const BASIC_COLUMNS: ColumnDef[] = [
 
 const EXPANDED_COLUMNS: ColumnDef[] = [
   LINKS_COLUMN,
+  {
+    key: 'set_id',
+    header: 'Set ID',
+    sort: 'set_id',
+    render: (row) => <code className="fdl-code-sm">{row.set_id}</code>,
+  },
+  {
+    key: 'spl_id',
+    header: 'SPL ID',
+    sort: 'spl_id',
+    render: (row) => <code className="fdl-code-sm">{row.spl_id}</code>,
+  },
   { key: 'type', header: 'Labeling Type', sort: 'doc_type', render: (row) => row.doc_type || '' },
   {
     key: 'dosage',
@@ -347,8 +359,7 @@ const EXPANDED_COLUMNS: ColumnDef[] = [
   {
     key: 'unii',
     header: 'Active Ingredient UNII(s)',
-    // Codes are opaque and fixed-width, so they read better monospaced and one
-    // per line than run together in a sentence.
+    sort: 'unii',
     render: (row) =>
       row.active_uniis ? (
         <span className="fdl-unii">
@@ -364,6 +375,7 @@ const EXPANDED_COLUMNS: ColumnDef[] = [
   {
     key: 'epc',
     header: 'Pharmacologic Class(es)',
+    sort: 'epc',
     render: (row) => joined(row.epc),
   },
   SPL_DATE,
@@ -386,67 +398,262 @@ export function ResultsTable({
   sortState: SortState;
   onSort: (sort: string) => void;
 }) {
-  const columns = view === 'expanded' ? EXPANDED_COLUMNS : BASIC_COLUMNS;
+  const allColumns = view === 'expanded' ? EXPANDED_COLUMNS : BASIC_COLUMNS;
+  const [hiddenColumns, setHiddenColumns] = useState<Record<string, boolean>>({});
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const [colPickerOpen, setColPickerOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
+  const visibleColumns = allColumns.filter((c) => !hiddenColumns[c.key]);
+
+  const toggleColumn = (key: string) => {
+    setHiddenColumns((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const toggleRow = (id: string) => {
+    setExpandedRows((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const showAllColumns = () => {
+    setHiddenColumns({});
+  };
+
   return (
-    <div className="fdl-tablescroll">
-      <div className="fdl-tablewrap" ref={scrollRef}>
-        <table className="fdl-table">
-          <thead>
-            <tr>
-              {columns.map((column) => {
-                const active = column.sort && column.sort === sortState.sort;
+    <div className="fdl-results-container">
+      <div className="fdl-table-toolbar">
+        <div className="fdl-colpicker-wrap">
+          <button
+            type="button"
+            className="fdl-btn fdl-btn--quiet fdl-colpicker-btn"
+            onClick={() => setColPickerOpen((prev) => !prev)}
+            aria-expanded={colPickerOpen}
+          >
+            Columns ({visibleColumns.length}/{allColumns.length}) ▾
+          </button>
+          {colPickerOpen ? (
+            <div className="fdl-colpicker-dropdown">
+              <div className="fdl-colpicker-head">
+                <span>Toggle Columns</span>
+                <button type="button" className="fdl-link" onClick={showAllColumns}>
+                  Show All
+                </button>
+              </div>
+              <div className="fdl-colpicker-list">
+                {allColumns.map((c) => (
+                  <label key={c.key} className="fdl-colpicker-item">
+                    <input
+                      type="checkbox"
+                      checked={!hiddenColumns[c.key]}
+                      onChange={() => toggleColumn(c.key)}
+                    />
+                    <span>{c.header}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="fdl-tablescroll">
+        <div className="fdl-tablewrap" ref={scrollRef}>
+          <table className="fdl-table">
+            <thead>
+              <tr>
+                <th style={{ width: '40px' }} aria-label="Expand detail"></th>
+                {visibleColumns.map((column) => {
+                  const active = column.sort && column.sort === sortState.sort;
+                  return (
+                    <th
+                      key={column.key}
+                      scope="col"
+                      aria-sort={
+                        active ? (sortState.dir === 'asc' ? 'ascending' : 'descending') : undefined
+                      }
+                    >
+                      {column.sort ? (
+                        <button
+                          type="button"
+                          className="fdl-th"
+                          onClick={() => onSort(column.sort as string)}
+                        >
+                          <span className="fdl-th__caret">
+                            {active ? (sortState.dir === 'asc' ? '▲' : '▼') : ''}
+                          </span>
+                          {column.header}
+                        </button>
+                      ) : (
+                        column.header
+                      )}
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => {
+                const rowId = row.spl_id || row.set_id;
+                const isExpanded = Boolean(expandedRows[rowId]);
                 return (
-                  <th
-                    key={column.key}
-                    scope="col"
-                    aria-sort={
-                      active ? (sortState.dir === 'asc' ? 'ascending' : 'descending') : undefined
-                    }
-                  >
-                    {column.sort ? (
-                      <button
-                        type="button"
-                        className="fdl-th"
-                        onClick={() => onSort(column.sort as string)}
+                  <Fragment key={rowId}>
+                    <tr
+                      className={`fdl-row ${isExpanded ? 'fdl-row--expanded' : ''}`}
+                      onClick={() => toggleRow(rowId)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <td
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleRow(rowId);
+                        }}
                       >
-                        <span className="fdl-th__caret">
-                          {active ? (sortState.dir === 'asc' ? '▲' : '▼') : ''}
-                        </span>
-                        {column.header}
-                      </button>
-                    ) : (
-                      column.header
-                    )}
-                  </th>
+                        <button
+                          type="button"
+                          className={`fdl-row-expand-btn ${isExpanded ? 'active' : ''}`}
+                          title={isExpanded ? 'Collapse drug card' : 'Expand drug card'}
+                        >
+                          {isExpanded ? '▼' : '▶'}
+                        </button>
+                      </td>
+                      {visibleColumns.map((column) => (
+                        <td
+                          key={column.key}
+                          className={
+                            column.accent
+                              ? 'fdl-td--accent'
+                              : column.strong
+                                ? 'fdl-td--strong'
+                                : undefined
+                          }
+                        >
+                          {column.render(row)}
+                        </td>
+                      ))}
+                    </tr>
+                    {isExpanded ? (
+                      <tr className="fdl-card-detail-row">
+                        <td colSpan={visibleColumns.length + 1}>
+                          <div className="fdl-label-card">
+                            <div className="fdl-label-card__header">
+                              <div className="fdl-label-card__title">
+                                <span className="fdl-label-card__brand">
+                                  {joined(row.product_names) || 'Unbranded Product'}
+                                </span>
+                                {row.generic_names ? (
+                                  <span className="fdl-label-card__generic">
+                                    {' '}
+                                    ({joined(row.generic_names)})
+                                  </span>
+                                ) : null}
+                              </div>
+                              <div className="fdl-label-card__badges">
+                                {row.doc_type ? (
+                                  <span className="fdl-badge fdl-badge--type">{row.doc_type}</span>
+                                ) : null}
+                                {row.market_categories ? (
+                                  <span className="fdl-badge fdl-badge--market">
+                                    {row.market_categories}
+                                  </span>
+                                ) : null}
+                                {row.is_rld ? (
+                                  <span className="fdl-badge fdl-badge--rld">RLD</span>
+                                ) : null}
+                              </div>
+                            </div>
+
+                            <div className="fdl-label-card__grid">
+                              <div className="fdl-card-section">
+                                <div className="fdl-card-section__head">Product Identification</div>
+                                <dl className="fdl-card-dl">
+                                  <dt>Trade Name:</dt>
+                                  <dd>{joined(row.product_names) || '—'}</dd>
+                                  <dt>Generic Name:</dt>
+                                  <dd>{joined(row.generic_names) || '—'}</dd>
+                                  <dt>Active Ingredients:</dt>
+                                  <dd>{joined(row.active_ingredients) || '—'}</dd>
+                                  <dt>UNII Code(s):</dt>
+                                  <dd>
+                                    {row.active_uniis ? (
+                                      <span className="fdl-unii">
+                                        {row.active_uniis.split(';').map((u) => (
+                                          <code key={u.trim()}>{u.trim()}</code>
+                                        ))}
+                                      </span>
+                                    ) : (
+                                      '—'
+                                    )}
+                                  </dd>
+                                  <dt>NDC Code(s):</dt>
+                                  <dd>{joined(row.ndc_codes) || '—'}</dd>
+                                </dl>
+                              </div>
+
+                              <div className="fdl-card-section">
+                                <div className="fdl-card-section__head">Regulatory & Marketing</div>
+                                <dl className="fdl-card-dl">
+                                  <dt>Application Number:</dt>
+                                  <dd>{joined(row.appr_num) || '—'}</dd>
+                                  <dt>Labeler / Manufacturer:</dt>
+                                  <dd>{row.manufacturer || '—'}</dd>
+                                  <dt>Marketing Category:</dt>
+                                  <dd>{joined(row.market_categories) || '—'}</dd>
+                                  <dt>Initial Approval Year:</dt>
+                                  <dd>{row.initial_approval_year || '—'}</dd>
+                                  <dt>Reference Listed Drug:</dt>
+                                  <dd>{row.is_rld ? 'Yes (RLD)' : 'No'}</dd>
+                                </dl>
+                              </div>
+
+                              <div className="fdl-card-section">
+                                <div className="fdl-card-section__head">Clinical Specifications</div>
+                                <dl className="fdl-card-dl">
+                                  <dt>Labeling Type:</dt>
+                                  <dd>{row.doc_type || '—'}</dd>
+                                  <dt>Dosage Form(s):</dt>
+                                  <dd>{joined(row.dosage_forms) || '—'}</dd>
+                                  <dt>Route(s) of Admin:</dt>
+                                  <dd>{joined(row.routes) || '—'}</dd>
+                                  <dt>Pharmacologic Class:</dt>
+                                  <dd>{joined(row.epc) || '—'}</dd>
+                                </dl>
+                              </div>
+
+                              <div className="fdl-card-section">
+                                <div className="fdl-card-section__head">Identifiers & Dates</div>
+                                <dl className="fdl-card-dl">
+                                  <dt>Set ID:</dt>
+                                  <dd>
+                                    <code className="fdl-code-sm">{row.set_id}</code>
+                                  </dd>
+                                  <dt>SPL ID:</dt>
+                                  <dd>
+                                    <code className="fdl-code-sm">{row.spl_id}</code>
+                                  </dd>
+                                  <dt>Most Recent SPL Date:</dt>
+                                  <dd>{(row.revised_date || '').replace(/-/g, '/') || '—'}</dd>
+                                </dl>
+                              </div>
+                            </div>
+
+                            <div className="fdl-label-card__footer">
+                              <span className="fdl-label-card__footer-head">Quick Links:</span>
+                              <LinksCell row={row} />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
                 );
               })}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.spl_id}>
-                {columns.map((column) => (
-                  <td
-                    key={column.key}
-                    className={
-                      column.accent
-                        ? 'fdl-td--accent'
-                        : column.strong
-                          ? 'fdl-td--strong'
-                          : undefined
-                    }
-                  >
-                    {column.render(row)}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
+        <StickyXScrollbar
+          targetRef={scrollRef}
+          signature={`${view}:${visibleColumns.length}:${rows.length}`}
+        />
       </div>
-      <StickyXScrollbar targetRef={scrollRef} signature={`${view}:${columns.length}:${rows.length}`} />
     </div>
   );
 }

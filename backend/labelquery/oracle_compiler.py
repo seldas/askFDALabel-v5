@@ -337,6 +337,27 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
     else:
         fetch_clause = ""
 
+    # Sort mapping
+    oracle_sort_map = {
+        'product': 'PRODUCT_NAMES',
+        'generic': 'PRODUCT_NORMD_GENERIC_NAMES',
+        'manufacturer': 'MANUFACTURER',
+        'appr_num': 'APPR_NUM',
+        'market_category': 'MARKET_CATEGORIES',
+        'doc_type': 'DOCUMENT_TYPE',
+        'dosage_form': 'DOSAGE_FORMS',
+        'route': 'ROUTES',
+        'revised_date': 'EFF_TIME',
+        'approval_year': 'EFF_TIME',
+        'set_id': 'SET_ID',
+        'spl_id': 'SPL_ID',
+        'epc': 'EPC',
+        'unii': 'ACT_INGR_UNIIS',
+    }
+    sort_column_name = oracle_sort_map.get(str(sort).lower(), 'EFF_TIME')
+    sort_dir = 'ASC' if str(direction).lower() == 'asc' else 'DESC'
+    order_clause = f"ORDER BY {sort_column_name} {sort_dir} NULLS LAST"
+
     if text_clauses:
         # Phase 1: Candidate Isolation CTE -> Phase 2: CONTAINS text search -> Phase 3: Total Count & Paged RLD lookup
         text_where = ' AND '.join(text_clauses)
@@ -344,7 +365,8 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
         WITH candidate_labels AS (
             SELECT /*+ INLINE NO_MERGE */ s.SPL_ID, s.SET_ID, s.TITLE, s.PRODUCT_NAMES, s.PRODUCT_NORMD_GENERIC_NAMES,
                    s.AUTHOR_ORG_NORMD_NAME as MANUFACTURER, s.APPR_NUM, s.NDC_CODES, s.EFF_TIME, s.MARKET_CATEGORIES,
-                   s.DOCUMENT_TYPE, s.ACT_INGR_NAMES, s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC
+                   s.DOCUMENT_TYPE, s.ACT_INGR_NAMES, s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC,
+                   s.ACT_INGR_UNIIS
             FROM druglabel.DGV_SUM_RX_SPL s
             WHERE {relational_where}
         ),
@@ -352,7 +374,7 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
             SELECT /*+ LEADING(c sec) USE_NL(sec) */ DISTINCT
                    c.SPL_ID, c.SET_ID, c.PRODUCT_NAMES, c.PRODUCT_NORMD_GENERIC_NAMES, c.MANUFACTURER,
                    c.APPR_NUM, c.NDC_CODES, c.EFF_TIME, c.MARKET_CATEGORIES, c.DOCUMENT_TYPE,
-                   c.ACT_INGR_NAMES, c.DOSAGE_FORMS, c.ROUTES, c.EPC
+                   c.ACT_INGR_NAMES, c.DOSAGE_FORMS, c.ROUTES, c.EPC, c.ACT_INGR_UNIIS
             FROM candidate_labels c
             INNER JOIN druglabel.SPL_SEC sec ON sec.SPL_ID = c.SPL_ID
             WHERE {text_where}
@@ -363,7 +385,7 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
         paged_matched AS (
             SELECT m.*
             FROM matched_sections m
-            ORDER BY m.EFF_TIME DESC NULLS LAST
+            {order_clause}
             {fetch_clause}
         )
         SELECT p.SET_ID, p.SPL_ID, p.PRODUCT_NAMES, p.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
@@ -371,7 +393,8 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
                p.MARKET_CATEGORIES, p.DOCUMENT_TYPE, p.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
                p.DOSAGE_FORMS, p.ROUTES, p.EPC,
                (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD,
-               t.total_count
+               t.total_count,
+               p.ACT_INGR_UNIIS as ACTIVE_UNIIS
         FROM total_cnt t
         LEFT JOIN paged_matched p ON 1=1
         """
@@ -381,7 +404,8 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
         WITH candidate_labels AS (
             SELECT /*+ INLINE NO_MERGE */ s.SPL_ID, s.SET_ID, s.TITLE, s.PRODUCT_NAMES, s.PRODUCT_NORMD_GENERIC_NAMES,
                    s.AUTHOR_ORG_NORMD_NAME as MANUFACTURER, s.APPR_NUM, s.NDC_CODES, s.EFF_TIME, s.MARKET_CATEGORIES,
-                   s.DOCUMENT_TYPE, s.ACT_INGR_NAMES, s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC
+                   s.DOCUMENT_TYPE, s.ACT_INGR_NAMES, s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC,
+                   s.ACT_INGR_UNIIS
             FROM druglabel.DGV_SUM_RX_SPL s
             WHERE {relational_where}
         ),
@@ -391,7 +415,7 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
         paged_candidates AS (
             SELECT c.*
             FROM candidate_labels c
-            ORDER BY c.EFF_TIME DESC NULLS LAST
+            {order_clause}
             {fetch_clause}
         )
         SELECT p.SET_ID, p.SPL_ID, p.PRODUCT_NAMES, p.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
@@ -399,7 +423,8 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
                p.MARKET_CATEGORIES, p.DOCUMENT_TYPE, p.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
                p.DOSAGE_FORMS, p.ROUTES, p.EPC,
                (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD,
-               t.total_count
+               t.total_count,
+               p.ACT_INGR_UNIIS as ACTIVE_UNIIS
         FROM total_cnt t
         LEFT JOIN paged_candidates p ON 1=1
         """

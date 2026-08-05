@@ -953,6 +953,239 @@
   line-height: 1.5;
 }
 
+/* --- Table Toolbar & Column Selector --- */
+.fdl-table-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: var(--afl-space-2);
+}
+
+.fdl-colpicker-wrap {
+  position: relative;
+}
+
+.fdl-colpicker-btn {
+  font-size: var(--afl-text-xs);
+  padding: var(--afl-space-1) var(--afl-space-3);
+  border: 1px solid var(--afl-border);
+  border-radius: var(--afl-radius-md);
+  background: var(--afl-surface);
+  color: var(--afl-text-secondary);
+}
+
+.fdl-colpicker-btn:hover {
+  background: var(--afl-surface-hover);
+  color: var(--afl-text-primary);
+}
+
+.fdl-colpicker-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 100;
+  margin-top: 4px;
+  min-width: 240px;
+  max-height: 380px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid var(--afl-border-strong);
+  border-radius: var(--afl-radius-md);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  padding: var(--afl-space-2);
+}
+
+.fdl-colpicker-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--afl-space-2) var(--afl-space-2);
+  border-bottom: 1px solid var(--afl-border);
+  font-weight: var(--afl-weight-bold);
+  font-size: var(--afl-text-xs);
+  color: var(--afl-text-secondary);
+}
+
+.fdl-colpicker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--afl-space-2) 0 0;
+}
+
+.fdl-colpicker-item {
+  display: flex;
+  align-items: center;
+  gap: var(--afl-space-2);
+  padding: 4px var(--afl-space-2);
+  font-size: var(--afl-text-xs);
+  color: var(--afl-text-primary);
+  border-radius: var(--afl-radius-sm);
+  cursor: pointer;
+  user-select: none;
+}
+
+.fdl-colpicker-item:hover {
+  background: var(--afl-surface-hover);
+}
+
+/* --- Row Expand Button & Code Cell --- */
+.fdl-row-expand-btn {
+  background: none;
+  border: none;
+  color: var(--afl-text-tertiary);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--afl-radius-sm);
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.fdl-row:hover .fdl-row-expand-btn {
+  color: var(--afl-brand-600);
+}
+
+.fdl-row-expand-btn.active {
+  color: var(--afl-brand-600);
+}
+
+.fdl-code-sm {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82em;
+  background: var(--afl-surface-subtle);
+  padding: 1px 4px;
+  border-radius: var(--afl-radius-sm);
+  border: 1px solid var(--afl-border);
+  color: var(--afl-text-primary);
+  word-break: break-all;
+}
+
+/* --- Label Details Card Panel --- */
+.fdl-card-detail-row > td {
+  background: #f8fafc !important;
+  padding: var(--afl-space-4) !important;
+  border-bottom: 2px solid var(--afl-brand-200) !important;
+}
+
+.fdl-label-card {
+  background: #ffffff;
+  border: 1px solid var(--afl-border-strong);
+  border-radius: var(--afl-radius-lg);
+  padding: var(--afl-space-4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.fdl-label-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--afl-space-4);
+  margin-bottom: var(--afl-space-4);
+  padding-bottom: var(--afl-space-3);
+  border-bottom: 1px solid var(--afl-border);
+}
+
+.fdl-label-card__brand {
+  font-size: var(--afl-text-lg);
+  font-weight: var(--afl-weight-bold);
+  color: var(--afl-brand-900);
+}
+
+.fdl-label-card__generic {
+  font-size: var(--afl-text-md);
+  color: var(--afl-text-secondary);
+  font-weight: var(--afl-weight-normal);
+}
+
+.fdl-label-card__badges {
+  display: flex;
+  gap: var(--afl-space-2);
+  flex-wrap: wrap;
+}
+
+.fdl-badge {
+  display: inline-block;
+  padding: 2px var(--afl-space-2);
+  border-radius: var(--afl-radius-pill);
+  font-size: 11px;
+  font-weight: var(--afl-weight-bold);
+  line-height: 1.4;
+}
+
+.fdl-badge--type {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.fdl-badge--market {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.fdl-badge--rld {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.fdl-label-card__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--afl-space-4);
+}
+
+.fdl-card-section {
+  background: var(--afl-surface-subtle);
+  border: 1px solid var(--afl-border);
+  border-radius: var(--afl-radius-md);
+  padding: var(--afl-space-3);
+}
+
+.fdl-card-section__head {
+  font-size: var(--afl-text-xs);
+  font-weight: var(--afl-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--afl-brand-700);
+  margin-bottom: var(--afl-space-2);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--afl-border);
+}
+
+.fdl-card-dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px var(--afl-space-3);
+  font-size: var(--afl-text-xs);
+  margin: 0;
+}
+
+.fdl-card-dl dt {
+  font-weight: var(--afl-weight-semibold);
+  color: var(--afl-text-secondary);
+  white-space: nowrap;
+}
+
+.fdl-card-dl dd {
+  margin: 0;
+  color: var(--afl-text-primary);
+  word-break: break-word;
+}
+
+.fdl-label-card__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--afl-space-3);
+  margin-top: var(--afl-space-4);
+  padding-top: var(--afl-space-3);
+  border-top: 1px solid var(--afl-border);
+  font-size: var(--afl-text-xs);
+}
+
+.fdl-label-card__footer-head {
+  font-weight: var(--afl-weight-bold);
+  color: var(--afl-text-secondary);
+}
+
 @media (max-width: 720px) {
   .fdl-shell {
     padding: var(--afl-space-3);
