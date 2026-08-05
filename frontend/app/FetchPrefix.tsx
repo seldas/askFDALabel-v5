@@ -12,6 +12,7 @@ const DASHBOARD_PREFIXES = [
   "/search",
   "/webtest",
   "/device",
+  "/disclaimer",
 ];
 
 const normalizeRoute = (value: string) => value.replace(/\/{2,}/g, "/");
