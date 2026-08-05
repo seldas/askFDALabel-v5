@@ -419,10 +419,75 @@ def execute():
     except (TypeError, ValueError):
         return jsonify({'error': 'limit and offset must be integers'}), 400
 
-    # Clamp the requested page into the browse window. Done here rather than in
-    # SQL so `offset` in the response is the page actually returned.
+    # Clamp the requested page into the browse window.
     offset = min(offset, max(0, BROWSE_CAP - 1))
     limit = max(1, min(limit, BROWSE_CAP - offset))
+
+    # Branch between Oracle (internal FDA DB) and Postgres (local DB)
+    if FDALabelDBService.is_internal():
+        try:
+            from .oracle_compiler import compile_oracle_query, OracleQueryCompileError
+            sql, params, warnings = compile_oracle_query(
+                query,
+                sort=payload.get('sort'),
+                direction=payload.get('dir'),
+                limit=limit,
+                offset=offset,
+                expand_meddra=_expand_meddra,
+                capabilities=_capabilities()
+            )
+        except OracleQueryCompileError as e:
+            return jsonify({'error': str(e)}), 400
+
+        conn = None
+        try:
+            conn = FDALabelDBService.get_connection()
+            if not conn:
+                return jsonify({'error': 'Oracle database connection failed'}), 500
+            cur = conn.cursor()
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+            cur.close()
+
+            results = []
+            for r in rows:
+                if isinstance(r, dict):
+                    results.append(r)
+                else:
+                    results.append({
+                        'set_id': r[0],
+                        'spl_id': r[1],
+                        'product_names': r[2],
+                        'generic_names': r[3],
+                        'manufacturer': r[4],
+                        'appr_num': r[5],
+                        'ndc_codes': r[6],
+                        'revised_date': r[7],
+                        'market_categories': r[8],
+                        'doc_type': r[9],
+                        'active_ingredients': r[10],
+                        'dosage_forms': r[11],
+                        'routes': r[12],
+                        'epc': r[13],
+                        'is_rld': bool(r[14]),
+                        'is_rs': False
+                    })
+            total = len(results)
+            return jsonify({
+                'results': results,
+                'total': total,
+                'browsable': min(total, BROWSE_CAP),
+                'cap': BROWSE_CAP,
+                'capped': False,
+                'limit': limit,
+                'offset': offset,
+                'warnings': warnings,
+            })
+        except Exception as e:
+            return jsonify({'error': f'Oracle query execution failed: {e}'}), 500
+        finally:
+            if conn:
+                conn.close()
 
     try:
         where, params, warnings = compile_where(
@@ -442,17 +507,6 @@ def execute():
         page_params['_limit'] = limit
         page_params['_offset'] = offset
         with conn.cursor() as cur:
-            # One statement, one evaluation of `where`. It used to be two — a
-            # capped COUNT and then the page — and with a text criterion that
-            # meant paying for the full-text semi-join twice per search.
-            #
-            # `matched` carries only the id and the sort key, so materializing
-            # the whole match set stays cheap even at a few hundred thousand
-            # rows; the wide columns are fetched for the 50 rows of one page.
-            #
-            # The count is joined in with LEFT JOINs rather than read from the
-            # rows, so an out-of-range offset still reports the real total
-            # instead of collapsing to zero results and zero total.
             cur.execute(
                 f"""
                 WITH matched AS MATERIALIZED (
@@ -482,7 +536,6 @@ def execute():
         return jsonify({
             'results': results,
             'total': total,
-            # How many of `total` the UI can actually page through.
             'browsable': min(total, BROWSE_CAP),
             'cap': BROWSE_CAP,
             'capped': total > BROWSE_CAP,
