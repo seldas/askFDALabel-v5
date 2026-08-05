@@ -39,8 +39,8 @@ interface SnapshotTask {
     urls?: Record<string, string>;
 }
 
-const BACKEND_API_PREFIX = `${API_BASE}/api`;
-const WEBTEST_API_PREFIX = `${BACKEND_API_PREFIX}/webtest`;
+const BACKEND_API_PREFIX = API_BASE;
+const WEBTEST_API_PREFIX = `${BACKEND_API_PREFIX}/api/webtest`;
 const webtestEndpoint = (suffix: string) => `${WEBTEST_API_PREFIX}${suffix}`;
 
 // Canonical version ordering for columns
@@ -237,11 +237,11 @@ export default function WebTestingPage() {
             const taskId = data.task_id;
             const pollStatus = async () => {
                 if (stopRef.current) {
-                    await fetch(`${BACKEND_API_PREFIX}/dashboard/tasks/${taskId}/cancel`, { method: 'POST' });
+                    await fetch(`${BACKEND_API_PREFIX}/api/dashboard/tasks/${taskId}/cancel`, { method: 'POST' });
                     setStatus('idle'); return;
                 }
                 try {
-                    const statusRes = await fetch(`${BACKEND_API_PREFIX}/dashboard/tasks/${taskId}`);
+                    const statusRes = await fetch(`${BACKEND_API_PREFIX}/api/dashboard/tasks/${taskId}`);
                     const statusData = await statusRes.json();
                     if (statusData.success && statusData.task) {
                         const task = statusData.task;

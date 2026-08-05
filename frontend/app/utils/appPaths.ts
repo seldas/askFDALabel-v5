@@ -12,7 +12,7 @@ const appendBase = (path: string, base: string) => {
   }
 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  if (normalizedPath.startsWith(base)) {
+  if (normalizedPath === base || normalizedPath.startsWith(`${base}/`)) {
     return normalizedPath;
   }
 

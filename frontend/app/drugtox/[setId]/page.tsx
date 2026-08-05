@@ -126,8 +126,8 @@ interface HistoryItem {
   Assessment_Date?: string;
 }
 
-const BACKEND_API_PREFIX = `${API_BASE}/api`;
-const DRUGTOX_API_PREFIX = `${BACKEND_API_PREFIX}/drugtox`;
+const BACKEND_API_PREFIX = API_BASE;
+const DRUGTOX_API_PREFIX = `${BACKEND_API_PREFIX}/api/drugtox`;
 
 const AGENT_CONFIGS: Record<string, { name: string; title: string; color: string; icon: string; instructions: string }> = {
   dili: {
@@ -191,7 +191,7 @@ export default function DrugToxDetailPage() {
     setReportLoading(prev => ({ ...prev, [toxType]: true }));
     try {
       const endpoint = toxType === 'pgx' ? 'pgx/assess' : `${toxType}/assess`;
-      const res = await axios.get(`${BACKEND_API_PREFIX}/dashboard/${endpoint}/${setId}`);
+      const res = await axios.get(`${BACKEND_API_PREFIX}/api/dashboard/${endpoint}/${setId}`);
       
       let markdownContent = '';
       if (toxType === 'pgx') {
@@ -222,7 +222,7 @@ export default function DrugToxDetailPage() {
       axios.get(`${DRUGTOX_API_PREFIX}/drugs/${setId}`).catch(async (err) => {
         if (err.response && err.response.status === 404) {
           try {
-            const metaRes = await axios.get(`${BACKEND_API_PREFIX}/dashboard/label/${setId}?json=1`);
+            const metaRes = await axios.get(`${BACKEND_API_PREFIX}/api/dashboard/label/${setId}?json=1`);
             const meta = metaRes.data;
             return {
               data: {
@@ -320,15 +320,6 @@ export default function DrugToxDetailPage() {
       <div className="afl-main-container" style={{ flex: 1, padding: '24px 32px', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
         <div className="afl-content-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-            {/* NAV BREADCRUMB */}
-            <div className="afl-label-crumbs" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}>
-              <Link href="/dashboard" style={{ color: '#64748b', textDecoration: 'none', fontWeight: 600 }}>Dashboard</Link>
-              <span style={{ color: '#94a3b8' }}>›</span>
-              <Link href={withDashboardBase(`/dashboard/label/${setId}`)} style={{ color: '#64748b', textDecoration: 'none', fontWeight: 600 }}>{detail.Trade_Name}</Link>
-              <span style={{ color: '#94a3b8' }}>›</span>
-              <span style={{ color: currentAgent.color, fontWeight: 800 }}>{currentAgent.name}</span>
-            </div>
-
             {/* DRUG IDENTITY CARD */}
             <div className="document-header-container" style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>

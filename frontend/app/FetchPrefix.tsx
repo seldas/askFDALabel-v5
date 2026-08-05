@@ -24,7 +24,10 @@ const prefixString = (value: string) => {
   if (!value.startsWith("/")) return value;
 
   const normalized = normalizeRoute(value);
-  if (normalized.startsWith(API_BASE) || normalized.startsWith(DASHBOARD_BASE)) {
+  if (
+    (API_BASE !== "/" && (normalized === API_BASE || normalized.startsWith(`${API_BASE}/`))) ||
+    (DASHBOARD_BASE !== "/" && (normalized === DASHBOARD_BASE || normalized.startsWith(`${DASHBOARD_BASE}/`)))
+  ) {
     return normalized;
   }
 

@@ -42,6 +42,11 @@ const nextConfig: NextConfig = {
         destination: `${BACKEND}/api/:path*`,
         basePath: false,
       });
+      rewrites.push({
+        source: `${normalizedApiBase}/:path*`,
+        destination: `${BACKEND}/:path*`,
+        basePath: false,
+      });
     }
 
     return rewrites;

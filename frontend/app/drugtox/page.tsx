@@ -168,8 +168,8 @@ const TOX_ORDER: Record<string, number> = {
   'Unknown': 5,
 };
 
-const BACKEND_API_PREFIX = `${API_BASE}/api`;
-const DRUGTOX_API_PREFIX = `${BACKEND_API_PREFIX}/drugtox`;
+const BACKEND_API_PREFIX = API_BASE;
+const DRUGTOX_API_PREFIX = `${BACKEND_API_PREFIX}/api/drugtox`;
 
 export default function DrugToxPage() {
   const theme = useTheme();
@@ -186,7 +186,7 @@ export default function DrugToxPage() {
   useEffect(() => {
     const checkInternalStatus = async () => {
       try {
-        const response = await fetch(`${BACKEND_API_PREFIX}/check-fdalabel`, { method: 'POST' });
+        const response = await fetch(`${BACKEND_API_PREFIX}/api/check-fdalabel`, { method: 'POST' });
         const data = await response.json();
         setIsInternal(data.isInternal);
       } catch (error) {
