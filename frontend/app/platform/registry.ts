@@ -157,6 +157,7 @@ const PLATFORM_TOOLS: ToolDef[] = [
     group: 'discover',
     contexts: ['global'],
     ai: true,
+    target: '_blank',
     href: (ctx) => queryRoute('/search', ctx),
   },
   {
@@ -199,6 +200,7 @@ const PLATFORM_TOOLS: ToolDef[] = [
     kind: 'embedded',
     group: 'analyze',
     contexts: ['global'],
+    target: '_blank',
     href: () => '/drugtox',
   },
   {
@@ -209,6 +211,7 @@ const PLATFORM_TOOLS: ToolDef[] = [
     kind: 'embedded',
     group: 'validate',
     contexts: ['global'],
+    target: '_blank',
     href: () => '/webtest',
   },
   {

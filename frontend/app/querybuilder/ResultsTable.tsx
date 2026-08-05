@@ -102,7 +102,7 @@ function LinksCell({ row }: { row: LabelRow }) {
   const apps = applications(row.appr_num);
   return (
     <div className="fdl-links">
-      <Link className="fdl-link" href={labelRoute(row.set_id)}>
+      <Link className="fdl-link" href={labelRoute(row.set_id)} target="_blank" rel="noopener noreferrer">
         View Label
       </Link>
       <span className="fdl-links__row">

@@ -352,8 +352,10 @@ export default function Header({
                 const searchTool = getTool('search');
                 if (!searchTool || !isToolAvailable(searchTool, GLOBAL_CTX, capabilities)) return null;
                 return (
-                  <Link
+                  <a
                     href={searchTool.href(GLOBAL_CTX)}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className={cx('hp-dropdown-item', resolvedActiveApp === 'afl' && 'is-active')}
                     onClick={handleNavClick}
                   >
@@ -377,7 +379,7 @@ export default function Header({
                       </div>
                       <div style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 500 }}>{searchTool.blurb}</div>
                     </div>
-                  </Link>
+                  </a>
                 );
               })()}
 
@@ -406,8 +408,10 @@ export default function Header({
               {(() => {
                 const webtest = getTool('webtest')!;
                 return (
-                  <Link
+                  <a
                     href={webtest.href(GLOBAL_CTX)}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className={cx('hp-dropdown-item', resolvedActiveApp === 'webtest' && 'is-active')}
                     onClick={handleNavClick}
                   >
@@ -416,7 +420,7 @@ export default function Header({
                       <div className="dropdown-title">{webtest.name}</div>
                       <div className="dropdown-subtitle">{webtest.blurb}</div>
                     </div>
-                  </Link>
+                  </a>
                 );
               })()}
             </div>

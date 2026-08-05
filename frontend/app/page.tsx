@@ -118,7 +118,7 @@ export default function HomePage() {
       const wire = toWire(query);
       window.localStorage.setItem(LAST_QUERY_KEY, JSON.stringify(wire));
       setHasSaved(true);
-      window.open(withAppBase(resultsPath(wire, targetDb)), '_blank', 'noopener');
+      window.location.href = withAppBase(resultsPath(wire, targetDb));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
