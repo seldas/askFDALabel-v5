@@ -548,20 +548,11 @@ export function CriterionCard({
               <p>Search for:</p>
               <ul className="fdl-idlist">
                 <li>
+                  <strong>SET ID / SPL ID (SPL GUID):</strong> (e.g., ca73b519-015a-436d-aa3c-af53492825a1)
+                </li>
+                <li>
                   <strong>Application Number for ANDA, BLA, or NDA:</strong> 3 to 6 digits (e.g.,
                   077844, 125118, 020977)
-                </li>
-                <li>
-                  <strong>DEA Schedule</strong> (e.g., CII, CIII, CIV, CV)
-                </li>
-                <li>
-                  <strong>NDC Number</strong> (e.g., 0378-4105, 49702-221)
-                </li>
-                <li>
-                  <strong>OTC Monograph ID</strong> (e.g., M012)
-                </li>
-                <li>
-                  <strong>SET ID:</strong> (e.g., ca73b519-015a-436d-aa3c-af53492825a1)
                 </li>
                 <li>
                   <strong>Unique Ingredient Identifier (UNII):</strong> alphanumeric code(s) (e.g.,

@@ -1207,7 +1207,7 @@ Rules:
    - Use "labelingSection" with "sections": ["BOXED WARNING", "WARNINGS AND PRECAUTIONS", "ADVERSE REACTIONS"] and place the search terms in "text".
    - A "meddra" criterion also accepts "sections" to confine it the same way.
 4. A drug name goes in "productName", never "identifier". "identifier" is for
-   codes: NDC, application number, Set ID, SPL ID, UNII.
+   codes: application number, Set ID, SPL ID (SPL GUID), UNII.
 5. Pharmacologic class: set "classType" to what was actually asked for --
    "moa" for a mechanism ("kinase inhibition"), "pe" for a physiologic effect,
    "cs" for a chemical structure class, "epc" for an established pharmacologic

@@ -487,11 +487,6 @@ def _compile_identifier(value, bag):
         if _UUID_RE.match(token_str):
             p = bag.add(token_str)
             alts.append(f'(s.SET_ID = {p} OR s.SPL_GUID = {p})')
-        elif _NDC_RE.match(token_str):
-            parts = token_str.split('-')
-            base = parts[0] + parts[1]
-            p = bag.add(f'%{base}%')
-            alts.append(f"REPLACE(s.NDC_CODES, '-', '') LIKE {p}")
         elif _UNII_RE.match(token_str):
             p = bag.add(token_str.upper())
             alts.append(

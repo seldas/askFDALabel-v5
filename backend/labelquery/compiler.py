@@ -626,24 +626,6 @@ def _c_identifier(criterion, bag, warnings, unii_available=True):
     for token in tokens:
         if _UUID_RE.match(token):
             alts.append(f'(s.set_id = {bag.add(token)} OR s.spl_id = {bag.add(token)})')
-        elif _NDC_RE.match(token):
-            # NDCs are stored with hyphens but users paste either form, and a
-            # package-level NDC should still match its product-level label.
-            parts = token.split('-')
-            base = parts[0] + parts[1]
-            alts.append(f"REPLACE(s.ndc_codes, '-', '') ILIKE {bag.add(f'%{base}%')}")
-        elif _MONOGRAPH_RE.match(token):
-            alts.append(_like_any(['s.appr_num', 's.market_categories'], [f'%{token}%'], bag))
-        elif _DEA_RE.match(token):
-            # No DEA schedule column exists; the schedule is stated in the
-            # label text, so this falls through to a phrase search.
-            alts.append(
-                _sections_exists(
-                    f"phraseto_tsquery('english', {bag.add('Schedule ' + token[1:].upper())})",
-                    None,
-                    bag,
-                )
-            )
         elif _PREFIXED_APPL_RE.match(token):
             kind, number = _PREFIXED_APPL_RE.match(token).groups()
             alts.append(
