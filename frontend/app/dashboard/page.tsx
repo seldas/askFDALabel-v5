@@ -484,6 +484,36 @@ function DashboardContent() {
     } catch (error) { alert('Import error'); } finally { setUploading(false); }
   };
 
+  const handleCreateEmptyTask = async (title: string) => {
+    setUploading(true);
+    try {
+      const res = await fetch('/api/dashboard/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      });
+      const data = await res.json();
+      if (data.success && data.project) {
+        setNewImportProjectName('');
+        setImportBatchTags('');
+        setUploadedFile(null);
+        setShowImportUI(false);
+        const projectsRes = await fetch('/api/dashboard/projects');
+        const projectsData = await projectsRes.json();
+        const updatedProjects: Project[] = projectsData.projects || [];
+        setProjects(updatedProjects);
+        const targetProj = updatedProjects.find(p => p.id === data.project.id);
+        if (targetProj) setActiveProject(targetProj);
+      } else if (data.error) {
+        alert(data.error);
+      }
+    } catch (e) {
+      alert('Failed to create task');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleImportButtonClick = () => {
     if (uploadedFile) { handleExcelFile(uploadedFile); return; }
     const input = document.createElement('input');
@@ -540,31 +570,6 @@ function DashboardContent() {
               </div>
             </div>
 
-            <div className="dash-import-block" style={{ marginBottom: '8px' }}>
-              <Link
-                href="/dashboard/query_history"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '9px 12px',
-                  borderRadius: '8px',
-                  background: '#eef2ff',
-                  color: '#4f46e5',
-                  fontWeight: 700,
-                  fontSize: '0.82rem',
-                  textDecoration: 'none',
-                  border: '1px solid #c7d2fe',
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-                <span>Search & Query History</span>
-              </Link>
-            </div>
-
             <div className="dash-import-block">
               <button
                 className={cx('dash-import-toggle', showImportUI && 'active')}
@@ -593,7 +598,7 @@ function DashboardContent() {
                     <line x1="5" y1="12" x2="19" y2="12" />
                   )}
                 </svg>
-                <span>{showImportUI ? 'Cancel Import' : 'Import Task'}</span>
+                <span>{showImportUI ? 'Cancel' : 'Create Task'}</span>
               </button>
 
               {showImportUI && (
@@ -670,9 +675,9 @@ function DashboardContent() {
                     />
                   </div>
 
-                  {/* Excel File Uploader */}
+                  {/* Excel File Uploader (Optional for New Task) */}
                   <div className="dash-import-field" style={{ marginBottom: '16px' }}>
-                    <label className="dash-import-field__label">FDALabel Excel</label>
+                    <label className="dash-import-field__label">FDALabel Excel (Optional)</label>
                     <button
                       className="dash-file-picker"
                       onClick={() => {
@@ -699,15 +704,20 @@ function DashboardContent() {
                   <Button
                     variant="primary"
                     style={{ width: '100%' }}
-                    onClick={() => { if(uploadedFile) handleExcelFile(uploadedFile); }}
+                    onClick={() => {
+                      if (uploadedFile) {
+                        handleExcelFile(uploadedFile);
+                      } else if (importTargetMode === 'new' && newImportProjectName.trim()) {
+                        handleCreateEmptyTask(newImportProjectName.trim());
+                      }
+                    }}
                     disabled={
                       uploading ||
-                      !uploadedFile ||
                       (importTargetMode === 'new' && !newImportProjectName.trim()) ||
-                      (importTargetMode === 'existing' && !importTargetProjectId)
+                      (importTargetMode === 'existing' && (!importTargetProjectId || !uploadedFile))
                     }
                   >
-                    {uploading ? 'Importing...' : importTargetMode === 'new' ? 'Create Task' : 'Import to Task'}
+                    {uploading ? 'Processing...' : importTargetMode === 'new' ? 'Create Task' : 'Import to Task'}
                   </Button>
                 </div>
               )}
