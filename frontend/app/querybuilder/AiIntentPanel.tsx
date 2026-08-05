@@ -10,7 +10,7 @@
  */
 
 import { useState } from 'react';
-import type { LabelQuery } from './types';
+import type { LabelQuery, TargetDb } from './types';
 import { fromWire } from './types';
 
 const EXAMPLES = [
@@ -22,9 +22,13 @@ const EXAMPLES = [
 export function AiIntentPanel({
   onQuery,
   disabled,
+  targetDb = 'local',
 }: {
   onQuery: (query: LabelQuery) => void;
   disabled?: boolean;
+  /* The three databases do not answer the same questions, so the model is told
+   * which one before it picks criteria. */
+  targetDb?: TargetDb;
 }) {
   const [intent, setIntent] = useState('');
   const [busy, setBusy] = useState(false);
@@ -44,10 +48,17 @@ export function AiIntentPanel({
       const res = await fetch('/api/labelquery/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intent: trimmed }),
+        body: JSON.stringify({ intent: trimmed, target_db: targetDb }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || `Translation failed (${res.status})`);
+      if (!res.ok) {
+        // A refusal carries its reason in `notes` — usually that the request is
+        // outside the selected database's scope, which is the one thing the
+        // user needs in order to fix it. Losing that leaves only the generic
+        // "could not turn that into criteria".
+        setNotes(json.notes || []);
+        throw new Error(json.error || `Translation failed (${res.status})`);
+      }
       onQuery(fromWire(json.query));
       setNotes(json.notes || []);
     } catch (e) {
@@ -67,7 +78,7 @@ export function AiIntentPanel({
       const res = await fetch('/api/labelquery/refine', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intent: trimmed }),
+        body: JSON.stringify({ intent: trimmed, target_db: targetDb }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || `Refinement failed (${res.status})`);

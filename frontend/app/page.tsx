@@ -219,7 +219,7 @@ export default function HomePage() {
       <Header />
 
       <main className="fdl-shell">
-        <AiIntentPanel onQuery={setQuery} />
+        <AiIntentPanel onQuery={setQuery} targetDb={targetDb} />
 
         {actionBar('top')}
 

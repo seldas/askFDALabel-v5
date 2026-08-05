@@ -1158,8 +1158,14 @@ Return ONLY a JSON object (no markdown, no code fences) with this schema:
   "notes": ["short note about anything you could not express"]
 }
 
-Criteria inside a group are combined with AND. Groups are combined with OR.
-Prefer ONE group unless the request clearly asks for alternatives ("either X or Y").
+Criteria inside a group are combined with AND, per label. Groups are combined
+with OR. Prefer ONE group unless the request clearly asks for alternatives
+("either X or Y").
+
+AND is per label, not per section: two text criteria in one group are satisfied
+by the same label even when the matches fall in different sections. So "boxed
+warning mentions X and the label mentions Y anywhere" is two criteria in one
+group, not one criterion with both terms.
 
 Allowed "type" values and the exact shape of their "value":
 
@@ -1177,21 +1183,76 @@ Allowed "type" values and the exact shape of their "value":
 - "marketStatus"      {"values": ["rld"]}          // rld, rs, marketed, discontinued
 - "deaSchedule"       {"values": ["CII"]}          // CI, CII, CIII, CIV, CV -- Oracle only
 - "activeMoiety"      {"op": "equals"|"startsWith"|"contains", "terms": ["Amphetamine"]}  // Oracle only; the active part of the molecule, so it catches salts
-- "meddra"            {"level": "pt"|"llt"|"hlt"|"hlgt"|"soc", "terms": ["Hepatic failure", "Hepatotoxicity", "Drug-induced liver injury", "Acute hepatic failure"]}
+- "meddra"            {"level": "pt"|"llt", "terms": ["Hepatic failure"]}
 - "pharmClass"        {"classType": "any"|"epc"|"moa"|"pe"|"cs", "terms": ["Kinase Inhibitor"]}
 - "identifier"        {"text": "NDA 021436", "ingredientType": "active"|"inactive"|"both"}
 
 Rules:
-1. Multi-term or Adverse Event OR Queries:
-   When multiple terms, adverse events, or conditions are requested (e.g. "DILI, hepatotoxicity, liver function test abnormalities, or acute liver failure"):
-   - Use "labelingSection" or "fullText" with "mode": "advanced" and join phrases with "OR" (e.g. text: "\"drug-induced liver injury\" OR DILI OR hepatotoxicity OR \"liver function test\" OR \"acute liver failure\"").
-   - OR use "meddra" with a list of terms in "terms": ["Drug-induced liver injury", "Hepatotoxicity", "Liver function test abnormal", "Acute hepatic failure"].
-2. Target Sections:
+1. Adverse events and medical concepts: prefer "meddra" over free text.
+   Give the ONE Preferred Term that names the concept. Do NOT list synonyms or
+   near-synonyms -- a PT is automatically expanded to every Lowest Level Term
+   beneath it before the search runs, so "Hepatic failure" already covers
+   "Liver failure", "Hepatic insufficiency", "Hepatic decompensation" and the
+   rest. Listing them yourself does not widen the search; it only risks pulling
+   in terms that belong to a different PT.
+   Use several "terms" only for genuinely distinct concepts (e.g.
+   ["Hepatic failure", "Hepatitis"]), not for wordings of one concept.
+   Use "level": "llt" only when the request names one specific lowest-level
+   wording and should not be widened.
+2. Free text is the fallback, for wording MedDRA does not cover (trial design,
+   storage, dosing language). Then "mode": "advanced" with terms joined by OR
+   is right: "\"black box\" OR boxed".
+3. Target Sections:
    When specific sections are named (e.g. "Boxed Warning", "Warnings and Precautions", "Adverse Reactions"):
    - Use "labelingSection" with "sections": ["BOXED WARNING", "WARNINGS AND PRECAUTIONS", "ADVERSE REACTIONS"] and place the search terms in "text".
-3. A drug name goes in "productName", never "identifier".
-4. Never return an empty "groups" array when medical concepts, adverse events, or labeling sections are requested.
+   - A "meddra" criterion also accepts "sections" to confine it the same way.
+4. A drug name goes in "productName", never "identifier". "identifier" is for
+   codes: NDC, application number, Set ID, SPL ID, UNII.
+5. Pharmacologic class: set "classType" to what was actually asked for --
+   "moa" for a mechanism ("kinase inhibition"), "pe" for a physiologic effect,
+   "cs" for a chemical structure class, "epc" for an established pharmacologic
+   class. Use "any" only when the request does not say.
+6. Market status: "rld" and "rs" are Orange Book roles; "marketed" and
+   "discontinued" are derived from marketing end dates and are NOT opposites --
+   a label carrying several products can be both.
+7. Never return an empty "groups" array when medical concepts, adverse events,
+   or labeling sections are requested.
 """
+
+
+#: Appended to the system prompt per request. The panel targets one of three
+#: databases and they do not answer the same questions, so the model is told
+#: which one before it picks criteria rather than having its output filtered
+#: afterwards -- a dropped criterion is a silently narrower search.
+_TRANSLATE_SCOPE_NOTES = {
+    'local': """
+Target database: LOCAL import (PostgreSQL).
+- "deaSchedule" and "activeMoiety" are NOT available. Do not emit them; put the
+  requirement in "notes" instead.
+- "chemicalStructure" is not available on any target. Never emit it.
+""",
+    'oracle': """
+Target database: FDALabel Oracle, CDER-CBER scope.
+- This scope covers HUMAN labeling only. Animal labeling is absent, so never
+  emit a "labelingType" of animal Rx or animal OTC here -- say in "notes" that
+  the FDA scope is needed for it.
+- "chemicalStructure" is not available on any target. Never emit it.
+""",
+    'oracle_all': """
+Target database: FDALabel Oracle, full FDA scope.
+- Covers all labeling, human and animal.
+- "chemicalStructure" is not available on any target. Never emit it.
+""",
+}
+
+
+#: Criteria that cannot be evaluated per target. Mirrors CRITERION_SUPPORT in
+#: frontend/app/querybuilder/types.ts -- keep the two in step.
+_TARGET_UNSUPPORTED = {
+    'local': {'deaSchedule', 'activeMoiety', 'chemicalStructure'},
+    'oracle': {'chemicalStructure'},
+    'oracle_all': {'chemicalStructure'},
+}
 
 _ALLOWED_TYPES = {
     'labelingType', 'applicationType', 'route', 'productName', 'fullText',
@@ -1215,12 +1276,19 @@ def _parse_json_object(text):
         return None
 
 
-def _sanitize_translation(parsed):
+def _sanitize_translation(parsed, target_db='local'):
     """
     Keeps only criteria the compiler understands and normalizes loose LLM outputs.
+
+    Criteria the chosen database cannot evaluate are dropped here as a backstop.
+    The prompt already tells the model which those are; this catches the case
+    where it emits one anyway, and says so in the notes rather than letting the
+    search quietly run wider than asked.
     """
+    unsupported = _TARGET_UNSUPPORTED.get(target_db, _TARGET_UNSUPPORTED['local'])
     groups = []
     dropped = []
+    unavailable = []
     for group in (parsed.get('groups') or [])[:5]:
         criteria = []
         for criterion in (group.get('criteria') or [])[:12]:
@@ -1230,6 +1298,9 @@ def _sanitize_translation(parsed):
             value = criterion.get('value')
             if ctype not in _ALLOWED_TYPES:
                 dropped.append(str(ctype))
+                continue
+            if ctype in unsupported:
+                unavailable.append(str(ctype))
                 continue
 
             # Auto-repair loose values from LLM
@@ -1260,6 +1331,11 @@ def _sanitize_translation(parsed):
     notes = [str(n) for n in (parsed.get('notes') or []) if n][:5]
     if dropped:
         notes.append('Dropped unsupported criteria: ' + ', '.join(sorted(set(dropped))))
+    if unavailable:
+        notes.append(
+            'Not available on the selected database, so left out: '
+            + ', '.join(sorted(set(unavailable)))
+        )
     return {'groups': groups}, notes
 
 
@@ -1270,13 +1346,17 @@ def translate():
     if not intent:
         return jsonify({'error': 'intent is required'}), 400
 
+    target_db = (payload.get('target_db') or payload.get('targetDb') or 'local').lower()
+    if target_db not in _TRANSLATE_SCOPE_NOTES:
+        target_db = 'oracle' if target_db in _ORACLE_TARGETS else 'local'
+
     from dashboard.services.ai_handler import call_llm
 
     user = current_user._get_current_object() if current_user.is_authenticated else None
     try:
         raw = call_llm(
             user=user,
-            system_prompt=TRANSLATE_SYSTEM_PROMPT,
+            system_prompt=TRANSLATE_SYSTEM_PROMPT + _TRANSLATE_SCOPE_NOTES[target_db],
             user_message=json.dumps({'request': intent}),
             temperature=0.0,
         )
@@ -1287,7 +1367,7 @@ def translate():
     if not isinstance(parsed, dict):
         return jsonify({'error': 'The model did not return a usable query.'}), 502
 
-    query, notes = _sanitize_translation(parsed)
+    query, notes = _sanitize_translation(parsed, target_db)
     if not query['groups']:
         return jsonify({
             'error': 'Could not turn that into search criteria. Try naming a drug, '
