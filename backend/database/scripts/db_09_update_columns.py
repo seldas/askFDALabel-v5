@@ -104,6 +104,9 @@ def extract_approvals(root, doc_title=""):
         normalized = f"{kind.upper()} {number}"
         if normalized not in appr_nums:
             appr_nums.append(normalized)
+        kind_upper = kind.upper()
+        if kind_upper in ('NDA', 'ANDA', 'BLA', 'NADA', 'ANADA') and kind_upper not in categories:
+            categories.append(kind_upper)
 
     for approval in root.findall('.//ns:subjectOf/ns:approval', NS):
         code_el = approval.find('ns:code', NS)

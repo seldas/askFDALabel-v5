@@ -701,10 +701,37 @@ def _c_chemical_structure(criterion, bag, warnings):
     return None
 
 
+def _c_application_type(value, bag, warnings):
+    values = _as_list(value.get('values'))
+    if not values:
+        return None
+    clauses = []
+    for v in values:
+        v_clean = v.strip()
+        if not v_clean:
+            continue
+        p_exact = bag.add(v_clean)
+        p_pattern = bag.add(f'%{v_clean}%')
+        p_appr_prefix = bag.add(f'{v_clean.upper()} %')
+
+        clause = f"""(
+            (s.market_categories ILIKE {p_pattern} AND EXISTS (
+                SELECT 1 FROM unnest(string_to_array(s.market_categories, ';')) AS item
+                WHERE btrim(item) ILIKE {p_exact} OR btrim(item) ILIKE {p_pattern}
+            ))
+            OR s.appr_num ILIKE {p_appr_prefix}
+            OR s.appr_num ILIKE {p_pattern}
+        )"""
+        clauses.append(clause)
+    return '(' + ' OR '.join(clauses) + ')' if clauses else None
+
+
 def _compile_criterion(criterion, bag, warnings, expand_meddra, capabilities):
     ctype = criterion.get('type')
     value = criterion.get('value') or {}
 
+    if ctype == 'applicationType':
+        return _c_application_type(value, bag, warnings)
     if ctype in _LIST_COLUMNS:
         return _c_value_list(value, ctype, bag, warnings)
     if ctype == 'productName':

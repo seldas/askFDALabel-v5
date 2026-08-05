@@ -186,6 +186,9 @@ def extract_approvals(root, doc_title=""):
         normalized = f"{kind.upper()} {number}"
         if normalized not in appr_nums:
             appr_nums.append(normalized)
+        kind_upper = kind.upper()
+        if kind_upper in ('NDA', 'ANDA', 'BLA', 'NADA', 'ANADA') and kind_upper not in categories:
+            categories.append(kind_upper)
 
     for approval in root.findall('.//ns:subjectOf/ns:approval', NS):
         code_el = approval.find('ns:code', NS)
@@ -805,7 +808,6 @@ def refresh_query_options_cache():
     print("Refreshing query options statistics cache in labeling.query_options_cache...")
     columns = [
         ('labelingTypes', 'doc_type'),
-        ('applicationTypes', 'market_categories'),
         ('routes', 'routes'),
         ('dosageForms', 'dosage_forms'),
     ]
@@ -818,7 +820,7 @@ def refresh_query_options_cache():
 
     queries = []
     
-    # 1. Column counts
+    # 1. Column counts (doc_type, routes, dosage_forms)
     for category, col in columns:
         queries.append(f"""
             INSERT INTO labeling.query_options_cache (category, key_name, item_count, updated_at)
@@ -833,6 +835,25 @@ def refresh_query_options_cache():
             ON CONFLICT (category, key_name) 
             DO UPDATE SET item_count = EXCLUDED.item_count, updated_at = CURRENT_TIMESTAMP;
         """)
+
+    # 1b. Application Types (combining market_categories and appr_num prefixes)
+    queries.append("""
+        INSERT INTO labeling.query_options_cache (category, key_name, item_count, updated_at)
+        SELECT 'applicationTypes' AS category, value AS key_name, COUNT(DISTINCT set_id) AS item_count, CURRENT_TIMESTAMP
+        FROM (
+            SELECT set_id, TRIM(unnest(string_to_array(s.market_categories, ';'))) AS value
+            FROM labeling.sum_spl s
+            WHERE s.is_latest = TRUE AND s.market_categories IS NOT NULL AND s.market_categories <> ''
+            UNION ALL
+            SELECT set_id, UPPER(TRIM(split_part(unnest(string_to_array(s.appr_num, ';')), ' ', 1))) AS value
+            FROM labeling.sum_spl s
+            WHERE s.is_latest = TRUE AND s.appr_num IS NOT NULL AND s.appr_num <> ''
+        ) t
+        WHERE value <> ''
+        GROUP BY value
+        ON CONFLICT (category, key_name) 
+        DO UPDATE SET item_count = EXCLUDED.item_count, updated_at = CURRENT_TIMESTAMP;
+    """)
 
     # 2. Total labels count ('SPLTITLE')
     queries.append("""

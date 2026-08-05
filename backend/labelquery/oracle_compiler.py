@@ -106,9 +106,15 @@ def _compile_application_type(value, bag):
         return None
     clauses = []
     for v in values:
-        p = bag.add(f'%{v.upper()}%')
-        clauses.append(f'UPPER(s.MARKET_CATEGORIES) LIKE {p}')
-    return '(' + ' OR '.join(clauses) + ')'
+        v_clean = v.strip().upper()
+        if not v_clean:
+            continue
+        p_contain = bag.add(f'%{v_clean}%')
+        p_prefix = bag.add(f'{v_clean} %')
+        clauses.append(
+            f"(UPPER(s.MARKET_CATEGORIES) LIKE {p_contain} OR UPPER(s.APPR_NUM) LIKE {p_prefix} OR UPPER(s.APPR_NUM) LIKE {p_contain})"
+        )
+    return '(' + ' OR '.join(clauses) + ')' if clauses else None
 
 
 def _compile_route(value, bag):
