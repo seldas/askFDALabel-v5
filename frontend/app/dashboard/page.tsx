@@ -18,6 +18,8 @@ import './workspace.css';
 interface Project {
   id: number;
   title: string;
+  description?: string;
+  created_at?: string;
   role: string;
   count: number;
   tags?: string[];
@@ -87,9 +89,11 @@ function DashboardContent() {
   const [importTargetProjectId, setImportTargetProjectId] = useState<string>('');
   const [importBatchTags, setImportBatchTags] = useState<string>('');
 
-  // Tag Filtering State
+  // Task Search, Tag Filter, & Sort State
   const [sidebarTagFilter, setSidebarTagFilter] = useState<string>('All');
   const [tableTagFilter, setTableTagFilter] = useState<string>('All');
+  const [taskSearchQuery, setTaskSearchQuery] = useState<string>('');
+  const [taskSortMode, setTaskSortMode] = useState<'newest' | 'name_asc' | 'name_desc' | 'count_desc'>('newest');
 
   // Multi-select for comparison
   const [selectedLabels, setSelectedLabels] = useState<Favorite[]>([]);
@@ -191,9 +195,38 @@ function DashboardContent() {
   }, [projectComparisons, projectSearch]);
 
   const filteredProjects = useMemo(() => {
-    if (sidebarTagFilter === 'All') return projects;
-    return projects.filter(p => p.tags && p.tags.some(t => t && t.split(/[;,]/).map(x => x.trim()).includes(sidebarTagFilter)));
-  }, [projects, sidebarTagFilter]);
+    let list = [...projects];
+
+    // Filter by tag
+    if (sidebarTagFilter !== 'All') {
+      list = list.filter(p => p.tags && p.tags.some(t => t && t.split(/[;,]/).map(x => x.trim()).includes(sidebarTagFilter)));
+    }
+
+    // Filter by task name or description
+    if (taskSearchQuery.trim()) {
+      const q = taskSearchQuery.trim().toLowerCase();
+      list = list.filter(p => 
+        (p.title && p.title.toLowerCase().includes(q)) ||
+        (p.description && p.description.toLowerCase().includes(q)) ||
+        (p.tags && p.tags.some(t => t && t.toLowerCase().includes(q)))
+      );
+    }
+
+    // Sort tasks
+    list.sort((a, b) => {
+      if (taskSortMode === 'name_asc') {
+        return a.title.localeCompare(b.title);
+      } else if (taskSortMode === 'name_desc') {
+        return b.title.localeCompare(a.title);
+      } else if (taskSortMode === 'count_desc') {
+        return b.count - a.count;
+      } else {
+        return b.id - a.id;
+      }
+    });
+
+    return list;
+  }, [projects, sidebarTagFilter, taskSearchQuery, taskSortMode]);
 
   const allProjectsTags = useMemo(() => {
     const tagsSet = new Set<string>();
@@ -723,27 +756,71 @@ function DashboardContent() {
               )}
             </div>
 
-            {/* Tag Filter for Tasks */}
-            {allProjectsTags.length > 0 && (
-              <div className="dash-tag-filter">
-                <label className="dash-tag-filter__label">FILTER TASKS BY TAG</label>
-                <div className="dash-select-wrapper">
+            {/* Search, Sort, & Tag Filter Controls */}
+            <div style={{ padding: '0 20px 12px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {/* Task Search Box */}
+              <div style={{ position: 'relative' }}>
+                <Input
+                  type="text"
+                  placeholder="Filter tasks by name or description..."
+                  value={taskSearchQuery}
+                  onChange={(e) => setTaskSearchQuery(e.target.value)}
+                  style={{ paddingLeft: '32px', fontSize: '0.8rem', height: '34px', borderRadius: '8px' }}
+                />
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#94a3b8"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+                >
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </div>
+
+              {/* Sort & Tag Dropdowns */}
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <div style={{ flex: 1, position: 'relative' }}>
                   <select
                     className="dash-custom-select"
-                    value={sidebarTagFilter}
-                    onChange={(e) => setSidebarTagFilter(e.target.value)}
+                    value={taskSortMode}
+                    onChange={(e) => setTaskSortMode(e.target.value as any)}
+                    style={{ fontSize: '0.74rem', height: '30px', padding: '0 20px 0 8px', borderRadius: '6px' }}
                   >
-                    <option value="All">All Tags</option>
-                    {allProjectsTags.map(tag => (
-                      <option key={tag} value={tag}>{tag}</option>
-                    ))}
+                    <option value="newest">Sort: Newest</option>
+                    <option value="name_asc">Name (A-Z)</option>
+                    <option value="name_desc">Name (Z-A)</option>
+                    <option value="count_desc">Most Labels</option>
                   </select>
-                  <span className="dash-select-caret">▼</span>
+                  <span className="dash-select-caret" style={{ right: '6px' }}>▼</span>
                 </div>
-              </div>
-            )}
 
-            <div className="workspace-list">
+                {allProjectsTags.length > 0 && (
+                  <div style={{ flex: 1, position: 'relative' }}>
+                    <select
+                      className="dash-custom-select"
+                      value={sidebarTagFilter}
+                      onChange={(e) => setSidebarTagFilter(e.target.value)}
+                      style={{ fontSize: '0.74rem', height: '30px', padding: '0 20px 0 8px', borderRadius: '6px' }}
+                    >
+                      <option value="All">All Tags</option>
+                      {allProjectsTags.map(tag => (
+                        <option key={tag} value={tag}>{tag}</option>
+                      ))}
+                    </select>
+                    <span className="dash-select-caret" style={{ right: '6px' }}>▼</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Overflow Task List */}
+            <div className="workspace-list" style={{ overflowY: 'auto', flex: 1, padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {projectsLoading ? (
                 <div style={{ textAlign: 'center', padding: '2rem' }}><div className="loader" style={{ width: '28px', height: '28px', margin: '0 auto' }}></div></div>
               ) : filteredProjects.length > 0 ? (
@@ -763,28 +840,50 @@ function DashboardContent() {
                         }
                       }}
                       className={cx('dash-project-card', isActive && 'active')}
+                      style={{ padding: '12px 14px', borderRadius: '10px' }}
                     >
-                      <div className="dash-project-card__header">
-                        <div className="dash-project-card__icon-wrapper">
-                          {p.title === 'Favorite' ? (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="#eab308" stroke="#ca8a04" strokeWidth="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                          ) : (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isActive ? "#2563eb" : "#64748b"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                          )}
+                      {/* Header Row: Icon, Title, Count, Badge */}
+                      <div className="dash-project-card__header" style={{ marginBottom: '4px', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                          <div className="dash-project-card__icon-wrapper">
+                            {p.title === 'Favorite' ? (
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="#eab308" stroke="#ca8a04" strokeWidth="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                            ) : (
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isActive ? "#2563eb" : "#64748b"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                            )}
+                          </div>
+                          <span className="dash-project-card__title" style={{ fontSize: '0.88rem', color: '#0f172a' }}>{p.title}</span>
                         </div>
-                        <span className="dash-project-card__title">{p.title}</span>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#2563eb', background: '#eff6ff', padding: '1px 6px', borderRadius: '4px' }}>
+                            {p.count.toLocaleString()} label{p.count !== 1 ? 's' : ''}
+                          </span>
+                          <span className="dash-project-card__badge" style={{ fontSize: '0.6rem' }}>{p.role.toUpperCase()}</span>
+                        </div>
                       </div>
-                      <div className="dash-project-card__meta">
-                        <span>{p.count} label{p.count !== 1 ? 's' : ''}</span>
-                        <span className="dash-project-card__dot">•</span>
-                        <span className="dash-project-card__badge">{p.role.toUpperCase()}</span>
+
+                      {/* List w/ Description Style Subtitle */}
+                      <div style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.4, margin: '2px 0 2px 24px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                        {p.description ? p.description : `Task workspace containing ${p.count.toLocaleString()} label record${p.count !== 1 ? 's' : ''}.`}
                       </div>
+
+                      {/* Tags Line */}
+                      {p.tags && p.tags.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginLeft: '24px', marginTop: '4px' }}>
+                          {p.tags.map((t, idx) => (
+                            <span key={idx} style={{ fontSize: '0.64rem', color: '#475569', background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                              #{t.trim()}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })
               ) : (
                 <div className="dash-sidebar-empty">
-                  {projects.length > 0 ? 'No tasks match selected tag.' : 'No tasks found.'}
+                  {projects.length > 0 ? 'No tasks match search or filter.' : 'No tasks found.'}
                 </div>
               )}
             </div>

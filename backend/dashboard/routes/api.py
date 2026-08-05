@@ -1365,11 +1365,13 @@ def api_projects():
         projects.append({
             'id': not_grouped.id, 
             'title': not_grouped.title, 
+            'description': not_grouped.description or 'Default saved items workspace.',
+            'created_at': not_grouped.created_at.strftime('%Y-%m-%d %H:%M') if getattr(not_grouped, 'created_at', None) else '',
             'role': 'owner', 
             'count': len(not_grouped.favorites) + len(not_grouped.comparisons), 
             'tags': not_grouped_tags,
             'is_default': True,
-            'is_mutable': False # Favorite project is a permanent workspace and cannot be removed
+            'is_mutable': False
         })
         
     for p in other_owned:
@@ -1383,11 +1385,13 @@ def api_projects():
         projects.append({
             'id': p.id, 
             'title': p.title, 
+            'description': p.description or '',
+            'created_at': p.created_at.strftime('%Y-%m-%d %H:%M') if getattr(p, 'created_at', None) else '',
             'role': 'owner', 
             'count': len(p.favorites) + len(p.comparisons), 
             'tags': p_tags,
             'is_default': False,
-            'is_mutable': True # Non-favorite projects can be removed freely by the owner
+            'is_mutable': True
         })
         
     for p in shared:
@@ -1401,6 +1405,8 @@ def api_projects():
         projects.append({
             'id': p.id, 
             'title': p.title, 
+            'description': p.description or '',
+            'created_at': p.created_at.strftime('%Y-%m-%d %H:%M') if getattr(p, 'created_at', None) else '',
             'role': 'contributor', 
             'count': len(p.favorites) + len(p.comparisons), 
             'tags': p_tags,

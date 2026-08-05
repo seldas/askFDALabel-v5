@@ -33,7 +33,7 @@ from .compiler import (
 
 labelquery_bp = Blueprint('labelquery', __name__)
 
-MAX_LIMIT = 200
+MAX_LIMIT = 3000
 # How far into a match set the UI will page. FDALabel shows the most recent N
 # rather than everything, and bounding the browse window is what keeps paging
 # cheap: the page query only ever sorts and slices, never scrolls past 3000.
