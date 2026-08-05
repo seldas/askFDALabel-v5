@@ -1075,7 +1075,7 @@
   position: sticky;
   left: var(--afl-space-3);
   width: 100%;
-  max-width: 680px;
+  max-width: min(840px, calc(100vw - 40px));
   box-sizing: border-box;
   background: #ffffff;
   border: 1px solid var(--afl-border-strong);
@@ -1137,8 +1137,8 @@
 }
 
 .fdl-label-card__grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--afl-space-3);
 }
 
@@ -1146,7 +1146,7 @@
   background: #f8fafc;
   border: 1px solid var(--afl-border);
   border-radius: var(--afl-radius-md);
-  padding: var(--afl-space-3) var(--afl-space-4);
+  padding: var(--afl-space-3);
 }
 
 .fdl-card-section__head {
@@ -1162,9 +1162,9 @@
 
 .fdl-card-dl {
   display: grid;
-  grid-template-columns: 170px 1fr;
-  row-gap: 6px;
-  column-gap: var(--afl-space-3);
+  grid-template-columns: 135px 1fr;
+  row-gap: 5px;
+  column-gap: var(--afl-space-2);
   font-size: var(--afl-text-xs);
   margin: 0;
   align-items: baseline;
@@ -1183,10 +1183,13 @@
   line-height: 1.4;
 }
 
-@media (max-width: 540px) {
-  .fdl-card-dl {
+@media (max-width: 680px) {
+  .fdl-label-card__grid {
     grid-template-columns: 1fr;
-    row-gap: 2px;
+  }
+
+  .fdl-card-dl {
+    grid-template-columns: 140px 1fr;
   }
 }
 
