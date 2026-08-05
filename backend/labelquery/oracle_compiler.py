@@ -330,11 +330,15 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
     # Formulate Candidate Isolation SQL
     relational_where = ' AND '.join(relational_clauses) if relational_clauses else '1=1'
     
-    p_offset = bag.add(offset)
-    p_limit = bag.add(limit)
+    if limit is not None:
+        p_offset = bag.add(offset)
+        p_limit = bag.add(limit)
+        fetch_clause = f"OFFSET {p_offset} ROWS FETCH NEXT {p_limit} ROWS ONLY"
+    else:
+        fetch_clause = ""
 
     if text_clauses:
-        # Phase 1: Candidate Isolation CTE -> Phase 2: CONTAINS text search -> Phase 3: Paged RLD lookup
+        # Phase 1: Candidate Isolation CTE -> Phase 2: CONTAINS text search -> Phase 3: Total Count & Paged RLD lookup
         text_where = ' AND '.join(text_clauses)
         sql = f"""
         WITH candidate_labels AS (
@@ -353,21 +357,26 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
             INNER JOIN druglabel.SPL_SEC sec ON sec.SPL_ID = c.SPL_ID
             WHERE {text_where}
         ),
+        total_cnt AS (
+            SELECT COUNT(*) AS total_count FROM matched_sections
+        ),
         paged_matched AS (
             SELECT m.*
             FROM matched_sections m
             ORDER BY m.EFF_TIME DESC NULLS LAST
-            OFFSET {p_offset} ROWS FETCH NEXT {p_limit} ROWS ONLY
+            {fetch_clause}
         )
         SELECT p.SET_ID, p.SPL_ID, p.PRODUCT_NAMES, p.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
                p.MANUFACTURER, p.APPR_NUM, p.NDC_CODES, p.EFF_TIME as REVISED_DATE,
                p.MARKET_CATEGORIES, p.DOCUMENT_TYPE, p.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
                p.DOSAGE_FORMS, p.ROUTES, p.EPC,
-               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD
-        FROM paged_matched p
+               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD,
+               t.total_count
+        FROM total_cnt t
+        LEFT JOIN paged_matched p ON 1=1
         """
     else:
-        # Fast Relational Only Query -> Paged RLD lookup
+        # Fast Relational Only Query -> Total Count & Paged RLD lookup
         sql = f"""
         WITH candidate_labels AS (
             SELECT /*+ INLINE NO_MERGE */ s.SPL_ID, s.SET_ID, s.TITLE, s.PRODUCT_NAMES, s.PRODUCT_NORMD_GENERIC_NAMES,
@@ -376,18 +385,23 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
             FROM druglabel.DGV_SUM_RX_SPL s
             WHERE {relational_where}
         ),
+        total_cnt AS (
+            SELECT COUNT(*) AS total_count FROM candidate_labels
+        ),
         paged_candidates AS (
             SELECT c.*
             FROM candidate_labels c
             ORDER BY c.EFF_TIME DESC NULLS LAST
-            OFFSET {p_offset} ROWS FETCH NEXT {p_limit} ROWS ONLY
+            {fetch_clause}
         )
         SELECT p.SET_ID, p.SPL_ID, p.PRODUCT_NAMES, p.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
                p.MANUFACTURER, p.APPR_NUM, p.NDC_CODES, p.EFF_TIME as REVISED_DATE,
                p.MARKET_CATEGORIES, p.DOCUMENT_TYPE, p.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
                p.DOSAGE_FORMS, p.ROUTES, p.EPC,
-               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD
-        FROM paged_candidates p
+               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD,
+               t.total_count
+        FROM total_cnt t
+        LEFT JOIN paged_candidates p ON 1=1
         """
 
     return sql.strip(), bag.params, warnings

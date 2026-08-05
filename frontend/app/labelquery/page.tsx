@@ -123,7 +123,7 @@ function ResultsPage() {
         const res = await fetch('/api/labelquery/export', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query, format, sort: sortState.sort, dir: sortState.dir }),
+          body: JSON.stringify({ query, format, sort: sortState.sort, dir: sortState.dir, target_db: targetDb }),
         });
         if (!res.ok) {
           const json = await res.json().catch(() => ({}));

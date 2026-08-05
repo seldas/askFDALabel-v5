@@ -486,35 +486,49 @@ def execute():
                 cur.close()
 
                 results = []
-                for r in rows:
-                    if isinstance(r, dict):
-                        results.append(r)
+                total = 0
+                if rows:
+                    first_r = rows[0]
+                    if isinstance(first_r, dict):
+                        total = first_r.get('total_count') or first_r.get('TOTAL_COUNT') or 0
                     else:
-                        results.append({
-                            'set_id': r[0],
-                            'spl_id': r[1],
-                            'product_names': r[2],
-                            'generic_names': r[3],
-                            'manufacturer': r[4],
-                            'appr_num': r[5],
-                            'ndc_codes': r[6],
-                            'revised_date': r[7],
-                            'market_categories': r[8],
-                            'doc_type': r[9],
-                            'active_ingredients': r[10],
-                            'dosage_forms': r[11],
-                            'routes': r[12],
-                            'epc': r[13],
-                            'is_rld': bool(r[14]),
-                            'is_rs': False
-                        })
-                total = len(results)
+                        total = first_r[15] if len(first_r) > 15 else 0
+
+                    for r in rows:
+                        set_id_val = r.get('set_id') or r.get('SET_ID') if isinstance(r, dict) else r[0]
+                        if not set_id_val:
+                            continue
+                        if isinstance(r, dict):
+                            results.append(r)
+                        else:
+                            results.append({
+                                'set_id': r[0],
+                                'spl_id': r[1],
+                                'product_names': r[2],
+                                'generic_names': r[3],
+                                'manufacturer': r[4],
+                                'appr_num': r[5],
+                                'ndc_codes': r[6],
+                                'revised_date': r[7],
+                                'market_categories': r[8],
+                                'doc_type': r[9],
+                                'active_ingredients': r[10],
+                                'dosage_forms': r[11],
+                                'routes': r[12],
+                                'epc': r[13],
+                                'is_rld': bool(r[14]),
+                                'is_rs': False
+                            })
+
+                browsable = min(total, BROWSE_CAP)
+                capped = total > BROWSE_CAP
+
                 return jsonify({
                     'results': results,
                     'total': total,
-                    'browsable': min(total, BROWSE_CAP),
+                    'browsable': browsable,
                     'cap': BROWSE_CAP,
-                    'capped': False,
+                    'capped': capped,
                     'limit': limit,
                     'offset': offset,
                     'warnings': warnings,
@@ -634,10 +648,6 @@ def execute():
 # Export
 # ---------------------------------------------------------------------------
 
-# "Download Full Results" means the whole match set, not the visible page, so
-# this is capped separately and much higher than a page.
-EXPORT_CAP = 5000
-
 # (header, row key) in the order FDALabel's own download uses.
 EXPORT_COLUMNS = [
     ('SET ID', 'set_id'),
@@ -661,22 +671,95 @@ EXPORT_COLUMNS = [
 ]
 
 
-def _export_rows(query, sort, direction):
-    where, params, _ = compile_where(
+def _export_rows(query, sort, direction, target_db=None):
+    target_str = str(target_db or '').lower()
+    use_oracle = (target_str in ('oracle', 'fdalabel')) or (target_str != 'local' and FDALabelDBService.is_internal())
+
+    if use_oracle:
+        conn = FDALabelDBService.get_oracle_connection()
+        if not conn:
+            raise RuntimeError('Oracle DB connection failed for export. Please check credentials or host.')
+        try:
+            from .oracle_compiler import compile_oracle_query
+            sql, params, warnings = compile_oracle_query(
+                query,
+                sort=sort,
+                direction=direction,
+                limit=None,
+                offset=0,
+                expand_meddra=_expand_meddra,
+                capabilities=_capabilities()
+            )
+            cur = conn.cursor()
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+            cur.close()
+
+            results = []
+            for r in rows:
+                if isinstance(r, dict):
+                    set_id_val = r.get('set_id') or r.get('SET_ID')
+                    if set_id_val:
+                        results.append(r)
+                else:
+                    if r[0]:
+                        results.append({
+                            'set_id': r[0],
+                            'spl_id': r[1],
+                            'product_names': r[2],
+                            'generic_names': r[3],
+                            'manufacturer': r[4],
+                            'appr_num': r[5],
+                            'ndc_codes': r[6],
+                            'revised_date': r[7],
+                            'market_categories': r[8],
+                            'doc_type': r[9],
+                            'active_ingredients': r[10],
+                            'dosage_forms': r[11],
+                            'routes': r[12],
+                            'epc': r[13],
+                            'is_rld': bool(r[14]),
+                            'is_rs': False,
+                            'active_uniis': '',
+                            'initial_approval_year': ''
+                        })
+            return results
+        finally:
+            conn.close()
+
+    # Postgres / Local mode: full result export without artificial limits
+    relational_where, section_where, params, warnings = compile_where(
         query, expand_meddra=_expand_meddra, capabilities=_capabilities()
     )
-    page_params = dict(params)
-    page_params['_limit'] = EXPORT_CAP
-    return _rows(
-        f"""
-        SELECT {SELECT_COLUMNS}
-        FROM labeling.sum_spl s
-        WHERE {where}
-        ORDER BY {order_by_sql(sort, direction)}
-        LIMIT %(_limit)s
-        """,
-        page_params,
-    )
+    order_by = order_by_sql(sort, direction)
+
+    conn = _pg()
+    try:
+        if section_where:
+            sql = f"""
+            WITH section_candidates AS (
+                SELECT DISTINCT sec.spl_id
+                FROM labeling.spl_sections sec
+                WHERE {section_where}
+            )
+            SELECT {SELECT_COLUMNS}
+            FROM labeling.sum_spl s
+            INNER JOIN section_candidates sc ON sc.spl_id = s.spl_id
+            WHERE {relational_where}
+            ORDER BY {order_by}
+            """
+        else:
+            sql = f"""
+            SELECT {SELECT_COLUMNS}
+            FROM labeling.sum_spl s
+            WHERE {relational_where}
+            ORDER BY {order_by}
+            """
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            return [dict(r) for r in cur.fetchall()]
+    finally:
+        conn.close()
 
 
 def _cell(row, key):
@@ -695,8 +778,10 @@ def export():
     if fmt not in ('csv', 'xlsx'):
         return jsonify({'error': "format must be 'csv' or 'xlsx'"}), 400
 
+    target_db = str(payload.get('target_db') or payload.get('source') or '').lower()
+
     try:
-        rows = _export_rows(payload.get('query') or {}, payload.get('sort'), payload.get('dir'))
+        rows = _export_rows(payload.get('query') or {}, payload.get('sort'), payload.get('dir'), target_db=target_db)
     except QueryCompileError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:
