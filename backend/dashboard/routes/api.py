@@ -10,7 +10,7 @@ import hashlib
 
 from database import (
     db, User, Project, Favorite, FavoriteComparison, Annotation, 
-    LabelAnnotation, ComparisonSummary,
+    LabelAnnotation, ComparisonSummary, UserQueryHistory,
     MeddraPT, MeddraMDHIER, MeddraSOC, MeddraHLT, MeddraLLT,
     ProjectAeReport, ProjectAeReportDetail, AeAiAssessment, SystemTask
 )
@@ -1522,6 +1522,107 @@ def api_my_favorites():
             } for comp in favorite_comparisons],
             'duplicates_removed': False
         })
+
+# --- User Query History Routes ---
+
+@api_bp.route('/query_history', methods=['GET'])
+def get_user_query_history():
+    user_obj = current_user._get_current_object() if current_user.is_authenticated else None
+    if not user_obj:
+        return jsonify({'history': []}), 200
+
+    sort_order = request.args.get('sort', 'desc').lower()
+    query = UserQueryHistory.query.filter_by(user_id=user_obj.id)
+    
+    if sort_order == 'asc':
+        query = query.order_by(UserQueryHistory.timestamp.asc())
+    else:
+        query = query.order_by(UserQueryHistory.timestamp.desc())
+        
+    records = query.all()
+    res = []
+    for r in records:
+        q_json = None
+        if r.query_json:
+            try:
+                q_json = json.loads(r.query_json)
+            except Exception:
+                q_json = None
+        res.append({
+            'id': r.id,
+            'query_title': r.query_title,
+            'query_link': r.query_link,
+            'query_json': q_json,
+            'result_count': r.result_count,
+            'target_db': r.target_db,
+            'timestamp': r.timestamp.isoformat() + 'Z' if r.timestamp else datetime.utcnow().isoformat() + 'Z'
+        })
+    return jsonify({'history': res}), 200
+
+
+@api_bp.route('/query_history', methods=['POST'])
+def save_user_query_history():
+    user_obj = current_user._get_current_object() if current_user.is_authenticated else None
+    if not user_obj:
+        return jsonify({'success': False, 'message': 'User not authenticated'}), 200
+
+    payload = request.get_json(silent=True) or {}
+    query_title = (payload.get('query_title') or 'Search Query').strip()
+    query_link = (payload.get('query_link') or '').strip()
+    query_json = payload.get('query_json')
+    result_count = int(payload.get('result_count') or 0)
+    target_db = (payload.get('target_db') or 'oracle').strip()
+
+    if not query_link:
+        return jsonify({'error': 'query_link is required'}), 400
+
+    q_json_str = json.dumps(query_json) if isinstance(query_json, (dict, list)) else (query_json or '')
+
+    # Deduplicate recent identical searches within 10 seconds
+    recent = UserQueryHistory.query.filter_by(
+        user_id=user_obj.id,
+        query_link=query_link
+    ).order_by(UserQueryHistory.timestamp.desc()).first()
+
+    if recent and (datetime.utcnow() - recent.timestamp).total_seconds() < 10:
+        recent.result_count = result_count
+        recent.timestamp = datetime.utcnow()
+        db.session.commit()
+        return jsonify({'success': True, 'id': recent.id, 'updated': True}), 200
+
+    record = UserQueryHistory(
+        user_id=user_obj.id,
+        query_title=query_title,
+        query_link=query_link,
+        query_json=q_json_str,
+        result_count=result_count,
+        target_db=target_db,
+        timestamp=datetime.utcnow()
+    )
+    db.session.add(record)
+    db.session.commit()
+    return jsonify({'success': True, 'id': record.id}), 201
+
+
+@api_bp.route('/query_history/<int:history_id>', methods=['DELETE'])
+@login_required
+def delete_user_query_history(history_id):
+    user_obj = current_user._get_current_object()
+    record = UserQueryHistory.query.filter_by(id=history_id, user_id=user_obj.id).first()
+    if not record:
+        return jsonify({'error': 'History record not found'}), 404
+    db.session.delete(record)
+    db.session.commit()
+    return jsonify({'success': True}), 200
+
+
+@api_bp.route('/query_history/clear', methods=['DELETE'])
+@login_required
+def clear_user_query_history():
+    user_obj = current_user._get_current_object()
+    UserQueryHistory.query.filter_by(user_id=user_obj.id).delete()
+    db.session.commit()
+    return jsonify({'success': True}), 200
 
 @api_bp.route('/update_favorite_tag', methods=['POST'])
 @login_required

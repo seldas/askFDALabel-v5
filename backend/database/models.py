@@ -77,6 +77,19 @@ class SearchHistory(db.Model):
 
     user = db.relationship('User', backref=db.backref('search_histories', lazy=True, cascade="all, delete-orphan"))
 
+class UserQueryHistory(db.Model):
+    __tablename__ = 'user_query_history'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    query_title = db.Column(db.String(500), nullable=False)
+    query_link = db.Column(db.Text, nullable=False)
+    query_json = db.Column(db.Text, nullable=True) # JSON string of query structure
+    result_count = db.Column(db.Integer, default=0)
+    target_db = db.Column(db.String(50), default='oracle')
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('query_histories', lazy=True, cascade="all, delete-orphan"))
+
 class Favorite(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)

@@ -20,11 +20,45 @@ import {
   type ResultView,
   type SortState,
 } from '../querybuilder/ResultsTable';
-import { QUERY_PARAM, decodeQuery } from '../querybuilder/queryUrl';
+import { QUERY_PARAM, decodeQuery, resultsPath } from '../querybuilder/queryUrl';
 import type { WireQuery } from '../querybuilder/types';
 import '../querybuilder/querybuilder.css';
 
 const PAGE_SIZE = 50;
+
+function summarizeQuery(query: WireQuery | null): string {
+  if (!query || !query.groups || query.groups.length === 0) return 'All Labels';
+  const parts: string[] = [];
+  for (const group of query.groups) {
+    if (!group.criteria) continue;
+    for (const c of group.criteria as any[]) {
+      if (c.type === 'fullText' && c.text) {
+        parts.push(`Full Text: "${c.text}"`);
+      } else if (c.type === 'productName' && c.text) {
+        parts.push(`Product Name: "${c.text}"`);
+      } else if (c.type === 'labelingSection' && c.text) {
+        parts.push(`Section (${(c.sections || []).join(', ') || 'All'}): "${c.text}"`);
+      } else if (c.type === 'pharmClass' && (c.terms || c.text)) {
+        const termsStr = Array.isArray(c.terms) ? c.terms.join(', ') : c.text;
+        parts.push(`Pharm Class: ${termsStr}`);
+      } else if (c.type === 'identifier' && c.text) {
+        parts.push(`Identifier: ${c.text}`);
+      } else if (c.type === 'meddra' && (c.terms || c.text)) {
+        const termsStr = Array.isArray(c.terms) ? c.terms.join(', ') : c.text;
+        parts.push(`MedDRA (${c.level || 'PT'}): ${termsStr}`);
+      } else if (c.type === 'labelingType' && c.values?.length) {
+        parts.push(`Label Type: ${c.values.join(', ')}`);
+      } else if (c.type === 'applicationType' && c.values?.length) {
+        parts.push(`App Type: ${c.values.join(', ')}`);
+      } else if (c.type === 'route' && c.values?.length) {
+        parts.push(`Route: ${c.values.join(', ')}`);
+      } else if (c.type === 'marketStatus' && c.values?.length) {
+        parts.push(`Market Status: ${c.values.join(', ')}`);
+      }
+    }
+  }
+  return parts.length > 0 ? parts.join('; ') : 'Label Query';
+}
 
 function ResultsPage() {
   const searchParams = useSearchParams();
@@ -88,6 +122,24 @@ function ResultsPage() {
         }
         setData(json as ResultSet);
         setErrorQuery(null);
+
+        // Record search in user query history on initial search execution (offset === 0)
+        if (offset === 0 && query) {
+          const currentLink = typeof window !== 'undefined' 
+            ? (window.location.pathname + window.location.search) 
+            : resultsPath(query, targetDb as any);
+          fetch('/api/dashboard/query_history', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query_title: summarizeQuery(query),
+              query_link: currentLink,
+              query_json: query,
+              result_count: json.total || 0,
+              target_db: targetDb
+            })
+          }).catch(() => {});
+        }
       } catch (err: any) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : String(err));

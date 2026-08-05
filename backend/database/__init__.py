@@ -7,6 +7,6 @@ from .models import (
     ProjectAeReport, ProjectAeReportDetail,
     AeAiAssessment, OrangeBook, SystemTask,
     DrugLabel, LabelSection, ActiveIngredientMap, LabelMeddraProfile, TokenUsage,
-    SearchHistory,
+    SearchHistory, UserQueryHistory,
     ExaminePrompt, ExamineHistory
 )

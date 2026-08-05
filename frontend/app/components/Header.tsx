@@ -497,6 +497,10 @@ export default function Header({
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                       My Dashboard
                     </Link>
+                    <Link href="/dashboard/query_history" className="dropdown-item" onClick={() => setActiveDropdown(null)} style={{ color: '#4f46e5', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                      Search & Query History
+                    </Link>
                     <Link href="/management" className="dropdown-item" style={{ color: '#6366f1', fontWeight: 700 }}>
                       {session?.is_admin ? 'System Management' : 'Settings & Preferences'}
                     </Link>

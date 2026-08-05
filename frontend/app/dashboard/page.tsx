@@ -537,8 +537,32 @@ function DashboardContent() {
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                 </div>
                 <h2 className="dash-sidebar-heading">Tasks</h2>
-                <span className="dash-sidebar-count-chip">{projects.length} {projects.length === 1 ? 'task' : 'tasks'}</span>
               </div>
+            </div>
+
+            <div className="dash-import-block" style={{ marginBottom: '8px' }}>
+              <Link
+                href="/dashboard/query_history"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  background: '#eef2ff',
+                  color: '#4f46e5',
+                  fontWeight: 700,
+                  fontSize: '0.82rem',
+                  textDecoration: 'none',
+                  border: '1px solid #c7d2fe',
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span>Search & Query History</span>
+              </Link>
             </div>
 
             <div className="dash-import-block">
