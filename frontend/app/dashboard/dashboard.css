@@ -12,9 +12,11 @@
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  height: 100vh;
+  /* The app header is sticky above this, so a full 100vh starting below it hangs
+     off the bottom of the screen — which put the task pager out of reach. */
+  height: calc(100vh - var(--afl-header-height));
   position: sticky;
-  top: 0;
+  top: var(--afl-header-height);
   box-shadow: 4px 0 24px rgba(15, 23, 42, 0.02);
 }
 
@@ -189,6 +191,35 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   position: relative;
   overflow: hidden;
+  /* A card sizes to its content and never gets squeezed by its siblings —
+     without this the flex column shrinks every card as the list grows, and the
+     description is the first thing to disappear. */
+  flex-shrink: 0;
+}
+
+/* Task list pager */
+.dash-pager-btn {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.dash-pager-btn:hover:not(:disabled) {
+  border-color: #2563eb;
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.dash-pager-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .dash-project-card:hover {

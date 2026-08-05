@@ -94,6 +94,9 @@ function DashboardContent() {
   const [tableTagFilter, setTableTagFilter] = useState<string>('All');
   const [taskSearchQuery, setTaskSearchQuery] = useState<string>('');
   const [taskSortMode, setTaskSortMode] = useState<'newest' | 'name_asc' | 'name_desc' | 'count_desc'>('newest');
+  // Sidebar pages five tasks at a time so each card keeps its full height —
+  // an unbounded list compressed the cards until the descriptions clipped.
+  const [taskPage, setTaskPage] = useState<number>(1);
 
   // Multi-select for comparison
   const [selectedLabels, setSelectedLabels] = useState<Favorite[]>([]);
@@ -227,6 +230,22 @@ function DashboardContent() {
 
     return list;
   }, [projects, sidebarTagFilter, taskSearchQuery, taskSortMode]);
+
+  const TASKS_PER_PAGE = 5;
+  const taskPageCount = Math.max(1, Math.ceil(filteredProjects.length / TASKS_PER_PAGE));
+  // Clamp rather than reset: filtering or deleting can shrink the list under the
+  // current page, and a page past the end would render empty.
+  const currentTaskPage = Math.min(taskPage, taskPageCount);
+  const pagedProjects = useMemo(
+    () => filteredProjects.slice((currentTaskPage - 1) * TASKS_PER_PAGE, currentTaskPage * TASKS_PER_PAGE),
+    [filteredProjects, currentTaskPage],
+  );
+
+  // A new search or sort should show its first page, not whichever page the
+  // previous result set was on.
+  useEffect(() => {
+    setTaskPage(1);
+  }, [taskSearchQuery, sidebarTagFilter, taskSortMode]);
 
   const allProjectsTags = useMemo(() => {
     const tagsSet = new Set<string>();
@@ -819,12 +838,12 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* Overflow Task List */}
-            <div className="workspace-list" style={{ overflowY: 'auto', flex: 1, padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {/* Overflow Task List — five per page, cards at natural height */}
+            <div className="workspace-list" style={{ overflowY: 'auto', flex: 1, padding: '0 20px 12px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {projectsLoading ? (
                 <div style={{ textAlign: 'center', padding: '2rem' }}><div className="loader" style={{ width: '28px', height: '28px', margin: '0 auto' }}></div></div>
-              ) : filteredProjects.length > 0 ? (
-                filteredProjects.map(p => {
+              ) : pagedProjects.length > 0 ? (
+                pagedProjects.map(p => {
                   const isActive = activeProject?.id === p.id;
                   return (
                     <div
@@ -840,7 +859,11 @@ function DashboardContent() {
                         }
                       }}
                       className={cx('dash-project-card', isActive && 'active')}
-                      style={{ padding: '12px 14px', borderRadius: '10px' }}
+                      // flexShrink: 0 is what keeps the description readable. As a
+                      // flex child in a column, the card would otherwise be
+                      // compressed once the list outgrew the sidebar, clipping the
+                      // description line before the scrollbar ever appeared.
+                      style={{ padding: '12px 14px', borderRadius: '10px', flexShrink: 0 }}
                     >
                       {/* Header Row: Icon, Title, Count, Badge */}
                       <div className="dash-project-card__header" style={{ marginBottom: '4px', justifyContent: 'space-between' }}>
@@ -887,6 +910,32 @@ function DashboardContent() {
                 </div>
               )}
             </div>
+
+            {/* Pager — only earns its space once there is a second page */}
+            {!projectsLoading && taskPageCount > 1 && (
+              <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '10px 20px 16px 20px', borderTop: '1px solid #e2e8f0' }}>
+                <button
+                  type="button"
+                  onClick={() => setTaskPage(p => Math.max(1, p - 1))}
+                  disabled={currentTaskPage <= 1}
+                  className="dash-pager-btn"
+                >
+                  ← Prev
+                </button>
+                <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>
+                  Page {currentTaskPage} of {taskPageCount}
+                  <span style={{ color: '#94a3b8', fontWeight: 500 }}> · {filteredProjects.length} task{filteredProjects.length !== 1 ? 's' : ''}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setTaskPage(p => Math.min(taskPageCount, p + 1))}
+                  disabled={currentTaskPage >= taskPageCount}
+                  className="dash-pager-btn"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
           </aside>
 
           {/* Main: Active Workspace or Setup */}
