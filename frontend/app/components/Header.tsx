@@ -309,7 +309,7 @@ export default function Header({
                         gap: '10px',
                         padding: '8px 12px',
                       }}
-                      title="Disabled — Requires ELSA_API_NAME configured in .env for internal FDA network access"
+                      title="Disabled — Available on internal FDA network only"
                     >
                       <span className="hp-dropdown-icon" style={{ filter: 'grayscale(1)' }}>
                         <ToolIcon id={tool.iconId} size={18} />

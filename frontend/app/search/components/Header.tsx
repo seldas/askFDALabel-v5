@@ -111,7 +111,7 @@ const Header: React.FC = () => {
               </>
             ) : (
               <>
-                <div className="hp-dropdown-item is-disabled" style={{ opacity: 0.45, cursor: 'not-allowed', userSelect: 'none' }} title="Disabled — Requires ELSA_API_NAME configured in .env for internal FDA network access">
+                <div className="hp-dropdown-item is-disabled" style={{ opacity: 0.45, cursor: 'not-allowed', userSelect: 'none' }} title="Disabled — Available on internal FDA network only">
                   <span className="hp-dropdown-icon" style={{ filter: 'grayscale(1)' }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"></path><path d="M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4"></path><path d="M5 21V10.85"></path><path d="M19 21V10.85"></path><path d="M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4"></path></svg>
                   </span>
@@ -120,7 +120,7 @@ const Header: React.FC = () => {
                     <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600 }}>Disabled (Internal Only)</div>
                   </div>
                 </div>
-                <div className="hp-dropdown-item is-disabled" style={{ opacity: 0.45, cursor: 'not-allowed', userSelect: 'none' }} title="Disabled — Requires ELSA_API_NAME configured in .env for internal FDA network access">
+                <div className="hp-dropdown-item is-disabled" style={{ opacity: 0.45, cursor: 'not-allowed', userSelect: 'none' }} title="Disabled — Available on internal FDA network only">
                   <span className="hp-dropdown-icon" style={{ filter: 'grayscale(1)' }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                   </span>

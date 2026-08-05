@@ -181,18 +181,17 @@ export default function HomePage() {
             type="button"
             className={`fdl-target-db-pill ${targetDb === 'local' ? 'active' : ''}`}
             onClick={() => setTargetDb('local')}
-            title="Local PostgreSQL import"
+            title="Local DB — Search local structured drug and SPL records"
           >
             {TARGET_DB_LABELS.local}
           </button>
-          {/* Human and All are the same Oracle database; they differ only in
-            * which summary table the query is based on. */}
+          {/* Human and All are the same Oracle database; they differ only in scope */}
           <button
             type="button"
             className={`fdl-target-db-pill ${targetDb === 'oracle' ? 'active' : ''}`}
             onClick={() => oracleAvailable && setTargetDb('oracle')}
             disabled={!oracleAvailable}
-            title="Oracle FDALabel, CDER/CBER scope — human labeling only (DGV_SUM_RX_SPL). Animal labeling is not in this table."
+            title="CDER-CBER ver. — Search human prescription and OTC drug labeling"
           >
             {TARGET_DB_LABELS.oracle}
           </button>
@@ -201,7 +200,7 @@ export default function HomePage() {
             className={`fdl-target-db-pill ${targetDb === 'oracle_all' ? 'active' : ''}`}
             onClick={() => oracleAvailable && setTargetDb('oracle_all')}
             disabled={!oracleAvailable}
-            title="Oracle FDALabel — all labeling, including animal and non-Rx (SUM_SPL)"
+            title="FDA ver. — Search all drug labeling including human and animal records"
           >
             {TARGET_DB_LABELS.oracle_all}
           </button>
