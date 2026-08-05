@@ -360,37 +360,29 @@ TITLE_TO_LOINCS = {
 
 
 def _sections_exists(tsquery_sql, section_filters, bag):
-    """EXISTS over spl_sections, optionally narrowed to specific sections."""
+    """EXISTS over spl_sections, narrowed strictly by indexed LOINC codes and TSVECTOR search."""
     conditions = ['sec.spl_id = s.spl_id']
     if tsquery_sql:
         conditions.append(f'sec.search_vector @@ {tsquery_sql}')
     if section_filters:
         loincs_set = set()
-        titles_set = set()
         for f in section_filters:
             if re.match(r'^[\d.\-]+$', f):
                 loincs_set.add(f)
-                if f in LOINC_TO_TITLES:
-                    for t in LOINC_TO_TITLES[f]:
-                        titles_set.add(t)
             else:
                 clean = re.sub(r'^[0-9]+(\.[0-9]+)*\s*', '', f).strip().upper()
-                if clean:
-                    titles_set.add(f'%{clean}%')
-                    if clean in TITLE_TO_LOINCS:
-                        for l in TITLE_TO_LOINCS[clean]:
-                            loincs_set.add(l)
-                titles_set.add(f'%{f}%')
+                if clean in TITLE_TO_LOINCS:
+                    for l in TITLE_TO_LOINCS[clean]:
+                        loincs_set.add(l)
+                else:
+                    for key, l_list in TITLE_TO_LOINCS.items():
+                        if clean and (clean in key or key in clean):
+                            for l in l_list:
+                                loincs_set.add(l)
 
         loincs = list(loincs_set)
-        titles = list(titles_set)
-        alts = []
         if loincs:
-            alts.append(f'sec.loinc_code = ANY({bag.add(loincs)})')
-        if titles:
-            alts.append(f'sec.title ILIKE ANY({bag.add(titles)})')
-        if alts:
-            conditions.append('(' + ' OR '.join(alts) + ')')
+            conditions.append(f'sec.loinc_code = ANY({bag.add(loincs)})')
     return (
         'EXISTS (SELECT 1 FROM labeling.spl_sections sec WHERE '
         + ' AND '.join(conditions)

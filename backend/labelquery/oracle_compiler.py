@@ -10,6 +10,7 @@ Enforces a 5-tier relational candidate isolation strategy:
 """
 
 import re
+from .compiler import TITLE_TO_LOINCS
 
 _PRODUCT_NAME_COLUMNS = {
     'trade': ['p.NAME'],
@@ -279,9 +280,21 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
                     p = bag.add(text_query)
                     clause = f'CONTAINS(sec.CONTENT_XML, {p}, 1) > 0'
                     if sections:
-                        sec_loincs = [s for s in sections if s not in ('SPLTITLE', '43683-2')]
-                        if sec_loincs:
-                            loinc_preds = [f'sec.LOINC_CODE = {bag.add(sec)}' for sec in sec_loincs]
+                        sec_loincs_set = set()
+                        for s in sections:
+                            if s in ('SPLTITLE', '43683-2'):
+                                continue
+                            if re.match(r'^[\d.\-]+$', s):
+                                sec_loincs_set.add(s)
+                            else:
+                                clean = re.sub(r'^[0-9]+(\.[0-9]+)*\s*', '', s).strip().upper()
+                                if clean in TITLE_TO_LOINCS:
+                                    for l in TITLE_TO_LOINCS[clean]:
+                                        sec_loincs_set.add(l)
+                                else:
+                                    sec_loincs_set.add(s)
+                        if sec_loincs_set:
+                            loinc_preds = [f'sec.LOINC_CODE = {bag.add(l)}' for l in sec_loincs_set]
                             clause += f' AND ({" OR ".join(loinc_preds)})'
                     group_text.append(clause)
             elif ctype == 'labelingType':
