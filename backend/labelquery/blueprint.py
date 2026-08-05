@@ -518,9 +518,20 @@ def execute():
                     'limit': limit,
                     'offset': offset,
                     'warnings': warnings,
+                    'query': sql,
+                    'sql': sql,
                 })
             except Exception as e:
-                return jsonify({'error': f'Oracle query execution failed: {e}'}), 500
+                formatted_sql = sql
+                if params and isinstance(params, dict):
+                    param_lines = "\n".join([f"-- :{k} = {repr(v)}" for k, v in params.items()])
+                    formatted_sql = f"{param_lines}\n\n{sql}" if sql else ""
+                return jsonify({
+                    'error': f'Oracle query execution failed: {e}',
+                    'query': formatted_sql or sql,
+                    'sql': formatted_sql or sql,
+                    'params': params
+                }), 500
             finally:
                 conn.close()
 
@@ -604,7 +615,16 @@ def execute():
             'warnings': warnings,
         })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        formatted_sql = sql if 'sql' in locals() else None
+        page_params_val = page_params if 'page_params' in locals() else None
+        if formatted_sql and page_params_val and isinstance(page_params_val, dict):
+            param_lines = "\n".join([f"-- %({k})s = {repr(v)}" for k, v in page_params_val.items()])
+            formatted_sql = f"{param_lines}\n\n{formatted_sql}"
+        return jsonify({
+            'error': str(e),
+            'query': formatted_sql,
+            'sql': formatted_sql
+        }), 500
     finally:
         if conn:
             conn.close()

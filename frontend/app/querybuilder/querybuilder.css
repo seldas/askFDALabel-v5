@@ -908,13 +908,49 @@
   font-weight: var(--afl-weight-bold);
 }
 
-.fdl-error {
+.fdl-error-box {
   margin: var(--afl-space-4) 0 0;
+}
+
+.fdl-error {
+  margin: 0;
   padding: var(--afl-space-3) var(--afl-space-4);
   background: var(--afl-danger-50);
   color: var(--afl-danger-700);
   border-radius: var(--afl-radius-md);
   font-size: var(--afl-text-md);
+}
+
+.fdl-error-query {
+  margin-top: var(--afl-space-3);
+  padding: var(--afl-space-3) var(--afl-space-4);
+  background: #181825;
+  color: #cdd6f4;
+  border-radius: var(--afl-radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: var(--afl-text-xs);
+  overflow-x: auto;
+}
+
+.fdl-error-query__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--afl-space-2);
+  padding-bottom: var(--afl-space-2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: var(--afl-weight-bold);
+  color: #a6adc8;
+}
+
+.fdl-error-query__code {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.5;
 }
 
 @media (max-width: 720px) {

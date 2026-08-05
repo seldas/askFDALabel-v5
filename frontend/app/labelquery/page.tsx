@@ -36,6 +36,7 @@ function ResultsPage() {
   const [data, setData] = useState<ResultSet | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorQuery, setErrorQuery] = useState<string | null>(null);
   const [view, setView] = useState<ResultView>('basic');
   const [offset, setOffset] = useState(0);
   const [sortState, setSortState] = useState<SortState>({ sort: 'revised_date', dir: 'desc' });
@@ -55,12 +56,14 @@ function ResultsPage() {
           ? 'This results link is not readable. Run the search again from the query builder.'
           : 'No query was provided.',
       );
+      setErrorQuery(null);
       return;
     }
 
     let cancelled = false;
     setBusy(true);
     setError(null);
+    setErrorQuery(null);
 
     (async () => {
       try {
@@ -78,11 +81,17 @@ function ResultsPage() {
         });
         const json = await res.json();
         if (cancelled) return;
-        if (!res.ok) throw new Error(json.error || `Search failed (${res.status})`);
+        if (!res.ok) {
+          const errObj = new Error(json.error || `Search failed (${res.status})`);
+          (errObj as any).query = json.query || json.sql || null;
+          throw errObj;
+        }
         setData(json as ResultSet);
-      } catch (err) {
+        setErrorQuery(null);
+      } catch (err: any) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : String(err));
+          setErrorQuery(err?.query || null);
           setData(null);
         }
       } finally {
@@ -221,7 +230,29 @@ function ResultsPage() {
           </div>
         </div>
 
-        {error ? <p className="fdl-error">{error}</p> : null}
+        {error ? (
+          <div className="fdl-error-box">
+            <p className="fdl-error">{error}</p>
+            {errorQuery ? (
+              <div className="fdl-error-query">
+                <div className="fdl-error-query__header">
+                  <span>Processed SQL Query:</span>
+                  <button
+                    type="button"
+                    className="fdl-link"
+                    style={{ color: '#a6adc8' }}
+                    onClick={() => {
+                      navigator.clipboard.writeText(errorQuery);
+                    }}
+                  >
+                    Copy Query
+                  </button>
+                </div>
+                <pre className="fdl-error-query__code"><code>{errorQuery}</code></pre>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {data?.warnings?.length ? (
           <ul className="fdl-results__warnings">
