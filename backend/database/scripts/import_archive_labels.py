@@ -239,9 +239,9 @@ def parse_spl_xml(xml_path):
 
 def load_orange_book():
     ob_dict = {}
-    ob_path = repo_root / 'data' / 'downloads' / 'OrangeBook' / 'EOB_Latest' / 'products.txt'
+    ob_path = '/data/downloads/OrangeBook/EOB_Latest/products.txt'
 
-    if ob_path.exists():
+    if ob_path:
         try:
             with open(ob_path, 'r', encoding='latin-1') as f:
                 f.readline()
