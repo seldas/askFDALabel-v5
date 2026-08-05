@@ -301,8 +301,7 @@ export function CriterionCard({
               </div>
             </div>
             <p className="fdl-note">
-              Terms above the Preferred Term level are expanded to their PTs before the labeling
-              text is searched.
+              Terms at or above the Preferred Term level (PT, HLT, HLGT, SOC) are expanded to their Lowest Level Terms (LLTs) when querying labeling occurrences.
             </p>
           </>
         );
