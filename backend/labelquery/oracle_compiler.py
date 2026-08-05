@@ -512,8 +512,11 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
     bag = OracleParamBag()
     warnings = []
 
-    relational_clauses = []
-    text_clauses = []
+    # One boolean expression per group, OR-ed at the end.
+    group_exprs = []
+    # Each text criterion becomes its own CTE of matching SPL_IDs, referenced
+    # from the group expression by an IN. See the assembly below for why.
+    text_ctes = []
     # Oracle requires every CONTAINS in a statement to carry a distinct label;
     # reusing one raises ORA-29900. Two full-text criteria is enough to hit it.
     contains_label = 0
@@ -596,14 +599,27 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
             else:
                 warnings.append(f'Unsupported criterion "{ctype}" was ignored.')
 
-        if group_relational:
-            relational_clauses.append('(' + ' AND '.join(group_relational) + ')')
-        if group_text:
-            text_clauses.append('(' + ' AND '.join(group_text) + ')')
+        # Each text criterion gets its own CTE and its own membership test, so
+        # two of them in one group are satisfied independently -- a label whose
+        # Boxed Warning says one thing and whose Adverse Reactions says another
+        # matches. Sharing one `sec` row would have required both in the *same*
+        # section, and would also have leaked the first criterion's LOINC filter
+        # onto the second.
+        group_preds = list(group_relational)
+        for clause in group_text:
+            name = f'text_{len(text_ctes)}'
+            text_ctes.append((name, clause))
+            group_preds.append(f's.SPL_ID IN (SELECT SPL_ID FROM {name})')
 
-    # Formulate Candidate Isolation SQL
-    relational_where = ' AND '.join(relational_clauses) if relational_clauses else '1=1'
-    
+        if group_preds:
+            group_exprs.append('(' + ' AND '.join(group_preds) + ')')
+
+    # Groups are alternatives -- the panel draws "OR" between them. They used to
+    # be AND-ed, and the relational and text halves were AND-ed independently of
+    # each other, so `(R1 AND T1) OR (R2 AND T2)` came out as
+    # `R1 AND R2 AND T1 AND T2`.
+    where_sql = ' OR '.join(group_exprs) if group_exprs else '1=1'
+
     if limit is not None:
         p_offset = bag.add(offset)
         p_limit = bag.add(limit)
@@ -632,73 +648,49 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
     sort_dir = 'ASC' if str(direction).lower() == 'asc' else 'DESC'
     order_clause = f"ORDER BY {sort_column_name} {sort_dir} NULLS LAST"
 
-    # SPL_ID is carried through every CTE because it is the only key the detail
-    # tables share with the summary rollup; SPL_GUID exists on DGV_SUM_RX_SPL and
-    # four sibling rollups, and on nothing else. It is projected as SPL_ID at the
-    # very end because the application's "spl_id" is the GUID.
-    # MATERIALIZE only pays for itself in the text branch, where candidate_labels
-    # is read twice. The relational-only branch reads it once, so forcing a temp
-    # table write there would just add a round trip through TEMP.
-    cte_hint = '/*+ MATERIALIZE */ ' if text_clauses else ''
-    candidate_cte = f"""SELECT {cte_hint}s.SPL_ID, s.SPL_GUID, s.SET_ID, s.TITLE, s.PRODUCT_NAMES,
+    # Each text criterion is resolved once, on its own, into a set of SPL_IDs.
+    #
+    # MATERIALIZE matters here: it forces the CTX domain index on CONTENT_XML to
+    # drive its own scan exactly once, independent of the candidate set. The
+    # alternative -- a correlated EXISTS against SPL_SEC -- would be a full scan
+    # per candidate row, because SPL_SEC carries no index on SPL_ID (only
+    # PK_SPLSEC on ID). Membership is then a hash semi-join against the
+    # materialized set.
+    #
+    # Only SPL_ID is selected. Deduplicating fifteen VARCHAR2(4000) columns, as
+    # this once did, sorts ~60KB rows to remove duplicates a single NUMBER
+    # identifies just as well.
+    text_cte_sql = ''.join(
+        f"""{name} AS (
+            SELECT /*+ MATERIALIZE */ DISTINCT sec.SPL_ID
+            FROM druglabel.SPL_SEC sec
+            WHERE {clause}
+        ),
+        """
+        for name, clause in text_ctes
+    )
+
+    # SPL_ID is carried through because it is the only key the detail tables
+    # share with the summary rollup; SPL_GUID exists on DGV_SUM_RX_SPL and four
+    # sibling rollups, and on nothing else. It is projected as SPL_ID at the very
+    # end because the application's "spl_id" is the GUID.
+    sql = f"""
+        WITH {text_cte_sql}matched AS (
+            SELECT s.SPL_ID, s.SPL_GUID, s.SET_ID, s.TITLE, s.PRODUCT_NAMES,
                    s.PRODUCT_NORMD_GENERIC_NAMES, s.AUTHOR_ORG_NORMD_NAME as MANUFACTURER, s.APPR_NUM,
                    s.NDC_CODES, s.EFF_TIME, s.MARKET_CATEGORIES, s.DOCUMENT_TYPE, s.ACT_INGR_NAMES,
-                   s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC, s.ACT_INGR_UNIIS
+                   s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC, s.ACT_INGR_UNIIS,
+                   COUNT(*) OVER () AS TOTAL_COUNT
             FROM druglabel.DGV_SUM_RX_SPL s
-            WHERE {relational_where}"""
-
-    select_list = """SELECT p.SET_ID, p.SPL_GUID as SPL_ID, p.PRODUCT_NAMES, p.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
+            WHERE {where_sql}
+        )
+        SELECT p.SET_ID, p.SPL_GUID as SPL_ID, p.PRODUCT_NAMES, p.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
                p.MANUFACTURER, p.APPR_NUM, p.NDC_CODES, p.EFF_TIME as REVISED_DATE,
                p.MARKET_CATEGORIES, p.DOCUMENT_TYPE, p.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
                p.DOSAGE_FORMS, p.ROUTES, p.EPC,
                (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD,
                p.TOTAL_COUNT,
-               p.ACT_INGR_UNIIS as ACTIVE_UNIIS"""
-
-    if text_clauses:
-        # Phase 1: relational candidate isolation -> Phase 2: Oracle Text match -> Phase 3: page.
-        #
-        # SPL_SEC carries no index on SPL_ID (only PK_SPLSEC on ID), so a
-        # candidate-driven nested loop full-scans the largest table in the
-        # database once per candidate row. The CTX index on CONTENT_XML has to
-        # drive instead, hashing back to the candidates -- hence LEADING(sec c).
-        #
-        # Only SPL_ID is deduplicated. The previous DISTINCT spanned fifteen
-        # VARCHAR2(4000) columns, sorting ~60KB rows to remove duplicates that a
-        # single NUMBER identifies just as well.
-        text_where = ' AND '.join(text_clauses)
-        sql = f"""
-        WITH candidate_labels AS (
-            {candidate_cte}
-        ),
-        matched_ids AS (
-            SELECT /*+ LEADING(sec c) USE_HASH(c) */ DISTINCT sec.SPL_ID
-            FROM druglabel.SPL_SEC sec
-            INNER JOIN candidate_labels c ON c.SPL_ID = sec.SPL_ID
-            WHERE {text_where}
-        ),
-        matched AS (
-            SELECT c.*, COUNT(*) OVER () AS TOTAL_COUNT
-            FROM candidate_labels c
-            INNER JOIN matched_ids m ON m.SPL_ID = c.SPL_ID
-        )
-        {select_list}
-        FROM matched p
-        {order_clause}
-        {fetch_clause}
-        """
-    else:
-        # Fast relational-only query. COUNT(*) OVER () totals the match set in the
-        # same pass that produces the page, rather than building it twice.
-        sql = f"""
-        WITH candidate_labels AS (
-            {candidate_cte}
-        ),
-        matched AS (
-            SELECT c.*, COUNT(*) OVER () AS TOTAL_COUNT
-            FROM candidate_labels c
-        )
-        {select_list}
+               p.ACT_INGR_UNIIS as ACTIVE_UNIIS
         FROM matched p
         {order_clause}
         {fetch_clause}

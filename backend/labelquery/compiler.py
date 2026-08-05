@@ -946,6 +946,36 @@ def _has_virtual_section(query):
     return False
 
 
+def _has_multi_section_group(query, capabilities):
+    """
+    Whether any group holds two or more criteria that read section text.
+
+    Those cannot share the section CTE. Its predicates all apply to one
+    ``spl_sections`` row, so two criteria in one group would have to be
+    satisfied by the *same* section -- and the first one's LOINC filter would
+    narrow the second as well. The intent is per-label: a boxed warning
+    mentioning one thing and an adverse reactions section mentioning another is
+    a match. Only the inline form, one correlated EXISTS per criterion, says
+    that.
+
+    fullText drops out of the count when the document-level vector is available,
+    since it then compiles to a relational predicate and never touches the CTE.
+    """
+    fts = bool((capabilities or {}).get('full_fts'))
+    for group in (query.get('groups') or []):
+        n = 0
+        for criterion in (group.get('criteria') or []):
+            ctype = criterion.get('type')
+            if ctype not in SECTION_CRITERION_TYPES:
+                continue
+            if ctype == 'fullText' and fts:
+                continue
+            n += 1
+            if n > 1:
+                return True
+    return False
+
+
 def _compile_groups(query, bag, warnings, expand_meddra, capabilities, inline_sections):
     """
     Compiles each group to ``(relational_sql, section_sql)``, either of which may
@@ -1027,7 +1057,7 @@ def compile_where(query, expand_meddra=None, capabilities=None):
 
     bag = _ParamBag()
     warnings = []
-    inline_sections = _has_virtual_section(query)
+    inline_sections = _has_virtual_section(query) or _has_multi_section_group(query, capabilities)
     compiled = _compile_groups(
         query, bag, warnings, expand_meddra, capabilities, inline_sections
     )
