@@ -202,7 +202,7 @@ export default function HomePage() {
 
         {actionBar('top')}
 
-        <QueryPanel query={query} onChange={setQuery} options={options} />
+        <QueryPanel query={query} onChange={setQuery} options={options} targetDb={targetDb} />
 
         {actionBar('bottom')}
 

@@ -11,7 +11,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AutoCompleteInput, Chips, ListAdder, type Option, QuickPicks, Select, TokenInput } from './controls';
-import { CRITERION_DEFS, type Criterion, type CriterionValue } from './types';
+import {
+  CRITERION_DEFS,
+  type Criterion,
+  type CriterionValue,
+  type TargetDb,
+  unsupportedReason,
+} from './types';
 
 export interface OptionLists {
   labelingTypes: Option[];
@@ -56,10 +62,14 @@ export function CriterionCard({
   onChange: (value: CriterionValue) => void;
   onRemove: () => void;
   options: OptionLists;
-  targetDb?: 'local' | 'oracle';
+  targetDb?: TargetDb;
 }) {
   const def = CRITERION_DEFS[criterion.type];
   const v = criterion.value as Record<string, any>;
+
+  /* One banner on the frame, so every card reports unavailability the same
+   * way instead of each body inventing its own note. */
+  const unavailable = unsupportedReason(criterion.type, targetDb);
 
   const [hierarchies, setHierarchies] = useState<Record<string, string>>({});
 
@@ -387,12 +397,6 @@ export function CriterionCard({
               onRemove={(value) => set({ values: values.filter((x: string) => x !== value) })}
               labelFor={(value) => def.quickPicks?.find((p) => p.value === value)?.label || value}
             />
-            {targetDb !== 'oracle' ? (
-              <p className="fdl-note">
-                DEA schedule is only available against the FDALabel Oracle database. This criterion
-                will be ignored for a local search.
-              </p>
-            ) : null}
           </>
         );
 
@@ -421,9 +425,8 @@ export function CriterionCard({
             <p className="fdl-note">
               The active moiety is the therapeutically active part of the molecule, so a search for
               amphetamine also returns its salts — which an active ingredient search does not.
-              {targetDb !== 'oracle'
-                ? ' Only available against the FDALabel Oracle database; ignored for a local search.'
-                : ' "is exactly" and "starts with" use an index; "contains" does not.'}
+              &ldquo;is exactly&rdquo; and &ldquo;starts with&rdquo; use an index; &ldquo;contains&rdquo;
+              does not.
             </p>
           </>
         );
@@ -541,6 +544,11 @@ export function CriterionCard({
         ×
       </button>
       <h2 className="fdl-card__title">{def.title}</h2>
+      {unavailable ? (
+        <p className="fdl-note fdl-note--warn" role="status">
+          {unavailable}
+        </p>
+      ) : null}
       <div className="fdl-card__body">{body}</div>
     </div>
   );

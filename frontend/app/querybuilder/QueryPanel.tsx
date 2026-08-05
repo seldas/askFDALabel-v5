@@ -15,7 +15,9 @@ import {
   type LabelQuery,
   makeCriterion,
   makeDefaultGroup,
+  type TargetDb,
   uid,
+  unsupportedReason,
 } from './types';
 
 export function QueryPanel({
@@ -27,7 +29,7 @@ export function QueryPanel({
   query: LabelQuery;
   onChange: (query: LabelQuery) => void;
   options: OptionLists;
-  targetDb?: 'local' | 'oracle';
+  targetDb?: TargetDb;
 }) {
   const replaceGroup = (index: number, group: CriteriaGroup | null) => {
     const groups = query.groups.slice();
@@ -81,23 +83,38 @@ export function QueryPanel({
 
             <div className="fdl-addmore">
               <span className="fdl-addmore__label">Add more criteria:</span>
-              {ADD_MORE_ORDER.map((type: CriterionType, i) => (
-                <span key={type} className="fdl-addmore__item">
-                  {i > 0 ? <span className="fdl-addmore__sep">|</span> : null}
-                  <button
-                    type="button"
-                    className="fdl-link"
-                    onClick={() =>
-                      replaceGroup(gi, {
-                        ...group,
-                        criteria: [...group.criteria, makeCriterion(type)],
-                      })
-                    }
-                  >
-                    {CRITERION_DEFS[type].shortTitle}
-                  </button>
-                </span>
-              ))}
+              {ADD_MORE_ORDER.map((type: CriterionType, i) => {
+                /* Disabled, not hidden: a criterion vanishing from the row on a
+                 * target switch reads as a bug, and the tooltip is where the
+                 * reason belongs. Cards already on the page stay editable and
+                 * carry their own banner. */
+                const reason = unsupportedReason(type, targetDb);
+                return (
+                  <span key={type} className="fdl-addmore__item">
+                    {i > 0 ? <span className="fdl-addmore__sep">|</span> : null}
+                    <button
+                      type="button"
+                      className="fdl-link"
+                      disabled={Boolean(reason)}
+                      title={reason ?? undefined}
+                      aria-describedby={reason ? `fdl-unavail-${type}` : undefined}
+                      onClick={() =>
+                        replaceGroup(gi, {
+                          ...group,
+                          criteria: [...group.criteria, makeCriterion(type)],
+                        })
+                      }
+                    >
+                      {CRITERION_DEFS[type].shortTitle}
+                    </button>
+                    {reason ? (
+                      <span id={`fdl-unavail-${type}`} className="fdl-sr-only">
+                        {reason}
+                      </span>
+                    ) : null}
+                  </span>
+                );
+              })}
             </div>
           </div>
         </div>

@@ -248,8 +248,50 @@ export const ADD_MORE_ORDER: CriterionType[] = [
   'meddra',
   'chemicalStructure',
   'route',
+  'dosageForm',
+  'deaSchedule',
+  'activeMoiety',
   'identifier',
 ];
+
+export type TargetDb = 'local' | 'oracle';
+
+/*
+ * Which backends can actually evaluate a criterion.
+ *
+ * Absent from this map means "both", which is the common case. The entries
+ * here are the exceptions, and they are the single source of truth for the
+ * disabled state in the "Add more criteria" row and the banner on a card —
+ * the compilers warn about the same cases server-side, but a warning that
+ * only arrives with the results is a wasted round trip.
+ *
+ * chemicalStructure maps to the empty list deliberately: Postgres has no
+ * structure index and Oracle has no structure cartridge, so it is offered but
+ * never satisfiable. Keeping it visible-but-flagged beats removing it, since
+ * saved queries and the AI translator can both still produce one.
+ */
+export const CRITERION_SUPPORT: Partial<Record<CriterionType, TargetDb[]>> = {
+  deaSchedule: ['oracle'],
+  activeMoiety: ['oracle'],
+  chemicalStructure: [],
+};
+
+export function isCriterionSupported(type: CriterionType, targetDb: TargetDb): boolean {
+  const support = CRITERION_SUPPORT[type];
+  return support === undefined || support.includes(targetDb);
+}
+
+/** Why a criterion is unavailable, or null when it is fine. Shown verbatim. */
+export function unsupportedReason(type: CriterionType, targetDb: TargetDb): string | null {
+  if (isCriterionSupported(type, targetDb)) return null;
+  const { shortTitle } = CRITERION_DEFS[type];
+  const support = CRITERION_SUPPORT[type] ?? [];
+  if (support.length === 0) {
+    return `${shortTitle} needs a chemical structure index that neither database has. This criterion will be ignored.`;
+  }
+  const only = support.includes('oracle') ? 'FDALabel Oracle' : 'local';
+  return `${shortTitle} is only available against the ${only} database. This criterion will be ignored for the current target.`;
+}
 
 export function makeCriterion(type: CriterionType): Criterion {
   return { uid: uid(), type, value: CRITERION_DEFS[type].defaultValue() };

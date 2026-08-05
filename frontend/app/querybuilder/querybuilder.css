@@ -439,6 +439,21 @@
   color: var(--afl-warn-700);
 }
 
+/* Reason text for a disabled "add criterion" link. A disabled button is not
+ * reachable by keyboard, so its title tooltip never surfaces to a screen
+ * reader; this sibling carries the same text into the accessibility tree. */
+.fdl-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ---- Add more criteria ----------------------------------------------------- */
 
 .fdl-addmore {
