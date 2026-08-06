@@ -240,7 +240,7 @@ export function AiIntentPanel({
               whiteSpace: 'nowrap',
             }}
           >
-            &ldquo;{activePrompt}&rdquo;
+            “{activePrompt}”
           </span>
         </div>
       )}
