@@ -38,9 +38,6 @@ const SEARCH_HELP = (
     <p>
       <span className="fdl-help__term">Simple Search</span>: Full span phrase match. Supports uppercase AND, OR, NOT operators.
     </p>
-    <p>
-      <span className="fdl-help__term">Advanced Search</span>: Supports regular expressions, wildcards (*, ?, %, .), exact span matching with braces <code>{'{...}'}</code> (e.g., <code>{'{NDA}'}</code>), and boolean AND/OR/NOT (escape with <code>\</code>).
-    </p>
   </div>
 );
 
