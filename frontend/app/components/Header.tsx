@@ -567,19 +567,6 @@ export default function Header({
           </div>
         )}
 
-        {/* Disclaimer Link in Header */}
-        <Link 
-          href="/disclaimer"
-          className="header-chip"
-          title="FDALabel Disclaimer"
-          style={{ textDecoration: 'none', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 800 }}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-          </svg>
-          <span>Disclaimer</span>
-        </Link>
-
         {/* 3. About Dropdown */}
         <div className="custom-dropdown" onClick={(e) => e.stopPropagation()}>
           <button 
@@ -650,10 +637,10 @@ export default function Header({
                 <Link
                   href="/disclaimer"
                   onClick={() => setActiveDropdown(null)}
-                  style={{ color: '#475569', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                  <span>FDALabel Disclaimer</span>
+                  <span>FDALabel Disclaimer →</span>
                 </Link>
               </div>
 
