@@ -782,16 +782,16 @@ export default function ChemSearchPage() {
               <line x1="4.5" y1="13" x2="4.5" y2="11" />
               <line x1="6.2" y1="10" x2="12" y2="7" />
             </svg>
-            <div style={{ fontWeight: 700, fontSize: ‘1.05rem’, color: ‘#64748b’, marginBottom: 8 }}>
+            <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#64748b', marginBottom: 8 }}>
               Enter a structure and click Search
             </div>
-            <div style={{ fontSize: ‘0.85rem’, maxWidth: 520, margin: ‘0 auto’, lineHeight: 1.6 }}>
+            <div style={{ fontSize: '0.85rem', maxWidth: 520, margin: '0 auto', lineHeight: 1.6 }}>
               Find FDA-approved drug labels by chemical structure.
               Accepts <strong>SMILES</strong>, <strong>InChI</strong>, or <strong>InChIKey</strong> as input.
               Supports exact match, substructure search, and Tanimoto similarity scoring
-              against the FDA{‘\’’}s UNII chemical structure registry.
+              against the FDA{'\''}s UNII chemical structure registry.
               <br />
-              <span style={{ color: ‘#94a3b8’, fontSize: ‘0.78rem’ }}>
+              <span style={{ color: '#94a3b8', fontSize: '0.78rem' }}>
                 InChIKey lookup uses PubChem — if resolution fails you will be prompted to provide SMILES or InChI directly.
               </span>
             </div>

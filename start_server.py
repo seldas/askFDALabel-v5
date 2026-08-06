@@ -248,7 +248,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
 
     frontend_service = {
         "image": "fdalabel-v3-frontend:latest",
-        "container_name": "fdalabel-v3-frontend-app",
+        "container_name": "fdalabel-v3-frontend",
         "depends_on": ["backend"],
         "env_file": ["./.env"],
         "environment": frontend_env,
@@ -273,7 +273,10 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
     if not rapid:
         frontend_service["build"] = {
             "context": "./frontend",
-            "dockerfile": "Dockerfile"
+            "dockerfile": "Dockerfile",
+            "args": {
+                "BUILD_ENV": "development" if mode == "dev" else "production"
+            }
         }
 
     if mode == "dev":
@@ -317,7 +320,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
         "services": services,
         "networks": {
             "default": {
-                "name": "apps-network"
+                "name": "fdalabel-network"
             }
         }
     }
