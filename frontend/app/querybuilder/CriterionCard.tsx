@@ -722,16 +722,21 @@ export function CriterionCard({
 
   return (
     <div className="fdl-card">
-      <button
-        type="button"
-        className="fdl-card__x"
-        onClick={onRemove}
-        aria-label={`Remove ${def.title}`}
-        title="Remove this criterion"
-      >
-        ×
-      </button>
-      <h2 className="fdl-card__title">{def.title}</h2>
+      <div className="fdl-card__header">
+        <h2 className="fdl-card__title">{def.title}</h2>
+        <button
+          type="button"
+          className="fdl-card__remove-btn"
+          onClick={onRemove}
+          aria-label={`Remove ${def.title}`}
+          title="Remove this criterion"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
       {unavailable ? (
         <p className="fdl-note fdl-note--warn" role="status">
           {unavailable}

@@ -1515,11 +1515,46 @@
   margin: 0 !important;
 }
 
+.fdl-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
 .fdl-step-card-wrapper .fdl-card__title {
   font-size: 0.9rem !important;
   font-weight: 700 !important;
-  margin-bottom: 8px !important;
+  margin: 0 !important;
   color: #0f172a !important;
+}
+
+.fdl-card__remove-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.fdl-card__remove-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
+  transform: scale(1.08);
+}
+
+.fdl-card__remove-btn:active {
+  transform: scale(0.95);
 }
 
 .fdl-subpanel {
