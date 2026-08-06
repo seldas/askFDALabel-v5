@@ -188,6 +188,56 @@ export function CriterionCard({
   const body = useMemo(() => {
     switch (criterion.type) {
       case 'labelingType':
+        return (
+          <>
+            {def.quickPicks ? (
+              <QuickPicks
+                picks={def.quickPicks}
+                selected={values}
+                onToggle={toggle}
+                reasonFor={quickPickReason}
+              />
+            ) : null}
+            <ListAdder
+              options={list}
+              selected={values}
+              loading={options.loading}
+              onAdd={(value) => set({ values: [...values, value] })}
+            />
+            <Chips
+              values={values}
+              onRemove={(value) => set({ values: values.filter((x: string) => x !== value) })}
+              labelFor={(value) =>
+                def.quickPicks?.find((p) => p.value === value)?.label || value
+              }
+            />
+            <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                PLR Format:
+              </span>
+              {[
+                { id: 'all', label: 'All (Rx, OTC, etc.)' },
+                { id: 'plr', label: 'PLR Format' },
+                { id: 'non_plr', label: 'non-PLR Format' },
+              ].map((opt) => {
+                const active = (v.plr || 'all') === opt.id;
+                return (
+                  <label key={opt.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: active ? 700 : 500, color: active ? '#2563eb' : '#334155' }}>
+                    <input
+                      type="radio"
+                      name={`plr_${criterion.uid}`}
+                      checked={active}
+                      onChange={() => set({ plr: opt.id })}
+                      style={{ cursor: 'pointer', accentColor: '#2563eb' }}
+                    />
+                    <span>{opt.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </>
+        );
+
       case 'route':
       case 'dosageForm':
         return (

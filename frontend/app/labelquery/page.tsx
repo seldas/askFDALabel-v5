@@ -48,8 +48,12 @@ function summarizeQuery(query: WireQuery | null): string {
       } else if (c.type === 'meddra' && (c.terms || c.text)) {
         const termsStr = Array.isArray(c.terms) ? c.terms.join(', ') : c.text;
         parts.push(`MedDRA (${c.level || 'PT'}): ${termsStr}`);
-      } else if (c.type === 'labelingType' && c.values?.length) {
-        parts.push(`Label Type: ${c.values.join(', ')}`);
+      } else if (c.type === 'labelingType') {
+        const ltParts = [];
+        if (c.values?.length) ltParts.push(c.values.join(', '));
+        if (c.plr === 'plr') ltParts.push('PLR Format');
+        if (c.plr === 'non_plr' || c.plr === 'non-plr') ltParts.push('non-PLR Format');
+        if (ltParts.length) parts.push(`Label Type: ${ltParts.join('; ')}`);
       } else if (c.type === 'applicationType') {
         const appParts = [];
         if (c.isRld) appParts.push('RLD');

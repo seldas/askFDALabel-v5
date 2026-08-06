@@ -129,13 +129,26 @@ def _format_contains_query(text, mode='simple'):
 
 def _compile_labeling_type(value, bag):
     values = _as_list(value.get('values'))
-    if not values:
-        return None
+    plr = str(value.get('plr') or value.get('formatGroup') or 'all').lower()
+
     clauses = []
-    for v in values:
-        p = bag.add(f'%{v.upper()}%')
-        clauses.append(f'UPPER(s.DOCUMENT_TYPE) LIKE {p}')
-    return '(' + ' OR '.join(clauses) + ')'
+    if values:
+        type_clauses = []
+        for v in values:
+            p = bag.add(f'%{v.upper()}%')
+            type_clauses.append(f'UPPER(s.DOCUMENT_TYPE) LIKE {p}')
+        if type_clauses:
+            clauses.append('(' + ' OR '.join(type_clauses) + ')')
+
+    if plr in ('plr', '1'):
+        clauses.append('s.FORMAT_GROUP = 1')
+    elif plr in ('non_plr', 'non-plr', '2'):
+        clauses.append('s.FORMAT_GROUP = 2')
+
+    if not clauses:
+        return None
+
+    return '(' + ' AND '.join(clauses) + ')'
 
 
 def _compile_application_type(value, bag):

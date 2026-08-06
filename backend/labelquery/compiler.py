@@ -740,6 +740,11 @@ def _compile_criterion(criterion, bag, warnings, expand_meddra, capabilities):
     ctype = criterion.get('type')
     value = criterion.get('value') or {}
 
+    if ctype == 'labelingType':
+        plr = str(value.get('plr') or value.get('formatGroup') or 'all').lower()
+        if plr in ('plr', 'non_plr', 'non-plr', '1', '2'):
+            warnings.append('PLR / non-PLR format filtering is optimized for Oracle CDER-CBER database.')
+        return _c_value_list(value, 'labelingType', bag, warnings)
     if ctype == 'applicationType':
         return _c_application_type(value, bag, warnings)
     if ctype in _LIST_COLUMNS:

@@ -110,7 +110,7 @@ export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
       { label: 'Human OTC', value: '%HUMAN OTC%' },
       { label: 'Vaccine', value: '%VACCINE%' },
     ],
-    defaultValue: () => ({ values: [] }),
+    defaultValue: () => ({ values: [], plr: 'all' }),
   },
   applicationType: {
     type: 'applicationType',
@@ -445,10 +445,11 @@ export function fromWire(wire: WireQuery): LabelQuery {
 export function isCriterionEmpty(c: Criterion): boolean {
   const v = c.value as Record<string, any>;
   switch (c.type) {
-    case 'labelingType':
     case 'route':
     case 'marketStatus':
       return !(v.values?.length > 0);
+    case 'labelingType':
+      return !(v.values?.length > 0) && (!v.plr || v.plr === 'all');
     case 'applicationType':
       return (
         !(v.values?.length > 0) &&
