@@ -96,7 +96,7 @@ export function QueryPanel({
               return (
                 <section
                   key={sec.id}
-                  className={`fdl-step-section ${isCollapsed ? 'is-collapsed' : ''}`}
+                  className={`fdl-step-section fdl-step-section--step-${sec.stepNumber} fdl-step-section--${sec.id} ${isCollapsed ? 'is-collapsed' : ''}`}
                 >
                   <header
                     className="fdl-step-header"

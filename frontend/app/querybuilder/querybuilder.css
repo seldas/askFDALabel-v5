@@ -1370,12 +1370,84 @@
 
 /* Step Section Container */
 .fdl-step-section {
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
   background: #ffffff;
   overflow: hidden;
-  transition: all 0.15s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+}
+
+/* Step 1: Market & Categorical Filters (Classic Sapphire Blue) */
+.fdl-step-section--step-1 {
+  border-color: #bfdbfe;
+}
+
+.fdl-step-section--step-1 .fdl-step-header {
+  background: linear-gradient(135deg, #f0f7ff 0%, #eff6ff 100%);
+  border-bottom: 1px solid #dbeafe;
+}
+
+.fdl-step-section--step-1 .fdl-step-badge {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.fdl-step-section--step-1 .fdl-step-title {
+  color: #1e3a8a;
+}
+
+.fdl-step-section--step-1 .fdl-active-tag--highlight {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+/* Step 2: Product Names & Identifiers (Sleek Ocean / Teal-Blue) */
+.fdl-step-section--step-2 {
+  border-color: #bae6fd;
+}
+
+.fdl-step-section--step-2 .fdl-step-header {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-bottom: 1px solid #bae6fd;
+}
+
+.fdl-step-section--step-2 .fdl-step-badge {
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+}
+
+.fdl-step-section--step-2 .fdl-step-title {
+  color: #0c4a6e;
+}
+
+.fdl-step-section--step-2 .fdl-active-tag--highlight {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+/* Step 3: Labeling Text & Clinical Match (Refined Indigo-Blue) */
+.fdl-step-section--step-3 {
+  border-color: #c7d2fe;
+}
+
+.fdl-step-section--step-3 .fdl-step-header {
+  background: linear-gradient(135deg, #f5f3ff 0%, #e0e7ff 100%);
+  border-bottom: 1px solid #c7d2fe;
+}
+
+.fdl-step-section--step-3 .fdl-step-badge {
+  background: linear-gradient(135deg, #4f46e5, #4338ca);
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+}
+
+.fdl-step-section--step-3 .fdl-step-title {
+  color: #1e1b4b;
+}
+
+.fdl-step-section--step-3 .fdl-active-tag--highlight {
+  background: #e0e7ff;
+  color: #4338ca;
 }
 
 .fdl-step-section:hover {
