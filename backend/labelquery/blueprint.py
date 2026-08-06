@@ -804,7 +804,7 @@ def execute():
                     if isinstance(first_r, dict):
                         total = first_r.get('total_count') or first_r.get('TOTAL_COUNT') or 0
                     else:
-                        total = first_r[15] if len(first_r) > 15 else 0
+                        total = first_r[16] if len(first_r) > 16 else (first_r[15] if len(first_r) > 15 else 0)
 
                     for r in rows:
                         set_id_val = r.get('set_id') or r.get('SET_ID') if isinstance(r, dict) else r[0]

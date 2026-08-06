@@ -37,6 +37,7 @@ export function AiIntentPanel({
   const [notes, setNotes] = useState<string[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [isFolded, setIsFolded] = useState(false);
+  const [activePrompt, setActivePrompt] = useState<string>('');
 
   const translate = async (text: string) => {
     const trimmed = text.trim();
@@ -52,15 +53,12 @@ export function AiIntentPanel({
       });
       const json = await res.json();
       if (!res.ok) {
-        // A refusal carries its reason in `notes` — usually that the request is
-        // outside the selected database's scope, which is the one thing the
-        // user needs in order to fix it. Losing that leaves only the generic
-        // "could not turn that into criteria".
         setNotes(json.notes || []);
         throw new Error(json.error || `Translation failed (${res.status})`);
       }
       onQuery(fromWire(json.query));
       setNotes(json.notes || []);
+      setActivePrompt(trimmed);
       setIsFolded(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -200,6 +198,51 @@ export function AiIntentPanel({
             </ul>
           ) : null}
         </>
+      )}
+
+      {activePrompt && (
+        <div
+          className="fdl-ai-applied-intent"
+          style={{
+            marginTop: isFolded ? '8px' : '14px',
+            padding: '10px 14px',
+            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+            border: '1px solid #cbd5e1',
+            borderRadius: '10px',
+            display: 'flex',
+            align-items: 'center',
+            gap: '10px',
+            fontSize: '0.82rem',
+          }}
+        >
+          <span
+            style={{
+              fontWeight: 800,
+              color: '#4f46e5',
+              fontSize: '0.72rem',
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              flexShrink: 0,
+              background: '#e0e7ff',
+              padding: '3px 9px',
+              borderRadius: '12px',
+            }}
+          >
+            Active AI Query Prompt
+          </span>
+          <span
+            style={{
+              color: '#0f172a',
+              fontWeight: 600,
+              fontStyle: 'italic',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            &ldquo;{activePrompt}&rdquo;
+          </span>
+        </div>
       )}
     </section>
   );
