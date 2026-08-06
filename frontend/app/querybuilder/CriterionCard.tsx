@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AutoCompleteInput, Chips, ListAdder, type Option, QuickPicks, Select, TokenInput } from './controls';
+import { AutoCompleteInput, Chips, isPickSelected, ListAdder, type Option, QuickPicks, Select, TokenInput } from './controls';
 import {
   CRITERION_DEFS,
   type Criterion,
@@ -133,10 +133,14 @@ export function CriterionCard({
 
   const values: string[] = v.values || [];
   const toggle = useCallback(
-    (value: string) =>
-      set({
-        values: values.includes(value) ? values.filter((x) => x !== value) : [...values, value],
-      }),
+    (value: string) => {
+      const already = isPickSelected(value, values);
+      if (already) {
+        set({ values: values.filter((x) => !isPickSelected(value, [x])) });
+      } else {
+        set({ values: [...values, value] });
+      }
+    },
     [set, values],
   );
 

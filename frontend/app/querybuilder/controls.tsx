@@ -49,6 +49,21 @@ export function Chips({
   );
 }
 
+export function isPickSelected(pickValue: string, selectedValues: string[]): boolean {
+  if (!selectedValues || !selectedValues.length) return false;
+
+  const pNorm = pickValue.replace(/%/g, '').trim().toUpperCase();
+  if (!pNorm) return false;
+
+  return selectedValues.some((s) => {
+    const sNorm = String(s || '').replace(/%/g, '').trim().toUpperCase();
+    if (sNorm === pNorm) return true;
+    if (sNorm && sNorm.includes(pNorm)) return true;
+    if (pNorm && pNorm.includes(sNorm)) return true;
+    return false;
+  });
+}
+
 /** "Choose one or more: Animal Rx  Animal OTC  …" — toggles, styled as links. */
 export function QuickPicks({
   picks,
@@ -71,21 +86,20 @@ export function QuickPicks({
         // A pick already chosen stays enabled even when unavailable, so the
         // only way to clear it does not disappear along with its target.
         const reason = reasonFor?.(p.value) ?? null;
-        const blocked = Boolean(reason) && !selected.includes(p.value);
+        const active = isPickSelected(p.value, selected);
+        const blocked = Boolean(reason) && !active;
         return (
-        <button
-          key={p.value}
-          type="button"
-          className={
-            selected.includes(p.value) ? 'fdl-link fdl-link--on' : 'fdl-link'
-          }
-          aria-pressed={selected.includes(p.value)}
-          disabled={blocked}
-          title={reason ?? undefined}
-          onClick={() => onToggle(p.value)}
-        >
-          {p.label}
-        </button>
+          <button
+            key={p.value}
+            type="button"
+            className={active ? 'fdl-link fdl-link--on' : 'fdl-link'}
+            aria-pressed={active}
+            disabled={blocked}
+            title={reason ?? undefined}
+            onClick={() => onToggle(p.value)}
+          >
+            {p.label}
+          </button>
         );
       })}
     </div>
