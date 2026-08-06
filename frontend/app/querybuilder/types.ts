@@ -265,6 +265,57 @@ export const ADD_MORE_ORDER: CriterionType[] = [
   'identifier',
 ];
 
+export type SearchSectionId = 'filters' | 'identifiers' | 'textMatch';
+
+export interface SearchSectionDef {
+  id: SearchSectionId;
+  stepNumber: number;
+  title: string;
+  subtitle: string;
+  criterionTypes: CriterionType[];
+}
+
+export const SEARCH_SECTIONS: SearchSectionDef[] = [
+  {
+    id: 'filters',
+    stepNumber: 1,
+    title: 'Market & Categorical Filters',
+    subtitle: 'Filter by marketing categories, status, dosage form, administration route, and pharm class',
+    criterionTypes: [
+      'labelingType',
+      'applicationType',
+      'marketStatus',
+      'route',
+      'dosageForm',
+      'pharmClass',
+      'deaSchedule',
+      'activeMoiety',
+    ],
+  },
+  {
+    id: 'identifiers',
+    stepNumber: 2,
+    title: 'Product Names & Identifiers',
+    subtitle: 'Exact or keyword lookup by drug product names, NDCs, UNIIs, or Set/Document IDs',
+    criterionTypes: ['productName', 'identifier'],
+  },
+  {
+    id: 'textMatch',
+    stepNumber: 3,
+    title: 'Labeling Text & Clinical Match',
+    subtitle: 'Search labeling full text, specific sections (e.g. Boxed Warning), or MedDRA safety terms',
+    criterionTypes: ['fullText', 'labelingSection', 'meddra'],
+  },
+];
+
+export function getSectionForCriterion(type: CriterionType): SearchSectionId {
+  for (const section of SEARCH_SECTIONS) {
+    if (section.criterionTypes.includes(type)) return section.id;
+  }
+  return 'filters';
+}
+
+
 /*
  * Search target.
  *

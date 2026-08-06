@@ -163,6 +163,18 @@ export default function HomePage() {
 
   const actionBar = (position: 'top' | 'bottom') => (
     <div className={position === 'top' ? 'fdl-actions' : 'fdl-actions fdl-actions--bottom'}>
+      <div style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {filled > 0 ? (
+          <span className="fdl-active-tag fdl-active-tag--highlight">
+            {filled} active {filled === 1 ? 'criterion' : 'criteria'} configured
+          </span>
+        ) : (
+          <span className="fdl-active-tag fdl-active-tag--none">
+            All Labels (No filters applied)
+          </span>
+        )}
+      </div>
+
       <button type="button" className="fdl-link" onClick={restoreLast} disabled={!hasSaved}>
         Restore Last Query
       </button>
@@ -208,7 +220,7 @@ export default function HomePage() {
       </div>
 
       <button type="button" className="fdl-btn fdl-btn--search" onClick={runSearch}>
-        Search »
+        Search Labels »
       </button>
     </div>
   );

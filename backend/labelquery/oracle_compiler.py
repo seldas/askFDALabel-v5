@@ -145,12 +145,14 @@ def _compile_application_type(value, bag):
 
     if is_rld_rs:
         clauses.append(
-            "EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND (rld.REFERENCE_DRUG = 'Y' OR rld.REFERENCE_STANDARD = 'Y'))"
+            "(EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID) "
+            "OR EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = s.SPL_ID) "
+            "OR (s.RLD_NUM IS NOT NULL AND s.RLD_NUM <> '0'))"
         )
 
     if exclude_repackager:
         clauses.append(
-            "(UPPER(s.MARKET_CATEGORIES) NOT LIKE '%REPACK%' AND UPPER(s.MARKET_CATEGORIES) NOT LIKE '%REPACKAG%')"
+            "(s.MARKET_CATEGORIES IS NULL OR (UPPER(s.MARKET_CATEGORIES) NOT LIKE '%REPACK%' AND UPPER(s.MARKET_CATEGORIES) NOT LIKE '%REPACKAG%'))"
         )
 
     return '(' + ' AND '.join(clauses) + ')' if clauses else None
@@ -337,10 +339,10 @@ def _compile_market_status(value, bag):
     if 'rld' in values or 'rs' in values:
         alts = []
         if 'rld' in values:
-            alts.append("rld.REFERENCE_DRUG = 'Y'")
+            alts.append("EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = s.SPL_ID) OR EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND (UPPER(rld.REFERENCE_DRUG) IN ('Y', 'YES', '1') OR rld.REFERENCE_DRUG IS NOT NULL))")
         if 'rs' in values:
-            alts.append("rld.REFERENCE_STANDARD = 'Y'")
-        rld_rs_cond = f"EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND ({' OR '.join(alts)}))"
+            alts.append("EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND (UPPER(rld.REFERENCE_STANDARD) IN ('Y', 'YES', '1') OR rld.REFERENCE_STANDARD IS NOT NULL))")
+        rld_rs_cond = '(' + ' OR '.join(alts) + ')'
 
     if not conds and not rld_rs_cond:
         return None
@@ -746,17 +748,18 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
         WITH {text_cte_sql}matched AS (
             SELECT s.SPL_ID, s.SPL_GUID, s.SET_ID, s.TITLE, s.PRODUCT_NAMES,
                    s.PRODUCT_NORMD_GENERIC_NAMES, s.AUTHOR_ORG_NORMD_NAME as MANUFACTURER, s.APPR_NUM,
-                   s.NDC_CODES, s.EFF_TIME, s.MARKET_CATEGORIES, s.DOCUMENT_TYPE, s.ACT_INGR_NAMES,
-                   s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC, s.ACT_INGR_UNIIS,
+                   s.NDC_CODES, s.NDC3_CODES, s.EFF_TIME, s.MARKET_CATEGORIES, s.DOCUMENT_TYPE, s.ACT_INGR_NAMES,
+                   s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC,
+                   COALESCE(s.ACT_INGR_UNIIS, s.ACT_MOIETY_UNIIS) as ACT_INGR_UNIIS,
                    COUNT(*) OVER () AS TOTAL_COUNT
             FROM {base_table} s
             WHERE {where_sql}
         )
         SELECT p.SET_ID, p.SPL_GUID as SPL_ID, p.PRODUCT_NAMES, p.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
-               p.MANUFACTURER, p.APPR_NUM, p.NDC_CODES, p.EFF_TIME as REVISED_DATE,
+               p.MANUFACTURER, p.APPR_NUM, p.NDC_CODES, p.NDC3_CODES, p.EFF_TIME as REVISED_DATE,
                p.MARKET_CATEGORIES, p.DOCUMENT_TYPE, p.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
                p.DOSAGE_FORMS, p.ROUTES, p.EPC,
-               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD,
+               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND (rld.REFERENCE_DRUG = 'Y' OR rld.REFERENCE_DRUG = 'Yes' OR rld.REFERENCE_DRUG = '1')) as IS_RLD,
                p.TOTAL_COUNT,
                p.ACT_INGR_UNIIS as ACTIVE_UNIIS
         FROM matched p

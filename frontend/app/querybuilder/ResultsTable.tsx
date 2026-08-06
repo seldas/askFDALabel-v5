@@ -21,6 +21,7 @@ export interface LabelRow {
   manufacturer: string | null;
   appr_num: string | null;
   ndc_codes: string | null;
+  ndc3_codes?: string | null;
   revised_date: string | null;
   market_categories: string | null;
   doc_type: string | null;
@@ -580,7 +581,14 @@ export function ResultsTable({
                                     )}
                                   </dd>
                                   <dt>NDC Code(s):</dt>
-                                  <dd>{joined(row.ndc_codes) || '—'}</dd>
+                                  <dd>
+                                    <div>{joined(row.ndc_codes) || '—'}</div>
+                                    {row.ndc3_codes ? (
+                                      <div style={{ marginTop: '4px', fontSize: '0.8rem', color: '#475569' }}>
+                                        <strong>NDC3 (3-Segment):</strong> {joined(row.ndc3_codes)}
+                                      </div>
+                                    ) : null}
+                                  </dd>
                                 </dl>
                               </div>
 

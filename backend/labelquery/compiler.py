@@ -714,7 +714,7 @@ def _c_application_type(value, bag, warnings):
         preds.append('(s.is_rld = 1 OR s.is_rs = 1)')
 
     if exclude_repackager:
-        preds.append("(UPPER(s.marketing_category) NOT LIKE '%REPACK%' AND UPPER(s.marketing_category) NOT LIKE '%REPACKAG%')")
+        preds.append("(s.marketing_category IS NULL OR (UPPER(s.marketing_category) NOT LIKE '%REPACK%' AND UPPER(s.marketing_category) NOT LIKE '%REPACKAG%'))")
 
     if values:
         warnings.append(

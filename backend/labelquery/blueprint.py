@@ -811,7 +811,10 @@ def execute():
                         if not set_id_val:
                             continue
                         if isinstance(r, dict):
-                            results.append(r)
+                            res_item = dict(r)
+                            res_item['active_uniis'] = r.get('active_uniis') or r.get('ACTIVE_UNIIS') or r.get('ACT_INGR_UNIIS') or r.get('act_ingr_unii')
+                            res_item['ndc3_codes'] = r.get('ndc3_codes') or r.get('NDC3_CODES')
+                            results.append(res_item)
                         else:
                             results.append({
                                 'set_id': r[0],
@@ -821,15 +824,17 @@ def execute():
                                 'manufacturer': r[4],
                                 'appr_num': r[5],
                                 'ndc_codes': r[6],
-                                'revised_date': r[7],
-                                'market_categories': r[8],
-                                'doc_type': r[9],
-                                'active_ingredients': r[10],
-                                'dosage_forms': r[11],
-                                'routes': r[12],
-                                'epc': r[13],
-                                'is_rld': bool(r[14]),
-                                'is_rs': False
+                                'ndc3_codes': r[7],
+                                'revised_date': r[8],
+                                'market_categories': r[9],
+                                'doc_type': r[10],
+                                'active_ingredients': r[11],
+                                'dosage_forms': r[12],
+                                'routes': r[13],
+                                'epc': r[14],
+                                'is_rld': bool(r[15]),
+                                'is_rs': False,
+                                'active_uniis': r[17] if len(r) > 17 else None,
                             })
 
                 browsable = min(total, BROWSE_CAP)
