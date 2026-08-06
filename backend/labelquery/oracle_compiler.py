@@ -83,26 +83,44 @@ def _format_contains_query(text, mode='simple'):
     text = (text or '').strip()
     if not text:
         return ''
-    
+
     if mode == 'advanced':
-        # Replace AND/OR/NOT operators while wrapping search terms in braces {}
-        words = text.split()
+        # Advanced search mode: parse operators, exact span braces {}, wildcards
+        # If user explicitly specified {span}, keep {span} intact
+        tokens = re.split(r'(\{.*?\}|\b(?:AND|OR|NOT)\b|[()&|!])', text)
         out = []
-        for w in words:
-            up = w.upper()
+        for tok in tokens:
+            if not tok:
+                continue
+            up = tok.strip().upper()
             if up in ('AND', 'OR', 'NOT', '&', '|', '!'):
                 out.append(up)
+            elif tok.startswith('{') and tok.endswith('}'):
+                out.append(tok)
+            elif tok in '()':
+                out.append(tok)
             else:
-                clean_w = w.strip('()"{}"')
-                if clean_w:
-                    out.append(f'{{{clean_w}}}')
+                tok_clean = tok.strip()
+                if tok_clean:
+                    out.append(f'{{{tok_clean}}}')
         return ' '.join(out)
     else:
-        # Simple phrase mode: wrap individual words or whole phrase in braces
-        words = [w.strip('()"{}"') for w in text.split() if w.strip()]
-        if not words:
-            return ''
-        return ' AND '.join([f'{{{w}}}' for w in words])
+        # Simple phrase mode: full span match, supporting uppercase AND, OR, NOT
+        tokens = re.split(r'\b(AND|OR|NOT)\b', text)
+        if len(tokens) > 1 and any(t in ('AND', 'OR', 'NOT') for t in tokens):
+            out = []
+            for tok in tokens:
+                t_strip = tok.strip()
+                if not t_strip:
+                    continue
+                if t_strip in ('AND', 'OR', 'NOT'):
+                    out.append(t_strip)
+                else:
+                    out.append(f'{{{t_strip}}}')
+            return ' '.join(out)
+
+        # Full span exact phrase match
+        return f'{{{text}}}'
 
 
 # ---------------------------------------------------------------------------

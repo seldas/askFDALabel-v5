@@ -86,6 +86,13 @@ export function QueryPanel({
               // Count active (non-empty) criteria in this section
               const activeCount = sectionCriteria.filter((c) => !isCriterionEmpty(c)).length;
 
+              // Check if any text search criterion in this section or group uses Advanced mode
+              const hasAdvancedSearch = group.criteria.some(
+                (c) =>
+                  (c.type === 'fullText' || c.type === 'labelingSection') &&
+                  (c.value as any)?.mode === 'advanced',
+              );
+
               return (
                 <section
                   key={sec.id}
@@ -126,6 +133,14 @@ export function QueryPanel({
 
                   {!isCollapsed && (
                     <div className="fdl-step-body">
+                      {sec.id === 'textMatch' && hasAdvancedSearch && (
+                        <div className="fdl-advanced-warning">
+                          <span className="fdl-advanced-warning-icon">⚠️</span>
+                          <div>
+                            <strong>Advanced Search Active:</strong> Advanced search supports regular expressions, exact span matching with braces <code>{'{...}'}</code> (e.g., <code>{'{NDA}'}</code>), wildcards (<code>*</code>, <code>?</code>, <code>%</code>, <code>.</code>), and boolean operators (<code>AND</code>, <code>OR</code>, <code>NOT</code>). Ensure syntax rules and backslash escapes (<code>\</code>) are followed to avoid unexpected search results.
+                          </div>
+                        </div>
+                      )}
                       {/* Active Criteria Cards in this section */}
                       {sectionCriteria.length > 0 ? (
                         <div className="fdl-step-cards">

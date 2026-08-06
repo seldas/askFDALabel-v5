@@ -36,13 +36,10 @@ const MODE_OPTIONS = [
 const SEARCH_HELP = (
   <div className="fdl-help">
     <p>
-      <span className="fdl-help__term">Simple Search</span>: Search for exact text using
-      complete words/phrases (ignores non-alphanumeric characters, e.g., ignores &quot;-&quot;,
-      &quot;%&quot;)
+      <span className="fdl-help__term">Simple Search</span>: Full span phrase match. Supports uppercase AND, OR, NOT operators.
     </p>
     <p>
-      <span className="fdl-help__term">Advanced Search</span> (from drop-down menu): Conduct a
-      Boolean and/or partial word search
+      <span className="fdl-help__term">Advanced Search</span>: Supports regular expressions, wildcards (*, ?, %, .), exact span matching with braces <code>{'{...}'}</code> (e.g., <code>{'{NDA}'}</code>), and boolean AND/OR/NOT (escape with <code>\</code>).
     </p>
   </div>
 );
@@ -305,7 +302,8 @@ export function CriterionCard({
           </div>
         );
 
-      case 'fullText':
+      case 'fullText': {
+        const isAdv = (v.mode || 'simple') === 'advanced';
         return (
           <>
             <div className="fdl-row">
@@ -319,13 +317,18 @@ export function CriterionCard({
                 className="fdl-input fdl-input--grow"
                 type="text"
                 value={v.text || ''}
-                placeholder='Enter text (e.g., search for NAUSEA OR VOMITING retrieves labeling containing the phrase "nausea or vomiting")'
+                placeholder={
+                  isAdv
+                    ? 'Advanced search: regex, wildcards (*, ?, %, .), exact span {NDA}, AND/OR/NOT (escape with \\)'
+                    : 'Simple search: enter phrase or text with AND, OR, NOT (e.g. "nausea or vomiting" or "nausea AND vomiting")'
+                }
                 onChange={(e) => set({ text: e.target.value })}
               />
             </div>
             {SEARCH_HELP}
           </>
         );
+      }
 
       case 'labelingSection': {
         const sections: string[] = v.sections || [];
@@ -336,6 +339,7 @@ export function CriterionCard({
           if (!groupedMap.has(g)) groupedMap.set(g, []);
           groupedMap.get(g)!.push(opt);
         }
+        const isAdv = (v.mode || 'simple') === 'advanced';
 
         return (
           <>
@@ -350,7 +354,11 @@ export function CriterionCard({
                 className="fdl-input fdl-input--grow"
                 type="text"
                 value={v.text || ''}
-                placeholder="Enter text (may leave blank to check for presence of a labeling section)"
+                placeholder={
+                  isAdv
+                    ? 'Advanced search: regex, wildcards (*, ?, %, .), exact span {NDA}, AND/OR/NOT (escape with \\)'
+                    : 'Simple search: enter phrase or text with AND, OR, NOT (e.g. "nausea or vomiting" or "nausea AND vomiting")'
+                }
                 onChange={(e) => set({ text: e.target.value })}
               />
               <span className="fdl-row__word">within</span>

@@ -141,10 +141,8 @@ def _advanced_tsquery_expression(text):
     """
     Translates the FDALabel "Advanced Search" dialect into a to_tsquery string.
 
-    Accepted: AND/OR/NOT (and &|!), parentheses, quoted phrases, and a trailing
-    ``*`` for prefix matching. Everything else is dropped rather than escaped,
-    because a stray character in to_tsquery input is a hard SQL error, not a
-    zero-result query.
+    Accepted: AND/OR/NOT (and &|!), parentheses, quoted phrases "", exact span braces {},
+    and wildcard * for prefix matching.
     """
     tokens = []
     i = 0
@@ -156,6 +154,14 @@ def _advanced_tsquery_expression(text):
             i += 1
         elif ch == '"':
             end = text.find('"', i + 1)
+            if end == -1:
+                end = len(text)
+            phrase = _ADVANCED_WORD_RE.findall(text[i + 1:end])
+            if phrase:
+                tokens.append('(' + ' <-> '.join(phrase) + ')')
+            i = end + 1
+        elif ch == '{':
+            end = text.find('}', i + 1)
             if end == -1:
                 end = len(text)
             phrase = _ADVANCED_WORD_RE.findall(text[i + 1:end])
@@ -181,13 +187,10 @@ def _advanced_tsquery_expression(text):
             elif upper == 'NOT':
                 tokens.append('!')
             else:
-                tokens.append(word.replace('*', ':*'))
+                tokens.append(word.replace('*', ':*').replace('%', ':*'))
             i = m.end()
 
-    # Insert an implicit & between adjacent operands, the way a search box is
-    # expected to behave ("hepatic failure" == "hepatic AND failure"). `!` and
-    # `(` start an operand too, so "(a|b) NOT c" needs the & just as much as
-    # "a b" does — tsquery rejects both `) ! c` and `a b`.
+    # Insert an implicit & between adjacent operands
     out = []
     for tok in tokens:
         prev = out[-1] if out else None
@@ -206,12 +209,7 @@ def _advanced_tsquery_expression(text):
 def _repair_tsquery_tokens(tokens):
     """
     Makes a token stream syntactically valid for to_tsquery.
-
-    A half-typed query ("hepatic AND", "(failure") is normal in a search box but
-    a hard SQL error in to_tsquery, so unbalanced parens, empty groups and
-    dangling operators are repaired rather than reported.
     """
-    # Drop unmatched ')' and remember how many '(' stay open.
     balanced = []
     depth = 0
     for tok in tokens:
@@ -224,8 +222,6 @@ def _repair_tsquery_tokens(tokens):
         balanced.append(tok)
     balanced.extend([')'] * depth)
 
-    # Collapse empty groups and strip operators that lost an operand, to a fixed
-    # point — each repair can expose another ("(a AND)" -> "(a)" -> "a").
     changed = True
     while changed:
         changed = False
@@ -237,7 +233,7 @@ def _repair_tsquery_tokens(tokens):
                 del balanced[i:i + 2]
             elif tok in ('&', '|') and (prev is None or prev in ('(', '&', '|', '!')):
                 del balanced[i]
-            elif tok in ('&', '|', '!') and (nxt is None or nxt == ')'):
+            elif tok in ('&', '|') and (nxt is None or nxt == ')'):
                 del balanced[i]
             else:
                 continue
@@ -254,18 +250,34 @@ def _tsquery_sql(mode, text, bag):
         return None
     if mode == 'advanced':
         return f"to_tsquery('english', {bag.add(_advanced_tsquery_expression(text))})"
-    
-    words = text.split()
-    if len(words) == 1:
-        # A single word is a plain lexeme lookup, which GIN answers straight out
-        # of the index. It used to compile to "word:*", and that one character
-        # was most of why simple search felt slow: a prefix query has to walk
-        # every entry in the GIN entry tree under that prefix, union all their
-        # posting lists, and then recheck each candidate row against the heap.
-        # Users who want prefix matching can still type "word*" in Advanced.
-        return f"plainto_tsquery('english', {bag.add(text)})"
 
-    # Simple search is FDALabel's exact-phrase mode.
+    # Simple Search logic: full span phrase match, supporting uppercase AND, OR, NOT
+    tokens = re.split(r'\b(AND|OR|NOT)\b', text)
+    if len(tokens) > 1 and any(t in ('AND', 'OR', 'NOT') for t in tokens):
+        parts = []
+        op = None
+        for tok in tokens:
+            t_strip = tok.strip()
+            if not t_strip:
+                continue
+            if t_strip in ('AND', 'OR', 'NOT'):
+                op = t_strip
+            else:
+                ts = f"phraseto_tsquery('english', {bag.add(t_strip)})"
+                if not parts:
+                    parts.append(ts)
+                else:
+                    if op == 'OR':
+                        parts.append(f"({parts.pop()} || {ts})")
+                    elif op == 'NOT':
+                        parts.append(f"({parts.pop()} && !{ts})")
+                    else:  # AND
+                        parts.append(f"({parts.pop()} && {ts})")
+                    op = None
+        if parts:
+            return parts[0]
+
+    # Full span phrase match
     return f"phraseto_tsquery('english', {bag.add(text)})"
 
 
