@@ -240,37 +240,25 @@ export function CriterionCard({
                 def.quickPicks?.find((p) => p.value === value)?.label || value
               }
             />
-            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(v.isRld || v.isRldRs)}
-                    onChange={(e) => set({ isRld: e.target.checked, isRldRs: false })}
-                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#2563eb' }}
-                  />
-                  <span>RLD (Reference Listed Drug)</span>
-                </label>
-
-                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(v.isRs || v.isRldRs)}
-                    onChange={(e) => set({ isRs: e.target.checked, isRldRs: false })}
-                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#2563eb' }}
-                  />
-                  <span>RS (Reference Standard)</span>
-                </label>
-              </div>
+            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(v.isRld || v.isRldRs)}
+                  onChange={(e) => set({ isRld: e.target.checked, isRldRs: false })}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#2563eb' }}
+                />
+                <span>RLD (Reference Listed Drug)</span>
+              </label>
 
               <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
                 <input
                   type="checkbox"
-                  checked={!!v.excludeRepackager}
-                  onChange={(e) => set({ excludeRepackager: e.target.checked })}
+                  checked={Boolean(v.isRs || v.isRldRs)}
+                  onChange={(e) => set({ isRs: e.target.checked, isRldRs: false })}
                   style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#2563eb' }}
                 />
-                <span>Exclude repacker and repackaging</span>
+                <span>RS (Reference Standard)</span>
               </label>
             </div>
           </>

@@ -143,13 +143,12 @@ def _compile_application_type(value, bag):
     is_rld = bool(value.get('isRld') or value.get('is_rld'))
     is_rs = bool(value.get('isRs') or value.get('is_rs'))
     is_rld_rs = bool(value.get('isRldRs') or value.get('rld_rs'))
-    exclude_repackager = bool(value.get('excludeRepackager') or value.get('exclude_repackager'))
 
     if is_rld_rs:
         is_rld = True
         is_rs = True
 
-    if not values and not is_rld and not is_rs and not exclude_repackager:
+    if not values and not is_rld and not is_rs:
         return None
 
     clauses = []
@@ -177,11 +176,6 @@ def _compile_application_type(value, bag):
     if is_rs:
         clauses.append(
             "(EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND (UPPER(rld.REFERENCE_STANDARD) IN ('Y', 'YES', '1') OR rld.REFERENCE_STANDARD IS NOT NULL)))"
-        )
-
-    if exclude_repackager:
-        clauses.append(
-            "(s.MARKET_CATEGORIES IS NULL OR (UPPER(s.MARKET_CATEGORIES) NOT LIKE '%REPACK%' AND UPPER(s.MARKET_CATEGORIES) NOT LIKE '%REPACKAG%'))"
         )
 
     return '(' + ' AND '.join(clauses) + ')' if clauses else None

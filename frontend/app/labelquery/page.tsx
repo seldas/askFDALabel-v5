@@ -55,7 +55,6 @@ function summarizeQuery(query: WireQuery | null): string {
         if (c.isRld) appParts.push('RLD');
         if (c.isRs) appParts.push('RS');
         if (c.isRldRs && !c.isRld && !c.isRs) appParts.push('RLD/RS');
-        if (c.excludeRepackager) appParts.push('Excl. Repackager');
         if (appParts.length) parts.push(`App Type: ${appParts.join('; ')}`);
       } else if (c.type === 'route' && c.values?.length) {
         parts.push(`Route: ${c.values.join(', ')}`);

@@ -715,7 +715,6 @@ def _c_application_type(value, bag, warnings):
     is_rld = bool(value.get('isRld') or value.get('is_rld'))
     is_rs = bool(value.get('isRs') or value.get('is_rs'))
     is_rld_rs = bool(value.get('isRldRs') or value.get('rld_rs'))
-    exclude_repackager = bool(value.get('excludeRepackager') or value.get('exclude_repackager'))
 
     if is_rld_rs:
         is_rld = True
@@ -726,9 +725,6 @@ def _c_application_type(value, bag, warnings):
         preds.append('s.is_rld = 1')
     if is_rs:
         preds.append('s.is_rs = 1')
-
-    if exclude_repackager:
-        preds.append("(s.marketing_category IS NULL OR (UPPER(s.marketing_category) NOT LIKE '%REPACK%' AND UPPER(s.marketing_category) NOT LIKE '%REPACKAG%'))")
 
     if values:
         warnings.append(

@@ -127,7 +127,7 @@ export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
       // and the quick pick means all of them.
       { label: 'OTC Monograph Drug', value: '%OTC monograph%' },
     ],
-    defaultValue: () => ({ values: [], isRld: false, isRs: false, isRldRs: false, excludeRepackager: false }),
+    defaultValue: () => ({ values: [], isRld: false, isRs: false, isRldRs: false }),
   },
   productName: {
     type: 'productName',
@@ -454,8 +454,7 @@ export function isCriterionEmpty(c: Criterion): boolean {
         !(v.values?.length > 0) &&
         !v.isRld &&
         !v.isRs &&
-        !v.isRldRs &&
-        !v.excludeRepackager
+        !v.isRldRs
       );
     case 'meddra':
     case 'pharmClass':
