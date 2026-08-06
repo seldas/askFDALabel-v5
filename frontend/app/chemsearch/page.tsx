@@ -505,6 +505,51 @@ export default function ChemSearchPage() {
 
       <main className="fdl-shell fdl-shell--results">
 
+        {/* Data-source notice */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 12,
+            alignItems: 'flex-start',
+            background: '#f0f9ff',
+            border: '1px solid #bae6fd',
+            borderRadius: 12,
+            padding: '14px 18px',
+            marginBottom: 20,
+            fontSize: '0.82rem',
+            color: '#0c4a6e',
+            lineHeight: 1.6,
+          }}
+        >
+          <svg
+            width={18}
+            height={18}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#0284c7"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ flexShrink: 0, marginTop: 1 }}
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <div>
+            <strong>Data source: FDA Oracle database (DRUGLABEL.UNII_CHEM_STRUCT)</strong>
+            <br />
+            Chemical structure search queries the centralized FDA FDALabel Oracle database, not the
+            local PostgreSQL instance. This means:
+            <ul style={{ margin: '6px 0 0 0', paddingLeft: 18 }}>
+              <li>Search requires an <strong>internal FDA network connection</strong> — external users will receive a service-unavailable error.</li>
+              <li>Labels available here reflect the <strong>FDA Oracle catalog</strong>, which may include entries not yet imported into the local database. Conversely, some labels in your local database may not be retrievable if they are absent from the Oracle UNII structure registry.</li>
+              <li>Structure data is matched via <strong>UNII codes</strong> — drugs with no registered UNII chemical structure will not appear in results regardless of match type.</li>
+            </ul>
+          </div>
+        </div>
+
         <InputPanel onSearch={handleSearch} busy={busy} />
 
         {/* Errors */}
