@@ -210,7 +210,7 @@ export function AiIntentPanel({
             border: '1px solid #cbd5e1',
             borderRadius: '10px',
             display: 'flex',
-            align-items: 'center',
+            alignItems: 'center',
             gap: '10px',
             fontSize: '0.82rem',
           }}
