@@ -1492,19 +1492,20 @@
   gap: 10px;
 }
 
-/* Multi-column Grid for cards in each step section */
+/* Vertical Stack for cards in each step section */
 .fdl-step-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .fdl-step-card-wrapper {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  padding: 10px 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  padding: 12px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  width: 100%;
 }
 
 .fdl-step-card-wrapper .fdl-card {
@@ -1515,10 +1516,28 @@
 }
 
 .fdl-step-card-wrapper .fdl-card__title {
-  font-size: 0.88rem !important;
+  font-size: 0.9rem !important;
   font-weight: 700 !important;
-  margin-bottom: 6px !important;
-  color: #1e293b !important;
+  margin-bottom: 8px !important;
+  color: #0f172a !important;
+}
+
+.fdl-subpanel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+.fdl-subpanel-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .fdl-step-empty {
