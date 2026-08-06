@@ -364,11 +364,38 @@ def _compile_meddra(value, bag, expand_meddra=None):
     level = (value.get('level') or 'pt').lower()
     sections = _as_list(value.get('sections'))
 
-    # Section filter inside SPL_SEC_MEDDRA_LLT_OCC if specified
+    # Section filter inside SPL_SEC_MEDDRA_LLT_OCC.
+    # SEC_TYPE_CODE is a LOINC code (e.g. "34084-4"), never a label like
+    # "ADVERSE REACTIONS". Resolve any human-readable section names or
+    # LOINC-prefixed display labels to their bare LOINC code(s) first,
+    # mirroring the same logic used for the full-text/labelingSection path.
     sec_clause = ""
     if sections:
-        sec_params = [bag.add(s) for s in sections]
-        sec_clause = f" AND occ.SEC_TYPE_CODE IN ({', '.join(sec_params)})"
+        loinc_set = set()
+        for s in sections:
+            # Skip virtual/non-LOINC sections that have no OCC rows.
+            if s in ('SPLTITLE', 'Product Title', '43683-2',
+                     'Initial U.S. Approval [4 Digit Year]'):
+                continue
+            # Already a bare LOINC code (digits and hyphens only).
+            if re.match(r'^[\d.\-]+$', s):
+                loinc_set.add(s)
+            else:
+                # Strip a leading "N " or "N.N " section-number prefix
+                # (e.g. "6 ADVERSE REACTIONS" → "ADVERSE REACTIONS").
+                clean = re.sub(r'^[0-9]+(\.[0-9]+)*\s*', '', s).strip().upper()
+                if clean in TITLE_TO_LOINCS:
+                    for loinc in TITLE_TO_LOINCS[clean]:
+                        loinc_set.add(loinc)
+                else:
+                    # Partial match — "WARNINGS" inside "WARNINGS AND PRECAUTIONS"
+                    for key, loincs in TITLE_TO_LOINCS.items():
+                        if clean and (clean in key or key in clean):
+                            for loinc in loincs:
+                                loinc_set.add(loinc)
+        if loinc_set:
+            sec_params = [bag.add(loinc) for loinc in loinc_set]
+            sec_clause = f" AND occ.SEC_TYPE_CODE IN ({', '.join(sec_params)})"
 
     term_clauses = []
     for term in terms:
