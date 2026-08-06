@@ -559,6 +559,9 @@ export function ResultsTable({
                                 {row.is_rld ? (
                                   <span className="fdl-badge fdl-badge--rld">RLD</span>
                                 ) : null}
+                                {row.is_rs ? (
+                                  <span className="fdl-badge fdl-badge--rld" style={{ background: '#0284c7' }}>RS</span>
+                                ) : null}
                               </div>
                             </div>
 

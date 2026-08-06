@@ -241,15 +241,27 @@ export function CriterionCard({
               }
             />
             <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
-                <input
-                  type="checkbox"
-                  checked={!!v.isRldRs}
-                  onChange={(e) => set({ isRldRs: e.target.checked })}
-                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#2563eb' }}
-                />
-                <span>RLD / RS (Reference Listed Drug / Reference Standard)</span>
-              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(v.isRld || v.isRldRs)}
+                    onChange={(e) => set({ isRld: e.target.checked, isRldRs: false })}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#2563eb' }}
+                  />
+                  <span>RLD (Reference Listed Drug)</span>
+                </label>
+
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(v.isRs || v.isRldRs)}
+                    onChange={(e) => set({ isRs: e.target.checked, isRldRs: false })}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#2563eb' }}
+                  />
+                  <span>RS (Reference Standard)</span>
+                </label>
+              </div>
 
               <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
                 <input

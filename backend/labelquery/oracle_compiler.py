@@ -140,10 +140,16 @@ def _compile_labeling_type(value, bag):
 
 def _compile_application_type(value, bag):
     values = _as_list(value.get('values'))
+    is_rld = bool(value.get('isRld') or value.get('is_rld'))
+    is_rs = bool(value.get('isRs') or value.get('is_rs'))
     is_rld_rs = bool(value.get('isRldRs') or value.get('rld_rs'))
     exclude_repackager = bool(value.get('excludeRepackager') or value.get('exclude_repackager'))
 
-    if not values and not is_rld_rs and not exclude_repackager:
+    if is_rld_rs:
+        is_rld = True
+        is_rs = True
+
+    if not values and not is_rld and not is_rs and not exclude_repackager:
         return None
 
     clauses = []
@@ -161,11 +167,16 @@ def _compile_application_type(value, bag):
         if app_clauses:
             clauses.append('(' + ' OR '.join(app_clauses) + ')')
 
-    if is_rld_rs:
+    if is_rld:
         clauses.append(
-            "(EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID) "
-            "OR EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = s.SPL_ID) "
+            "(EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = s.SPL_ID) "
+            "OR EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND (UPPER(rld.REFERENCE_DRUG) IN ('Y', 'YES', '1') OR rld.REFERENCE_DRUG IS NOT NULL)) "
             "OR (s.RLD_NUM IS NOT NULL AND s.RLD_NUM <> '0'))"
+        )
+
+    if is_rs:
+        clauses.append(
+            "(EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND (UPPER(rld.REFERENCE_STANDARD) IN ('Y', 'YES', '1') OR rld.REFERENCE_STANDARD IS NOT NULL)))"
         )
 
     if exclude_repackager:
@@ -835,6 +846,7 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
                p.MARKET_CATEGORIES, p.DOCUMENT_TYPE, p.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
                p.DOSAGE_FORMS, p.ROUTES, p.EPC,
                (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND (rld.REFERENCE_DRUG = 'Y' OR rld.REFERENCE_DRUG = 'Yes' OR rld.REFERENCE_DRUG = '1')) as IS_RLD,
+               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND (rld.REFERENCE_STANDARD = 'Y' OR rld.REFERENCE_STANDARD = 'Yes' OR rld.REFERENCE_STANDARD = '1')) as IS_RS,
                p.TOTAL_COUNT,
                p.ACT_INGR_UNIIS as ACTIVE_UNIIS,
                {moiety_project}

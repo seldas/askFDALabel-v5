@@ -52,8 +52,9 @@ function summarizeQuery(query: WireQuery | null): string {
         parts.push(`Label Type: ${c.values.join(', ')}`);
       } else if (c.type === 'applicationType') {
         const appParts = [];
-        if (c.values?.length) appParts.push(c.values.join(', '));
-        if (c.isRldRs) appParts.push('RLD/RS');
+        if (c.isRld) appParts.push('RLD');
+        if (c.isRs) appParts.push('RS');
+        if (c.isRldRs && !c.isRld && !c.isRs) appParts.push('RLD/RS');
         if (c.excludeRepackager) appParts.push('Excl. Repackager');
         if (appParts.length) parts.push(`App Type: ${appParts.join('; ')}`);
       } else if (c.type === 'route' && c.values?.length) {
