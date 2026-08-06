@@ -8,7 +8,7 @@
  *
  * Convention: builders here return **base-path-relative** routes for in-app
  * destinations (e.g. "/label/abc?tab=faers"). Next's `basePath` config adds the
- * /askfdalabel prefix to <Link>, and FetchPrefix.tsx handles raw anchors, so
+ * /fdalabel-v3 prefix to <Link>, and FetchPrefix.tsx handles raw anchors, so
  * prefixing here as well would be redundant. Use withAppBase() only when
  * assigning to window.location directly.
  */

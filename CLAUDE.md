@@ -94,13 +94,13 @@ Modules import as `from dashboard.config import Config`, `from database import d
 
 ### Path-prefix handling is the trickiest part of the frontend
 
-The app is served under a base path (`/askfdalabel`) with the API under a separate one (`/askfdalabel_api`), both behind nginx in production. Three pieces cooperate:
+The app is served under a base path (`/fdalabel-v3`) with the API under a separate one (`/fdalabel-v3_api`), both behind nginx in production. Three pieces cooperate:
 
 - `frontend/next.config.ts` — sets `basePath`/`assetPrefix` from `NEXT_PUBLIC_APP_BASE`, and rewrites `/api/:path*` **and** `${API_BASE}/api/:path*` to the Flask origin with `basePath: false`.
 - `frontend/app/utils/appPaths.ts` — exports `APP_BASE`/`API_BASE`/`DASHBOARD_BASE` and the `withAppBase()` / `withApiBase()` helpers.
 - `frontend/app/FetchPrefix.tsx` — mounted globally, it **monkey-patches `window.fetch` and `window.open`** and runs a `MutationObserver` that rewrites `<a href>`, `src`, and `srcset` across the DOM.
 
-Consequence: write plain paths like `/api/dashboard/foo` in component code and the prefix is injected at runtime. Do not hand-prefix, or you get `/askfdalabel_api/askfdalabel_api/...` (the helpers guard against double-prefixing, but only for the exact base string). Module routes listed in `DASHBOARD_PREFIXES` get `DASHBOARD_BASE`; `/api/*` gets `API_BASE`.
+Consequence: write plain paths like `/api/dashboard/foo` in component code and the prefix is injected at runtime. Do not hand-prefix, or you get `/fdalabel-v3_api/fdalabel-v3_api/...` (the helpers guard against double-prefixing, but only for the exact base string). Module routes listed in `DASHBOARD_PREFIXES` get `DASHBOARD_BASE`; `/api/*` gets `API_BASE`.
 
 ### Two PostgreSQL schemas in one database
 

@@ -77,7 +77,7 @@ The repo also includes:
 - React `19`
 - MUI-based application UI
 - app-router pages under `frontend/app/`
-- default app base path: `/askfdalabel`
+- default app base path: `/fdalabel-v3`
 
 ### Backend
 - Flask application assembled in `backend/app.py`
@@ -112,7 +112,7 @@ The repo also includes:
 backend/             Flask app, blueprints, services, models, migrations
 frontend/            Next.js app-router frontend
 data/                Runtime data, downloads, SPL storage, uploads
-deploy/nginx/        Optional reverse proxy for /askfdalabel and /askfdalabel_api
+deploy/nginx/        Optional reverse proxy for /fdalabel-v3 and /fdalabel-v3_api
 backend/webtest/     Validation templates, history, and results
 archive/             Archived historical files (Documents, scripts, bookmarklets, legacy code)
 ```
@@ -145,7 +145,7 @@ LOCAL-PG=true
 COMPOSE_PROFILES=db
 PG_HOST=db
 PG_PORT=5432
-PG_DATABASE=askfdalabel
+PG_DATABASE=fdalabel-v3
 PG_USERNAME=afd_user
 PG_PASSWORD=afd_password
 DATABASE_URL=postgresql://${PG_USERNAME}:${PG_PASSWORD}@${PG_HOST}:${PG_PORT}/${PG_DATABASE}
@@ -160,8 +160,8 @@ BACKEND_PORT=8842
 FRONTEND_PORT=8841
 
 # Frontend path helpers
-NEXT_PUBLIC_API_BASE=/askfdalabel_api
-NEXT_PUBLIC_DASHBOARD_BASE=/askfdalabel
+NEXT_PUBLIC_API_BASE=/fdalabel-v3_api
+NEXT_PUBLIC_DASHBOARD_BASE=/fdalabel-v3
 
 # AI providers
 GEMINI_API_KEY=
@@ -185,7 +185,7 @@ FDALabel_PASSWORD=
 ```
 
 Routing note:
-- the suite now uses standardized path-prefix handling. For most deployments (including local development), keep `NEXT_PUBLIC_API_BASE=/askfdalabel_api` and `NEXT_PUBLIC_APP_BASE=/askfdalabel`.
+- the suite now uses standardized path-prefix handling. For most deployments (including local development), keep `NEXT_PUBLIC_API_BASE=/fdalabel-v3_api` and `NEXT_PUBLIC_APP_BASE=/fdalabel-v3`.
 - the `next.config.ts` and `FetchPrefix.tsx` utilities ensure that these paths work correctly whether running behind nginx or during direct local development.
 
 ## Running with Docker
@@ -217,8 +217,8 @@ Useful options:
 - `--build`: Rebuilds the docker images during startup.
 
 ### 3. Access the application
-- **If you ran the Dev configuration**, open your browser to `http://localhost:8841/askfdalabel/`.
-- **If you ran the Prod configuration**, open your browser to `http://localhost/askfdalabel/`.
+- **If you ran the Dev configuration**, open your browser to `http://localhost:8841/fdalabel-v3/`.
+- **If you ran the Prod configuration**, open your browser to `http://localhost/fdalabel-v3/`.
 
 ### 4. Stopping containers
 
@@ -283,7 +283,7 @@ npm run dev:all
 ```
 
 This uses the helper scripts in `frontend/scripts/` to:
-- start Next.js on `http://localhost:8841/askfdalabel`
+- start Next.js on `http://localhost:8841/fdalabel-v3`
 - start Flask on `http://localhost:8842`
 
 Backend health check:
@@ -372,7 +372,7 @@ These files are preserved for reference only and are not active or required for 
 ## Known implementation notes
 
 - The backend loads environment variables from the repo-root `.env`.
-- The frontend expects the backend under `/api/*` in direct development, and under `/askfdalabel_api/*` when routed through nginx.
+- The frontend expects the backend under `/api/*` in direct development, and under `/fdalabel-v3_api/*` when routed through nginx.
 - The application creates required data directories on startup.
 - MedDRA-dependent features will run with reduced detail if MedDRA tables have not been populated.
 - Some functionality becomes richer when Oracle/internal FDALabel access is available, but the suite is designed to run in PostgreSQL-only mode as well.
