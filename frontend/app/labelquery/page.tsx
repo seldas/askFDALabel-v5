@@ -88,6 +88,8 @@ function ResultsPage() {
   const [sortState, setSortState] = useState<SortState>({ sort: 'revised_date', dir: 'desc' });
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [sqlOpen, setSqlOpen] = useState(false);
+  const [sqlCopied, setSqlCopied] = useState(false);
 
   // Task creation and Export menu states
   const [exportOpen, setExportOpen] = useState(false);
@@ -639,6 +641,90 @@ function ResultsPage() {
             <p>No labeling matched your criteria.</p>
           </div>
         ) : null}
+
+        {/* Technical: processed SQL query — collapsed by default */}
+        {data?.sql && (
+          <div style={{ marginTop: '2rem' }}>
+            <button
+              type="button"
+              onClick={() => setSqlOpen((v) => !v)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#94a3b8',
+                fontSize: '0.75rem',
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                fontWeight: 600,
+                padding: '4px 0',
+                userSelect: 'none',
+              }}
+              aria-expanded={sqlOpen}
+            >
+              <span style={{ fontSize: '0.65rem', display: 'inline-block', transition: 'transform 0.15s', transform: sqlOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+              {sqlOpen ? 'Hide' : 'Show'} processed query
+            </button>
+            {sqlOpen && (
+              <div style={{
+                marginTop: '6px',
+                background: '#0f172a',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.08)',
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 14px',
+                  borderBottom: '1px solid rgba(255,255,255,0.08)',
+                  background: '#1e293b',
+                }}>
+                  <span style={{ color: '#64748b', fontSize: '0.7rem', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontWeight: 700, letterSpacing: '0.05em' }}>
+                    PROCESSED QUERY · {targetDb.toUpperCase()}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(data.sql ?? '');
+                      setSqlCopied(true);
+                      setTimeout(() => setSqlCopied(false), 2000);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '4px',
+                      color: sqlCopied ? '#4ade80' : '#94a3b8',
+                      fontSize: '0.7rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      padding: '2px 8px',
+                    }}
+                  >
+                    {sqlCopied ? '✓ Copied' : 'Copy'}
+                  </button>
+                </div>
+                <pre style={{
+                  margin: 0,
+                  padding: '12px 14px',
+                  color: '#cdd6f4',
+                  fontSize: '0.72rem',
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                  lineHeight: 1.6,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  maxHeight: '400px',
+                  overflowY: 'auto',
+                }}>
+                  <code>{data.sql}</code>
+                </pre>
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* Customized Result Truncation Warning Modal (>3000 results) */}

@@ -47,6 +47,8 @@ export interface ResultSet {
   limit: number;
   offset: number;
   warnings: string[];
+  /** The processed SQL (or Oracle) query, included for technical debugging. */
+  sql?: string;
 }
 
 export type ResultView = 'basic' | 'expanded';

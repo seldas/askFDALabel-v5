@@ -835,6 +835,12 @@ def execute():
                 browsable = min(total, BROWSE_CAP)
                 capped = total > BROWSE_CAP
 
+                # Annotate with bound params for the debug box.
+                debug_sql = sql
+                if params and isinstance(params, dict):
+                    param_lines = "\n".join([f"-- :{k} = {repr(v)}" for k, v in params.items()])
+                    debug_sql = f"{param_lines}\n\n{sql}"
+
                 return jsonify({
                     'results': results,
                     'total': total,
@@ -844,8 +850,7 @@ def execute():
                     'limit': limit,
                     'offset': offset,
                     'warnings': warnings,
-                    'query': sql,
-                    'sql': sql,
+                    'sql': debug_sql,
                 })
             except Exception as e:
                 formatted_sql = sql
@@ -930,6 +935,13 @@ def execute():
         results = [{k: v for k, v in r.items() if k != 'total_count'}
                    for r in rows if r.get('spl_id')]
 
+        # Annotate the returned SQL with the bound parameter values so the
+        # frontend debug box is readable without a separate params list.
+        debug_sql = sql
+        if page_params:
+            param_lines = "\n".join([f"-- %({k})s = {repr(v)}" for k, v in page_params.items()])
+            debug_sql = f"{param_lines}\n\n{sql}"
+
         return jsonify({
             'results': results,
             'total': total,
@@ -939,6 +951,7 @@ def execute():
             'limit': limit,
             'offset': offset,
             'warnings': warnings,
+            'sql': debug_sql,
         })
     except Exception as e:
         formatted_sql = sql if 'sql' in locals() else None
