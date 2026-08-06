@@ -131,8 +131,8 @@ export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
   },
   productName: {
     type: 'productName',
-    title: 'Product Name(s)',
-    shortTitle: 'Product Name(s)',
+    title: 'Product Identifier(s)',
+    shortTitle: 'Product Identifier(s)',
     defaultValue: () => ({ field: 'any', op: 'contains', text: '' }),
   },
   fullText: {
@@ -232,7 +232,14 @@ export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
     type: 'identifier',
     title: 'Labeling, Product and Ingredient Identifiers',
     shortTitle: 'Labeling, Product and Ingredient Identifiers',
-    defaultValue: () => ({ text: '', ingredientType: 'active' }),
+    defaultValue: () => ({
+      text: '',
+      setSplGuid: '',
+      applKind: '',
+      applNum: '',
+      uniiCode: '',
+      uniiTarget: 'active',
+    }),
   },
 };
 
@@ -452,6 +459,13 @@ export function isCriterionEmpty(c: Criterion): boolean {
       return !(v.terms?.length > 0);
     case 'labelingSection':
       return !String(v.text || '').trim() && !(v.sections?.length > 0);
+    case 'identifier':
+      return (
+        !String(v.text || '').trim() &&
+        !String(v.setSplGuid || '').trim() &&
+        !String(v.applNum || '').trim() &&
+        !String(v.uniiCode || '').trim()
+      );
     default:
       return !String(v.text || '').trim();
   }

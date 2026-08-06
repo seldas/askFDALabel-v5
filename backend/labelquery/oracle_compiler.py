@@ -292,8 +292,10 @@ def _compile_product_name(value, bag):
             sub = f'UPPER(p.NAME) LIKE {p}'
         elif field == 'generic':
             sub = f'UPPER(p.NORMD_GENERIC_NAME) LIKE {p}'
+        elif field == 'unii':
+            sub = f'(UPPER(s.ACT_INGR_NAMES) LIKE {p} OR UPPER(s.ACT_MOIETY_NAMES) LIKE {p})'
         else:
-            sub = f'(UPPER(p.NAME) LIKE {p} OR UPPER(p.NORMD_GENERIC_NAME) LIKE {p} OR UPPER(s.ACT_INGR_NAMES) LIKE {p})'
+            sub = f'(UPPER(p.NAME) LIKE {p} OR UPPER(p.NORMD_GENERIC_NAME) LIKE {p} OR UPPER(s.ACT_INGR_NAMES) LIKE {p} OR UPPER(s.ACT_MOIETY_NAMES) LIKE {p})'
 
         if op == 'notContains':
             clauses.append(
@@ -539,21 +541,64 @@ def _compile_pharm_class(value, bag):
 
 
 def _compile_identifier(value, bag):
-    tokens = _as_list(value.get('text')) or _split_terms(value.get('text'))
-    if not tokens:
-        return None
     alts = []
+    set_spl_guid = str(value.get('setSplGuid') or '').strip()
+    appl_kind = str(value.get('applKind') or '').strip().upper()
+    appl_num = str(value.get('applNum') or '').strip()
+    unii_code = str(value.get('uniiCode') or '').strip().upper()
+    unii_target = str(value.get('uniiTarget') or 'active').lower()
+
+    if set_spl_guid:
+        p = bag.add(set_spl_guid)
+        p_like = bag.add(f'%{set_spl_guid.upper()}%')
+        alts.append(f'(s.SET_ID = {p} OR s.SPL_GUID = {p} OR UPPER(s.SET_ID) LIKE {p_like} OR UPPER(s.SPL_GUID) LIKE {p_like})')
+
+    if appl_num:
+        digits = re.sub(r'\D', '', appl_num)
+        if digits:
+            padded = digits.zfill(6)
+            if appl_kind:
+                p1 = bag.add(f'%{appl_kind} {padded}%')
+                p2 = bag.add(f'%{appl_kind} {digits}%')
+                alts.append(f'(UPPER(s.APPR_NUM) LIKE {p1} OR UPPER(s.APPR_NUM) LIKE {p2})')
+            else:
+                p1 = bag.add(f'%{padded}%')
+                p2 = bag.add(f'%{digits}%')
+                alts.append(f'(s.APPR_NUM LIKE {p1} OR s.APPR_NUM LIKE {p2})')
+
+    if unii_code:
+        p_unii = bag.add(unii_code)
+        if unii_target == 'moiety':
+            alts.append(
+                'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_ACT_MOIETY_UNII mu '
+                f'WHERE mu.SPL_ID = s.SPL_ID AND UPPER(mu.ACTIVE_MOIETY_UNII) = {p_unii})'
+            )
+        else:
+            alts.append(
+                'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_GEN_PROD_ACT_INGR_UNII ing '
+                f'WHERE ing.SPL_ID = s.SPL_ID AND UPPER(ing.UNII) = {p_unii})'
+            )
+
+    tokens = _as_list(value.get('text')) or _split_terms(value.get('text'))
     for token in tokens:
         token_str = token.strip()
+        if not token_str:
+            continue
         if _UUID_RE.match(token_str):
             p = bag.add(token_str)
             alts.append(f'(s.SET_ID = {p} OR s.SPL_GUID = {p})')
         elif _UNII_RE.match(token_str):
             p = bag.add(token_str.upper())
-            alts.append(
-                'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_GEN_PROD_ACT_INGR_UNII ing '
-                f'WHERE ing.SPL_ID = s.SPL_ID AND UPPER(ing.UNII) = {p})'
-            )
+            if unii_target == 'moiety':
+                alts.append(
+                    'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_ACT_MOIETY_UNII mu '
+                    f'WHERE mu.SPL_ID = s.SPL_ID AND UPPER(mu.ACTIVE_MOIETY_UNII) = {p})'
+                )
+            else:
+                alts.append(
+                    'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_GEN_PROD_ACT_INGR_UNII ing '
+                    f'WHERE ing.SPL_ID = s.SPL_ID AND UPPER(ing.UNII) = {p})'
+                )
         elif _PREFIXED_APPL_RE.match(token_str):
             kind, number = _PREFIXED_APPL_RE.match(token_str).groups()
             p1 = bag.add(f'%{kind.upper()} {number.zfill(6)}%')
@@ -570,7 +615,7 @@ def _compile_identifier(value, bag):
 
     if not alts:
         return None
-    return '(' + ' OR '.join(alts) + ')'
+    return '(' + ' AND '.join(alts) + ')'
 
 
 def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0, expand_meddra=None,

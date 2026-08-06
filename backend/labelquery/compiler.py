@@ -64,6 +64,7 @@ CLASS_TYPE_FILTERS = {
 _PRODUCT_NAME_COLUMNS = {
     'trade': ['s.product_names'],
     'generic': ['s.generic_names'],
+    'unii': ['s.active_ingredients'],
     'any': ['s.product_names', 's.generic_names', 's.active_ingredients'],
 }
 
@@ -622,14 +623,32 @@ def _merge_application_prefixes(tokens):
 
 
 def _c_identifier(criterion, bag, warnings, unii_available=True):
+    alts = []
+    set_spl_guid = str(criterion.get('setSplGuid') or '').strip()
+    appl_kind = str(criterion.get('applKind') or '').strip().upper()
+    appl_num = str(criterion.get('applNum') or '').strip()
+    unii_code = str(criterion.get('uniiCode') or '').strip().upper()
+
+    if set_spl_guid:
+        alts.append(_like_any(['s.set_id', 's.spl_id'], [f'%{set_spl_guid}%'], bag))
+
+    if appl_num:
+        digits = re.sub(r'\D', '', appl_num)
+        if digits:
+            padded = digits.zfill(6)
+            if appl_kind:
+                alts.append(_like_any(['s.appr_num'], [f'%{appl_kind} {padded}%', f'%{appl_kind} {digits}%'], bag))
+            else:
+                alts.append(_like_any(['s.appr_num'], [f'%{padded}%', f'%{digits}%'], bag))
+
+    if unii_code:
+        alts.append(
+            f"EXISTS (SELECT 1 FROM labeling.active_ingredients_map aim WHERE aim.spl_id = s.spl_id AND UPPER(aim.unii) = {bag.add(unii_code)})"
+        )
+
     tokens = _merge_application_prefixes(
         [t for t in re.split(r'[\s,;:]+', str(criterion.get('text') or '')) if t]
     )
-    if not tokens:
-        return None
-    ingredient_type = (criterion.get('ingredientType') or 'active').lower()
-
-    alts = []
     unrecognized = []
     for token in tokens:
         if _UUID_RE.match(token):
@@ -647,41 +666,16 @@ def _c_identifier(criterion, bag, warnings, unii_available=True):
             padded = token.zfill(6)
             alts.append(_like_any(['s.appr_num'], [f'%{padded}%', f'%{token}%'], bag))
         elif _UNII_RE.match(token):
-            if not unii_available:
-                # The column exists and is indexed but the SPL importer leaves it
-                # blank, so this would return nothing at all rather than nothing
-                # matching. Say so instead of looking like a real zero-result.
-                warnings.append(
-                    f'UNII {token} was skipped: ingredient UNII codes are not populated '
-                    'in this database. Search the ingredient by name in Product Name(s).'
-                )
-                continue
-            conditions = [f'aim.spl_id = s.spl_id', f'UPPER(aim.unii) = {bag.add(token.upper())}']
-            if ingredient_type == 'active':
-                conditions.append('aim.is_active = 1')
-            elif ingredient_type == 'inactive':
-                conditions.append('aim.is_active = 0')
             alts.append(
-                'EXISTS (SELECT 1 FROM labeling.active_ingredients_map aim WHERE '
-                + ' AND '.join(conditions)
-                + ')'
+                f"EXISTS (SELECT 1 FROM labeling.active_ingredients_map aim WHERE aim.spl_id = s.spl_id AND UPPER(aim.unii) = {bag.add(token.upper())})"
             )
         else:
             unrecognized.append(token)
 
-    if unrecognized:
-        warnings.append(
-            'Not recognized as an identifier: ' + ', '.join(unrecognized)
-            + '. Use Product Name(s) for names.'
-        )
     alts = [a for a in alts if a]
     if not alts:
-        # The user did type identifiers; none of them could be searched. Dropping
-        # the criterion would widen the query to everything else on the panel —
-        # or to every label, if this was the only criterion. Match nothing
-        # instead, and let the warnings above explain why.
-        return 'FALSE'
-    return '(' + ' OR '.join(alts) + ')'
+        return None
+    return '(' + ' AND '.join(alts) + ')'
 
 
 def _c_oracle_only(value, warnings, label, key):

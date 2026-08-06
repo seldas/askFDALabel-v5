@@ -270,13 +270,14 @@ export function CriterionCard({
         return (
           <div className="fdl-row" style={{ position: 'relative' }}>
             <Select
-              ariaLabel="Name field"
+              ariaLabel="Field scope"
               value={v.field || 'any'}
               onChange={(field) => set({ field })}
               options={[
-                { value: 'any', label: 'Trade or generic/proper name' },
-                { value: 'trade', label: 'Trade name' },
-                { value: 'generic', label: 'Generic/proper name' },
+                { value: 'any', label: 'All Product Identifiers' },
+                { value: 'trade', label: 'Trade / Brand Name' },
+                { value: 'generic', label: 'Generic / Established Name' },
+                { value: 'unii', label: 'UNII / Ingredient Name' },
               ]}
             />
             <Select
@@ -293,7 +294,7 @@ export function CriterionCard({
             <AutoCompleteInput
               value={v.text || ''}
               onChange={(text) => set({ text })}
-              placeholder="Enter product name (type 4+ chars for suggestions)"
+              placeholder="Enter product or ingredient name (type 4+ chars for suggestions)"
               fetchSuggestions={fetchProductName}
               minChars={4}
             />
@@ -611,44 +612,82 @@ export function CriterionCard({
 
       case 'identifier':
         return (
-          <>
-            <textarea
-              className="fdl-textarea"
-              rows={2}
-              value={v.text || ''}
-              placeholder="Enter one or more identifiers (separate with a space, comma, semicolon, or colon)"
-              onChange={(e) => set({ text: e.target.value })}
-            />
-            <div className="fdl-row fdl-row--tight">
-              <span className="fdl-row__word">Ingredient type (UNII)</span>
-              <Select
-                ariaLabel="Ingredient type"
-                value={v.ingredientType || 'active'}
-                onChange={(ingredientType) => set({ ingredientType })}
-                options={[
-                  { value: 'active', label: 'Active' },
-                  { value: 'inactive', label: 'Inactive' },
-                  { value: 'both', label: 'Both' },
-                ]}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {/* Sub-panel 1: SET ID / SPL GUID */}
+            <div className="fdl-subpanel">
+              <label className="fdl-subpanel-label">SET ID / SPL GUID (UUID):</label>
+              <input
+                className="fdl-input fdl-input--grow"
+                type="text"
+                value={v.setSplGuid || ''}
+                placeholder="e.g. ca73b519-015a-436d-aa3c-af53492825a1"
+                onChange={(e) => set({ setSplGuid: e.target.value })}
               />
             </div>
-            <div className="fdl-help">
-              <p>Search for:</p>
-              <ul className="fdl-idlist">
-                <li>
-                  <strong>SET ID / SPL ID (SPL GUID):</strong> (e.g., ca73b519-015a-436d-aa3c-af53492825a1)
-                </li>
-                <li>
-                  <strong>Application Number for ANDA, BLA, or NDA:</strong> 3 to 6 digits (e.g.,
-                  077844, 125118, 020977)
-                </li>
-                <li>
-                  <strong>Unique Ingredient Identifier (UNII):</strong> alphanumeric code(s) (e.g.,
-                  J220T4J9Q2)
-                </li>
-              </ul>
+
+            {/* Sub-panel 2: Application Number (digits only + optional category dropdown) */}
+            <div className="fdl-subpanel">
+              <label className="fdl-subpanel-label">Application Number:</label>
+              <div className="fdl-row fdl-row--tight">
+                <Select
+                  ariaLabel="Application Category (Optional)"
+                  value={v.applKind || ''}
+                  onChange={(applKind) => set({ applKind })}
+                  options={[
+                    { value: '', label: 'All Categories (Optional)' },
+                    { value: 'NDA', label: 'NDA' },
+                    { value: 'ANDA', label: 'ANDA' },
+                    { value: 'BLA', label: 'BLA' },
+                  ]}
+                />
+                <input
+                  className="fdl-input fdl-input--grow"
+                  type="text"
+                  value={v.applNum || ''}
+                  placeholder="3 to 6 digits (e.g. 021436 or 077844)"
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '');
+                    set({ applNum: digits });
+                  }}
+                />
+              </div>
             </div>
-          </>
+
+            {/* Sub-panel 3: UNII Identifier Code */}
+            <div className="fdl-subpanel">
+              <label className="fdl-subpanel-label">UNII Code (by UNII ID):</label>
+              <div className="fdl-row fdl-row--tight">
+                <input
+                  className="fdl-input fdl-input--grow"
+                  type="text"
+                  value={v.uniiCode || ''}
+                  placeholder="10-character UNII code (e.g. J220T4J9Q2)"
+                  onChange={(e) => set({ uniiCode: e.target.value.toUpperCase() })}
+                />
+                <Select
+                  ariaLabel="UNII Selection Target"
+                  value={v.uniiTarget || 'active'}
+                  onChange={(uniiTarget) => set({ uniiTarget })}
+                  options={[
+                    { value: 'active', label: 'Active Ingredient (Default)' },
+                    { value: 'moiety', label: 'Active Moiety' },
+                  ]}
+                />
+              </div>
+            </div>
+
+            {/* Quick Free-text paste fallback */}
+            <div style={{ paddingTop: '6px', borderTop: '1px dashed #e2e8f0' }}>
+              <input
+                className="fdl-input fdl-input--grow"
+                style={{ fontSize: '0.78rem' }}
+                type="text"
+                value={v.text || ''}
+                placeholder="Or paste multiple mixed identifiers (SET ID, UNII, Application No)..."
+                onChange={(e) => set({ text: e.target.value })}
+              />
+            </div>
+          </div>
         );
 
       default:
