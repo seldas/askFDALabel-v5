@@ -637,13 +637,6 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
             elif ctype == 'identifier':
                 c = _compile_identifier(cval, bag)
                 if c: group_relational.append(c)
-            elif ctype == 'chemicalStructure':
-                # DRUGLABEL has UNII_CHEM_STRUCT(UNII, SMILES) but no structure
-                # cartridge, so substructure matching is not available here.
-                warnings.append(
-                    'Chemical structure search is not available against the FDALabel Oracle '
-                    'database; this criterion was ignored.'
-                )
             else:
                 warnings.append(f'Unsupported criterion "{ctype}" was ignored.')
 

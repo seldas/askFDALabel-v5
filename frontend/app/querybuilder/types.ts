@@ -17,7 +17,6 @@ export type CriterionType =
   | 'labelingSection'
   | 'marketStatus'
   | 'meddra'
-  | 'chemicalStructure'
   | 'route'
   | 'dosageForm'
   | 'deaSchedule'
@@ -161,12 +160,6 @@ export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
     shortTitle: 'MedDRA Terms',
     defaultValue: () => ({ level: 'pt', terms: [] }),
   },
-  chemicalStructure: {
-    type: 'chemicalStructure',
-    title: 'Chemical Structure',
-    shortTitle: 'Chemical Structure',
-    defaultValue: () => ({ structure: '', match: 'exact' }),
-  },
   route: {
     type: 'route',
     title: 'Route(s) of Administration',
@@ -265,7 +258,6 @@ export const ADD_MORE_ORDER: CriterionType[] = [
   'applicationType',
   'marketStatus',
   'meddra',
-  'chemicalStructure',
   'route',
   'dosageForm',
   'deaSchedule',
@@ -301,16 +293,11 @@ export const TARGET_DB_LABELS: Record<TargetDb, string> = {
  * the compilers warn about the same cases server-side, but a warning that
  * only arrives with the results is a wasted round trip.
  *
- * chemicalStructure maps to the empty list deliberately: Postgres has no
- * structure index and Oracle has no structure cartridge, so it is offered but
- * never satisfiable. Keeping it visible-but-flagged beats removing it, since
- * saved queries and the AI translator can both still produce one.
  */
 export const CRITERION_SUPPORT: Partial<Record<CriterionType, TargetDb[]>> = {
   deaSchedule: ['oracle', 'oracle_all'],
   activeMoiety: ['oracle', 'oracle_all'],
   applicationType: ['oracle', 'oracle_all'],
-  chemicalStructure: [],
 };
 
 /**
@@ -355,9 +342,6 @@ export function unsupportedReason(type: CriterionType, targetDb: TargetDb): stri
   if (override) return override;
   const { shortTitle } = CRITERION_DEFS[type];
   const support = CRITERION_SUPPORT[type] ?? [];
-  if (support.length === 0) {
-    return `${shortTitle} needs a chemical structure index that neither database has. This criterion will be ignored.`;
-  }
   const only = support.some(isOracleTarget) ? 'FDALabel Oracle' : 'local';
   return `${shortTitle} is only available against the ${only} database. This criterion will be ignored for the current target.`;
 }
@@ -417,8 +401,6 @@ export function isCriterionEmpty(c: Criterion): boolean {
       return !(v.terms?.length > 0);
     case 'labelingSection':
       return !String(v.text || '').trim() && !(v.sections?.length > 0);
-    case 'chemicalStructure':
-      return !String(v.structure || '').trim();
     default:
       return !String(v.text || '').trim();
   }

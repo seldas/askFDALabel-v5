@@ -25,7 +25,8 @@ export type IconId =
   | 'microscope'
   | 'building'
   | 'shield'
-  | 'external';
+  | 'external'
+  | 'molecule';
 
 function Svg({ children, size = 20 }: { children: ReactNode; size?: number }) {
   return (
@@ -131,6 +132,23 @@ const PATHS: Record<IconId, ReactNode> = {
       <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
       <polyline points="15 3 21 3 21 9" />
       <line x1="10" y1="14" x2="21" y2="3" />
+    </>
+  ),
+  molecule: (
+    <>
+      {/* Benzene-ring style molecule icon */}
+      <circle cx="12" cy="5" r="2" />
+      <circle cx="19.5" cy="9" r="2" />
+      <circle cx="19.5" cy="15" r="2" />
+      <circle cx="12" cy="19" r="2" />
+      <circle cx="4.5" cy="15" r="2" />
+      <circle cx="4.5" cy="9" r="2" />
+      <line x1="12" y1="7" x2="17.8" y2="10" />
+      <line x1="19.5" y1="11" x2="19.5" y2="13" />
+      <line x1="17.8" y1="14" x2="12" y2="17" />
+      <line x1="12" y1="17" x2="6.2" y2="14" />
+      <line x1="4.5" y1="13" x2="4.5" y2="11" />
+      <line x1="6.2" y1="10" x2="12" y2="7" />
     </>
   ),
 };

@@ -204,6 +204,17 @@ const PLATFORM_TOOLS: ToolDef[] = [
     href: () => '/drugtox',
   },
   {
+    id: 'chemsearch',
+    name: 'Chemical Structure Search',
+    blurb: 'Find drug labels by SMILES/InChI: exact, substructure, or similarity.',
+    iconId: 'molecule',
+    kind: 'embedded',
+    group: 'discover',
+    contexts: ['global'],
+    target: '_blank',
+    href: () => '/chemsearch',
+  },
+  {
     id: 'webtest',
     name: 'Web-test Tool',
     blurb: 'Automated regression testing of FDALabel web endpoints.',

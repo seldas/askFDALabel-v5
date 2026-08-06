@@ -292,6 +292,27 @@ export default function Header({
                 ) : null;
               })()}
 
+              {(() => {
+                const chemsearch = getTool('chemsearch')!;
+                return (
+                  <a
+                    href={chemsearch.href(GLOBAL_CTX)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hp-dropdown-item"
+                    onClick={handleNavClick}
+                  >
+                    <span className="hp-dropdown-icon">
+                      <ToolIcon id={chemsearch.iconId} size={18} />
+                    </span>
+                    <div>
+                      <div className="dropdown-title" style={{ fontWeight: 800 }}>{chemsearch.name}</div>
+                      <div style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 500 }}>{chemsearch.blurb}</div>
+                    </div>
+                  </a>
+                );
+              })()}
+
               {(['fdalabel-fda', 'fdalabel-cder', 'fdalabel-public'] as const).map((toolId) => {
                 const tool = getTool(toolId)!;
                 const available = isToolAvailable(tool, GLOBAL_CTX, capabilities);

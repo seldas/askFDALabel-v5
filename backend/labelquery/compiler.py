@@ -684,16 +684,6 @@ def _c_identifier(criterion, bag, warnings, unii_available=True):
     return '(' + ' OR '.join(alts) + ')'
 
 
-def _c_chemical_structure(criterion, bag, warnings):
-    if not (criterion.get('structure') or '').strip():
-        return None
-    warnings.append(
-        'Chemical Structure search needs a structure index that this deployment '
-        'does not have; the criterion was ignored.'
-    )
-    return None
-
-
 def _c_oracle_only(value, warnings, label, key):
     """
     A criterion the FDALabel Oracle database can answer but the local import
@@ -758,8 +748,6 @@ def _compile_criterion(criterion, bag, warnings, expand_meddra, capabilities):
         return _c_pharm_class(value, bag, warnings)
     if ctype == 'identifier':
         return _c_identifier(value, bag, warnings, capabilities.get('unii', True))
-    if ctype == 'chemicalStructure':
-        return _c_chemical_structure(value, bag, warnings)
     if ctype == 'deaSchedule':
         return _c_oracle_only(value, warnings, 'DEA schedule search', 'values')
     if ctype == 'activeMoiety':

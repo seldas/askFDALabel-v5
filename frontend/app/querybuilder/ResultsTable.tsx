@@ -251,7 +251,7 @@ function StickyXScrollbar({
   );
 }
 
-interface ColumnDef {
+export interface ColumnDef {
   key: string;
   header: string;
   /** Sort token accepted by /api/labelquery/execute; omit to disable sorting. */
@@ -380,13 +380,19 @@ export function ResultsTable({
   view,
   sortState,
   onSort,
+  extraColumns,
 }: {
   rows: LabelRow[];
   view: ResultView;
   sortState: SortState;
   onSort: (sort: string) => void;
+  /** Additional columns prepended before the standard column set. */
+  extraColumns?: ColumnDef[];
 }) {
-  const allColumns = view === 'expanded' ? EXPANDED_COLUMNS : BASIC_COLUMNS;
+  const baseColumns = view === 'expanded' ? EXPANDED_COLUMNS : BASIC_COLUMNS;
+  const allColumns = extraColumns && extraColumns.length > 0
+    ? [...extraColumns, ...baseColumns]
+    : baseColumns;
   const [hiddenColumns, setHiddenColumns] = useState<Record<string, boolean>>({});
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [colPickerOpen, setColPickerOpen] = useState(false);

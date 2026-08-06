@@ -1228,19 +1228,22 @@ Target database: LOCAL import (PostgreSQL).
 - "deaSchedule", "activeMoiety" and "applicationType" are NOT available. Do not
   emit them; put the requirement in "notes" instead. (applicationType is off
   here because its counts and its results disagree on this import.)
-- "chemicalStructure" is not available on any target. Never emit it.
+- Chemical structure search is handled by the dedicated Chemical Structure Search
+  tool (/chemsearch), not the query builder. Do not emit "chemicalStructure".
 """,
     'oracle': """
 Target database: FDALabel Oracle, CDER-CBER scope.
 - This scope covers HUMAN labeling only. Animal labeling is absent, so never
   emit a "labelingType" of animal Rx or animal OTC here -- say in "notes" that
   the FDA scope is needed for it.
-- "chemicalStructure" is not available on any target. Never emit it.
+- Chemical structure search is handled by the dedicated Chemical Structure Search
+  tool (/chemsearch), not the query builder. Do not emit "chemicalStructure".
 """,
     'oracle_all': """
 Target database: FDALabel Oracle, full FDA scope.
 - Covers all labeling, human and animal.
-- "chemicalStructure" is not available on any target. Never emit it.
+- Chemical structure search is handled by the dedicated Chemical Structure Search
+  tool (/chemsearch), not the query builder. Do not emit "chemicalStructure".
 """,
 }
 
@@ -1248,15 +1251,15 @@ Target database: FDALabel Oracle, full FDA scope.
 #: Criteria that cannot be evaluated per target. Mirrors CRITERION_SUPPORT in
 #: frontend/app/querybuilder/types.ts -- keep the two in step.
 _TARGET_UNSUPPORTED = {
-    'local': {'deaSchedule', 'activeMoiety', 'applicationType', 'chemicalStructure'},
-    'oracle': {'chemicalStructure'},
-    'oracle_all': {'chemicalStructure'},
+    'local': {'deaSchedule', 'activeMoiety', 'applicationType'},
+    'oracle': set(),
+    'oracle_all': set(),
 }
 
 _ALLOWED_TYPES = {
     'labelingType', 'applicationType', 'route', 'productName', 'fullText',
     'labelingSection', 'marketStatus', 'meddra', 'pharmClass', 'identifier',
-    'chemicalStructure', 'dosageForm', 'deaSchedule', 'activeMoiety',
+    'dosageForm', 'deaSchedule', 'activeMoiety',
 }
 
 

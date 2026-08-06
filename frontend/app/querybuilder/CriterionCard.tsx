@@ -532,36 +532,6 @@ export function CriterionCard({
         );
       }
 
-      case 'chemicalStructure':
-        return (
-          <>
-            <div className="fdl-row">
-              <input
-                className="fdl-input fdl-input--grow"
-                type="text"
-                value={v.structure || ''}
-                placeholder="Enter a SMILES string or InChI"
-                onChange={(e) => set({ structure: e.target.value })}
-              />
-              <Select
-                ariaLabel="Structure match"
-                value={v.match || 'exact'}
-                onChange={(match) => set({ match })}
-                options={[
-                  { value: 'exact', label: 'exact match' },
-                  { value: 'substructure', label: 'substructure' },
-                  { value: 'similarity', label: 'similarity' },
-                ]}
-              />
-            </div>
-            <p className="fdl-note fdl-note--warn">
-              This deployment has no chemical structure index, so a structure entered here is
-              ignored when the search runs. Use Pharmacologic Class(es) or the ingredient UNII in
-              Identifiers instead.
-            </p>
-          </>
-        );
-
       case 'deaSchedule':
         return (
           <>
