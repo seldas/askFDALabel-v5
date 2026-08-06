@@ -234,7 +234,13 @@ export default function HomePage() {
 
         {actionBar('top')}
 
-        <QueryPanel query={query} onChange={setQuery} options={options} targetDb={targetDb} />
+        <QueryPanel
+          query={query}
+          onChange={setQuery}
+          options={options}
+          targetDb={targetDb}
+          visibleSections={['identifiers', 'textMatch']}
+        />
 
         {actionBar('bottom')}
 

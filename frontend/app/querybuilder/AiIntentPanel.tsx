@@ -14,9 +14,9 @@ import type { LabelQuery, TargetDb } from './types';
 import { fromWire } from './types';
 
 const EXAMPLES = [
-  'Human Rx labels for metformin that mention lactic acidosis in the boxed warning',
-  'NDA reference listed drugs given intravenously that are kinase inhibitors',
-  'OTC labels whose adverse reactions section mentions hepatic failure',
+  'Metformin or glipizide mentioning lactic acidosis in the boxed warning',
+  'Kinase inhibitors mentioning QTc prolongation or cardiac toxicity',
+  'Acetaminophen or aspirin labels with adverse reactions mentioning hepatic failure',
 ];
 
 export function AiIntentPanel({
@@ -115,7 +115,7 @@ export function AiIntentPanel({
           </h2>
           {!isFolded && (
             <p className="fdl-ai__lede" style={{ color: '#64748b', fontSize: '0.88rem', marginTop: '4px' }}>
-              Plain English is turned into the criteria below. Nothing is searched until you review them and press Search.
+              Plain English is converted into product names, identifiers, or section text criteria. Categorical filters (routes, forms, market status) are applied on the results page.
             </p>
           )}
         </div>
@@ -152,7 +152,7 @@ export function AiIntentPanel({
               rows={2}
               value={intent}
               disabled={disabled || busy}
-              placeholder="e.g. Human prescription labels for SGLT2 inhibitors that mention ketoacidosis in Warnings"
+              placeholder="e.g. Metformin or glipizide mentioning lactic acidosis in Boxed Warning or Adverse Reactions"
               onChange={(e) => setIntent(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {

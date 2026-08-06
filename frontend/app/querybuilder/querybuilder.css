@@ -1786,5 +1786,424 @@
   color: #78350f;
 }
 
+/* ==========================================================================
+   PubMed-Style Results Layout & Left Sidebar Filters
+   ========================================================================== */
+
+.fdl-mobile-filter-bar {
+  display: none;
+  margin-bottom: 12px;
+}
+
+.fdl-btn--mobile-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #1e293b;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.fdl-results-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.fdl-results-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.fdl-results-main {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+/* Sidebar Component Styling */
+.fdl-sidebar-filters {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  padding: 16px;
+}
+
+.fdl-sidebar-filters__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 12px;
+}
+
+.fdl-sidebar-filters__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fdl-sidebar-filters__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+}
+
+.fdl-sidebar-filters__badge {
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.fdl-sidebar-filters__clear {
+  background: none;
+  border: none;
+  color: #dc2626;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.fdl-sidebar-filters__clear:hover {
+  text-decoration: underline;
+}
+
+.fdl-sidebar-filters__target-db {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.fdl-sidebar-filters__target-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fdl-target-db-pills--sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fdl-target-db-pills--sidebar .fdl-target-db-pill {
+  width: 100%;
+  text-align: left;
+  justify-content: flex-start;
+  padding: 5px 10px;
+  font-size: 0.78rem;
+}
+
+/* Accordions */
+.fdl-sidebar-filters__accordions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fdl-filter-group {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+  transition: border-color 0.15s ease;
+}
+
+.fdl-filter-group.is-open {
+  border-color: #cbd5e1;
+}
+
+.fdl-filter-group__header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.fdl-filter-group__header:hover {
+  background: #f1f5f9;
+}
+
+.fdl-filter-group__name {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.fdl-filter-group__right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fdl-filter-group__count {
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  border-radius: 10px;
+  padding: 1px 6px;
+  min-width: 16px;
+  text-align: center;
+}
+
+.fdl-filter-group__arrow {
+  font-size: 0.65rem;
+  color: #64748b;
+}
+
+.fdl-filter-group__body {
+  padding: 10px 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.fdl-filter-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fdl-checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #334155;
+  cursor: pointer;
+  user-select: none;
+  line-height: 1.35;
+}
+
+.fdl-checkbox-label.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fdl-checkbox-label input[type="checkbox"] {
+  margin-top: 2px;
+  accent-color: #2563eb;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.fdl-filter-subgroup {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.fdl-filter-subgroup__title {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.fdl-radio-group {
+  display: flex;
+  gap: 10px;
+}
+
+.fdl-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: #334155;
+  cursor: pointer;
+}
+
+.fdl-radio-label input[type="radio"] {
+  accent-color: #2563eb;
+}
+
+.fdl-filter-select {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 0.78rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1e293b;
+}
+
+.fdl-date-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.fdl-date-input {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+}
+
+.fdl-filter-tags-input {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fdl-filter-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.fdl-filter-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.fdl-filter-tag button {
+  background: none;
+  border: none;
+  color: #1e40af;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.fdl-filter-tag-add {
+  display: flex;
+  gap: 6px;
+}
+
+.fdl-input--sm {
+  padding: 4px 8px !important;
+  font-size: 0.78rem !important;
+}
+
+.fdl-btn--sm {
+  padding: 4px 10px !important;
+  font-size: 0.75rem !important;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.fdl-results-summary-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  margin-bottom: 12px;
+  font-size: 0.82rem;
+}
+
+.fdl-results-summary-label {
+  font-weight: 700;
+  color: #475569;
+}
+
+.fdl-results-summary-text {
+  color: #0f172a;
+  font-weight: 600;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Responsive breakpoint for Mobile Drawer */
+@media (max-width: 900px) {
+  .fdl-mobile-filter-bar {
+    display: block;
+  }
+
+  .fdl-results-sidebar {
+    display: none;
+  }
+
+  .fdl-results-sidebar.is-mobile-open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    background: #ffffff;
+    padding: 16px;
+    overflow-y: auto;
+  }
+
+  .fdl-mobile-sidebar-close {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 2px solid #e2e8f0;
+    font-weight: 800;
+    font-size: 1.1rem;
+  }
+
+  .fdl-mobile-sidebar-close button {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+}
+
+/* PubMed style facet count badges */
+.fdl-facet-count {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #64748b;
+  margin-left: 4px;
+}
+
 
 

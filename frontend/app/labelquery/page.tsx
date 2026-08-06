@@ -13,8 +13,10 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import SidebarFilters from '../components/SidebarFilters';
 import { Page } from '../platform/primitives';
 import { useUser } from '../context/UserContext';
+import { useCapabilities } from '../platform/capabilities';
 import {
   ResultsTable,
   type LabelRow,
@@ -22,8 +24,10 @@ import {
   type ResultView,
   type SortState,
 } from '../querybuilder/ResultsTable';
+import type { OptionLists } from '../querybuilder/CriterionCard';
 import { QUERY_PARAM, decodeQuery, resultsPath } from '../querybuilder/queryUrl';
-import type { WireQuery } from '../querybuilder/types';
+import { fromWire, toWire, type LabelQuery, type TargetDb, type WireQuery } from '../querybuilder/types';
+import { withAppBase } from '../utils/appPaths';
 import '../querybuilder/querybuilder.css';
 
 const PAGE_SIZE = 50;
@@ -78,10 +82,35 @@ function summarizeQuery(query: WireQuery | null): string {
 function ResultsPage() {
   const searchParams = useSearchParams();
   const encoded = searchParams.get(QUERY_PARAM);
-  const targetDb = searchParams.get('target_db') || 'oracle';
+  const initialTargetDb = searchParams.get('target_db') || 'oracle';
   const { session, openAuthModal } = useUser();
+  const { capabilities, ready: capReady } = useCapabilities();
+  const oracleAvailable = capReady && Boolean(capabilities.isInternal || capabilities.fdaAccessible || capabilities.cderAccessible);
 
-  const query = useMemo<WireQuery | null>(() => decodeQuery(encoded), [encoded]);
+  const initialWireQuery = useMemo<WireQuery | null>(() => decodeQuery(encoded), [encoded]);
+
+  const [overrideWireQuery, setOverrideWireQuery] = useState<WireQuery | null>(null);
+  const [overrideTargetDb, setOverrideTargetDb] = useState<TargetDb | null>(null);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Sync state when URL searchParams changes
+  useEffect(() => {
+    setOverrideWireQuery(null);
+    setOverrideTargetDb(null);
+  }, [encoded]);
+
+  const activeWireQuery = overrideWireQuery ?? initialWireQuery;
+  const currentTargetDb = (overrideTargetDb || initialTargetDb) as TargetDb;
+  const labelQuery = useMemo<LabelQuery>(() => fromWire(activeWireQuery || { groups: [] }), [activeWireQuery]);
+
+  const [options, setOptions] = useState<OptionLists>({
+    labelingTypes: [],
+    applicationTypes: [],
+    routes: [],
+    dosageForms: [],
+    sections: [],
+    loading: true,
+  });
 
   const [data, setData] = useState<ResultSet | null>(null);
   const [busy, setBusy] = useState(true);
@@ -114,13 +143,41 @@ function ResultsPage() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
+  // Fetch option lists when currentTargetDb changes
+  useEffect(() => {
+    let cancelled = false;
+    setOptions((prev) => ({ ...prev, loading: true }));
+    (async () => {
+      try {
+        const res = await fetch(`/api/labelquery/options?target_db=${currentTargetDb}`);
+        const json = await res.json();
+        if (cancelled) return;
+        if (res.ok) {
+          setOptions({
+            labelingTypes: json.labelingTypes || [],
+            applicationTypes: json.applicationTypes || [],
+            routes: json.routes || [],
+            dosageForms: json.dosageForms || [],
+            sections: json.sections || [],
+            loading: false,
+          });
+        }
+      } catch {
+        if (!cancelled) setOptions((prev) => ({ ...prev, loading: false }));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentTargetDb]);
+
   // A changed query means the old page number is meaningless.
   useEffect(() => {
     setOffset(0);
   }, [encoded]);
 
   useEffect(() => {
-    if (!query) {
+    if (!activeWireQuery) {
       setBusy(false);
       setError(
         encoded
@@ -142,12 +199,12 @@ function ResultsPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            query,
+            query: activeWireQuery,
             limit: PAGE_SIZE,
             offset,
             sort: sortState.sort,
             dir: sortState.dir,
-            target_db: targetDb,
+            target_db: currentTargetDb,
           }),
         });
         const json = await res.json();
@@ -161,19 +218,19 @@ function ResultsPage() {
         setErrorQuery(null);
 
         // Record search in user query history on initial search execution (offset === 0)
-        if (offset === 0 && query) {
+        if (offset === 0 && activeWireQuery) {
           const currentLink = typeof window !== 'undefined' 
             ? (window.location.pathname + window.location.search) 
-            : resultsPath(query, targetDb as any);
+            : resultsPath(activeWireQuery, currentTargetDb);
           fetch('/api/dashboard/query_history', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              query_title: summarizeQuery(query),
+              query_title: summarizeQuery(activeWireQuery),
               query_link: currentLink,
-              query_json: query,
+              query_json: activeWireQuery,
               result_count: json.total || 0,
-              target_db: targetDb
+              target_db: currentTargetDb
             })
           }).catch(() => {});
         }
@@ -191,7 +248,42 @@ function ResultsPage() {
     return () => {
       cancelled = true;
     };
-  }, [query, encoded, offset, sortState]);
+  }, [activeWireQuery, currentTargetDb, offset, sortState]);
+
+  const handleSidebarQueryChange = useCallback(
+    (newLabelQuery: LabelQuery) => {
+      const newWire = toWire(newLabelQuery);
+      setOverrideWireQuery(newWire);
+      setOffset(0);
+      const newPath = withAppBase(resultsPath(newWire, currentTargetDb));
+      window.history.replaceState(null, '', newPath);
+    },
+    [currentTargetDb],
+  );
+
+  const handleTargetDbChange = useCallback(
+    (newDb: TargetDb) => {
+      setOverrideTargetDb(newDb);
+      setOffset(0);
+      const wireToUse = activeWireQuery || { groups: [] };
+      const newPath = withAppBase(resultsPath(wireToUse, newDb));
+      window.history.replaceState(null, '', newPath);
+    },
+    [activeWireQuery],
+  );
+
+  const handleClearAllSidebarFilters = useCallback(() => {
+    if (!activeWireQuery) return;
+    const nonSidebarTypes = ['productName', 'fullText', 'labelingSection', 'meddra', 'identifier'];
+    const newWire: WireQuery = {
+      groups: (activeWireQuery.groups || []).map((g) => ({
+        criteria: (g.criteria || []).filter((c) => nonSidebarTypes.includes(c.type)),
+      })),
+    };
+    setOverrideWireQuery(newWire);
+    setOffset(0);
+    window.history.replaceState(null, '', withAppBase(resultsPath(newWire, currentTargetDb)));
+  }, [activeWireQuery, currentTargetDb]);
 
   const onSort = useCallback((sort: string) => {
     setOffset(0);
@@ -204,14 +296,14 @@ function ResultsPage() {
 
   const download = useCallback(
     async (format: 'csv' | 'xlsx') => {
-      if (!query || downloading) return;
+      if (!activeWireQuery || downloading) return;
       setDownloading(format);
       setError(null);
       try {
         const res = await fetch('/api/labelquery/export', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query, format, sort: sortState.sort, dir: sortState.dir, target_db: targetDb }),
+          body: JSON.stringify({ query: activeWireQuery, format, sort: sortState.sort, dir: sortState.dir, target_db: currentTargetDb }),
         });
         if (!res.ok) {
           const json = await res.json().catch(() => ({}));
@@ -235,7 +327,7 @@ function ResultsPage() {
         setDownloading(null);
       }
     },
-    [downloading, query, sortState, targetDb],
+    [downloading, activeWireQuery, sortState, currentTargetDb],
   );
 
   const copyPermalink = useCallback(async () => {
@@ -255,7 +347,7 @@ function ResultsPage() {
       return;
     }
     const totalCount = data?.total || 0;
-    setTaskTitleInput(summarizeQuery(query));
+    setTaskTitleInput(summarizeQuery(activeWireQuery));
 
     if (totalCount > 3000) {
       setIs3000WarningOpen(true);
@@ -273,18 +365,18 @@ function ResultsPage() {
       let targetRows: any[] = data?.results || [];
 
       // If total results exceed loaded page size, fetch the full result set up to 3,000
-      if (query && totalCount > targetRows.length) {
+      if (activeWireQuery && totalCount > targetRows.length) {
         try {
           const fetchRes = await fetch('/api/labelquery/execute', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              query,
+              query: activeWireQuery,
               limit: Math.min(totalCount, 3000),
               offset: 0,
               sort: sortState.sort,
               dir: sortState.dir,
-              target_db: targetDb,
+              target_db: currentTargetDb,
             }),
           });
           if (fetchRes.ok) {
@@ -326,7 +418,7 @@ function ResultsPage() {
         body: JSON.stringify({
           title: taskTitleInput.trim(),
           labels,
-          target_db: targetDb,
+          target_db: currentTargetDb,
         }),
       });
 
@@ -360,375 +452,364 @@ function ResultsPage() {
       <Header />
 
       <main className="fdl-shell fdl-shell--results">
-        <div className="fdl-resultshead">
-          <h1 className="fdl-resultshead__count">
-            {!query
-              ? 'Query results'
-              : busy && !data
-                ? 'Searching…'
-                : data?.capped
-                  ? `Most Recent ${browsable.toLocaleString()}/${total.toLocaleString()} Labeling Results`
-                  : `${total.toLocaleString()} labeling result${total === 1 ? '' : 's'}`}
-          </h1>
-
-          <div className="fdl-viewtoggle" role="group" aria-label="Result detail">
-            <button
-              type="button"
-              className={view === 'basic' ? 'fdl-viewtoggle__on' : 'fdl-viewtoggle__off'}
-              aria-pressed={view === 'basic'}
-              onClick={() => setView('basic')}
-            >
-              Basic View
-            </button>
-            <button
-              type="button"
-              className={view === 'expanded' ? 'fdl-viewtoggle__on' : 'fdl-viewtoggle__off'}
-              aria-pressed={view === 'expanded'}
-              onClick={() => setView('expanded')}
-            >
-              Expanded View
-            </button>
-          </div>
-
-          {/* Unified Export Dropdown Button */}
-          <div className="fdl-export-dropdown" style={{ position: 'relative', display: 'inline-block' }}>
-            <button
-              type="button"
-              className="fdl-btn fdl-btn--export"
-              onClick={() => setExportOpen((prev) => !prev)}
-              disabled={!query || downloading !== null}
-              style={{
-                background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '8px 18px',
-                fontWeight: 700,
-                fontSize: '0.88rem',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 2px 6px rgba(15, 23, 42, 0.2)',
-              }}
-            >
-              <span>Export</span>
-              <span style={{ fontSize: '0.7rem' }}>▼</span>
-            </button>
-
-            {exportOpen && (
-              <div
-                style={{
-                  position: 'absolute',
-                  right: 0,
-                  top: 'calc(100% + 6px)',
-                  background: '#ffffff',
-                  borderRadius: '10px',
-                  border: '1px solid #cbd5e1',
-                  boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.2)',
-                  minWidth: '240px',
-                  zIndex: 1000,
-                  padding: '6px',
-                }}
-              >
-                <button
-                  type="button"
-                  disabled={downloading !== null}
-                  onClick={() => { setExportOpen(false); download('csv'); }}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: 'transparent',
-                    color: '#1e293b',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                  <span>{downloading === 'csv' ? 'Exporting CSV…' : 'Export as CSV'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  disabled={downloading !== null}
-                  onClick={() => { setExportOpen(false); download('xlsx'); }}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: 'transparent',
-                    color: '#1e293b',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-                  <span>{downloading === 'xlsx' ? 'Exporting Excel…' : 'Export as Excel (.xlsx)'}</span>
-                </button>
-
-                <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0' }} />
-
-                <button
-                  type="button"
-                  onClick={() => { setExportOpen(false); copyPermalink(); }}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: 'transparent',
-                    color: '#1e293b',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                  <span>{copied ? 'Link Copied!' : 'Copy Permanent Link'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => { setExportOpen(false); handleInitiateTaskCreation(); }}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: 'transparent',
-                    color: '#2563eb',
-                    fontSize: '0.85rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><polyline points="9 14 11 16 15 12"/></svg>
-                  <span>Save Query Results as Task</span>
-                </button>
-              </div>
-            )}
-          </div>
+        <div className="fdl-mobile-filter-bar">
+          <button
+            type="button"
+            className="fdl-btn fdl-btn--mobile-filter"
+            onClick={() => setMobileSidebarOpen((prev) => !prev)}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '6px' }}>
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+            </svg>
+            <span>Filters</span>
+          </button>
         </div>
 
-        {/* Task Creation Success Banner */}
-        {taskSuccessMsg && (
-          <div
-            style={{
-              background: '#ecfdf5',
-              border: '1px solid #a7f3d0',
-              color: '#065f46',
-              padding: '12px 18px',
-              borderRadius: '10px',
-              marginBottom: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '12px',
-              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.1)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '1.2rem', fontWeight: 800 }}>✓</span>
-              <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>
-                Task <strong>"{taskSuccessMsg.title}"</strong> created with{' '}
-                <strong>{taskSuccessMsg.count.toLocaleString()}</strong> labeling record(s)!
-              </span>
+        <div className="fdl-results-layout">
+          <aside className={`fdl-results-sidebar ${mobileSidebarOpen ? 'is-mobile-open' : ''}`}>
+            {mobileSidebarOpen && (
+              <div className="fdl-mobile-sidebar-close">
+                <span>Filter Results</span>
+                <button type="button" onClick={() => setMobileSidebarOpen(false)}>✕ Close</button>
+              </div>
+            )}
+            <SidebarFilters
+              query={labelQuery}
+              onChange={handleSidebarQueryChange}
+              options={options}
+              targetDb={currentTargetDb}
+              onTargetDbChange={handleTargetDbChange}
+              oracleAvailable={oracleAvailable}
+              totalResults={total}
+              loading={busy}
+              onClearAll={handleClearAllSidebarFilters}
+              facets={data?.facets}
+            />
+          </aside>
+
+          <div className="fdl-results-main">
+            <div className="fdl-resultshead">
+              <h1 className="fdl-resultshead__count">
+                {!activeWireQuery
+                  ? 'Query results'
+                  : busy && !data
+                    ? 'Searching…'
+                    : data?.capped
+                      ? `Most Recent ${browsable.toLocaleString()}/${total.toLocaleString()} Labeling Results`
+                      : `${total.toLocaleString()} labeling result${total === 1 ? '' : 's'}`}
+              </h1>
+
+              <div className="fdl-viewtoggle" role="group" aria-label="Result detail">
+                <button
+                  type="button"
+                  className={view === 'basic' ? 'fdl-viewtoggle__on' : 'fdl-viewtoggle__off'}
+                  aria-pressed={view === 'basic'}
+                  onClick={() => setView('basic')}
+                >
+                  Basic View
+                </button>
+                <button
+                  type="button"
+                  className={view === 'expanded' ? 'fdl-viewtoggle__on' : 'fdl-viewtoggle__off'}
+                  aria-pressed={view === 'expanded'}
+                  onClick={() => setView('expanded')}
+                >
+                  Expanded View
+                </button>
+              </div>
+
+              {/* Unified Export Dropdown Button */}
+              <div className="fdl-export-dropdown" style={{ position: 'relative', display: 'inline-block' }}>
+                <button
+                  type="button"
+                  className="fdl-btn fdl-btn--export"
+                  onClick={() => setExportOpen((prev) => !prev)}
+                  disabled={!activeWireQuery || downloading !== null}
+                  style={{
+                    background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 18px',
+                    fontWeight: 700,
+                    fontSize: '0.88rem',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 2px 6px rgba(15, 23, 42, 0.2)',
+                  }}
+                >
+                  <span>Export</span>
+                  <span style={{ fontSize: '0.7rem' }}>▼</span>
+                </button>
+
+                {exportOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      top: 'calc(100% + 6px)',
+                      background: '#ffffff',
+                      borderRadius: '10px',
+                      border: '1px solid #cbd5e1',
+                      boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.2)',
+                      minWidth: '240px',
+                      zIndex: 1000,
+                      padding: '6px',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      disabled={downloading !== null}
+                      onClick={() => { setExportOpen(false); download('csv'); }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#1e293b',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                      <span>{downloading === 'csv' ? 'Exporting CSV…' : 'Export as CSV'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={downloading !== null}
+                      onClick={() => { setExportOpen(false); download('xlsx'); }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#1e293b',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                      <span>{downloading === 'xlsx' ? 'Exporting Excel…' : 'Export as Excel (.xlsx)'}</span>
+                    </button>
+
+                    <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0' }} />
+
+                    <button
+                      type="button"
+                      onClick={() => { setExportOpen(false); copyPermalink(); }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#1e293b',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                      <span>{copied ? 'Link Copied!' : 'Copy Permanent Link'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => { setExportOpen(false); handleInitiateTaskCreation(); }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#2563eb',
+                        fontSize: '0.85rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><polyline points="9 14 11 16 15 12"/></svg>
+                      <span>Save Query Results as Task</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Link
-                href={`/dashboard?projectId=${taskSuccessMsg.id}`}
+
+            {/* Task Creation Success Banner */}
+            {taskSuccessMsg && (
+              <div
                 style={{
-                  background: '#059669',
-                  color: '#ffffff',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  textDecoration: 'none',
+                  background: '#ecfdf5',
+                  border: '1px solid #a7f3d0',
+                  color: '#065f46',
+                  padding: '12px 18px',
+                  borderRadius: '10px',
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  boxShadow: '0 2px 8px rgba(16, 185, 129, 0.1)',
                 }}
               >
-                View Task in Dashboard →
-              </Link>
-              <button
-                type="button"
-                onClick={() => setTaskSuccessMsg(null)}
-                style={{ background: 'none', border: 'none', color: '#047857', cursor: 'pointer', fontWeight: 800, fontSize: '1rem' }}
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '1.2rem', fontWeight: 800 }}>✓</span>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>
+                    Task <strong>"{taskSuccessMsg.title}"</strong> created with{' '}
+                    <strong>{taskSuccessMsg.count.toLocaleString()}</strong> labeling record(s)!
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Link
+                    href={`/dashboard?projectId=${taskSuccessMsg.id}`}
+                    style={{
+                      background: '#059669',
+                      color: '#ffffff',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    View Task in Dashboard →
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setTaskSuccessMsg(null)}
+                    style={{ background: 'none', border: 'none', color: '#047857', cursor: 'pointer', fontWeight: 800, fontSize: '1rem' }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
 
-        {error ? (
-          <div className="fdl-error-box">
-            <p className="fdl-error">{error}</p>
-            {errorQuery ? (
-              <div className="fdl-error-query">
-                <div className="fdl-error-query__header">
-                  <span>Processed SQL Query:</span>
+            {error ? (
+              <div className="fdl-error-box">
+                <p className="fdl-error">{error}</p>
+                {errorQuery ? (
+                  <div className="fdl-error-query">
+                    <div className="fdl-error-query__header">
+                      <span>Processed SQL Query:</span>
+                      <button
+                        type="button"
+                        className="fdl-link"
+                        style={{ color: '#a6adc8' }}
+                        onClick={() => {
+                          navigator.clipboard.writeText(errorQuery);
+                        }}
+                      >
+                        Copy Query
+                      </button>
+                    </div>
+                    <pre className="fdl-error-query__code"><code>{errorQuery}</code></pre>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {/* Active query summary tag pill */}
+            <div className="fdl-results-summary-bar">
+              <span className="fdl-results-summary-label">Query Criteria:</span>
+              <span className="fdl-results-summary-text">{summarizeQuery(activeWireQuery)}</span>
+              {data?.sql ? (
+                <button
+                  type="button"
+                  className="fdl-link fdl-link--sql"
+                  onClick={() => setSqlOpen((prev) => !prev)}
+                >
+                  {sqlOpen ? 'Hide SQL' : 'View SQL'}
+                </button>
+              ) : null}
+            </div>
+
+            {sqlOpen && data?.sql ? (
+              <div className="fdl-sql-panel">
+                <div className="fdl-sql-panel__head">
+                  <span className="fdl-sql-panel__title">Generated SQL Query</span>
                   <button
                     type="button"
                     className="fdl-link"
-                    style={{ color: '#a6adc8' }}
                     onClick={() => {
-                      navigator.clipboard.writeText(errorQuery);
-                    }}
-                  >
-                    Copy Query
-                  </button>
-                </div>
-                <pre className="fdl-error-query__code"><code>{errorQuery}</code></pre>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        {data?.warnings?.length ? (
-          <ul className="fdl-results__warnings">
-            {data.warnings.map((w) => (
-              <li key={w}>{w}</li>
-            ))}
-          </ul>
-        ) : null}
-
-        {rows.length > 0 ? (
-          <>
-            <ResultsTable rows={rows} view={view} sortState={sortState} onSort={onSort} />
-            <div className="fdl-results__bar fdl-results__bar--bottom">
-              <span className="fdl-results__count">
-                Showing {offset + 1}–{to} of {browsable.toLocaleString()}
-              </span>
-              <div className="fdl-pager">
-                <button
-                  type="button"
-                  className="fdl-btn fdl-btn--ghost"
-                  disabled={offset === 0}
-                  onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
-                >
-                  ‹ Previous
-                </button>
-                <button
-                  type="button"
-                  className="fdl-btn fdl-btn--ghost"
-                  disabled={to >= browsable}
-                  onClick={() => setOffset(offset + PAGE_SIZE)}
-                >
-                  Next ›
-                </button>
-              </div>
-            </div>
-          </>
-        ) : !busy ? (
-          <div className="fdl-empty">
-            <p>No labeling matched your criteria.</p>
-          </div>
-        ) : null}
-
-        {/* Technical: processed SQL query — collapsed by default */}
-        {data?.sql && (
-          <div style={{ marginTop: '2rem' }}>
-            <button
-              type="button"
-              onClick={() => setSqlOpen((v) => !v)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: '#94a3b8',
-                fontSize: '0.75rem',
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                fontWeight: 600,
-                padding: '4px 0',
-                userSelect: 'none',
-              }}
-              aria-expanded={sqlOpen}
-            >
-              <span style={{ fontSize: '0.65rem', display: 'inline-block', transition: 'transform 0.15s', transform: sqlOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
-              {sqlOpen ? 'Hide' : 'Show'} processed query
-            </button>
-            {sqlOpen && (
-              <div style={{
-                marginTop: '6px',
-                background: '#0f172a',
-                borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.08)',
-                overflow: 'hidden',
-              }}>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '8px 14px',
-                  borderBottom: '1px solid rgba(255,255,255,0.08)',
-                  background: '#1e293b',
-                }}>
-                  <span style={{ color: '#64748b', fontSize: '0.7rem', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontWeight: 700, letterSpacing: '0.05em' }}>
-                    PROCESSED QUERY · {targetDb.toUpperCase()}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(data.sql ?? '');
+                      navigator.clipboard.writeText(data.sql!);
                       setSqlCopied(true);
                       setTimeout(() => setSqlCopied(false), 2000);
                     }}
-                    style={{
-                      background: 'none',
-                      border: '1px solid rgba(255,255,255,0.15)',
-                      borderRadius: '4px',
-                      color: sqlCopied ? '#4ade80' : '#94a3b8',
-                      fontSize: '0.7rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      padding: '2px 8px',
-                    }}
                   >
-                    {sqlCopied ? '✓ Copied' : 'Copy'}
+                    {sqlCopied ? 'Copied!' : 'Copy SQL'}
                   </button>
                 </div>
-                <pre style={{
-                  margin: 0,
-                  padding: '12px 14px',
-                  color: '#cdd6f4',
-                  fontSize: '0.72rem',
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                  lineHeight: 1.6,
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  maxHeight: '400px',
-                  overflowY: 'auto',
-                }}>
-                  <code>{data.sql}</code>
-                </pre>
+                <pre className="fdl-sql-panel__code">{data.sql}</pre>
               </div>
-            )}
+            ) : null}
+
+            {data?.warnings?.length ? (
+              <ul className="fdl-results__warnings">
+                {data.warnings.map((w) => (
+                  <li key={w}>{w}</li>
+                ))}
+              </ul>
+            ) : null}
+
+            {rows.length > 0 ? (
+              <>
+                <ResultsTable rows={rows} view={view} sortState={sortState} onSort={onSort} />
+                <div className="fdl-results__bar fdl-results__bar--bottom">
+                  <span className="fdl-results__count">
+                    Showing {offset + 1}–{to} of {browsable.toLocaleString()}
+                  </span>
+                  <div className="fdl-pager">
+                    <button
+                      type="button"
+                      className="fdl-btn fdl-btn--ghost"
+                      disabled={offset === 0}
+                      onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+                    >
+                      ‹ Previous
+                    </button>
+                    <button
+                      type="button"
+                      className="fdl-btn fdl-btn--ghost"
+                      disabled={to >= browsable}
+                      onClick={() => setOffset(offset + PAGE_SIZE)}
+                    >
+                      Next ›
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : !busy ? (
+              <div className="fdl-empty">
+                <p>No labeling matched your criteria.</p>
+              </div>
+            ) : null}
           </div>
-        )}
+        </div>
       </main>
 
       {/* Customized Result Truncation Warning Modal (>3000 results) */}

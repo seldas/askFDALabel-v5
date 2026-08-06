@@ -742,6 +742,134 @@ def _expand_meddra(level, terms):
     return (names + list(terms))[:400] if names else []
 
 
+def _compute_python_facets(results):
+    if not results:
+        return {}
+
+    human_rx = 0
+    human_otc = 0
+    animal_rx = 0
+    animal_otc = 0
+    vaccine = 0
+
+    anda = 0
+    nda = 0
+    bla = 0
+    monograph = 0
+    rld = 0
+    rs = 0
+
+    status_rx = 0
+    status_otc = 0
+
+    routes_cnt = {}
+    dosage_cnt = {}
+    epc_cnt = {}
+
+    for r in results:
+        doc = str(r.get('doc_type') or '').upper()
+        mc = str(r.get('market_categories') or '').upper()
+
+        if 'HUMAN PRESCRIPTION' in doc:
+            human_rx += 1
+            status_rx += 1
+        elif 'HUMAN OTC' in doc:
+            human_otc += 1
+            status_otc += 1
+        elif 'ANIMAL' in doc and 'PRESCRIPTION' in doc:
+            animal_rx += 1
+            status_rx += 1
+        elif 'ANIMAL' in doc and 'OTC' in doc:
+            animal_otc += 1
+            status_otc += 1
+
+        if 'VACCINE' in doc:
+            vaccine += 1
+
+        if 'ANDA' in mc:
+            anda += 1
+        elif 'NDA' in mc:
+            nda += 1
+        elif 'BLA' in mc:
+            bla += 1
+
+        if 'MONOGRAPH' in mc:
+            monograph += 1
+
+        if r.get('is_rld'):
+            rld += 1
+        if r.get('is_rs'):
+            rs += 1
+
+        r_raw = r.get('routes')
+        if r_raw:
+            for rt in str(r_raw).split(';'):
+                rt_clean = rt.strip().upper()
+                if rt_clean:
+                    routes_cnt[rt_clean] = routes_cnt.get(rt_clean, 0) + 1
+
+        df_raw = r.get('dosage_forms')
+        if df_raw:
+            for df in str(df_raw).split(';'):
+                df_clean = df.strip().upper()
+                if df_clean:
+                    dosage_cnt[df_clean] = dosage_cnt.get(df_clean, 0) + 1
+
+        ep_raw = r.get('epc')
+        if ep_raw:
+            for ep in str(ep_raw).split(';'):
+                ep_clean = ep.strip()
+                if ep_clean:
+                    epc_cnt[ep_clean] = epc_cnt.get(ep_clean, 0) + 1
+
+    return {
+        'labelingTypes': [
+            {'value': '%HUMAN PRESCRIPTION%', 'label': 'Human Rx', 'count': human_rx},
+            {'value': '%HUMAN OTC%', 'label': 'Human OTC', 'count': human_otc},
+            {'value': '%ANIMAL%PRESCRIPTION%', 'label': 'Animal Rx', 'count': animal_rx},
+            {'value': '%ANIMAL%OTC%', 'label': 'Animal OTC', 'count': animal_otc},
+            {'value': '%VACCINE%', 'label': 'Vaccine', 'count': vaccine},
+        ],
+        'applicationTypes': [
+            {'value': 'ANDA', 'label': 'ANDA', 'count': anda},
+            {'value': 'NDA', 'label': 'NDA', 'count': nda},
+            {'value': 'BLA', 'label': 'BLA', 'count': bla},
+            {'value': '%OTC monograph%', 'label': 'OTC Monograph Drug', 'count': monograph},
+            {'value': 'RLD', 'label': 'Reference Listed Drug (RLD)', 'count': rld},
+            {'value': 'RS', 'label': 'Reference Standard (RS)', 'count': rs},
+        ],
+        'marketStatus': [
+            {'value': 'Prescription', 'label': 'Prescription', 'count': status_rx},
+            {'value': 'OTC', 'label': 'OTC', 'count': status_otc},
+        ],
+        'routes': [{'value': k, 'label': k, 'count': v} for k, v in sorted(routes_cnt.items(), key=lambda x: x[1], reverse=True)[:30]],
+        'dosageForms': [{'value': k, 'label': k, 'count': v} for k, v in sorted(dosage_cnt.items(), key=lambda x: x[1], reverse=True)[:30]],
+        'pharmClasses': [{'value': k, 'label': k, 'count': v} for k, v in sorted(epc_cnt.items(), key=lambda x: x[1], reverse=True)[:30]],
+    }
+
+
+def _compute_postgres_facets(conn, relational_where, section_where, params):
+    try:
+        sec_join = ""
+        if section_where:
+            sec_join = f"INNER JOIN (SELECT DISTINCT sec.spl_id FROM labeling.spl_sections sec WHERE {section_where}) sc ON sc.spl_id = s.spl_id"
+
+        sql = f"""
+            SELECT s.doc_type, s.market_categories, s.routes, s.dosage_forms, s.epc, s.is_rld, s.is_rs
+            FROM labeling.sum_spl s
+            {sec_join}
+            WHERE {relational_where}
+            LIMIT 3000
+        """
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            matched_rows = [dict(r) for r in cur.fetchall()]
+        return _compute_python_facets(matched_rows)
+    except Exception as e:
+        print(f"[WARN] Postgres facet calculation failed: {e}")
+        return {}
+
+
 # ---------------------------------------------------------------------------
 # Execute
 # ---------------------------------------------------------------------------
@@ -846,6 +974,9 @@ def execute():
                 browsable = min(total, BROWSE_CAP)
                 capped = total > BROWSE_CAP
 
+                # Compute real-time PubMed facets
+                facets = _compute_python_facets(results)
+
                 # Annotate with bound params for the debug box.
                 debug_sql = sql
                 if params and isinstance(params, dict):
@@ -862,6 +993,7 @@ def execute():
                     'offset': offset,
                     'warnings': warnings,
                     'sql': debug_sql,
+                    'facets': facets,
                 })
             except Exception as e:
                 formatted_sql = sql
@@ -946,6 +1078,9 @@ def execute():
         results = [{k: v for k, v in r.items() if k != 'total_count'}
                    for r in rows if r.get('spl_id')]
 
+        # Compute real-time PubMed facets for local Postgres DB
+        facets = _compute_postgres_facets(conn, relational_where, section_where, params)
+
         # Annotate the returned SQL with the bound parameter values so the
         # frontend debug box is readable without a separate params list.
         debug_sql = sql
@@ -963,6 +1098,7 @@ def execute():
             'offset': offset,
             'warnings': warnings,
             'sql': debug_sql,
+            'facets': facets,
         })
     except Exception as e:
         formatted_sql = sql if 'sql' in locals() else None
@@ -1171,74 +1307,41 @@ def export():
 # ---------------------------------------------------------------------------
 
 TRANSLATE_SYSTEM_PROMPT = """
-You convert a drug-labeling analyst's plain-English request into a structured
-query for the FDALabel search panel.
+You convert a drug-labeling analyst's plain-English request into structured
+initial search criteria for the AskFDALabel search panel.
+
+IMPORTANT FOCUS:
+You MUST focus EXCLUSIVELY on product names/identifiers and text/keywords/clinical sections.
+Categorical filters (such as labelingType, applicationType, route, dosageForm, marketStatus, deaSchedule) are applied post-search on the results page sidebar and should NOT be emitted in query translation.
 
 Return ONLY a JSON object (no markdown, no code fences) with this schema:
 {
   "groups": [
     {"criteria": [{"type": "<type>", "value": {...}}]}
   ],
-  "notes": ["short note about anything you could not express"]
+  "notes": ["short note about anything omitted or handled by post-search sidebar filters"]
 }
 
 Criteria inside a group are combined with AND, per label. Groups are combined
 with OR. Prefer ONE group unless the request clearly asks for alternatives
 ("either X or Y").
 
-AND is per label, not per section: two text criteria in one group are satisfied
-by the same label even when the matches fall in different sections. So "boxed
-warning mentions X and the label mentions Y anywhere" is two criteria in one
-group, not one criterion with both terms.
-
 Allowed "type" values and the exact shape of their "value":
 
-- "labelingType"      {"values": ["HUMAN PRESCRIPTION DRUG LABEL"]}
-- "applicationType"   {"values": ["NDA"]}          // ANDA, BLA, NDA, NDA authorized generic, OTC monograph drug
-- "route"             {"values": ["ORAL"]}
-- "dosageForm"        {"values": ["TABLET, FILM COATED"]}   // exact NCI SPL term; "TABLET" does not match "TABLET, FILM COATED"
-- "productName"       {"field": "any"|"trade"|"generic",
-                       "op": "contains"|"startsWith"|"equals"|"notContains",
-                       "text": "metformin"}
-- "fullText"          {"mode": "simple"|"advanced", "text": "hepatic failure"}
-- "applicationType"   {"values": ["NDA"], "isRldRs": false, "excludeRepackager": true}
-- "marketStatus"      {"status": "active", "startDateMin": "2020-01-01", "startDateMax": "2023-12-31"} // status: active|completed|discontinued, plus optional startDateMin/Max
-- "deaSchedule"       {"values": ["CII"]}          // CI, CII, CIII, CIV, CV -- Oracle only
-- "activeMoiety"      {"op": "equals"|"startsWith"|"contains", "terms": ["Amphetamine"]}  // Oracle only; the active part of the molecule, so it catches salts
-- "meddra"            {"level": "pt"|"llt", "terms": ["Hepatic failure"]}
-- "pharmClass"        {"classType": "any"|"epc"|"moa"|"pe"|"cs", "terms": ["Kinase Inhibitor"]}
+- "productName"       {"field": "any"|"trade"|"generic", "op": "contains"|"startsWith"|"equals"|"notContains", "text": "metformin"}
 - "identifier"        {"text": "NDA 021436", "ingredientType": "active"|"inactive"|"both"}
+- "fullText"          {"mode": "simple"|"advanced", "text": "hepatic failure"}
+- "labelingSection"   {"sections": ["BOXED WARNING", "WARNINGS AND PRECAUTIONS"], "text": "lactic acidosis"}
+- "meddra"            {"level": "pt"|"llt", "terms": ["Hepatic failure"], "sections": ["ADVERSE REACTIONS"]}
+- "pharmClass"        {"classType": "any"|"epc"|"moa"|"pe"|"cs", "terms": ["Kinase Inhibitor"]}
 
 Rules:
-1. Adverse events and medical concepts: prefer "meddra" over free text.
-   Give the ONE Preferred Term that names the concept. Do NOT list synonyms or
-   near-synonyms -- a PT is automatically expanded to every Lowest Level Term
-   beneath it before the search runs, so "Hepatic failure" already covers
-   "Liver failure", "Hepatic insufficiency", "Hepatic decompensation" and the
-   rest. Listing them yourself does not widen the search; it only risks pulling
-   in terms that belong to a different PT.
-   Use several "terms" only for genuinely distinct concepts (e.g.
-   ["Hepatic failure", "Hepatitis"]), not for wordings of one concept.
-   Use "level": "llt" only when the request names one specific lowest-level
-   wording and should not be widened.
-2. Free text is the fallback, for wording MedDRA does not cover (trial design,
-   storage, dosing language). Then "mode": "advanced" with terms joined by OR
-   is right: "\"black box\" OR boxed".
-3. Target Sections:
-   When specific sections are named (e.g. "Boxed Warning", "Warnings and Precautions", "Adverse Reactions"):
-   - Use "labelingSection" with "sections": ["BOXED WARNING", "WARNINGS AND PRECAUTIONS", "ADVERSE REACTIONS"] and place the search terms in "text".
-   - A "meddra" criterion also accepts "sections" to confine it the same way.
-4. A drug name goes in "productName", never "identifier". "identifier" is for
-   codes: application number, Set ID, SPL ID (SPL GUID), UNII.
-5. Pharmacologic class: set "classType" to what was actually asked for --
-   "moa" for a mechanism ("kinase inhibition"), "pe" for a physiologic effect,
-   "cs" for a chemical structure class, "epc" for an established pharmacologic
-   class. Use "any" only when the request does not say.
-6. Market status: "rld" and "rs" are Orange Book roles; "marketed" and
-   "discontinued" are derived from marketing end dates and are NOT opposites --
-   a label carrying several products can be both.
-7. Never return an empty "groups" array when medical concepts, adverse events,
-   or labeling sections are requested.
+1. Focus ONLY on drug names/identifiers and text/clinical section matches. Do NOT emit categorical market/application/route filters (e.g. labelingType, applicationType, route, dosageForm, marketStatus, deaSchedule). Note in "notes" that those will be filtered on the results page.
+2. Adverse events and medical concepts: prefer "meddra" over free text. Give the ONE Preferred Term that names the concept.
+3. Free text is the fallback for wording MedDRA does not cover.
+4. Target Sections: When specific sections are named (e.g. "Boxed Warning", "Warnings and Precautions", "Adverse Reactions"), use "labelingSection" or attach "sections" to "meddra".
+5. A drug name goes in "productName", never "identifier". "identifier" is for codes: application number, Set ID, SPL ID, UNII, NDC.
+6. Never return an empty "groups" array when medical concepts, drug names, or labeling sections are requested.
 """
 
 

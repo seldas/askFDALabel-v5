@@ -40,6 +40,22 @@ export interface LabelRow {
   active_moiety_uniis?: string | null;
 }
 
+export interface FacetItem {
+  value: string;
+  label: string;
+  count: number;
+}
+
+export interface QueryFacets {
+  labelingTypes?: FacetItem[];
+  applicationTypes?: FacetItem[];
+  marketStatus?: FacetItem[];
+  routes?: FacetItem[];
+  dosageForms?: FacetItem[];
+  pharmClasses?: FacetItem[];
+  deaSchedule?: FacetItem[];
+}
+
 export interface ResultSet {
   results: LabelRow[];
   /** Exact number of matching labels, however large. */
@@ -54,6 +70,7 @@ export interface ResultSet {
   warnings: string[];
   /** The processed SQL (or Oracle) query, included for technical debugging. */
   sql?: string;
+  facets?: QueryFacets;
 }
 
 export type ResultView = 'basic' | 'expanded';

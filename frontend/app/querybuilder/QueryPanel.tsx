@@ -20,6 +20,7 @@ import {
   makeCriterion,
   makeDefaultGroup,
   SEARCH_SECTIONS,
+  type SearchSectionId,
   type TargetDb,
   uid,
   unsupportedReason,
@@ -30,11 +31,13 @@ export function QueryPanel({
   onChange,
   options,
   targetDb = 'local',
+  visibleSections,
 }: {
   query: LabelQuery;
   onChange: (query: LabelQuery) => void;
   options: OptionLists;
   targetDb?: TargetDb;
+  visibleSections?: SearchSectionId[];
 }) {
   // Track collapsed sections per group by section key ("groupUid_sectionId")
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
@@ -50,6 +53,10 @@ export function QueryPanel({
     // Never leave the page with nothing
     onChange({ groups: groups.length ? groups : [makeDefaultGroup()] });
   };
+
+  const sectionsToRender = SEARCH_SECTIONS.filter(
+    (sec) => !visibleSections || visibleSections.includes(sec.id),
+  );
 
   return (
     <div className="fdl-sectioned-builder">
@@ -73,7 +80,8 @@ export function QueryPanel({
           )}
 
           <div className="fdl-sections-list">
-            {SEARCH_SECTIONS.map((sec) => {
+            {sectionsToRender.map((sec, secIdx) => {
+              const stepNumber = secIdx + 1;
               const secKey = `${group.uid}_${sec.id}`;
               const isCollapsed = Boolean(collapsedSections[secKey]);
 
@@ -96,7 +104,7 @@ export function QueryPanel({
               return (
                 <section
                   key={sec.id}
-                  className={`fdl-step-section fdl-step-section--step-${sec.stepNumber} fdl-step-section--${sec.id} ${isCollapsed ? 'is-collapsed' : ''}`}
+                  className={`fdl-step-section fdl-step-section--step-${stepNumber} fdl-step-section--${sec.id} ${isCollapsed ? 'is-collapsed' : ''}`}
                 >
                   <header
                     className="fdl-step-header"
@@ -111,7 +119,7 @@ export function QueryPanel({
                     }}
                   >
                     <div className="fdl-step-header__left">
-                      <span className="fdl-step-badge">{sec.stepNumber}</span>
+                      <span className="fdl-step-badge">{stepNumber}</span>
                       <div className="fdl-step-header__titles">
                         <h3 className="fdl-step-title">{sec.title}</h3>
                         <p className="fdl-step-subtitle">{sec.subtitle}</p>
