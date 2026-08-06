@@ -61,6 +61,7 @@ export function AiIntentPanel({
       }
       onQuery(fromWire(json.query));
       setNotes(json.notes || []);
+      setIsFolded(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
