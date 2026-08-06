@@ -616,36 +616,40 @@ export function CriterionCard({
 
       case 'identifier':
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {/* Sub-panel 1: SET ID / SPL GUID */}
             <div className="fdl-subpanel">
-              <label className="fdl-subpanel-label">SET ID / SPL GUID (UUID):</label>
-              <input
-                className="fdl-input fdl-input--grow"
-                type="text"
-                value={v.setSplGuid || ''}
-                placeholder="e.g. ca73b519-015a-436d-aa3c-af53492825a1"
-                onChange={(e) => set({ setSplGuid: e.target.value })}
-              />
+              <div className="fdl-row fdl-row--tight" style={{ alignItems: 'center' }}>
+                <span className="fdl-subpanel-label" style={{ minWidth: '130px' }}>SET ID / SPL GUID:</span>
+                <input
+                  className="fdl-input"
+                  style={{ maxWidth: '380px', flex: '1' }}
+                  type="text"
+                  value={v.setSplGuid || ''}
+                  placeholder="e.g. ca73b519-015a-436d-aa3c-af53492825a1"
+                  onChange={(e) => set({ setSplGuid: e.target.value })}
+                />
+              </div>
             </div>
 
             {/* Sub-panel 2: Application Number (digits only + optional category dropdown) */}
             <div className="fdl-subpanel">
-              <label className="fdl-subpanel-label">Application Number:</label>
-              <div className="fdl-row fdl-row--tight">
+              <div className="fdl-row fdl-row--tight" style={{ alignItems: 'center' }}>
+                <span className="fdl-subpanel-label" style={{ minWidth: '130px' }}>Application No:</span>
                 <Select
                   ariaLabel="Application Category (Optional)"
                   value={v.applKind || ''}
                   onChange={(applKind) => set({ applKind })}
                   options={[
-                    { value: '', label: 'All Categories (Optional)' },
+                    { value: '', label: 'All Categories' },
                     { value: 'NDA', label: 'NDA' },
                     { value: 'ANDA', label: 'ANDA' },
                     { value: 'BLA', label: 'BLA' },
                   ]}
                 />
                 <input
-                  className="fdl-input fdl-input--grow"
+                  className="fdl-input"
+                  style={{ maxWidth: '280px', flex: '1' }}
                   type="text"
                   value={v.applNum || ''}
                   placeholder="3 to 6 digits (e.g. 021436 or 077844)"
@@ -659,13 +663,14 @@ export function CriterionCard({
 
             {/* Sub-panel 3: UNII Identifier Code */}
             <div className="fdl-subpanel">
-              <label className="fdl-subpanel-label">UNII Code (by UNII ID):</label>
-              <div className="fdl-row fdl-row--tight">
+              <div className="fdl-row fdl-row--tight" style={{ alignItems: 'center' }}>
+                <span className="fdl-subpanel-label" style={{ minWidth: '130px' }}>UNII Code:</span>
                 <input
-                  className="fdl-input fdl-input--grow"
+                  className="fdl-input"
+                  style={{ maxWidth: '240px', flex: '1' }}
                   type="text"
                   value={v.uniiCode || ''}
-                  placeholder="10-character UNII code (e.g. J220T4J9Q2)"
+                  placeholder="10-char UNII (e.g. J220T4J9Q2)"
                   onChange={(e) => set({ uniiCode: e.target.value.toUpperCase() })}
                 />
                 <Select
@@ -673,7 +678,7 @@ export function CriterionCard({
                   value={v.uniiTarget || 'active'}
                   onChange={(uniiTarget) => set({ uniiTarget })}
                   options={[
-                    { value: 'active', label: 'Active Ingredient (Default)' },
+                    { value: 'active', label: 'Active Ingredient' },
                     { value: 'moiety', label: 'Active Moiety' },
                   ]}
                 />
@@ -681,7 +686,7 @@ export function CriterionCard({
             </div>
 
             {/* Quick Free-text paste fallback */}
-            <div style={{ paddingTop: '6px', borderTop: '1px dashed #e2e8f0' }}>
+            <div style={{ paddingTop: '4px', borderTop: '1px dashed #e2e8f0' }}>
               <input
                 className="fdl-input fdl-input--grow"
                 style={{ fontSize: '0.78rem' }}
