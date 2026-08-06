@@ -813,6 +813,8 @@ def execute():
                         if isinstance(r, dict):
                             res_item = dict(r)
                             res_item['active_uniis'] = r.get('active_uniis') or r.get('ACTIVE_UNIIS') or r.get('ACT_INGR_UNIIS') or r.get('act_ingr_unii')
+                            res_item['active_moiety'] = r.get('active_moiety') or r.get('ACTIVE_MOIETY') or r.get('ACT_MOIETY_NAMES')
+                            res_item['active_moiety_uniis'] = r.get('active_moiety_uniis') or r.get('ACTIVE_MOIETY_UNIIS') or r.get('ACT_MOIETY_UNIIS')
                             res_item['ndc3_codes'] = r.get('ndc3_codes') or r.get('NDC3_CODES')
                             results.append(res_item)
                         else:
@@ -835,6 +837,8 @@ def execute():
                                 'is_rld': bool(r[15]),
                                 'is_rs': False,
                                 'active_uniis': r[17] if len(r) > 17 else None,
+                                'active_moiety': r[18] if len(r) > 18 else None,
+                                'active_moiety_uniis': r[19] if len(r) > 19 else None,
                             })
 
                 browsable = min(total, BROWSE_CAP)

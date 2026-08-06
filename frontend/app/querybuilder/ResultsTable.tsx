@@ -34,6 +34,10 @@ export interface LabelRow {
   initial_approval_year: number | null;
   /** Active-ingredient UNIIs, "; "-joined. Null when the label declares none. */
   active_uniis: string | null;
+  /** Active moiety names, "; "-joined. */
+  active_moiety?: string | null;
+  /** Active moiety UNIIs, "; "-joined. */
+  active_moiety_uniis?: string | null;
 }
 
 export interface ResultSet {
@@ -568,7 +572,7 @@ export function ResultsTable({
                                   <dd>{joined(row.generic_names) || '—'}</dd>
                                   <dt>Active Ingredients:</dt>
                                   <dd>{joined(row.active_ingredients) || '—'}</dd>
-                                  <dt>UNII Code(s):</dt>
+                                  <dt>Ingr. UNII Code(s):</dt>
                                   <dd>
                                     {row.active_uniis ? (
                                       <span className="fdl-unii">
@@ -580,6 +584,24 @@ export function ResultsTable({
                                       '—'
                                     )}
                                   </dd>
+                                  {(row.active_moiety || row.active_moiety_uniis) ? (
+                                    <>
+                                      <dt>Active Moiety:</dt>
+                                      <dd>{joined(row.active_moiety) || '—'}</dd>
+                                      {row.active_moiety_uniis ? (
+                                        <>
+                                          <dt>Moiety UNII(s):</dt>
+                                          <dd>
+                                            <span className="fdl-unii">
+                                              {row.active_moiety_uniis.split(';').map((u) => (
+                                                <code key={u.trim()}>{u.trim()}</code>
+                                              ))}
+                                            </span>
+                                          </dd>
+                                        </>
+                                      ) : null}
+                                    </>
+                                  ) : null}
                                   <dt>NDC Code(s):</dt>
                                   <dd>
                                     <div>{joined(row.ndc_codes) || '—'}</div>

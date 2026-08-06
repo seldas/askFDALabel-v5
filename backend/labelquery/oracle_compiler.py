@@ -744,13 +744,16 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
     # share with the summary rollup; SPL_GUID exists on DGV_SUM_RX_SPL and four
     # sibling rollups, and on nothing else. It is projected as SPL_ID at the very
     # end because the application's "spl_id" is the GUID.
+    moiety_names_expr = "s.ACT_MOIETY_NAMES" if base_table == BASE_TABLE_ALL else "(SELECT LISTAGG(mn.ACTIVE_MOIETY_NAME, '; ') WITHIN GROUP (ORDER BY mn.ACTIVE_MOIETY_NAME) FROM druglabel.SUM_SPL_ACT_MOIETY_NAME mn WHERE mn.SPL_ID = s.SPL_ID)"
+    moiety_uniis_expr = "s.ACT_MOIETY_UNIIS" if base_table == BASE_TABLE_ALL else "(SELECT LISTAGG(mu.ACTIVE_MOIETY_UNII, '; ') WITHIN GROUP (ORDER BY mu.ACTIVE_MOIETY_UNII) FROM druglabel.SUM_SPL_ACT_MOIETY_UNII mu WHERE mu.SPL_ID = s.SPL_ID)"
+
     sql = f"""
         WITH {text_cte_sql}matched AS (
             SELECT s.SPL_ID, s.SPL_GUID, s.SET_ID, s.TITLE, s.PRODUCT_NAMES,
                    s.PRODUCT_NORMD_GENERIC_NAMES, s.AUTHOR_ORG_NORMD_NAME as MANUFACTURER, s.APPR_NUM,
                    s.NDC_CODES, s.NDC3_CODES, s.EFF_TIME, s.MARKET_CATEGORIES, s.DOCUMENT_TYPE, s.ACT_INGR_NAMES,
+                   s.ACT_INGR_UNIIS, {moiety_names_expr} as ACT_MOIETY_NAMES, {moiety_uniis_expr} as ACT_MOIETY_UNIIS,
                    s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC,
-                   COALESCE(s.ACT_INGR_UNIIS, s.ACT_MOIETY_UNIIS) as ACT_INGR_UNIIS,
                    COUNT(*) OVER () AS TOTAL_COUNT
             FROM {base_table} s
             WHERE {where_sql}
@@ -761,7 +764,9 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
                p.DOSAGE_FORMS, p.ROUTES, p.EPC,
                (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND (rld.REFERENCE_DRUG = 'Y' OR rld.REFERENCE_DRUG = 'Yes' OR rld.REFERENCE_DRUG = '1')) as IS_RLD,
                p.TOTAL_COUNT,
-               p.ACT_INGR_UNIIS as ACTIVE_UNIIS
+               p.ACT_INGR_UNIIS as ACTIVE_UNIIS,
+               p.ACT_MOIETY_NAMES as ACTIVE_MOIETY,
+               p.ACT_MOIETY_UNIIS as ACTIVE_MOIETY_UNIIS
         FROM matched p
         {order_clause}
         {fetch_clause}
