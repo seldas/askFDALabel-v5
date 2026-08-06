@@ -807,15 +807,24 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
     # share with the summary rollup; SPL_GUID exists on DGV_SUM_RX_SPL and four
     # sibling rollups, and on nothing else. It is projected as SPL_ID at the very
     # end because the application's "spl_id" is the GUID.
-    moiety_names_expr = "s.ACT_MOIETY_NAMES" if base_table == BASE_TABLE_ALL else "(SELECT LISTAGG(mn.ACTIVE_MOIETY_NAME, '; ') WITHIN GROUP (ORDER BY mn.ACTIVE_MOIETY_NAME) FROM druglabel.SUM_SPL_ACT_MOIETY_NAME mn WHERE mn.SPL_ID = s.SPL_ID)"
-    moiety_uniis_expr = "s.ACT_MOIETY_UNIIS" if base_table == BASE_TABLE_ALL else "(SELECT LISTAGG(mu.ACTIVE_MOIETY_UNII, '; ') WITHIN GROUP (ORDER BY mu.ACTIVE_MOIETY_UNII) FROM druglabel.SUM_SPL_ACT_MOIETY_UNII mu WHERE mu.SPL_ID = s.SPL_ID)"
+    #
+    # Active moiety is only available for the full FDA scope (SUM_SPL). The
+    # CDER-CBER curated table (DGV_SUM_RX_SPL) does not carry the column, so
+    # building it via LISTAGG is both unreliable (ORA-01489 on long lists) and
+    # unnecessary — we simply omit it for that target.
+    if base_table == BASE_TABLE_ALL:
+        moiety_select = "s.ACT_MOIETY_NAMES, s.ACT_MOIETY_UNIIS,"
+        moiety_project = "p.ACT_MOIETY_NAMES as ACTIVE_MOIETY, p.ACT_MOIETY_UNIIS as ACTIVE_MOIETY_UNIIS,"
+    else:
+        moiety_select = ""
+        moiety_project = "NULL as ACTIVE_MOIETY, NULL as ACTIVE_MOIETY_UNIIS,"
 
     sql = f"""
         WITH {text_cte_sql}matched AS (
             SELECT s.SPL_ID, s.SPL_GUID, s.SET_ID, s.TITLE, s.PRODUCT_NAMES,
                    s.PRODUCT_NORMD_GENERIC_NAMES, s.AUTHOR_ORG_NORMD_NAME as MANUFACTURER, s.APPR_NUM,
                    s.NDC_CODES, s.NDC3_CODES, s.EFF_TIME, s.MARKET_CATEGORIES, s.DOCUMENT_TYPE, s.ACT_INGR_NAMES,
-                   s.ACT_INGR_UNIIS, {moiety_names_expr} as ACT_MOIETY_NAMES, {moiety_uniis_expr} as ACT_MOIETY_UNIIS,
+                   s.ACT_INGR_UNIIS, {moiety_select}
                    s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC,
                    COUNT(*) OVER () AS TOTAL_COUNT
             FROM {base_table} s
@@ -828,8 +837,8 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
                (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND (rld.REFERENCE_DRUG = 'Y' OR rld.REFERENCE_DRUG = 'Yes' OR rld.REFERENCE_DRUG = '1')) as IS_RLD,
                p.TOTAL_COUNT,
                p.ACT_INGR_UNIIS as ACTIVE_UNIIS,
-               p.ACT_MOIETY_NAMES as ACTIVE_MOIETY,
-               p.ACT_MOIETY_UNIIS as ACTIVE_MOIETY_UNIIS
+               {moiety_project}
+               NULL as PLACEHOLDER
         FROM matched p
         {order_clause}
         {fetch_clause}
