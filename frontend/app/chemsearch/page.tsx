@@ -141,7 +141,7 @@ function InputPanel({
   const [smiles, setSmiles] = useState('');
   const [mode, setMode] = useState<MatchMode>('substructure');
   const [threshold, setThreshold] = useState(0.7);
-  const [validation, setValidation] = useState<{ valid: boolean; canonical?: string; error?: string } | null>(null);
+  const [validation, setValidation] = useState<{ valid: boolean; canonical?: string; error?: string; warning?: string; fmt?: string } | null>(null);
   const [validating, setValidating] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -223,7 +223,7 @@ function InputPanel({
             htmlFor="smiles-input"
             style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#374151', marginBottom: 6 }}
           >
-            SMILES or InChI string
+            SMILES, InChI, or InChIKey
           </label>
           <div style={{ position: 'relative' }}>
             <input
@@ -231,7 +231,7 @@ function InputPanel({
               type="text"
               value={smiles}
               onChange={(e) => setSmiles(e.target.value)}
-              placeholder="e.g. CC(=O)Oc1ccccc1C(=O)O  (aspirin)"
+              placeholder="e.g. CC(=O)Oc1ccccc1C(=O)O  or  InChI=1S/…  or  BSYNRYMUTXBXSQ-UHFFFAOYSA-N"
               style={{
                 width: '100%',
                 boxSizing: 'border-box',
@@ -263,17 +263,26 @@ function InputPanel({
             )}
           </div>
           {validation && (
-            <div
-              style={{
-                marginTop: 5,
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                color: validation.valid ? '#15803d' : '#dc2626',
-              }}
-            >
-              {validation.valid
-                ? `✓ Valid${validation.canonical && validation.canonical !== smiles.trim() ? ` — canonical: ${validation.canonical}` : ''}`
-                : `✗ ${validation.error || 'Invalid structure'}`}
+            <div style={{ marginTop: 5, fontSize: '0.75rem', lineHeight: 1.5 }}>
+              {validation.valid ? (
+                <>
+                  <div style={{ fontWeight: 600, color: '#15803d' }}>
+                    ✓ Valid{validation.fmt && validation.fmt !== 'smiles' ? ` ${validation.fmt.toUpperCase()}` : ''}
+                    {validation.canonical && validation.canonical !== smiles.trim()
+                      ? ` — canonical SMILES: ${validation.canonical}`
+                      : ''}
+                  </div>
+                  {validation.warning && (
+                    <div style={{ color: '#92400e', fontWeight: 500, marginTop: 2 }}>
+                      ⚠ {validation.warning}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ fontWeight: 600, color: '#dc2626' }}>
+                  ✗ {validation.error || 'Invalid structure'}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -773,13 +782,18 @@ export default function ChemSearchPage() {
               <line x1="4.5" y1="13" x2="4.5" y2="11" />
               <line x1="6.2" y1="10" x2="12" y2="7" />
             </svg>
-            <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#64748b', marginBottom: 8 }}>
-              Enter a SMILES string and click Search
+            <div style={{ fontWeight: 700, fontSize: ‘1.05rem’, color: ‘#64748b’, marginBottom: 8 }}>
+              Enter a structure and click Search
             </div>
-            <div style={{ fontSize: '0.85rem', maxWidth: 480, margin: '0 auto', lineHeight: 1.6 }}>
+            <div style={{ fontSize: ‘0.85rem’, maxWidth: 520, margin: ‘0 auto’, lineHeight: 1.6 }}>
               Find FDA-approved drug labels by chemical structure.
+              Accepts <strong>SMILES</strong>, <strong>InChI</strong>, or <strong>InChIKey</strong> as input.
               Supports exact match, substructure search, and Tanimoto similarity scoring
-              against the FDA{'’'}s UNII chemical structure registry.
+              against the FDA{‘\’’}s UNII chemical structure registry.
+              <br />
+              <span style={{ color: ‘#94a3b8’, fontSize: ‘0.78rem’ }}>
+                InChIKey lookup uses PubChem — if resolution fails you will be prompted to provide SMILES or InChI directly.
+              </span>
             </div>
           </div>
         )}

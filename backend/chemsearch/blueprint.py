@@ -3,8 +3,15 @@ Chemical Structure Search blueprint.
 
 Provides two endpoints:
 
-  GET  /api/chemsearch/validate   — quick SMILES/InChI syntax check
+  GET  /api/chemsearch/validate   — quick SMILES/InChI/InChIKey syntax check
   POST /api/chemsearch/search     — find drug labels by structure
+
+Input formats accepted:
+  - SMILES   — parsed natively by RDKit
+  - InChI    — parsed natively by RDKit (rdkit.Chem.inchi.MolFromInchi)
+  - InChIKey — 27-char hash; resolved via PubChem PUG REST API (external
+               network required). If PubChem is unreachable the endpoint
+               returns a clear error asking the user to provide SMILES/InChI.
 
 The search pulls SMILES strings from the Oracle DRUGLABEL.UNII_CHEM_STRUCT
 table, screens them with RDKit in Python (exact / substructure / similarity),
@@ -15,6 +22,9 @@ equality on the SMILES column. Substructure and similarity return 501.
 If Oracle is unreachable the whole search returns a clear 503.
 """
 
+import re
+import urllib.request
+import urllib.error
 import json
 from flask import Blueprint, request, jsonify
 
@@ -25,9 +35,18 @@ try:
     from rdkit import Chem
     from rdkit.Chem import DataStructs
     from rdkit.Chem.rdMorganDescriptors import GetMorganFingerprintAsBitVect
+    try:
+        from rdkit.Chem.inchi import MolFromInchi
+    except ImportError:
+        # Older RDKit versions expose it directly on Chem
+        MolFromInchi = getattr(Chem, 'MolFromInchi', None)
     RDKIT_AVAILABLE = True
 except ImportError:
     RDKIT_AVAILABLE = False
+    MolFromInchi = None
+
+# InChIKey pattern: 3 blocks of uppercase letters separated by hyphens (27 chars total)
+_INCHIKEY_RE = re.compile(r'^[A-Z]{14}-[A-Z]{10}-[A-Z]$')
 
 chemsearch_bp = Blueprint('chemsearch', __name__)
 
@@ -50,14 +69,109 @@ def _oracle():
     return conn
 
 
-def _canonicalize(smiles: str):
-    """Return canonical SMILES, or None if invalid / RDKit unavailable."""
+def _detect_format(s: str) -> str:
+    """Return 'inchikey', 'inchi', or 'smiles' based on the input string."""
+    s = s.strip()
+    if _INCHIKEY_RE.match(s):
+        return 'inchikey'
+    if s.upper().startswith('INCHI='):
+        return 'inchi'
+    return 'smiles'
+
+
+def _inchikey_to_smiles(inchikey: str) -> tuple:
+    """
+    Resolve an InChIKey to canonical SMILES via PubChem PUG REST API.
+    Returns (smiles, error_message). On success error_message is None.
+    On failure smiles is None and error_message describes the problem.
+    """
+    url = (
+        'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/inchikey/'
+        f'{inchikey}/property/IsomericSMILES/JSON'
+    )
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'FDALabel-ChemSearch/1.0'})
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode())
+        smiles = data['PropertyTable']['Properties'][0]['IsomericSMILES']
+        return smiles, None
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None, (
+                f'InChIKey "{inchikey}" was not found in PubChem. '
+                'Please provide the structure as a SMILES or InChI string instead.'
+            )
+        return None, (
+            f'PubChem returned HTTP {e.code} while resolving this InChIKey. '
+            'Please provide the structure as a SMILES or InChI string instead.'
+        )
+    except urllib.error.URLError:
+        return None, (
+            'Could not reach the PubChem API to resolve this InChIKey '
+            '(network unreachable or timed out). '
+            'Please provide the structure as a SMILES or InChI string instead.'
+        )
+    except Exception:
+        return None, (
+            'Unexpected error resolving InChIKey via PubChem. '
+            'Please provide the structure as a SMILES or InChI string instead.'
+        )
+
+
+def _parse_input(raw: str):
+    """
+    Parse a SMILES, InChI, or InChIKey string into a canonical SMILES.
+
+    Returns a dict with keys:
+      canonical  — canonical SMILES string (None on failure)
+      fmt        — detected format ('smiles' | 'inchi' | 'inchikey')
+      error      — error message string (None on success)
+      warning    — optional warning string (None if none)
+    """
+    s = raw.strip()
+    fmt = _detect_format(s)
+    result = {'fmt': fmt, 'canonical': None, 'error': None, 'warning': None}
+
+    # --- InChIKey: resolve via PubChem, then parse the returned SMILES -------
+    if fmt == 'inchikey':
+        pubchem_smiles, err = _inchikey_to_smiles(s)
+        if err:
+            result['error'] = err
+            return result
+        result['warning'] = (
+            f'InChIKey resolved via PubChem → SMILES: {pubchem_smiles}'
+        )
+        s = pubchem_smiles
+        fmt = 'smiles'      # fall through to SMILES parsing below
+
+    # --- InChI ----------------------------------------------------------------
+    if fmt == 'inchi':
+        if not RDKIT_AVAILABLE:
+            result['error'] = 'InChI input requires RDKit, which is not installed on this server.'
+            return result
+        if MolFromInchi is None:
+            result['error'] = (
+                'InChI parsing is not available in this version of RDKit. '
+                'Please provide a SMILES string instead.'
+            )
+            return result
+        mol = MolFromInchi(s)
+        if mol is None:
+            result['error'] = 'Invalid InChI string; could not parse the molecule.'
+            return result
+        result['canonical'] = Chem.MolToSmiles(mol)
+        return result
+
+    # --- SMILES (default) -----------------------------------------------------
     if not RDKIT_AVAILABLE:
-        return smiles.strip()   # pass through for exact SQL match
-    mol = Chem.MolFromSmiles(smiles.strip())
+        result['canonical'] = s     # pass through for exact SQL fallback
+        return result
+    mol = Chem.MolFromSmiles(s)
     if mol is None:
-        return None
-    return Chem.MolToSmiles(mol)
+        result['error'] = 'Invalid SMILES string; could not parse the molecule.'
+        return result
+    result['canonical'] = Chem.MolToSmiles(mol)
+    return result
 
 
 def _morgan_fp(mol, radius=2, nbits=2048):
@@ -146,22 +260,23 @@ def _row_to_result(row: dict, scores: dict, match_type: str) -> dict:
 @chemsearch_bp.route('/validate', methods=['GET'])
 def validate():
     """
-    Quick SMILES/InChI syntax check.
-    GET /api/chemsearch/validate?smiles=CC(=O)Oc1ccccc1C(=O)O
+    Quick SMILES / InChI / InChIKey syntax check.
+    GET /api/chemsearch/validate?smiles=<input>
+    The query parameter is named 'smiles' for backwards compatibility but
+    accepts SMILES, InChI, and InChIKey strings.
     """
-    smiles = (request.args.get('smiles') or '').strip()
-    if not smiles:
-        return jsonify({'valid': False, 'error': 'No SMILES provided.'}), 400
+    raw = (request.args.get('smiles') or '').strip()
+    if not raw:
+        return jsonify({'valid': False, 'error': 'No structure provided.'}), 400
 
-    if not RDKIT_AVAILABLE:
-        return jsonify({'valid': True, 'canonical': smiles, 'warning': 'RDKit not installed; validation skipped.'})
+    parsed = _parse_input(raw)
+    if parsed['error']:
+        return jsonify({'valid': False, 'error': parsed['error'], 'fmt': parsed['fmt']})
 
-    mol = Chem.MolFromSmiles(smiles)
-    if mol is None:
-        return jsonify({'valid': False, 'error': 'Invalid SMILES string.'})
-
-    canonical = Chem.MolToSmiles(mol)
-    return jsonify({'valid': True, 'canonical': canonical})
+    resp = {'valid': True, 'canonical': parsed['canonical'], 'fmt': parsed['fmt']}
+    if parsed['warning']:
+        resp['warning'] = parsed['warning']
+    return jsonify(resp)
 
 
 @chemsearch_bp.route('/search', methods=['POST'])
@@ -170,22 +285,23 @@ def search():
     POST /api/chemsearch/search
     Body:
       {
-        "smiles":     "CC(=O)Oc1ccccc1C(=O)O",
+        "smiles":     "CC(=O)Oc1ccccc1C(=O)O",   // SMILES, InChI, or InChIKey
         "match":      "exact" | "substructure" | "similarity",
         "threshold":  0.7,      // only for similarity, default 0.7
         "limit":      50,
         "offset":     0
       }
+    The "smiles" field accepts SMILES, InChI, or InChIKey strings.
     """
     data = request.get_json(force=True, silent=True) or {}
-    raw_smiles   = (data.get('smiles') or '').strip()
+    raw_input    = (data.get('smiles') or '').strip()
     match_type   = (data.get('match') or 'exact').lower()
     threshold    = float(data.get('threshold') or 0.7)
     limit        = min(int(data.get('limit') or 50), 500)
     offset       = int(data.get('offset') or 0)
 
-    if not raw_smiles:
-        return jsonify({'error': 'No SMILES string provided.'}), 400
+    if not raw_input:
+        return jsonify({'error': 'No structure provided. Supply a SMILES, InChI, or InChIKey string.'}), 400
 
     if match_type not in ('exact', 'substructure', 'similarity'):
         return jsonify({'error': f'Unknown match type: {match_type!r}. Use exact, substructure, or similarity.'}), 400
@@ -196,12 +312,15 @@ def search():
             'hint': 'Use "exact" match, or contact the administrator to install rdkit.'
         }), 501
 
-    # Canonicalize / validate
-    canonical = _canonicalize(raw_smiles)
-    if canonical is None:
-        return jsonify({'error': 'Invalid SMILES string; could not parse the molecule.'}), 400
+    # Parse / canonicalize — handles SMILES, InChI, InChIKey
+    parsed = _parse_input(raw_input)
+    if parsed['error']:
+        return jsonify({'error': parsed['error']}), 400
 
+    canonical = parsed['canonical']
     warnings = []
+    if parsed['warning']:
+        warnings.append(parsed['warning'])
 
     try:
         conn = _oracle()
