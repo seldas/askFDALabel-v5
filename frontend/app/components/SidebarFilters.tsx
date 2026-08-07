@@ -15,7 +15,7 @@ import {
   makeCriterion,
   type TargetDb,
 } from '../querybuilder/types';
-import { isPickSelected } from '../querybuilder/controls';
+import { isPickSelected, pickMatches } from '../querybuilder/controls';
 
 interface SidebarFiltersProps {
   query: LabelQuery;
@@ -30,6 +30,13 @@ interface SidebarFiltersProps {
   facets?: QueryFacets;
   facetsLoading?: boolean;
   className?: string;
+}
+
+interface PickItem {
+  value: string;
+  label: string;
+  count: number;
+  disabledReason?: string | null;
 }
 
 interface ModalData {
@@ -122,16 +129,15 @@ export default function SidebarFilters({
   ) => {
     updateCriterion(type, (prevValue) => {
       const currentList: string[] = prevValue[field] || [];
-      const index = currentList.findIndex(
-        (v) => v.toLowerCase() === itemValue.toLowerCase() || v === itemValue,
-      );
+      // Unticking has to drop whatever spelling of this selection is actually
+      // stored -- an AI-built query holds "Serotonin Reuptake Inhibitor" where
+      // the facet row says "Serotonin Reuptake Inhibitor [EPC]". Matching by
+      // equality here would leave the old value in place and append a second.
+      const matched = currentList.filter((v) => pickMatches(itemValue, v));
 
-      let nextList: string[];
-      if (index >= 0) {
-        nextList = currentList.filter((_, i) => i !== index);
-      } else {
-        nextList = [...currentList, itemValue];
-      }
+      const nextList = matched.length
+        ? currentList.filter((v) => !pickMatches(itemValue, v))
+        : [...currentList, itemValue];
 
       return {
         ...prevValue,
@@ -196,12 +202,21 @@ export default function SidebarFilters({
    * own filter lifted, so those counts are real and are what the user needs to
    * widen the filter again.
    */
-  const visibleItems = <T extends { value: string; count: number }>(
+  const visibleItems = (
     cat: keyof QueryFacets,
-    items: T[],
+    sourceItems: PickItem[],
     selectedValues: string[],
-  ): T[] => {
+  ): PickItem[] => {
     const counted = isCounted(cat);
+    // A selection with no row to sit on -- an EPC outside the top 30, or a
+    // criterion the model phrased its own way -- gets one. Without it the
+    // panel counts the filter as active in its header and offers nothing to
+    // untick.
+    const orphans = selectedValues
+      .filter((sel) => sel && !sourceItems.some((item) => pickMatches(item.value, sel)))
+      .map((sel) => ({ value: sel, label: sel, count: 0 }));
+    const items = orphans.length ? [...sourceItems, ...orphans] : sourceItems;
+
     const kept = items.filter((item) => {
       if (isPickSelected(item.value, selectedValues)) return true;
       if (!counted || selectedValues.length > 0) return true;
@@ -260,7 +275,7 @@ export default function SidebarFilters({
   );
 
   // 4. Routes
-  const facetRoutes = (facets?.routes || []).filter((r) => r.count > 0 || routeValues.includes(r.value));
+  const facetRoutes = visibleItems('routes', facets?.routes || [], routeValues);
   const fallbackRoutes = visibleItems(
     'routes',
     (CRITERION_DEFS.route.quickPicks || []).map((pick) => ({
@@ -273,7 +288,7 @@ export default function SidebarFilters({
   const routeItems = facetRoutes.length > 0 ? facetRoutes : fallbackRoutes;
 
   // 5. Dosage Forms
-  const facetDosages = (facets?.dosageForms || []).filter((d) => d.count > 0 || dosageValues.includes(d.value));
+  const facetDosages = visibleItems('dosageForms', facets?.dosageForms || [], dosageValues);
   const fallbackDosages = visibleItems(
     'dosageForms',
     (CRITERION_DEFS.dosageForm.quickPicks || []).map((pick) => ({
@@ -286,7 +301,7 @@ export default function SidebarFilters({
   const dosageItems = facetDosages.length > 0 ? facetDosages : fallbackDosages;
 
   // 6. Pharm Classes (EPC)
-  const facetEpcs = (facets?.pharmClasses || []).filter((p) => p.count > 0 || pcTerms.includes(p.value));
+  const facetEpcs = visibleItems('pharmClasses', facets?.pharmClasses || [], pcTerms);
 
   // 7. DEA Schedule
   const deaPicks = visibleItems(
@@ -317,9 +332,7 @@ export default function SidebarFilters({
       <>
         <div className="fdl-filter-checkboxes">
           {top5.map((pick) => {
-            const isChecked = selectedValues.some(
-              (v) => v.toLowerCase() === pick.value.toLowerCase() || v === pick.value,
-            );
+            const isChecked = isPickSelected(pick.value, selectedValues);
             return (
               <label
                 key={pick.value}
@@ -820,9 +833,7 @@ export default function SidebarFilters({
               }}
             >
               {modalFilteredItems.map((item) => {
-                const isChecked = activeModalSelectedValues.some(
-                  (v) => v.toLowerCase() === item.value.toLowerCase() || v === item.value,
-                );
+                const isChecked = isPickSelected(item.value, activeModalSelectedValues);
                 return (
                   <label
                     key={item.value}

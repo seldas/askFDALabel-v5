@@ -49,19 +49,43 @@ export function Chips({
   );
 }
 
+/**
+ * A stored criterion value and the pick that represents it are rarely written
+ * the same way. The panel's own picks are LIKE patterns ('%HUMAN OTC%'); a
+ * query arriving from /translate carries whatever the model wrote ('HUMAN OTC
+ * DRUG LABEL'); and a facet value carries the class-type suffix the data has
+ * ('Serotonin Reuptake Inhibitor [EPC]') where the model wrote the bare name.
+ * All three have to read as the same selection, or the panel shows "1 active"
+ * over a column of unchecked boxes.
+ */
+function normalizePickValue(value: string): string {
+  return String(value || '')
+    .replace(/%/g, ' ')
+    // Trailing class-type tag: "… [EPC]", "… [MoA]".
+    .replace(/\s*\[[^\]]*\]\s*$/, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
+/** True when `selected` is the same selection as `pickValue`. */
+export function pickMatches(pickValue: string, selected: string): boolean {
+  const pNorm = normalizePickValue(pickValue);
+  const sNorm = normalizePickValue(selected);
+  if (!pNorm || !sNorm) return false;
+  if (sNorm === pNorm) return true;
+
+  // Containment only where one side is explicitly a pattern. Applying it
+  // unconditionally made "TABLET" read as selected whenever "TABLET, FILM
+  // COATED" was -- every dosage form is a substring of its own variants.
+  if (pickValue.includes('%') && sNorm.includes(pNorm)) return true;
+  if (String(selected || '').includes('%') && pNorm.includes(sNorm)) return true;
+  return false;
+}
+
 export function isPickSelected(pickValue: string, selectedValues: string[]): boolean {
   if (!selectedValues || !selectedValues.length) return false;
-
-  const pNorm = pickValue.replace(/%/g, '').trim().toUpperCase();
-  if (!pNorm) return false;
-
-  return selectedValues.some((s) => {
-    const sNorm = String(s || '').replace(/%/g, '').trim().toUpperCase();
-    if (sNorm === pNorm) return true;
-    if (sNorm && sNorm.includes(pNorm)) return true;
-    if (pNorm && pNorm.includes(sNorm)) return true;
-    return false;
-  });
+  return selectedValues.some((s) => pickMatches(pickValue, s));
 }
 
 /** "Choose one or more: Animal Rx  Animal OTC  …" — toggles, styled as links. */
