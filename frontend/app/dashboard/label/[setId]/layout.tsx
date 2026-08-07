@@ -14,7 +14,7 @@
  */
 
 import { use, useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+
 import { usePathname, useSearchParams } from 'next/navigation';
 import Header from '../../../components/Header';
 import { Badge } from '../../../platform/primitives';
@@ -109,8 +109,6 @@ export default function LabelLayout({
         <div className="afl-label-shell__inner">
           {!hideCrumbsAndTools && (
             <nav className="afl-label-crumbs">
-              <Link href="/dashboard">Dashboard</Link>
-              <span aria-hidden="true">›</span>
               <span className="afl-label-crumbs__current">{title}</span>
             </nav>
           )}
