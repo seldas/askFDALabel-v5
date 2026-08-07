@@ -549,9 +549,6 @@ function ResultsPage() {
               <Link className="fdl-backlink" href={editSearchPath}>
                 <span aria-hidden="true">‹</span> Back to search
               </Link>
-              <span className="fdl-results-back__hint">
-                Criteria are carried back, including anything changed here.
-              </span>
             </div>
 
             <div className="fdl-resultshead">

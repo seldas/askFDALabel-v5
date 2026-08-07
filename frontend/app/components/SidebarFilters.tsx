@@ -405,7 +405,6 @@ export default function SidebarFilters({
       {/* Sidebar Header */}
       <div className="fdl-sidebar-filters__head">
         <div className="fdl-sidebar-filters__title-row">
-          <span className="fdl-sidebar-filters__icon">🔬</span>
           <h3 className="fdl-sidebar-filters__title">Filter Results</h3>
           {totalFilled > 0 && (
             <span className="fdl-sidebar-filters__badge">{totalFilled} active</span>

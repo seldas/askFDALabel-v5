@@ -636,15 +636,14 @@ export default function Header({
                 FDALabel web application for search, customization, and analysis of drug labeling metadata.
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.82rem', marginBottom: '16px', textAlign: 'left', padding: '10px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.82rem', marginBottom: '16px', textAlign: 'left', padding: '10px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
                 <a
                   href="https://www.fda.gov/ScienceResearch/BioinformaticsTools/ucm289739.htm"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                  <span>FDA Bioinformatics Tools ↗</span>
+                  <span>FDA Bioinformatics Tools</span>
                 </a>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '0.78rem', marginTop: '2px' }}>
                   <span style={{ color: '#64748b', fontWeight: 600 }}>Report Technical Problems:</span>
@@ -660,7 +659,6 @@ export default function Header({
                   onClick={() => setActiveDropdown(null)}
                   style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                   <span>FDALabel Disclaimer →</span>
                 </Link>
               </div>
