@@ -788,24 +788,14 @@ def _facets_once(query, target_db):
 
 def _compute_oracle_facets(query, target_db):
     """
-    Sidebar facet counts against Oracle, in exactly one round trip regardless
-    of how many sidebar filters are currently ticked.
-
-    The search criteria (text, MedDRA, product name, ...) are compiled once
-    against the "backbone" -- the query with every facet-driven criterion
-    (labelingType, applicationType, route, dosageForm, pharmClass,
-    marketStatus) stripped -- and run as a single MATERIALIZED CTE. Each
-    active facet category's own predicate is then layered back on as a cheap
-    branch against that already-materialized set, both for the base ("as
-    currently filtered") counts and for each active category's self-excluded
-    widen, so ticking a checkbox never re-triggers the full-text/MedDRA/base
-    table work again.
+    Sidebar facet counts against Oracle. Counts always reflect the full backbone
+    search set (all facet categories stripped), remaining fixed when filters are toggled.
     """
     conn = FDALabelDBService.get_oracle_connection()
     if not conn:
         return {}
     try:
-        from .oracle_compiler import compile_oracle_predicates, compile_active_category_predicates
+        from .oracle_compiler import compile_oracle_predicates
 
         base_table = _oracle_base_table(target_db)
         backbone_query = strip_all_categories(query)
@@ -815,21 +805,15 @@ def _compute_oracle_facets(query, target_db):
             capabilities=_capabilities(),
             base_table=base_table,
         )
-        active_predicates = compile_active_category_predicates(query, bag, base_table=base_table)
 
-        sql = oracle_facet_sql_combined(text_cte_sql, backbone_where_sql, base_table, active_predicates)
+        sql = oracle_facet_sql_combined(text_cte_sql, backbone_where_sql, base_table, active_predicates={})
         cur = conn.cursor()
         cur.execute(sql, bag.params)
         rows = cur.fetchall()
         cur.close()
 
         scoped = rows_to_scoped_facets(rows)
-        facets = scoped.get('base') or {}
-        for category in active_predicates:
-            widened = scoped.get(f'w:{category}')
-            if widened and widened.get(category):
-                facets[category] = widened[category]
-        return facets
+        return scoped.get('base') or {}
     except Exception as e:
         print(f"[WARN] Oracle facet calculation failed: {e}")
         return {}
@@ -839,34 +823,17 @@ def _compute_oracle_facets(query, target_db):
 
 def _compute_facets(query, target_db):
     """
-    Facet counts with AND logic across all filter panels.
+    Facet counts for the sidebar filter panel.
 
-    Base counts are computed over the full query (all active filters applied),
-    so a count in panel B already reflects any active filter in panel A — the
-    two panels AND together. For each active sidebar category its own filter is
-    then lifted for a second pass, so the user can see options they might want
-    to widen to while every other filter stays in effect.
-
-    If the combination of filters produces zero matches for a facet option
-    that option is returned with count 0 rather than being suppressed.
+    Counts are computed over strip_all_categories(query), ensuring that applying
+    or changing any filter updates the result set while keeping the filter panel
+    counts fixed against the full matched set.
     """
+    unfiltered_query = strip_all_categories(query)
     if _use_oracle_facets(target_db):
-        # _compute_oracle_facets strips the backbone itself; pass the full
-        # query so compile_active_category_predicates sees the real selections.
-        return _compute_oracle_facets(query, target_db)
+        return _compute_oracle_facets(unfiltered_query, target_db)
 
-    # Base: full query (all category filters applied = AND across panels).
-    facets = _facets_once(query, target_db) or {}
-
-    # For each active sidebar category recompute with that category's filter
-    # lifted so the user can see all available options to widen to.
-    for category in active_categories(query):
-        widened_query = strip_category(query, category)
-        wf = _facets_once(widened_query, target_db) or {}
-        if wf.get(category):
-            facets[category] = wf[category]
-
-    return facets
+    return _facets_once(unfiltered_query, target_db) or {}
 
 
 @labelquery_bp.route('/facets', methods=['POST'])

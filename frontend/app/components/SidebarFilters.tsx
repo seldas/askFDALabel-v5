@@ -243,7 +243,8 @@ export default function SidebarFilters({
   };
 
   // 1. Labeling Types
-  const labelingPicks = visibleItems(
+  const facetLabelingTypes = visibleItems('labelingTypes', facets?.labelingTypes || [], ltValues);
+  const fallbackLabelingTypes = visibleItems(
     'labelingTypes',
     (CRITERION_DEFS.labelingType.quickPicks || []).map((pick) => ({
       value: pick.value,
@@ -253,6 +254,7 @@ export default function SidebarFilters({
     })),
     ltValues,
   );
+  const labelingPicks = facetLabelingTypes.length > 0 ? facetLabelingTypes : fallbackLabelingTypes;
 
   // 2. Application Types
   const appPicks = visibleItems(
