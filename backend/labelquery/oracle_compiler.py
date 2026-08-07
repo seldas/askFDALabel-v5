@@ -17,6 +17,7 @@ It is the external identifier only, projected as SPL_ID in the result set.
 
 import re
 from .compiler import TITLE_TO_LOINCS
+from .facets import CATEGORY_CRITERION
 
 _PRODUCT_NAME_COLUMNS = {
     'trade': ['p.NAME'],
@@ -135,7 +136,7 @@ def _format_contains_query(text, mode='simple'):
 # Criterion Compilers (Oracle Relational Candidates)
 # ---------------------------------------------------------------------------
 
-def _compile_labeling_type(value, bag, base_table=BASE_TABLE_HUMAN, warnings=None):
+def _compile_labeling_type(value, bag, base_table=BASE_TABLE_HUMAN, warnings=None, alias='s'):
     values = _as_list(value.get('values'))
     plr = str(value.get('plr') or value.get('formatGroup') or 'all').lower()
 
@@ -144,7 +145,7 @@ def _compile_labeling_type(value, bag, base_table=BASE_TABLE_HUMAN, warnings=Non
         type_clauses = []
         for v in values:
             p = bag.add(f'%{v.upper()}%')
-            type_clauses.append(f'UPPER(s.DOCUMENT_TYPE) LIKE {p}')
+            type_clauses.append(f'UPPER({alias}.DOCUMENT_TYPE) LIKE {p}')
         if type_clauses:
             clauses.append('(' + ' OR '.join(type_clauses) + ')')
 
@@ -157,9 +158,9 @@ def _compile_labeling_type(value, bag, base_table=BASE_TABLE_HUMAN, warnings=Non
                     'the format filter was ignored for the All FDA scope.'
                 )
         elif plr in ('plr', '1'):
-            clauses.append('s.FORMAT_GROUP = 1')
+            clauses.append(f'{alias}.FORMAT_GROUP = 1')
         else:
-            clauses.append('s.FORMAT_GROUP = 2')
+            clauses.append(f'{alias}.FORMAT_GROUP = 2')
 
     if not clauses:
         return None
@@ -167,7 +168,7 @@ def _compile_labeling_type(value, bag, base_table=BASE_TABLE_HUMAN, warnings=Non
     return '(' + ' AND '.join(clauses) + ')'
 
 
-def _compile_application_type(value, bag):
+def _compile_application_type(value, bag, alias='s'):
     values = _as_list(value.get('values'))
     is_rld = bool(value.get('isRld') or value.get('is_rld'))
     is_rs = bool(value.get('isRs') or value.get('is_rs'))
@@ -190,27 +191,27 @@ def _compile_application_type(value, bag):
             p_contain = bag.add(f'%{v_clean}%')
             p_prefix = bag.add(f'{v_clean} %')
             app_clauses.append(
-                f"(UPPER(s.MARKET_CATEGORIES) LIKE {p_contain} OR UPPER(s.APPR_NUM) LIKE {p_prefix} OR UPPER(s.APPR_NUM) LIKE {p_contain})"
+                f"(UPPER({alias}.MARKET_CATEGORIES) LIKE {p_contain} OR UPPER({alias}.APPR_NUM) LIKE {p_prefix} OR UPPER({alias}.APPR_NUM) LIKE {p_contain})"
             )
         if app_clauses:
             clauses.append('(' + ' OR '.join(app_clauses) + ')')
 
     if is_rld:
         clauses.append(
-            "(EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = s.SPL_ID) "
-            "OR EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND (UPPER(rld.REFERENCE_DRUG) IN ('Y', 'YES', '1') OR rld.REFERENCE_DRUG IS NOT NULL)) "
-            "OR (s.RLD_NUM IS NOT NULL AND s.RLD_NUM <> '0'))"
+            f"(EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = {alias}.SPL_ID) "
+            f"OR EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = {alias}.SPL_ID AND (UPPER(rld.REFERENCE_DRUG) IN ('Y', 'YES', '1') OR rld.REFERENCE_DRUG IS NOT NULL)) "
+            f"OR ({alias}.RLD_NUM IS NOT NULL AND {alias}.RLD_NUM <> '0'))"
         )
 
     if is_rs:
         clauses.append(
-            "(EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND (UPPER(rld.REFERENCE_STANDARD) IN ('Y', 'YES', '1') OR rld.REFERENCE_STANDARD IS NOT NULL)))"
+            f"(EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = {alias}.SPL_ID AND (UPPER(rld.REFERENCE_STANDARD) IN ('Y', 'YES', '1') OR rld.REFERENCE_STANDARD IS NOT NULL)))"
         )
 
     return '(' + ' AND '.join(clauses) + ')' if clauses else None
 
 
-def _compile_route(value, bag):
+def _compile_route(value, bag, alias='s'):
     values = _as_list(value.get('values'))
     if not values:
         return None
@@ -219,13 +220,13 @@ def _compile_route(value, bag):
         p = bag.add(f'%{v.upper()}%')
         clauses.append(
             'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_ROUTE r '
-            f'WHERE r.SPL_ID = s.SPL_ID AND (UPPER(r.ROUTE_SPL_ACCEPTABLE_TERM) LIKE {p} '
+            f'WHERE r.SPL_ID = {alias}.SPL_ID AND (UPPER(r.ROUTE_SPL_ACCEPTABLE_TERM) LIKE {p} '
             f'OR UPPER(r.NCIT_ROUTE_OF_ADMIN_CODE) LIKE {p}))'
         )
     return '(' + ' OR '.join(clauses) + ')'
 
 
-def _compile_dosage_form(value, bag):
+def _compile_dosage_form(value, bag, alias='s'):
     """
     Dosage form, against the normalized SUM_SPL_DOSAGEFORM rather than the
     delimited DOSAGE_FORMS rollup column.
@@ -244,7 +245,7 @@ def _compile_dosage_form(value, bag):
         p = bag.add(v.upper())
         clauses.append(
             'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_DOSAGEFORM df '
-            f'WHERE df.SPL_ID = s.SPL_ID AND (UPPER(df.PRODUCT_DOSAGE_FORM_TERM) = {p} '
+            f'WHERE df.SPL_ID = {alias}.SPL_ID AND (UPPER(df.PRODUCT_DOSAGE_FORM_TERM) = {p} '
             f'OR UPPER(df.PRODUCT_NCIT_FORM_CODE) = {p}))'
         )
     return '(' + ' OR '.join(clauses) + ')'
@@ -373,7 +374,7 @@ def _compile_product_name(value, bag, base_table=BASE_TABLE_HUMAN):
     return '(' + ' AND '.join(clauses) + ')'
 
 
-def _compile_market_status(value, bag):
+def _compile_market_status(value, bag, alias='s'):
     status = (value.get('status') or '').strip().lower()
     min_date = (value.get('startDateMin') or '').replace('-', '').strip()
     max_date = (value.get('startDateMax') or '').replace('-', '').strip()
@@ -406,9 +407,9 @@ def _compile_market_status(value, bag):
     if 'rld' in values or 'rs' in values:
         alts = []
         if 'rld' in values:
-            alts.append("EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = s.SPL_ID) OR EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND (UPPER(rld.REFERENCE_DRUG) IN ('Y', 'YES', '1') OR rld.REFERENCE_DRUG IS NOT NULL))")
+            alts.append(f"EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = {alias}.SPL_ID) OR EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = {alias}.SPL_ID AND (UPPER(rld.REFERENCE_DRUG) IN ('Y', 'YES', '1') OR rld.REFERENCE_DRUG IS NOT NULL))")
         if 'rs' in values:
-            alts.append("EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = s.SPL_ID AND (UPPER(rld.REFERENCE_STANDARD) IN ('Y', 'YES', '1') OR rld.REFERENCE_STANDARD IS NOT NULL))")
+            alts.append(f"EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = {alias}.SPL_ID AND (UPPER(rld.REFERENCE_STANDARD) IN ('Y', 'YES', '1') OR rld.REFERENCE_STANDARD IS NOT NULL))")
         rld_rs_cond = '(' + ' OR '.join(alts) + ')'
 
     if not conds and not rld_rs_cond:
@@ -417,7 +418,7 @@ def _compile_market_status(value, bag):
     res = []
     if conds:
         res.append(
-            f"EXISTS (SELECT 1 FROM druglabel.PROD_MKT_ACT mkt WHERE mkt.SPL_ID = s.SPL_ID AND {' AND '.join(conds)})"
+            f"EXISTS (SELECT 1 FROM druglabel.PROD_MKT_ACT mkt WHERE mkt.SPL_ID = {alias}.SPL_ID AND {' AND '.join(conds)})"
         )
     if rld_rs_cond:
         res.append(rld_rs_cond)
@@ -553,7 +554,7 @@ def _compile_meddra(value, bag, expand_meddra=None):
     return '(' + ' OR '.join(term_clauses) + ')' if term_clauses else None
 
 
-def _compile_pharm_class(value, bag):
+def _compile_pharm_class(value, bag, alias='s'):
     """
     Pharmacologic class.
 
@@ -584,7 +585,7 @@ def _compile_pharm_class(value, bag):
         clauses = []
         for t in terms:
             p = bag.add(f'%{t.upper()}%')
-            clauses.append(f'UPPER(s.EPC) LIKE {p}')
+            clauses.append(f'UPPER({alias}.EPC) LIKE {p}')
         return '(' + ' OR '.join(clauses) + ')'
 
     cat_token = {'moa': 'MOA', 'pe': 'PE', 'cs': 'CHEMICAL'}.get(class_type)
@@ -599,7 +600,7 @@ def _compile_pharm_class(value, bag):
             'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_ACT_INGR_UNII ai '
             'JOIN druglabel.INGR_NDFRT_CONCEPT inc ON inc.INGR_UNII = ai.UNII '
             'JOIN druglabel.NDFRT_CONCEPT nc ON nc.NUI = inc.NDFRT_NUI '
-            f'WHERE ai.SPL_ID = s.SPL_ID AND UPPER(nc.NAME) LIKE {p} '
+            f'WHERE ai.SPL_ID = {alias}.SPL_ID AND UPPER(nc.NAME) LIKE {p} '
             f'AND UPPER(nc.CAT) LIKE {p_cat})'
         )
     return '(' + ' OR '.join(clauses) + ')'
@@ -825,6 +826,54 @@ def compile_oracle_predicates(query, expand_meddra=None, capabilities=None,
     )
 
     return text_cte_sql, where_sql, bag, warnings
+
+
+# Facet category -> the compiler for its criterion type, called with alias='m'
+# so the predicate reads off the matched CTE (see facets.oracle_facet_sql_combined)
+# instead of the base table.
+_CATEGORY_COMPILERS = {
+    'labelingTypes': lambda cval, bag, base_table: _compile_labeling_type(
+        cval, bag, base_table=base_table, alias='m'),
+    'applicationTypes': lambda cval, bag, base_table: _compile_application_type(cval, bag, alias='m'),
+    'marketStatus': lambda cval, bag, base_table: _compile_market_status(cval, bag, alias='m'),
+    'routes': lambda cval, bag, base_table: _compile_route(cval, bag, alias='m'),
+    'dosageForms': lambda cval, bag, base_table: _compile_dosage_form(cval, bag, alias='m'),
+    'pharmClasses': lambda cval, bag, base_table: _compile_pharm_class(cval, bag, alias='m'),
+}
+
+
+def compile_active_category_predicates(query, bag, base_table=BASE_TABLE_HUMAN):
+    """
+    One compiled predicate per facet category the query currently filters on,
+    aliased against `m` -- the materialized backbone CTE in the combined facet
+    query -- rather than `s`, the base table in a normal search.
+
+    This is what lets the facet endpoint run the (potentially expensive) search
+    criteria exactly once: the backbone CTE carries only the real search
+    criteria, and these predicates are layered back on in cheap per-row EXISTS
+    / LIKE checks against the already-materialized candidate set, instead of
+    recompiling and rerunning the whole query per active category.
+
+    Multiple criteria of the same type (across groups) are OR-ed together,
+    same as active_categories/strip_category treat them.
+    """
+    out = {}
+    for category, (ctype, _fields) in CATEGORY_CRITERION.items():
+        compile_fn = _CATEGORY_COMPILERS.get(category)
+        if not compile_fn:
+            continue
+        preds = []
+        for group in (query.get('groups') or []):
+            for criterion in (group.get('criteria') or []):
+                if criterion.get('type') != ctype:
+                    continue
+                cval = criterion.get('value') or {}
+                p = compile_fn(cval, bag, base_table)
+                if p:
+                    preds.append(p)
+        if preds:
+            out[category] = preds[0] if len(preds) == 1 else '(' + ' OR '.join(preds) + ')'
+    return out
 
 
 def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0, expand_meddra=None,

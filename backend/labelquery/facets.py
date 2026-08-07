@@ -25,6 +25,23 @@ tally avoided that with an if/elif chain, which had the side effect of making
 the buckets mutually exclusive -- a label marketed under both an NDA and an
 ANDA counted only once, under whichever the chain hit first. These buckets are
 independent, so such a label now counts in both.
+
+On Oracle, "one statement" used to mean one statement *per active category* --
+a self-excluded widen recompiled and reran the entire search predicate (full-
+text CONTAINS, MedDRA joins, candidate isolation) from scratch, once per
+ticked filter, on top of the base pass. That is the expensive part, and it
+does not change across those calls: the actual search criteria are the same
+every time, only which facet's own filter is temporarily removed changes.
+
+oracle_facet_sql_combined runs the search criteria exactly once, as a
+MATERIALIZED CTE built from strip_all_categories(query) -- the "backbone":
+the maximum set of cases the real search criteria can match, with every
+facet-driven filter (labelingType, applicationType, route, dosageForm,
+pharmClass, marketStatus) cleared. Every facet's own predicate is then layered
+back on as a cheap, alias-swapped branch against that already-materialized set
+(compile_active_category_predicates in oracle_compiler.py), so ticking or
+unticking a sidebar filter never re-touches the base table or full-text index
+again -- it only changes which AND clauses a branch carries.
 """
 
 import copy
@@ -122,13 +139,14 @@ def active_categories(query):
     return out
 
 
-def strip_category(query, category):
-    """A copy of `query` with `category`'s own filter cleared."""
-    ctype, fields = CATEGORY_CRITERION[category]
+def strip_categories(query, categories):
+    """A copy of `query` with every listed category's own filter cleared."""
+    wanted = {CATEGORY_CRITERION[c][0]: CATEGORY_CRITERION[c][1] for c in categories}
     stripped = copy.deepcopy(query)
     for group in (stripped.get('groups') or []):
         for criterion in (group.get('criteria') or []):
-            if criterion.get('type') != ctype:
+            fields = wanted.get(criterion.get('type'))
+            if fields is None:
                 continue
             value = criterion.get('value') or {}
             for field in fields:
@@ -140,6 +158,23 @@ def strip_category(query, category):
                     value[field] = None
             criterion['value'] = value
     return stripped
+
+
+def strip_category(query, category):
+    """A copy of `query` with `category`'s own filter cleared."""
+    return strip_categories(query, [category])
+
+
+def strip_all_categories(query):
+    """
+    The "backbone" query: every facet-driven criterion cleared, leaving only
+    the real search criteria (free text, MedDRA, product name, identifiers,
+    ...). This is the widest matched set the current search criteria can
+    produce -- see oracle_facet_sql_combined, which runs it exactly once and
+    layers every facet's own predicate back on as a cheap SQL branch instead
+    of recompiling and rerunning the whole query per active category.
+    """
+    return strip_categories(query, list(CATEGORY_CRITERION.keys()))
 
 
 # ---------------------------------------------------------------------------
@@ -190,49 +225,94 @@ def postgres_facet_sql(relational_where, section_where):
     """
 
 
-def oracle_facet_sql(text_cte_sql, where_sql, base_table):
+def _oracle_grouped_branch(category, scope, extra_sql):
+    """One UNION ALL branch for a data-driven (non-scalar) facet category."""
+    if category == 'routes':
+        return (
+            f"SELECT '{scope}' AS SCOPE, 'routes' AS CAT, UPPER(r.ROUTE_SPL_ACCEPTABLE_TERM) AS TOKEN, "
+            "COUNT(DISTINCT m.SPL_ID) AS N "
+            'FROM matched m JOIN druglabel.SUM_SPL_ROUTE r ON r.SPL_ID = m.SPL_ID '
+            f"WHERE r.ROUTE_SPL_ACCEPTABLE_TERM IS NOT NULL{extra_sql} "
+            'GROUP BY UPPER(r.ROUTE_SPL_ACCEPTABLE_TERM)'
+        )
+    if category == 'dosageForms':
+        return (
+            f"SELECT '{scope}' AS SCOPE, 'dosageForms' AS CAT, UPPER(df.PRODUCT_DOSAGE_FORM_TERM) AS TOKEN, "
+            "COUNT(DISTINCT m.SPL_ID) AS N "
+            'FROM matched m JOIN druglabel.SUM_SPL_DOSAGEFORM df ON df.SPL_ID = m.SPL_ID '
+            f"WHERE df.PRODUCT_DOSAGE_FORM_TERM IS NOT NULL{extra_sql} "
+            'GROUP BY UPPER(df.PRODUCT_DOSAGE_FORM_TERM)'
+        )
+    if category == 'pharmClasses':
+        return (
+            f"SELECT '{scope}' AS SCOPE, 'pharmClasses' AS CAT, "
+            "TRIM(REGEXP_SUBSTR(m.EPC, '[^;]+', 1, lv.n)) AS TOKEN, "
+            'COUNT(DISTINCT m.SPL_ID) AS N '
+            'FROM matched m '
+            f'JOIN (SELECT LEVEL n FROM DUAL CONNECT BY LEVEL <= {_MAX_SPLIT_PARTS}) lv '
+            "ON lv.n <= REGEXP_COUNT(m.EPC, ';') + 1 "
+            f"WHERE m.EPC IS NOT NULL{extra_sql} "
+            "GROUP BY TRIM(REGEXP_SUBSTR(m.EPC, '[^;]+', 1, lv.n))"
+        )
+    raise ValueError(f'Not a grouped category: {category!r}')
+
+
+def oracle_facet_sql_combined(text_cte_sql, backbone_where_sql, base_table, active_predicates):
     """
-    The Oracle counterpart. Routes and dosage forms come from the normalized
-    detail tables, which is both cheaper and more faithful than splitting the
-    delimited rollup columns. EPC has no such table -- SUM_SPL_EPC carries the
-    same concatenated string -- so it is split with REGEXP_SUBSTR against a
-    generated row source, bounded at _MAX_SPLIT_PARTS classes per label.
+    The whole Oracle facet payload -- base counts plus every active category's
+    self-excluded ("what if I widened just this one") counts -- in one
+    statement, one round trip.
+
+    `backbone_where_sql`/`text_cte_sql` come from compiling the query with
+    every facet category stripped (facets.strip_all_categories): the widest
+    matched set the real search criteria can produce. That is computed exactly
+    once, as a MATERIALIZED CTE (`matched`, aliased `m` below), which is the
+    expensive part on Oracle -- full-text CONTAINS, MedDRA occurrence joins,
+    candidate isolation.
+
+    `active_predicates` is {category: sql} from
+    oracle_compiler.compile_active_category_predicates -- each already aliased
+    to `m`, so applying or excluding a facet's own filter is just adding or
+    dropping an AND clause against the already-materialized candidate set,
+    never rerunning the backbone.
+
+    Rows come back long-form as (scope, cat, token, n): scope is 'base' for
+    the count-as-filtered numbers, or 'w:<category>' for that category's
+    self-excluded widen. See rows_to_scoped_facets for the split.
     """
+    def and_others(exclude):
+        parts = [p for cat, p in active_predicates.items() if cat != exclude and p]
+        return f" AND {' AND '.join(parts)}" if parts else ''
+
+    base_extra = and_others(exclude=None)  # no category excluded -> apply all
     branches = [
-        f"SELECT '{cat}' AS CAT, '{token}' AS TOKEN, COUNT(*) AS N FROM matched m WHERE {ora_pred}"
+        f"SELECT 'base' AS SCOPE, '{cat}' AS CAT, '{token}' AS TOKEN, COUNT(*) AS N "
+        f"FROM matched m WHERE {ora_pred}{base_extra}"
         for cat, token, _value, _label, _pg_pred, ora_pred in FACET_SCALARS
     ]
+    for grouped_cat in _GROUPED_CATEGORIES:
+        branches.append(_oracle_grouped_branch(grouped_cat, 'base', base_extra))
 
-    branches.append(
-        "SELECT 'routes' AS CAT, UPPER(r.ROUTE_SPL_ACCEPTABLE_TERM) AS TOKEN, "
-        "COUNT(DISTINCT m.SPL_ID) AS N "
-        'FROM matched m JOIN druglabel.SUM_SPL_ROUTE r ON r.SPL_ID = m.SPL_ID '
-        'WHERE r.ROUTE_SPL_ACCEPTABLE_TERM IS NOT NULL '
-        'GROUP BY UPPER(r.ROUTE_SPL_ACCEPTABLE_TERM)'
-    )
-    branches.append(
-        "SELECT 'dosageForms' AS CAT, UPPER(df.PRODUCT_DOSAGE_FORM_TERM) AS TOKEN, "
-        "COUNT(DISTINCT m.SPL_ID) AS N "
-        'FROM matched m JOIN druglabel.SUM_SPL_DOSAGEFORM df ON df.SPL_ID = m.SPL_ID '
-        'WHERE df.PRODUCT_DOSAGE_FORM_TERM IS NOT NULL '
-        'GROUP BY UPPER(df.PRODUCT_DOSAGE_FORM_TERM)'
-    )
-    branches.append(
-        "SELECT 'pharmClasses' AS CAT, TRIM(REGEXP_SUBSTR(m.EPC, '[^;]+', 1, lv.n)) AS TOKEN, "
-        'COUNT(DISTINCT m.SPL_ID) AS N '
-        'FROM matched m '
-        f'JOIN (SELECT LEVEL n FROM DUAL CONNECT BY LEVEL <= {_MAX_SPLIT_PARTS}) lv '
-        "ON lv.n <= REGEXP_COUNT(m.EPC, ';') + 1 "
-        'WHERE m.EPC IS NOT NULL '
-        "GROUP BY TRIM(REGEXP_SUBSTR(m.EPC, '[^;]+', 1, lv.n))"
-    )
+    for category in active_predicates:
+        extra = and_others(exclude=category)
+        scope = f'w:{category}'
+        if category in _GROUPED_CATEGORIES:
+            branches.append(_oracle_grouped_branch(category, scope, extra))
+        else:
+            for cat, token, _value, _label, _pg_pred, ora_pred in FACET_SCALARS:
+                if cat != category:
+                    continue
+                branches.append(
+                    f"SELECT '{scope}' AS SCOPE, '{cat}' AS CAT, '{token}' AS TOKEN, COUNT(*) AS N "
+                    f"FROM matched m WHERE {ora_pred}{extra}"
+                )
 
     union_sql = '\nUNION ALL\n'.join(branches)
     return f"""
         WITH {text_cte_sql}matched AS (
             SELECT /*+ MATERIALIZE */ s.SPL_ID, s.DOCUMENT_TYPE, s.MARKET_CATEGORIES, s.EPC
             FROM {base_table} s
-            WHERE {where_sql}
+            WHERE {backbone_where_sql}
         )
         {union_sql}
     """.strip()
@@ -281,3 +361,27 @@ def rows_to_facets(rows):
         facets[cat] = [{'value': k, 'label': k, 'count': v} for k, v in ordered]
 
     return facets
+
+
+def rows_to_scoped_facets(rows):
+    """
+    Splits the long-format (scope, cat, token, n) rows from
+    oracle_facet_sql_combined by scope, then runs each scope's rows through
+    rows_to_facets independently.
+
+    Returns {'base': {...facets...}, 'w:<category>': {...facets...}, ...}.
+    """
+    by_scope = {}
+    for row in rows or []:
+        if isinstance(row, dict):
+            scope = row.get('scope') or row.get('SCOPE')
+            cat = row.get('cat') or row.get('CAT')
+            token = row.get('token') or row.get('TOKEN')
+            n = row.get('n') or row.get('N')
+        else:
+            scope, cat, token, n = row[0], row[1], row[2], row[3]
+        if scope is None:
+            continue
+        by_scope.setdefault(scope, []).append((cat, token, n))
+
+    return {scope: rows_to_facets(scoped_rows) for scope, scoped_rows in by_scope.items()}

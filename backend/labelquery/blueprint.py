@@ -32,9 +32,11 @@ from .compiler import (
 )
 from .facets import (
     active_categories,
-    oracle_facet_sql,
+    oracle_facet_sql_combined,
     postgres_facet_sql,
     rows_to_facets,
+    rows_to_scoped_facets,
+    strip_all_categories,
     strip_category,
 )
 
@@ -749,40 +751,23 @@ def _expand_meddra(level, terms):
     return (names + list(terms))[:400] if names else []
 
 
-def _facets_once(query, target_db):
-    """
-    The full facet payload for one criteria tree, or {} when it cannot be
-    computed. Facets are decoration: a failure here must never take the result
-    list with it, which is why every path swallows and returns empty.
-    """
-    use_oracle = (target_db in _ORACLE_TARGETS) or (
+def _use_oracle_facets(target_db):
+    return (target_db in _ORACLE_TARGETS) or (
         target_db != 'local' and FDALabelDBService.is_internal()
     )
 
-    if use_oracle:
-        conn = FDALabelDBService.get_oracle_connection()
-        if not conn:
-            return {}
-        try:
-            from .oracle_compiler import compile_oracle_predicates
-            text_cte_sql, where_sql, bag, _warnings = compile_oracle_predicates(
-                query,
-                expand_meddra=_expand_meddra,
-                capabilities=_capabilities(),
-                base_table=_oracle_base_table(target_db),
-            )
-            sql = oracle_facet_sql(text_cte_sql, where_sql, _oracle_base_table(target_db))
-            cur = conn.cursor()
-            cur.execute(sql, bag.params)
-            rows = cur.fetchall()
-            cur.close()
-            return rows_to_facets(rows)
-        except Exception as e:
-            print(f"[WARN] Oracle facet calculation failed: {e}")
-            return {}
-        finally:
-            conn.close()
 
+def _facets_once(query, target_db):
+    """
+    The full Postgres facet payload for one criteria tree, or {} when it
+    cannot be computed. Facets are decoration: a failure here must never take
+    the result list with it, which is why the path swallows and returns
+    empty.
+
+    Postgres-only: see _compute_oracle_facets for the Oracle path, which does
+    not call this per active category -- that per-category recompile-and-rerun
+    is exactly what was slow on Oracle.
+    """
     conn = None
     try:
         relational_where, section_where, params, _warnings = compile_where(
@@ -801,10 +786,60 @@ def _facets_once(query, target_db):
             conn.close()
 
 
+def _compute_oracle_facets(query, target_db):
+    """
+    Sidebar facet counts against Oracle, in exactly one round trip regardless
+    of how many sidebar filters are currently ticked.
+
+    The search criteria (text, MedDRA, product name, ...) are compiled once
+    against the "backbone" -- the query with every facet-driven criterion
+    (labelingType, applicationType, route, dosageForm, pharmClass,
+    marketStatus) stripped -- and run as a single MATERIALIZED CTE. Each
+    active facet category's own predicate is then layered back on as a cheap
+    branch against that already-materialized set, both for the base ("as
+    currently filtered") counts and for each active category's self-excluded
+    widen, so ticking a checkbox never re-triggers the full-text/MedDRA/base
+    table work again.
+    """
+    conn = FDALabelDBService.get_oracle_connection()
+    if not conn:
+        return {}
+    try:
+        from .oracle_compiler import compile_oracle_predicates, compile_active_category_predicates
+
+        base_table = _oracle_base_table(target_db)
+        backbone_query = strip_all_categories(query)
+        text_cte_sql, backbone_where_sql, bag, _warnings = compile_oracle_predicates(
+            backbone_query,
+            expand_meddra=_expand_meddra,
+            capabilities=_capabilities(),
+            base_table=base_table,
+        )
+        active_predicates = compile_active_category_predicates(query, bag, base_table=base_table)
+
+        sql = oracle_facet_sql_combined(text_cte_sql, backbone_where_sql, base_table, active_predicates)
+        cur = conn.cursor()
+        cur.execute(sql, bag.params)
+        rows = cur.fetchall()
+        cur.close()
+
+        scoped = rows_to_scoped_facets(rows)
+        facets = scoped.get('base') or {}
+        for category in active_predicates:
+            widened = scoped.get(f'w:{category}')
+            if widened and widened.get(category):
+                facets[category] = widened[category]
+        return facets
+    except Exception as e:
+        print(f"[WARN] Oracle facet calculation failed: {e}")
+        return {}
+    finally:
+        conn.close()
+
+
 def _compute_facets(query, target_db):
     """
-    Facet counts for the sidebar, one aggregate pass per category that needs
-    its own.
+    Facet counts for the sidebar.
 
     A category is counted with its own filter removed, so the numbers answer
     "what would I get if I ticked this" rather than "how many of the rows I
@@ -813,9 +848,14 @@ def _compute_facets(query, target_db):
     the one number that cannot help anyone. The trade is that the counts stop
     summing to the result total -- the same trade PubMed makes.
 
-    Cost is one pass plus one per *filtered* category, so an unfiltered search
-    is a single query.
+    Oracle computes all of this (base pass plus every active category's widen)
+    in a single round trip -- see _compute_oracle_facets. Postgres is cheap
+    enough that one pass plus one per *filtered* category, each a fresh query,
+    is not worth the same restructuring.
     """
+    if _use_oracle_facets(target_db):
+        return _compute_oracle_facets(query, target_db)
+
     facets = _facets_once(query, target_db)
     if not facets:
         return {}
