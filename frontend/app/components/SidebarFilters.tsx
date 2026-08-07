@@ -218,9 +218,13 @@ export default function SidebarFilters({
     const items = orphans.length ? [...sourceItems, ...orphans] : sourceItems;
 
     const kept = items.filter((item) => {
+      // Always show selected items so the user can untick them.
       if (isPickSelected(item.value, selectedValues)) return true;
-      if (!counted || selectedValues.length > 0) return true;
-      return item.count > 0;
+      // If the backend never computed counts for this category, show everything.
+      if (!counted) return true;
+      // When facets are available, show all items (including 0-count ones) so
+      // the user can see which options are unavailable under the current filters.
+      return true;
     });
     if (!counted) return kept;
     // Only the first five are shown outright, so what the result set actually
@@ -345,7 +349,7 @@ export default function SidebarFilters({
                   onChange={() => toggleArrayValue(type, field, pick.value)}
                 />
                 <span>{pick.label}</span>
-                {pick.count > 0 && <span className="fdl-facet-count">({pick.count.toLocaleString()})</span>}
+                {hasFacets && <span className={`fdl-facet-count${pick.count === 0 ? ' fdl-facet-count--zero' : ''}`}>({pick.count.toLocaleString()})</span>}
               </label>
             );
           })}
@@ -578,7 +582,7 @@ export default function SidebarFilters({
                       }
                     />
                     <span>Reference Listed Drug (RLD)</span>
-                    {rldCount > 0 && <span className="fdl-facet-count">({rldCount.toLocaleString()})</span>}
+                    {hasFacets && <span className={`fdl-facet-count${rldCount === 0 ? ' fdl-facet-count--zero' : ''}`}>({rldCount.toLocaleString()})</span>}
                   </label>
                 </div>
               </div>

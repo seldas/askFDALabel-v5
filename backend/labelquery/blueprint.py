@@ -839,17 +839,34 @@ def _compute_oracle_facets(query, target_db):
 
 def _compute_facets(query, target_db):
     """
-    Facet counts for the sidebar. Always computed over the backbone query
-    (with all sidebar categories stripped). This ensures facet counts
-    reflect all matching search results and remain fixed/stable when
-    any sidebar filter is selected or unselected.
-    """
-    backbone_query = strip_all_categories(query)
-    if _use_oracle_facets(target_db):
-        return _compute_oracle_facets(backbone_query, target_db)
+    Facet counts with AND logic across all filter panels.
 
-    facets = _facets_once(backbone_query, target_db)
-    return facets or {}
+    Base counts are computed over the full query (all active filters applied),
+    so a count in panel B already reflects any active filter in panel A — the
+    two panels AND together. For each active sidebar category its own filter is
+    then lifted for a second pass, so the user can see options they might want
+    to widen to while every other filter stays in effect.
+
+    If the combination of filters produces zero matches for a facet option
+    that option is returned with count 0 rather than being suppressed.
+    """
+    if _use_oracle_facets(target_db):
+        # _compute_oracle_facets strips the backbone itself; pass the full
+        # query so compile_active_category_predicates sees the real selections.
+        return _compute_oracle_facets(query, target_db)
+
+    # Base: full query (all category filters applied = AND across panels).
+    facets = _facets_once(query, target_db) or {}
+
+    # For each active sidebar category recompute with that category's filter
+    # lifted so the user can see all available options to widen to.
+    for category in active_categories(query):
+        widened_query = strip_category(query, category)
+        wf = _facets_once(widened_query, target_db) or {}
+        if wf.get(category):
+            facets[category] = wf[category]
+
+    return facets
 
 
 @labelquery_bp.route('/facets', methods=['POST'])

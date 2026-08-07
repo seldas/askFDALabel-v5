@@ -2284,6 +2284,12 @@
   margin-left: 4px;
 }
 
+/* Zero-count badge — dimmed to signal "no results under current filters" */
+.fdl-facet-count--zero {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
 
 
 
