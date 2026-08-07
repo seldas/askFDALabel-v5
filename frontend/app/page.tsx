@@ -16,7 +16,8 @@
  * edited before anything executes.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import StartPage from './components/StartPage';
@@ -27,7 +28,7 @@ import { withAppBase } from './utils/appPaths';
 import { AiIntentPanel } from './querybuilder/AiIntentPanel';
 import type { OptionLists } from './querybuilder/CriterionCard';
 import { QueryPanel } from './querybuilder/QueryPanel';
-import { resultsPath } from './querybuilder/queryUrl';
+import { QUERY_PARAM, decodeQuery, resultsPath } from './querybuilder/queryUrl';
 import {
   countFilled,
   fromWire,
@@ -51,7 +52,8 @@ const EMPTY_OPTIONS: OptionLists = {
   loading: true,
 };
 
-export default function HomePage() {
+function HomePage() {
+  const searchParams = useSearchParams();
   const { session, loading, refreshSession, openAuthModal } = useUser();
   const { capabilities, ready: capReady } = useCapabilities();
   const isAuthed = Boolean(session?.is_authenticated);
@@ -74,6 +76,29 @@ export default function HomePage() {
   useEffect(() => {
     setHasSaved(Boolean(window.localStorage.getItem(LAST_QUERY_KEY)));
   }, []);
+
+  /* Coming back from the results page: the criteria tree travels in the same
+   * `q` parameter the results page reads, so "Back to search" reopens the panel
+   * exactly as the user left it -- including filters they ticked in the results
+   * sidebar, which never went through localStorage.
+   *
+   * Applied once per distinct parameter value. Re-applying on every render
+   * would fight the user's edits, since the URL is deliberately left alone
+   * afterwards. */
+  const hydratedFrom = useRef<string | null>(null);
+  const encodedParam = searchParams.get(QUERY_PARAM);
+  const targetParam = searchParams.get('target_db');
+
+  useEffect(() => {
+    if (!encodedParam || hydratedFrom.current === encodedParam) return;
+    const wire = decodeQuery(encodedParam);
+    if (!wire) return;
+    hydratedFrom.current = encodedParam;
+    setQuery(fromWire(wire));
+    if (targetParam === 'local' || targetParam === 'oracle' || targetParam === 'oracle_all') {
+      setTargetDb(targetParam);
+    }
+  }, [encodedParam, targetParam]);
 
   /* Dropdown contents come from the live database, so a deployment with a
    * partial label import offers only what it actually has.
@@ -249,5 +274,21 @@ export default function HomePage() {
 
       <Footer />
     </Page>
+  );
+}
+
+export default function HomePageWrapper() {
+  return (
+    <Suspense
+      fallback={
+        <Page>
+          <Header />
+          <main className="fdl-shell" />
+          <Footer />
+        </Page>
+      }
+    >
+      <HomePage />
+    </Suspense>
   );
 }

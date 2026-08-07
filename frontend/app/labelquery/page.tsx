@@ -26,7 +26,7 @@ import {
   type SortState,
 } from '../querybuilder/ResultsTable';
 import type { OptionLists } from '../querybuilder/CriterionCard';
-import { QUERY_PARAM, decodeQuery, resultsPath } from '../querybuilder/queryUrl';
+import { QUERY_PARAM, decodeQuery, encodeQuery, resultsPath } from '../querybuilder/queryUrl';
 import { fromWire, toWire, type LabelQuery, type TargetDb, type WireQuery } from '../querybuilder/types';
 import { withAppBase } from '../utils/appPaths';
 import '../querybuilder/querybuilder.css';
@@ -288,6 +288,24 @@ function ResultsPage() {
     };
   }, [activeWireQuery, currentTargetDb]);
 
+  /**
+   * Where "Back to search" goes: home, carrying the criteria tree the user is
+   * looking at right now -- sidebar edits included, which the browser's own
+   * Back button would lose since those only ever replaceState'd. Home reads the
+   * same `q` parameter the results page does.
+   *
+   * A tree too large to encode falls back to a bare home link rather than
+   * throwing on render; the panel is then empty, but the page still works.
+   */
+  const editSearchPath = useMemo(() => {
+    if (!activeWireQuery) return '/';
+    try {
+      return `/?${QUERY_PARAM}=${encodeQuery(activeWireQuery)}&target_db=${currentTargetDb}`;
+    } catch {
+      return '/';
+    }
+  }, [activeWireQuery, currentTargetDb]);
+
   const handleSidebarQueryChange = useCallback(
     (newLabelQuery: LabelQuery) => {
       const newWire = toWire(newLabelQuery);
@@ -527,6 +545,15 @@ function ResultsPage() {
           </aside>
 
           <div className="fdl-results-main">
+            <div className="fdl-results-back">
+              <Link className="fdl-backlink" href={editSearchPath}>
+                <span aria-hidden="true">‹</span> Back to search
+              </Link>
+              <span className="fdl-results-back__hint">
+                Criteria are carried back, including anything changed here.
+              </span>
+            </div>
+
             <div className="fdl-resultshead">
               <h1 className="fdl-resultshead__count">
                 {!activeWireQuery
