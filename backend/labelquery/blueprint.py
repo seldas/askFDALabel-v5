@@ -947,7 +947,7 @@ def execute():
                     if isinstance(first_r, dict):
                         total = first_r.get('total_count') or first_r.get('TOTAL_COUNT') or 0
                     else:
-                        total = first_r[17] if len(first_r) > 17 else (first_r[16] if len(first_r) > 16 else 0)
+                        total = first_r[16] if len(first_r) > 16 else (first_r[15] if len(first_r) > 15 else 0)
 
                     for r in rows:
                         set_id_val = r.get('set_id') or r.get('SET_ID') if isinstance(r, dict) else r[0]
@@ -956,7 +956,7 @@ def execute():
                         if isinstance(r, dict):
                             res_item = dict(r)
                             res_item['is_rld'] = bool(r.get('is_rld') or r.get('IS_RLD'))
-                            res_item['is_rs'] = bool(r.get('is_rs') or r.get('IS_RS'))
+                            res_item['is_rs'] = False
                             res_item['active_uniis'] = r.get('active_uniis') or r.get('ACTIVE_UNIIS') or r.get('ACT_INGR_UNIIS') or r.get('act_ingr_unii')
                             res_item['active_moiety'] = r.get('active_moiety') or r.get('ACTIVE_MOIETY') or r.get('ACT_MOIETY_NAMES')
                             res_item['active_moiety_uniis'] = r.get('active_moiety_uniis') or r.get('ACTIVE_MOIETY_UNIIS') or r.get('ACT_MOIETY_UNIIS')
@@ -980,10 +980,10 @@ def execute():
                                 'routes': r[13],
                                 'epc': r[14],
                                 'is_rld': bool(r[15]),
-                                'is_rs': bool(r[16]),
-                                'active_uniis': r[18] if len(r) > 18 else None,
-                                'active_moiety': r[19] if len(r) > 19 else None,
-                                'active_moiety_uniis': r[20] if len(r) > 20 else None,
+                                'is_rs': False,
+                                'active_uniis': r[17] if len(r) > 17 else None,
+                                'active_moiety': r[18] if len(r) > 18 else None,
+                                'active_moiety_uniis': r[19] if len(r) > 19 else None,
                             })
 
                 browsable = min(total, BROWSE_CAP)
@@ -1146,7 +1146,6 @@ EXPORT_COLUMNS = [
     ('Most Recent SPL Date', 'revised_date'),
     ('Initial Approval Year', 'initial_approval_year'),
     ('RLD', 'is_rld'),
-    ('RS', 'is_rs'),
 ]
 
 
@@ -1244,7 +1243,7 @@ def _export_rows(query, sort, direction, target_db=None):
 
 def _cell(row, key):
     value = row.get(key)
-    if key in ('is_rld', 'is_rs'):
+    if key in ('is_rld',):
         return 'Yes' if value else 'No'
     # Multi-valued columns are "; "-joined in storage; a comma reads better in a
     # spreadsheet and does not collide with CSV quoting.

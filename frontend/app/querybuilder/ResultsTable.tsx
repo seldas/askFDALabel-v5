@@ -30,7 +30,6 @@ export interface LabelRow {
   routes: string | null;
   epc: string | null;
   is_rld: number | null;
-  is_rs: number | null;
   initial_approval_year: number | null;
   /** Active-ingredient UNIIs, "; "-joined. Null when the label declares none. */
   active_uniis: string | null;
@@ -575,9 +574,6 @@ export function ResultsTable({
                                 ) : null}
                                 {row.is_rld ? (
                                   <span className="fdl-badge fdl-badge--rld">RLD</span>
-                                ) : null}
-                                {row.is_rs ? (
-                                  <span className="fdl-badge fdl-badge--rld" style={{ background: '#0284c7' }}>RS</span>
                                 ) : null}
                               </div>
                             </div>

@@ -539,8 +539,6 @@ def _c_market_status(criterion, bag, warnings):
     alts = []
     if 'rld' in values:
         alts.append('s.is_rld = 1')
-    if 'rs' in values:
-        alts.append('s.is_rs = 1')
 
     if status == 'active' or 'marketed' in values:
         alts.append(
@@ -713,18 +711,10 @@ def _c_oracle_only(value, warnings, label, key):
 def _c_application_type(value, bag, warnings):
     values = _as_list(value.get('values'))
     is_rld = bool(value.get('isRld') or value.get('is_rld'))
-    is_rs = bool(value.get('isRs') or value.get('is_rs'))
-    is_rld_rs = bool(value.get('isRldRs') or value.get('rld_rs'))
-
-    if is_rld_rs:
-        is_rld = True
-        is_rs = True
 
     preds = []
     if is_rld:
         preds.append('s.is_rld = 1')
-    if is_rs:
-        preds.append('s.is_rs = 1')
 
     if values:
         warnings.append(

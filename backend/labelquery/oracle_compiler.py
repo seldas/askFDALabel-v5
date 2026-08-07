@@ -168,18 +168,32 @@ def _compile_labeling_type(value, bag, base_table=BASE_TABLE_HUMAN, warnings=Non
     return '(' + ' AND '.join(clauses) + ')'
 
 
-def _compile_application_type(value, bag, alias='s'):
+def _compile_application_type(value, bag, alias='s', base_table=BASE_TABLE_HUMAN):
+    """
+    Compile an applicationType criterion into Oracle SQL.
+
+    Marketing category values (NDA, ANDA, BLA, …) are matched against the
+    normalized marketing-category detail tables — DGV_SUM_SPL_MKT_CAT for the
+    CDER-CBER scope (DGV_SUM_RX_SPL) and SUM_SPL_MKT_CAT for the FDA/all scope
+    (SUM_SPL) — rather than the denormalised MARKET_CATEGORIES varchar column.
+    This prevents NDA matches from bleeding into ANDA rows.  The APPR_NUM LIKE
+    fallback is preserved so application-number tokens still resolve correctly.
+
+    RLD is matched with a plain EXISTS against SUM_SPL_RLD, which is a
+    purpose-built table: a row there means the SPL is a Reference Listed Drug.
+    """
     values = _as_list(value.get('values'))
     is_rld = bool(value.get('isRld') or value.get('is_rld'))
-    is_rs = bool(value.get('isRs') or value.get('is_rs'))
-    is_rld_rs = bool(value.get('isRldRs') or value.get('rld_rs'))
 
-    if is_rld_rs:
-        is_rld = True
-        is_rs = True
-
-    if not values and not is_rld and not is_rs:
+    if not values and not is_rld:
         return None
+
+    # Select the right marketing-category detail table for the active scope.
+    mkt_cat_table = (
+        'druglabel.SUM_SPL_MKT_CAT'
+        if base_table == BASE_TABLE_ALL
+        else 'druglabel.DGV_SUM_SPL_MKT_CAT'
+    )
 
     clauses = []
     if values:
@@ -191,21 +205,18 @@ def _compile_application_type(value, bag, alias='s'):
             p_contain = bag.add(f'%{v_clean}%')
             p_prefix = bag.add(f'{v_clean} %')
             app_clauses.append(
-                f"(UPPER({alias}.MARKET_CATEGORIES) LIKE {p_contain} OR UPPER({alias}.APPR_NUM) LIKE {p_prefix} OR UPPER({alias}.APPR_NUM) LIKE {p_contain})"
+                f"(EXISTS (SELECT 1 FROM {mkt_cat_table} mkt "
+                f"WHERE mkt.SPL_ID = {alias}.SPL_ID "
+                f"AND UPPER(mkt.CATEGORY_SPL_ACCEPTABLE_TERM) LIKE {p_contain}) "
+                f"OR UPPER({alias}.APPR_NUM) LIKE {p_prefix} "
+                f"OR UPPER({alias}.APPR_NUM) LIKE {p_contain})"
             )
         if app_clauses:
             clauses.append('(' + ' OR '.join(app_clauses) + ')')
 
     if is_rld:
         clauses.append(
-            f"(EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = {alias}.SPL_ID) "
-            f"OR EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = {alias}.SPL_ID AND (UPPER(rld.REFERENCE_DRUG) IN ('Y', 'YES', '1') OR rld.REFERENCE_DRUG IS NOT NULL)) "
-            f"OR ({alias}.RLD_NUM IS NOT NULL AND {alias}.RLD_NUM <> '0'))"
-        )
-
-    if is_rs:
-        clauses.append(
-            f"(EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = {alias}.SPL_ID AND (UPPER(rld.REFERENCE_STANDARD) IN ('Y', 'YES', '1') OR rld.REFERENCE_STANDARD IS NOT NULL)))"
+            f"EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = {alias}.SPL_ID)"
         )
 
     return '(' + ' AND '.join(clauses) + ')' if clauses else None
@@ -404,13 +415,8 @@ def _compile_market_status(value, bag, alias='s'):
         conds.append(f"mkt.LOW_DATE <= {p_max}")
 
     rld_rs_cond = None
-    if 'rld' in values or 'rs' in values:
-        alts = []
-        if 'rld' in values:
-            alts.append(f"EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = {alias}.SPL_ID) OR EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = {alias}.SPL_ID AND (UPPER(rld.REFERENCE_DRUG) IN ('Y', 'YES', '1') OR rld.REFERENCE_DRUG IS NOT NULL))")
-        if 'rs' in values:
-            alts.append(f"EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = {alias}.SPL_ID AND (UPPER(rld.REFERENCE_STANDARD) IN ('Y', 'YES', '1') OR rld.REFERENCE_STANDARD IS NOT NULL))")
-        rld_rs_cond = '(' + ' OR '.join(alts) + ')'
+    if 'rld' in values:
+        rld_rs_cond = f"EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = {alias}.SPL_ID)"
 
     if not conds and not rld_rs_cond:
         return None
@@ -750,7 +756,7 @@ def compile_oracle_predicates(query, expand_meddra=None, capabilities=None,
                 c = _compile_labeling_type(cval, bag, base_table=base_table, warnings=warnings)
                 if c: group_relational.append(c)
             elif ctype == 'applicationType':
-                c = _compile_application_type(cval, bag)
+                c = _compile_application_type(cval, bag, base_table=base_table)
                 if c: group_relational.append(c)
             elif ctype == 'route':
                 c = _compile_route(cval, bag)
@@ -834,7 +840,7 @@ def compile_oracle_predicates(query, expand_meddra=None, capabilities=None,
 _CATEGORY_COMPILERS = {
     'labelingTypes': lambda cval, bag, base_table: _compile_labeling_type(
         cval, bag, base_table=base_table, alias='m'),
-    'applicationTypes': lambda cval, bag, base_table: _compile_application_type(cval, bag, alias='m'),
+    'applicationTypes': lambda cval, bag, base_table: _compile_application_type(cval, bag, alias='m', base_table=base_table),
     'marketStatus': lambda cval, bag, base_table: _compile_market_status(cval, bag, alias='m'),
     'routes': lambda cval, bag, base_table: _compile_route(cval, bag, alias='m'),
     'dosageForms': lambda cval, bag, base_table: _compile_dosage_form(cval, bag, alias='m'),
@@ -951,8 +957,7 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
                p.MANUFACTURER, p.APPR_NUM, p.NDC_CODES, p.NDC3_CODES, p.EFF_TIME as REVISED_DATE,
                p.MARKET_CATEGORIES, p.DOCUMENT_TYPE, p.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
                p.DOSAGE_FORMS, p.ROUTES, p.EPC,
-               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND (rld.REFERENCE_DRUG = 'Y' OR rld.REFERENCE_DRUG = 'Yes' OR rld.REFERENCE_DRUG = '1')) as IS_RLD,
-               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld WHERE rld.SPL_ID = p.SPL_ID AND (rld.REFERENCE_STANDARD = 'Y' OR rld.REFERENCE_STANDARD = 'Yes' OR rld.REFERENCE_STANDARD = '1')) as IS_RS,
+               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = p.SPL_ID) as IS_RLD,
                p.TOTAL_COUNT,
                p.ACT_INGR_UNIIS as ACTIVE_UNIIS,
                {moiety_project}

@@ -294,21 +294,11 @@ export function CriterionCard({
               <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
                 <input
                   type="checkbox"
-                  checked={Boolean(v.isRld || v.isRldRs)}
-                  onChange={(e) => set({ isRld: e.target.checked, isRldRs: false })}
+                  checked={Boolean(v.isRld)}
+                  onChange={(e) => set({ isRld: e.target.checked })}
                   style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#2563eb' }}
                 />
                 <span>RLD (Reference Listed Drug)</span>
-              </label>
-
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
-                <input
-                  type="checkbox"
-                  checked={Boolean(v.isRs || v.isRldRs)}
-                  onChange={(e) => set({ isRs: e.target.checked, isRldRs: false })}
-                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#2563eb' }}
-                />
-                <span>RS (Reference Standard)</span>
               </label>
             </div>
           </>

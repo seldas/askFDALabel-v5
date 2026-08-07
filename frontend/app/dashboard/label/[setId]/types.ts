@@ -78,7 +78,6 @@ export interface LabelData {
   document_type: string | null;
   has_boxed_warning: boolean;
   is_rld?: boolean;
-  is_rs?: boolean;
   is_latest?: boolean;
   openfda_status?: 'Current' | 'Archived' | 'Earlier Version' | null;
   clean_app_num: string | null;

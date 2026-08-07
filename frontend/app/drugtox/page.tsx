@@ -124,7 +124,6 @@ interface DiscrepancyItem {
     status: string;
     setid: string | null;
     is_rld?: boolean;
-    is_rs?: boolean;
   };
 }
 

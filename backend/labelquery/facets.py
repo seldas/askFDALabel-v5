@@ -84,12 +84,7 @@ FACET_SCALARS = [
      "UPPER(m.MARKET_CATEGORIES) LIKE '%MONOGRAPH%'"),
     ('applicationTypes', 'rld', 'RLD', 'Reference Listed Drug (RLD)',
      "coalesce(is_rld, 0) <> 0",
-     "EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rr WHERE rr.SPL_ID = m.SPL_ID "
-     "AND rr.REFERENCE_DRUG IN ('Y', 'Yes', '1'))"),
-    ('applicationTypes', 'rs', 'RS', 'Reference Standard (RS)',
-     "coalesce(is_rs, 0) <> 0",
-     "EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD_RS rr WHERE rr.SPL_ID = m.SPL_ID "
-     "AND rr.REFERENCE_STANDARD IN ('Y', 'Yes', '1'))"),
+     "EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rr WHERE rr.SPL_ID = m.SPL_ID)"),
 
     ('marketStatus', 'status_rx', 'Prescription', 'Prescription',
      "doc_type ILIKE '%%prescription%%'",
@@ -108,7 +103,7 @@ _GROUPED_LIMIT = 30
 # counting that category "as if it were not filtered". See strip_category.
 CATEGORY_CRITERION = {
     'labelingTypes': ('labelingType', ('values',)),
-    'applicationTypes': ('applicationType', ('values', 'isRld', 'isRs', 'isRldRs')),
+    'applicationTypes': ('applicationType', ('values', 'isRld')),
     'marketStatus': ('marketStatus', ('values',)),
     'routes': ('route', ('values',)),
     'dosageForms': ('dosageForm', ('values',)),
@@ -216,7 +211,7 @@ def postgres_facet_sql(relational_where, section_where):
     return f"""
         WITH matched AS MATERIALIZED (
             SELECT s.spl_id, s.doc_type, s.market_categories, s.routes,
-                   s.dosage_forms, s.epc, s.is_rld, s.is_rs
+                   s.dosage_forms, s.epc, s.is_rld
             FROM labeling.sum_spl s
             {sec_join}
             WHERE {relational_where}

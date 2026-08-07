@@ -148,7 +148,6 @@ export default function LabelLayout({
                     </Badge>
                   ) : null}
                   {data.is_rld ? <Badge tone="danger">RLD</Badge> : null}
-                  {data.is_rs ? <Badge tone="success">RS</Badge> : null}
                   {data.openfda_status ? (
                     <Badge tone={data.openfda_status === 'Current' ? 'info' : 'warn'}>
                       {data.openfda_status}
