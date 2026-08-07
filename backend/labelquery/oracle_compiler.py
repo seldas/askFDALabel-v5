@@ -153,16 +153,23 @@ def _compile_labeling_type(value, bag, base_table=BASE_TABLE_HUMAN, warnings=Non
     if values:
         type_clauses = []
         for v in values:
-            v_clean = v.strip('%').strip().upper()
+            v_clean = v.strip('%').strip()
             if not v_clean:
                 continue
-            p = bag.add(f'%{v_clean}%')
-            type_clauses.append(f'UPPER({alias}.DOCUMENT_TYPE) LIKE {p}')
+            p = bag.add(v_clean)
+            if '%' in v_clean:
+                type_clauses.append(
+                    f"REGEXP_LIKE({alias}.DOCUMENT_TYPE, '(^|;)[[:space:]]*' || REPLACE({p}, '%', '.*') || '([[:space:]]*;|$)', 'i')"
+                )
+            else:
+                type_clauses.append(
+                    f"REGEXP_LIKE({alias}.DOCUMENT_TYPE, '(^|;)[[:space:]]*' || {p} || '([[:space:]]*;|$)', 'i')"
+                )
         if type_clauses:
             clauses.append('(' + ' OR '.join(type_clauses) + ')')
 
     # FORMAT_GROUP is a DGV_SUM_RX_SPL column; SUM_SPL does not classify PLR.
-    if plr in ('plr', '1', 'non_plr', 'non-plr', '2'):
+    if plr in ('plr', '1', 'non_plr', 'non-plr', '2', 'unclassified', 'other', '3'):
         if base_table != BASE_TABLE_HUMAN:
             if warnings is not None:
                 warnings.append(
@@ -171,8 +178,10 @@ def _compile_labeling_type(value, bag, base_table=BASE_TABLE_HUMAN, warnings=Non
                 )
         elif plr in ('plr', '1'):
             clauses.append(f'{alias}.FORMAT_GROUP = 1')
-        else:
+        elif plr in ('non_plr', 'non-plr', '2'):
             clauses.append(f'{alias}.FORMAT_GROUP = 2')
+        elif plr in ('unclassified', 'other', '3'):
+            clauses.append(f'({alias}.FORMAT_GROUP IS NULL OR {alias}.FORMAT_GROUP NOT IN (1, 2))')
 
     if not clauses:
         return None
@@ -182,19 +191,8 @@ def _compile_labeling_type(value, bag, base_table=BASE_TABLE_HUMAN, warnings=Non
 
 def _compile_application_type(value, bag, alias='s', base_table=BASE_TABLE_HUMAN):
     """
-    Compile an applicationType criterion into Oracle SQL.
-
-    Marketing category values (NDA, ANDA, BLA, …) are matched against the
-    normalized marketing-category detail tables — DGV_SUM_SPL_MKT_CAT for the
-    CDER-CBER scope (DGV_SUM_RX_SPL) and SUM_SPL_MKT_CAT for the FDA/all scope
-    (SUM_SPL) — rather than the denormalised MARKET_CATEGORIES varchar column.
-    The CATEGORY_SPL_ACCEPTABLE_TERM column is compared with = (exact match), not
-    LIKE, because the table stores canonical terms and a substring match would let
-    "NDA" bleed into "ANDA" rows.  The APPR_NUM LIKE fallback is preserved so
-    application-number tokens still resolve correctly.
-
-    RLD is matched with a plain EXISTS against SUM_SPL_RLD, which is a
-    purpose-built table: a row there means the SPL is a Reference Listed Drug.
+    Compile an applicationType criterion into Oracle SQL strictly using case-insensitive
+    exact boundary matching against the MARKET_CATEGORIES column (no wildcards).
     """
     values = _as_list(value.get('values'))
     is_rld = bool(value.get('isRld') or value.get('is_rld'))
@@ -202,32 +200,16 @@ def _compile_application_type(value, bag, alias='s', base_table=BASE_TABLE_HUMAN
     if not values and not is_rld:
         return None
 
-    # Select the right marketing-category detail table for the active scope.
-    mkt_cat_table = (
-        'druglabel.SUM_SPL_MKT_CAT'
-        if base_table == BASE_TABLE_ALL
-        else 'druglabel.DGV_SUM_SPL_MKT_CAT'
-    )
-
     clauses = []
     if values:
         app_clauses = []
         for v in values:
-            v_clean = v.strip().upper()
+            v_clean = v.strip('%').strip()
             if not v_clean:
                 continue
-            # Exact match against the normalized category table — LIKE/%/% would
-            # let "NDA" bleed into "ANDA" rows (and vice-versa). The table holds
-            # canonical acceptable terms, so = is both correct and faster.
             p_exact = bag.add(v_clean)
-            p_prefix = bag.add(f'{v_clean} %')
-            p_contain = bag.add(f'%{v_clean}%')
             app_clauses.append(
-                f"(EXISTS (SELECT 1 FROM {mkt_cat_table} mkt "
-                f"WHERE mkt.SPL_ID = {alias}.SPL_ID "
-                f"AND UPPER(mkt.CATEGORY_SPL_ACCEPTABLE_TERM) = {p_exact}) "
-                f"OR UPPER({alias}.APPR_NUM) LIKE {p_prefix} "
-                f"OR UPPER({alias}.APPR_NUM) LIKE {p_contain})"
+                f"REGEXP_LIKE({alias}.MARKET_CATEGORIES, '(^|;)[[:space:]]*' || {p_exact} || '([[:space:]]*;|$)', 'i')"
             )
         if app_clauses:
             clauses.append('(' + ' OR '.join(app_clauses) + ')')
@@ -245,42 +227,29 @@ def _compile_route(value, bag, alias='s'):
     if not values:
         return None
     clauses = []
+    col = f'{alias}.ROUTES' if alias == 'm' else f'{alias}.ROUTES_OF_ADMINISTRATION'
     for v in values:
         v_clean = v.strip('%').strip().upper()
         if not v_clean:
             continue
         p = bag.add(f'%{v_clean}%')
-        clauses.append(
-            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_ROUTE r '
-            f'WHERE r.SPL_ID = {alias}.SPL_ID AND (UPPER(r.ROUTE_SPL_ACCEPTABLE_TERM) LIKE {p} '
-            f'OR UPPER(r.NCIT_ROUTE_OF_ADMIN_CODE) LIKE {p}))'
-        )
+        clauses.append(f'UPPER({col}) LIKE {p}')
     return '(' + ' OR '.join(clauses) + ')' if clauses else None
 
 
 def _compile_dosage_form(value, bag, alias='s'):
-    """
-    Dosage form, against the normalized SUM_SPL_DOSAGEFORM rather than the
-    delimited DOSAGE_FORMS rollup column.
-
-    The UI sends NCI SPL acceptable terms ("TABLET, FILM COATED"), so the term
-    column is matched exactly -- a substring match would make "TABLET" swallow
-    every coated, chewable and extended-release variant. NCIT_FORM_CODE is
-    accepted too, since it is the leading edge of PK_SUMSPLDFORM after SPL_ID
-    and callers may hold a code rather than a term.
-    """
     values = _as_list(value.get('values'))
     if not values:
         return None
     clauses = []
+    col = f'{alias}.DOSAGE_FORMS'
     for v in values:
-        p = bag.add(v.upper())
-        clauses.append(
-            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_DOSAGEFORM df '
-            f'WHERE df.SPL_ID = {alias}.SPL_ID AND (UPPER(df.PRODUCT_DOSAGE_FORM_TERM) = {p} '
-            f'OR UPPER(df.PRODUCT_NCIT_FORM_CODE) = {p}))'
-        )
-    return '(' + ' OR '.join(clauses) + ')'
+        v_clean = v.strip('%').strip().upper()
+        if not v_clean:
+            continue
+        p = bag.add(f'%{v_clean}%')
+        clauses.append(f'UPPER({col}) LIKE {p}')
+    return '(' + ' OR '.join(clauses) + ')' if clauses else None
 
 
 def _compile_dea_schedule(value, bag):

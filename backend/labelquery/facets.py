@@ -72,16 +72,16 @@ FACET_SCALARS = [
 
     ('applicationTypes', 'anda', 'ANDA', 'ANDA',
      "market_categories ~* '(^|;)[[:space:]]*ANDA'",
-     "EXISTS (SELECT 1 FROM druglabel.SUM_SPL_MKT_CAT mkt WHERE mkt.SPL_ID = m.SPL_ID AND UPPER(mkt.CATEGORY_SPL_ACCEPTABLE_TERM) = 'ANDA')"),
+     "REGEXP_LIKE(m.MARKET_CATEGORIES, '(^|;)[[:space:]]*ANDA', 'i')"),
     ('applicationTypes', 'nda', 'NDA', 'NDA',
      "market_categories ~* '(^|;)[[:space:]]*NDA'",
-     "EXISTS (SELECT 1 FROM druglabel.SUM_SPL_MKT_CAT mkt WHERE mkt.SPL_ID = m.SPL_ID AND UPPER(mkt.CATEGORY_SPL_ACCEPTABLE_TERM) = 'NDA')"),
+     "REGEXP_LIKE(m.MARKET_CATEGORIES, '(^|;)[[:space:]]*NDA', 'i')"),
     ('applicationTypes', 'bla', 'BLA', 'BLA',
      "market_categories ~* '(^|;)[[:space:]]*BLA'",
-     "EXISTS (SELECT 1 FROM druglabel.SUM_SPL_MKT_CAT mkt WHERE mkt.SPL_ID = m.SPL_ID AND UPPER(mkt.CATEGORY_SPL_ACCEPTABLE_TERM) = 'BLA')"),
+     "REGEXP_LIKE(m.MARKET_CATEGORIES, '(^|;)[[:space:]]*BLA', 'i')"),
     ('applicationTypes', 'monograph', '%OTC monograph%', 'OTC Monograph Drug',
      "market_categories ILIKE '%%monograph%%'",
-     "EXISTS (SELECT 1 FROM druglabel.SUM_SPL_MKT_CAT mkt WHERE mkt.SPL_ID = m.SPL_ID AND UPPER(mkt.CATEGORY_SPL_ACCEPTABLE_TERM) LIKE '%MONOGRAPH%')"),
+     "UPPER(m.MARKET_CATEGORIES) LIKE '%MONOGRAPH%'"),
     ('applicationTypes', 'rld', 'RLD', 'Reference Listed Drug (RLD)',
      "coalesce(is_rld, 0) <> 0",
      "EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rr WHERE rr.SPL_ID = m.SPL_ID)"),
@@ -96,7 +96,7 @@ FACET_SCALARS = [
 
 # Categories whose values are data rather than a fixed list. Ordered by count
 # and truncated in Python, since the sidebar only ever shows a handful.
-_GROUPED_CATEGORIES = ('routes', 'dosageForms', 'pharmClasses')
+_GROUPED_CATEGORIES = ('routes', 'dosageForms', 'pharmClasses', 'applicationTypes', 'labelingTypes')
 _GROUPED_LIMIT = 30
 
 # Which criterion a category is driven by, and the value field to blank when
@@ -199,6 +199,8 @@ def postgres_facet_sql(relational_where, section_where):
         ('routes', 'routes', True),
         ('dosageForms', 'dosage_forms', True),
         ('pharmClasses', 'epc', False),
+        ('applicationTypes', 'market_categories', True),
+        ('labelingTypes', 'doc_type', True),
     ):
         token_expr = 'upper(btrim(v))' if upper else 'btrim(v)'
         branches.append(
@@ -224,30 +226,58 @@ def _oracle_grouped_branch(category, scope, extra_sql):
     """One UNION ALL branch for a data-driven (non-scalar) facet category."""
     if category == 'routes':
         return (
-            f"SELECT '{scope}' AS SCOPE, 'routes' AS CAT, UPPER(r.ROUTE_SPL_ACCEPTABLE_TERM) AS TOKEN, "
+            f"SELECT '{scope}' AS SCOPE, 'routes' AS CAT, "
+            "UPPER(TRIM(REGEXP_SUBSTR(m.ROUTES, '[^;]+', 1, lv.n))) AS TOKEN, "
             "COUNT(DISTINCT m.SPL_ID) AS N "
-            'FROM matched m JOIN druglabel.SUM_SPL_ROUTE r ON r.SPL_ID = m.SPL_ID '
-            f"WHERE r.ROUTE_SPL_ACCEPTABLE_TERM IS NOT NULL{extra_sql} "
-            'GROUP BY UPPER(r.ROUTE_SPL_ACCEPTABLE_TERM)'
+            "FROM matched m "
+            f"JOIN (SELECT LEVEL n FROM DUAL CONNECT BY LEVEL <= {_MAX_SPLIT_PARTS}) lv "
+            "ON lv.n <= REGEXP_COUNT(m.ROUTES, ';') + 1 "
+            f"WHERE m.ROUTES IS NOT NULL{extra_sql} "
+            "GROUP BY UPPER(TRIM(REGEXP_SUBSTR(m.ROUTES, '[^;]+', 1, lv.n)))"
         )
     if category == 'dosageForms':
         return (
-            f"SELECT '{scope}' AS SCOPE, 'dosageForms' AS CAT, UPPER(df.PRODUCT_DOSAGE_FORM_TERM) AS TOKEN, "
+            f"SELECT '{scope}' AS SCOPE, 'dosageForms' AS CAT, "
+            "UPPER(TRIM(REGEXP_SUBSTR(m.DOSAGE_FORMS, '[^;]+', 1, lv.n))) AS TOKEN, "
             "COUNT(DISTINCT m.SPL_ID) AS N "
-            'FROM matched m JOIN druglabel.SUM_SPL_DOSAGEFORM df ON df.SPL_ID = m.SPL_ID '
-            f"WHERE df.PRODUCT_DOSAGE_FORM_TERM IS NOT NULL{extra_sql} "
-            'GROUP BY UPPER(df.PRODUCT_DOSAGE_FORM_TERM)'
+            "FROM matched m "
+            f"JOIN (SELECT LEVEL n FROM DUAL CONNECT BY LEVEL <= {_MAX_SPLIT_PARTS}) lv "
+            "ON lv.n <= REGEXP_COUNT(m.DOSAGE_FORMS, ';') + 1 "
+            f"WHERE m.DOSAGE_FORMS IS NOT NULL{extra_sql} "
+            "GROUP BY UPPER(TRIM(REGEXP_SUBSTR(m.DOSAGE_FORMS, '[^;]+', 1, lv.n)))"
         )
     if category == 'pharmClasses':
         return (
             f"SELECT '{scope}' AS SCOPE, 'pharmClasses' AS CAT, "
             "TRIM(REGEXP_SUBSTR(m.EPC, '[^;]+', 1, lv.n)) AS TOKEN, "
-            'COUNT(DISTINCT m.SPL_ID) AS N '
-            'FROM matched m '
+            "COUNT(DISTINCT m.SPL_ID) AS N "
+            "FROM matched m "
             f'JOIN (SELECT LEVEL n FROM DUAL CONNECT BY LEVEL <= {_MAX_SPLIT_PARTS}) lv '
             "ON lv.n <= REGEXP_COUNT(m.EPC, ';') + 1 "
             f"WHERE m.EPC IS NOT NULL{extra_sql} "
             "GROUP BY TRIM(REGEXP_SUBSTR(m.EPC, '[^;]+', 1, lv.n))"
+        )
+    if category == 'applicationTypes':
+        return (
+            f"SELECT '{scope}' AS SCOPE, 'applicationTypes' AS CAT, "
+            "UPPER(TRIM(REGEXP_SUBSTR(m.MARKET_CATEGORIES, '[^;]+', 1, lv.n))) AS TOKEN, "
+            "COUNT(DISTINCT m.SPL_ID) AS N "
+            "FROM matched m "
+            f'JOIN (SELECT LEVEL n FROM DUAL CONNECT BY LEVEL <= {_MAX_SPLIT_PARTS}) lv '
+            "ON lv.n <= REGEXP_COUNT(m.MARKET_CATEGORIES, ';') + 1 "
+            f"WHERE m.MARKET_CATEGORIES IS NOT NULL{extra_sql} "
+            "GROUP BY UPPER(TRIM(REGEXP_SUBSTR(m.MARKET_CATEGORIES, '[^;]+', 1, lv.n)))"
+        )
+    if category == 'labelingTypes':
+        return (
+            f"SELECT '{scope}' AS SCOPE, 'labelingTypes' AS CAT, "
+            "UPPER(TRIM(REGEXP_SUBSTR(m.DOCUMENT_TYPE, '[^;]+', 1, lv.n))) AS TOKEN, "
+            "COUNT(DISTINCT m.SPL_ID) AS N "
+            "FROM matched m "
+            f'JOIN (SELECT LEVEL n FROM DUAL CONNECT BY LEVEL <= {_MAX_SPLIT_PARTS}) lv '
+            "ON lv.n <= REGEXP_COUNT(m.DOCUMENT_TYPE, ';') + 1 "
+            f"WHERE m.DOCUMENT_TYPE IS NOT NULL{extra_sql} "
+            "GROUP BY UPPER(TRIM(REGEXP_SUBSTR(m.DOCUMENT_TYPE, '[^;]+', 1, lv.n)))"
         )
     raise ValueError(f'Not a grouped category: {category!r}')
 
@@ -257,23 +287,6 @@ def oracle_facet_sql_combined(text_cte_sql, backbone_where_sql, base_table, acti
     The whole Oracle facet payload -- base counts plus every active category's
     self-excluded ("what if I widened just this one") counts -- in one
     statement, one round trip.
-
-    `backbone_where_sql`/`text_cte_sql` come from compiling the query with
-    every facet category stripped (facets.strip_all_categories): the widest
-    matched set the real search criteria can produce. That is computed exactly
-    once, as a MATERIALIZED CTE (`matched`, aliased `m` below), which is the
-    expensive part on Oracle -- full-text CONTAINS, MedDRA occurrence joins,
-    candidate isolation.
-
-    `active_predicates` is {category: sql} from
-    oracle_compiler.compile_active_category_predicates -- each already aliased
-    to `m`, so applying or excluding a facet's own filter is just adding or
-    dropping an AND clause against the already-materialized candidate set,
-    never rerunning the backbone.
-
-    Rows come back long-form as (scope, cat, token, n): scope is 'base' for
-    the count-as-filtered numbers, or 'w:<category>' for that category's
-    self-excluded widen. See rows_to_scoped_facets for the split.
     """
     def and_others(exclude):
         parts = [p for cat, p in active_predicates.items() if cat != exclude and p]
@@ -303,9 +316,10 @@ def oracle_facet_sql_combined(text_cte_sql, backbone_where_sql, base_table, acti
                 )
 
     union_sql = '\nUNION ALL\n'.join(branches)
+    format_group_col = "s.FORMAT_GROUP" if str(base_table).lower().endswith("dgv_sum_rx_spl") else "NULL AS FORMAT_GROUP"
     return f"""
         WITH {text_cte_sql}matched AS (
-            SELECT /*+ MATERIALIZE */ s.SPL_ID, s.DOCUMENT_TYPE, s.MARKET_CATEGORIES, s.EPC
+            SELECT /*+ MATERIALIZE */ s.SPL_ID, s.DOCUMENT_TYPE, s.MARKET_CATEGORIES, s.EPC, s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION AS ROUTES, s.APPR_NUM, {format_group_col}
             FROM {base_table} s
             WHERE {backbone_where_sql}
         )
