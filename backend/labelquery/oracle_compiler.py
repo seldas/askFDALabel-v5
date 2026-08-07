@@ -39,9 +39,17 @@ _PREFIXED_APPL_RE = re.compile(r'^(' + '|'.join(_APPL_PREFIXES) + r')[\s-]*(\d{3
 # filter for those matched nothing and the search returned zero rows with no
 # explanation. SUM_SPL is the raw rollup and carries everything.
 #
-# The substitution is safe: every column this compiler reads exists on both.
-# SUM_SPL additionally has ACT_MOIETY_NAMES/_UNIIS and MEDDRA_SUPPORTED, and
-# DGV_SUM_RX_SPL additionally has FORMAT_GROUP; none of those are read here.
+# The substitution is *almost* a straight one -- three columns are not shared,
+# and referencing one against the wrong rollup is an ORA-00904 at execute time,
+# not a compile-time error we would catch here:
+#
+#   ACT_MOIETY_NAMES, ACT_MOIETY_UNIIS  -- SUM_SPL only
+#   FORMAT_GROUP (PLR / non-PLR)        -- DGV_SUM_RX_SPL only
+#
+# (SUM_SPL also has MEDDRA_SUPPORTED, which this compiler does not read.)
+# Every compiler that touches one of those takes ``base_table`` and degrades:
+# the predicate is dropped and a warning is surfaced, rather than emitting SQL
+# that Oracle rejects.
 BASE_TABLE_HUMAN = 'druglabel.DGV_SUM_RX_SPL'
 BASE_TABLE_ALL = 'druglabel.SUM_SPL'
 
@@ -127,7 +135,7 @@ def _format_contains_query(text, mode='simple'):
 # Criterion Compilers (Oracle Relational Candidates)
 # ---------------------------------------------------------------------------
 
-def _compile_labeling_type(value, bag):
+def _compile_labeling_type(value, bag, base_table=BASE_TABLE_HUMAN, warnings=None):
     values = _as_list(value.get('values'))
     plr = str(value.get('plr') or value.get('formatGroup') or 'all').lower()
 
@@ -140,10 +148,18 @@ def _compile_labeling_type(value, bag):
         if type_clauses:
             clauses.append('(' + ' OR '.join(type_clauses) + ')')
 
-    if plr in ('plr', '1'):
-        clauses.append('s.FORMAT_GROUP = 1')
-    elif plr in ('non_plr', 'non-plr', '2'):
-        clauses.append('s.FORMAT_GROUP = 2')
+    # FORMAT_GROUP is a DGV_SUM_RX_SPL column; SUM_SPL does not classify PLR.
+    if plr in ('plr', '1', 'non_plr', 'non-plr', '2'):
+        if base_table != BASE_TABLE_HUMAN:
+            if warnings is not None:
+                warnings.append(
+                    'PLR / non-PLR format is only classified for CDER-CBER labels; '
+                    'the format filter was ignored for the All FDA scope.'
+                )
+        elif plr in ('plr', '1'):
+            clauses.append('s.FORMAT_GROUP = 1')
+        else:
+            clauses.append('s.FORMAT_GROUP = 2')
 
     if not clauses:
         return None
@@ -306,12 +322,17 @@ def _compile_active_moiety(value, bag):
     return '(' + ' OR '.join(clauses) + ')' if clauses else None
 
 
-def _compile_product_name(value, bag):
+def _compile_product_name(value, bag, base_table=BASE_TABLE_HUMAN):
     field = value.get('field') or 'any'
     op = value.get('op') or 'contains'
     terms = _split_terms(value.get('text'))
     if not terms:
         return None
+
+    # The moiety rollup column only exists on SUM_SPL. On DGV_SUM_RX_SPL the
+    # equivalent reach is the SUM_SPL_ACT_MOIETY_NAME detail table, joined on
+    # SPL_ID -- same coverage, and it keeps the name-first index in play.
+    has_moiety_column = base_table == BASE_TABLE_ALL
 
     clauses = []
     for term in terms:
@@ -324,14 +345,22 @@ def _compile_product_name(value, bag):
             pat = f'%{term_up}%'
         p = bag.add(pat)
 
+        if has_moiety_column:
+            moiety_pred = f'UPPER(s.ACT_MOIETY_NAMES) LIKE {p}'
+        else:
+            moiety_pred = (
+                'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_ACT_MOIETY_NAME mn '
+                f'WHERE mn.SPL_ID = s.SPL_ID AND UPPER(mn.ACTIVE_MOIETY_NAME) LIKE {p})'
+            )
+
         if field == 'trade':
             sub = f'UPPER(p.NAME) LIKE {p}'
         elif field == 'generic':
             sub = f'UPPER(p.NORMD_GENERIC_NAME) LIKE {p}'
         elif field == 'unii':
-            sub = f'(UPPER(s.ACT_INGR_NAMES) LIKE {p} OR UPPER(s.ACT_MOIETY_NAMES) LIKE {p})'
+            sub = f'(UPPER(s.ACT_INGR_NAMES) LIKE {p} OR {moiety_pred})'
         else:
-            sub = f'(UPPER(p.NAME) LIKE {p} OR UPPER(p.NORMD_GENERIC_NAME) LIKE {p} OR UPPER(s.ACT_INGR_NAMES) LIKE {p} OR UPPER(s.ACT_MOIETY_NAMES) LIKE {p})'
+            sub = f'(UPPER(p.NAME) LIKE {p} OR UPPER(p.NORMD_GENERIC_NAME) LIKE {p} OR UPPER(s.ACT_INGR_NAMES) LIKE {p} OR {moiety_pred})'
 
         if op == 'notContains':
             clauses.append(
@@ -660,8 +689,9 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
     Compiles an FDALabel criteria tree into an Oracle SQL query with candidate isolation.
 
     ``base_table`` selects the summary rollup the query is based on -- see
-    BASE_TABLE_HUMAN and BASE_TABLE_ALL. Both expose every column read here, so
-    it is a straight substitution.
+    BASE_TABLE_HUMAN and BASE_TABLE_ALL. It is not a pure substitution: the
+    moiety and FORMAT_GROUP columns exist on only one rollup each, so it is
+    threaded into the criterion compilers that read them.
 
     Returns: (sql_statement, parameters_dict, warnings_list)
     """
@@ -715,7 +745,7 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
                             clause += f' AND ({" OR ".join(loinc_preds)})'
                     group_text.append(clause)
             elif ctype == 'labelingType':
-                c = _compile_labeling_type(cval, bag)
+                c = _compile_labeling_type(cval, bag, base_table=base_table, warnings=warnings)
                 if c: group_relational.append(c)
             elif ctype == 'applicationType':
                 c = _compile_application_type(cval, bag)
@@ -733,7 +763,7 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
                 c = _compile_active_moiety(cval, bag)
                 if c: group_relational.append(c)
             elif ctype == 'productName':
-                c = _compile_product_name(cval, bag)
+                c = _compile_product_name(cval, bag, base_table=base_table)
                 if c: group_relational.append(c)
             elif ctype == 'marketStatus':
                 c = _compile_market_status(cval, bag)
