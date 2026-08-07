@@ -839,33 +839,17 @@ def _compute_oracle_facets(query, target_db):
 
 def _compute_facets(query, target_db):
     """
-    Facet counts for the sidebar.
-
-    A category is counted with its own filter removed, so the numbers answer
-    "what would I get if I ticked this" rather than "how many of the rows I
-    have already narrowed to are the thing I narrowed to". Counting against the
-    query as-is reports 0 for every unticked value in that category, which is
-    the one number that cannot help anyone. The trade is that the counts stop
-    summing to the result total -- the same trade PubMed makes.
-
-    Oracle computes all of this (base pass plus every active category's widen)
-    in a single round trip -- see _compute_oracle_facets. Postgres is cheap
-    enough that one pass plus one per *filtered* category, each a fresh query,
-    is not worth the same restructuring.
+    Facet counts for the sidebar. Always computed over the backbone query
+    (with all sidebar categories stripped). This ensures facet counts
+    reflect all matching search results and remain fixed/stable when
+    any sidebar filter is selected or unselected.
     """
+    backbone_query = strip_all_categories(query)
     if _use_oracle_facets(target_db):
-        return _compute_oracle_facets(query, target_db)
+        return _compute_oracle_facets(backbone_query, target_db)
 
-    facets = _facets_once(query, target_db)
-    if not facets:
-        return {}
-
-    for category in active_categories(query):
-        widened = _facets_once(strip_category(query, category), target_db)
-        if widened.get(category):
-            facets[category] = widened[category]
-
-    return facets
+    facets = _facets_once(backbone_query, target_db)
+    return facets or {}
 
 
 @labelquery_bp.route('/facets', methods=['POST'])
@@ -899,10 +883,6 @@ def execute():
     except (TypeError, ValueError):
         return jsonify({'error': 'limit and offset must be integers'}), 400
 
-    # Clamp the requested page into the browse window.
-    offset = min(offset, max(0, BROWSE_CAP - 1))
-    limit = max(1, min(limit, BROWSE_CAP - offset))
-
     # Target database selection: check explicit target_db payload first
     target_db = str(payload.get('target_db') or payload.get('source') or '').lower()
     use_oracle = (target_db in _ORACLE_TARGETS) or (target_db != 'local' and FDALabelDBService.is_internal())
@@ -914,6 +894,7 @@ def execute():
                 'error': 'Target database requested is Oracle, but Oracle DB connection failed. Please verify Oracle host/VPN or credentials.',
                 'results': [],
                 'total': 0,
+                'unfiltered_total': 0,
                 'warnings': ['Oracle connection failed. Local database fallback avoided because Oracle target was explicitly selected.']
             }), 503
 
@@ -986,8 +967,33 @@ def execute():
                                 'active_moiety_uniis': r[19] if len(r) > 19 else None,
                             })
 
-                browsable = min(total, BROWSE_CAP)
-                capped = total > BROWSE_CAP
+                active_cats = active_categories(query)
+                unfiltered_total = total
+                if active_cats:
+                    try:
+                        backbone_query = strip_all_categories(query)
+                        b_sql, b_params, _ = compile_oracle_query(
+                            backbone_query,
+                            sort=payload.get('sort'),
+                            direction=payload.get('dir'),
+                            limit=1,
+                            offset=0,
+                            expand_meddra=_expand_meddra,
+                            capabilities=_capabilities(),
+                            base_table=_oracle_base_table(target_db),
+                        )
+                        b_cur = conn.cursor()
+                        b_cur.execute(b_sql, b_params)
+                        b_rows = b_cur.fetchall()
+                        b_cur.close()
+                        if b_rows:
+                            first_b = b_rows[0]
+                            if isinstance(first_b, dict):
+                                unfiltered_total = first_b.get('total_count') or first_b.get('TOTAL_COUNT') or total
+                            else:
+                                unfiltered_total = first_b[16] if len(first_b) > 16 else total
+                    except Exception:
+                        unfiltered_total = total
 
                 # Annotate with bound params for the debug box.
                 debug_sql = sql
@@ -998,9 +1004,10 @@ def execute():
                 return jsonify({
                     'results': results,
                     'total': total,
-                    'browsable': browsable,
-                    'cap': BROWSE_CAP,
-                    'capped': capped,
+                    'unfiltered_total': unfiltered_total,
+                    'browsable': total,
+                    'cap': None,
+                    'capped': False,
                     'limit': limit,
                     'offset': offset,
                     'warnings': warnings,
@@ -1089,6 +1096,33 @@ def execute():
         results = [{k: v for k, v in r.items() if k != 'total_count'}
                    for r in rows if r.get('spl_id')]
 
+        active_cats = active_categories(query)
+        unfiltered_total = total
+        if active_cats:
+            try:
+                backbone_query = strip_all_categories(query)
+                b_rel, b_sec, b_params, _ = compile_where(
+                    backbone_query, expand_meddra=_expand_meddra, capabilities=_capabilities()
+                )
+                b_pg_conn = _pg()
+                b_sql = f"SELECT count(*) AS n FROM labeling.sum_spl s WHERE {b_rel}"
+                if b_sec:
+                    b_sql = f"""
+                    WITH section_candidates AS (
+                        SELECT DISTINCT sec.spl_id FROM labeling.spl_sections sec WHERE {b_sec}
+                    )
+                    SELECT count(*) AS n FROM labeling.sum_spl s
+                    INNER JOIN section_candidates sc ON sc.spl_id = s.spl_id
+                    WHERE {b_rel}
+                    """
+                with b_pg_conn.cursor() as b_cur:
+                    b_cur.execute(b_sql, b_params)
+                    b_row = b_cur.fetchone()
+                    unfiltered_total = b_row['n'] if b_row else total
+                b_pg_conn.close()
+            except Exception:
+                unfiltered_total = total
+
         # Annotate the returned SQL with the bound parameter values so the
         # frontend debug box is readable without a separate params list.
         debug_sql = sql
@@ -1099,9 +1133,10 @@ def execute():
         return jsonify({
             'results': results,
             'total': total,
-            'browsable': min(total, BROWSE_CAP),
-            'cap': BROWSE_CAP,
-            'capped': total > BROWSE_CAP,
+            'unfiltered_total': unfiltered_total,
+            'browsable': total,
+            'cap': None,
+            'capped': False,
             'limit': limit,
             'offset': offset,
             'warnings': warnings,

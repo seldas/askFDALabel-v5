@@ -153,7 +153,10 @@ def _compile_labeling_type(value, bag, base_table=BASE_TABLE_HUMAN, warnings=Non
     if values:
         type_clauses = []
         for v in values:
-            p = bag.add(f'%{v.upper()}%')
+            v_clean = v.strip('%').strip().upper()
+            if not v_clean:
+                continue
+            p = bag.add(f'%{v_clean}%')
             type_clauses.append(f'UPPER({alias}.DOCUMENT_TYPE) LIKE {p}')
         if type_clauses:
             clauses.append('(' + ' OR '.join(type_clauses) + ')')
@@ -237,13 +240,16 @@ def _compile_route(value, bag, alias='s'):
         return None
     clauses = []
     for v in values:
-        p = bag.add(f'%{v.upper()}%')
+        v_clean = v.strip('%').strip().upper()
+        if not v_clean:
+            continue
+        p = bag.add(f'%{v_clean}%')
         clauses.append(
             'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_ROUTE r '
             f'WHERE r.SPL_ID = {alias}.SPL_ID AND (UPPER(r.ROUTE_SPL_ACCEPTABLE_TERM) LIKE {p} '
             f'OR UPPER(r.NCIT_ROUTE_OF_ADMIN_CODE) LIKE {p}))'
         )
-    return '(' + ' OR '.join(clauses) + ')'
+    return '(' + ' OR '.join(clauses) + ')' if clauses else None
 
 
 def _compile_dosage_form(value, bag, alias='s'):

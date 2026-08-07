@@ -411,7 +411,7 @@ export function CriterionCard({
                 }}
               >
                 <option value="">
-                  {options.loading ? 'Loading sections…' : '-- Select a section --'}
+                  {options.loading ? 'Loading sections…' : '-- Select a section (default: Full Text) --'}
                 </option>
                 {Array.from(groupedMap.entries()).map(([groupLabel, opts]) => (
                   <optgroup key={groupLabel} label={groupLabel}>
@@ -425,13 +425,19 @@ export function CriterionCard({
                 ))}
               </select>
             </div>
-            <Chips
-              values={sections}
-              onRemove={(value) =>
-                set({ sections: sections.filter((x: string) => x !== value) })
-              }
-              labelFor={(value) => labelForOption(list, value)}
-            />
+            {sections.length > 0 ? (
+              <Chips
+                values={sections}
+                onRemove={(value) =>
+                  set({ sections: sections.filter((x: string) => x !== value) })
+                }
+                labelFor={(value) => labelForOption(list, value)}
+              />
+            ) : (
+              <div className="fdl-help-subtle" style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '4px' }}>
+                Scope: Searching full text of labeling (no section filter applied)
+              </div>
+            )}
             {SEARCH_HELP}
           </>
         );

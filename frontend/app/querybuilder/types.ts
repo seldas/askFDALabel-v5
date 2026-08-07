@@ -143,8 +143,8 @@ export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
   },
   labelingSection: {
     type: 'labelingSection',
-    title: 'Labeling Section(s)',
-    shortTitle: 'Labeling Section(s)',
+    title: 'Labeling Text & Section(s)',
+    shortTitle: 'Labeling Text & Section(s)',
     optionsKey: 'sections',
     defaultValue: () => ({ mode: 'simple', text: '', sections: [] }),
   },
@@ -244,7 +244,6 @@ export const DEFAULT_CARDS: CriterionType[] = [
   'labelingType',
   'applicationType',
   'productName',
-  'fullText',
   'labelingSection',
   'route',
   'pharmClass',
@@ -253,9 +252,8 @@ export const DEFAULT_CARDS: CriterionType[] = [
 
 /** The "Add more criteria" row, in FDALabel's order. */
 export const ADD_MORE_ORDER: CriterionType[] = [
-  'fullText',
-  'productName',
   'labelingSection',
+  'productName',
   'labelingType',
   'pharmClass',
   'applicationType',
@@ -307,11 +305,12 @@ export const SEARCH_SECTIONS: SearchSectionDef[] = [
     stepNumber: 3,
     title: 'Labeling Text & Clinical Match',
     subtitle: 'Search labeling full text, specific sections (e.g. Boxed Warning), or MedDRA safety terms',
-    criterionTypes: ['fullText', 'labelingSection', 'meddra'],
+    criterionTypes: ['labelingSection', 'meddra'],
   },
 ];
 
 export function getSectionForCriterion(type: CriterionType): SearchSectionId {
+  if (type === 'fullText') return 'textMatch';
   for (const section of SEARCH_SECTIONS) {
     if (section.criterionTypes.includes(type)) return section.id;
   }

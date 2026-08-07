@@ -88,7 +88,8 @@ export function QueryPanel({
               // Filter criteria belonging to this section
               const sectionCriteria = group.criteria.filter(
                 (c) =>
-                  sec.criterionTypes.includes(c.type) && !isCriterionHidden(c.type, targetDb),
+                  (sec.criterionTypes.includes(c.type) || (sec.id === 'textMatch' && c.type === 'fullText')) &&
+                  !isCriterionHidden(c.type, targetDb),
               );
 
               // Count active (non-empty) criteria in this section

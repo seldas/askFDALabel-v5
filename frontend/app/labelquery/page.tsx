@@ -44,7 +44,8 @@ function summarizeQuery(query: WireQuery | null): string {
       } else if (c.type === 'productName' && c.text) {
         parts.push(`Product Name: "${c.text}"`);
       } else if (c.type === 'labelingSection' && c.text) {
-        parts.push(`Section (${(c.sections || []).join(', ') || 'All'}): "${c.text}"`);
+        const secList = (c.sections || []).join(', ');
+        parts.push(secList ? `Section (${secList}): "${c.text}"` : `Full Text: "${c.text}"`);
       } else if (c.type === 'pharmClass' && (c.terms || c.text)) {
         const termsStr = Array.isArray(c.terms) ? c.terms.join(', ') : c.text;
         parts.push(`Pharm Class: ${termsStr}`);
@@ -496,8 +497,7 @@ function ResultsPage() {
 
   const rows: LabelRow[] = data?.results || [];
   const total = data?.total || 0;
-  // What the pager can reach. The backend caps the browse window; `total` stays
-  // exact so the header can say "most recent 3,000 / 32,422".
+  const unfilteredTotal = (data as any)?.unfiltered_total ?? total;
   const browsable = data?.browsable ?? total;
   const to = offset + rows.length;
 
@@ -534,7 +534,7 @@ function ResultsPage() {
               targetDb={currentTargetDb}
               onTargetDbChange={handleTargetDbChange}
               oracleAvailable={oracleAvailable}
-              totalResults={total}
+              totalResults={unfilteredTotal}
               loading={busy}
               onClearAll={handleClearAllSidebarFilters}
               facets={facets}
@@ -557,9 +557,7 @@ function ResultsPage() {
                     ? data
                       ? 'Updating results…'
                       : 'Searching…'
-                    : data?.capped
-                      ? `Most Recent ${browsable.toLocaleString()}/${total.toLocaleString()} Labeling Results`
-                      : `${total.toLocaleString()} labeling result${total === 1 ? '' : 's'}`}
+                    : `${total.toLocaleString()}/${unfilteredTotal.toLocaleString()} Labeling Results`}
               </h1>
 
               <div className="fdl-viewtoggle" role="group" aria-label="Result detail">
