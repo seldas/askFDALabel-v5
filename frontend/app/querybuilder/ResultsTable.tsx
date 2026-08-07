@@ -47,6 +47,7 @@ export interface FacetItem {
 
 export interface QueryFacets {
   labelingTypes?: FacetItem[];
+  labelingFormat?: FacetItem[];
   applicationTypes?: FacetItem[];
   marketStatus?: FacetItem[];
   routes?: FacetItem[];

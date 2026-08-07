@@ -62,6 +62,15 @@ export default function SidebarFilters({
   facetsLoading = false,
   className = '',
 }: SidebarFiltersProps) {
+  // Local draft state for unapplied sidebar filter selections
+  const [draftQuery, setDraftQuery] = useState<LabelQuery>(query);
+  const [prevQueryProp, setPrevQueryProp] = useState<LabelQuery>(query);
+
+  if (query !== prevQueryProp) {
+    setPrevQueryProp(query);
+    setDraftQuery(query);
+  }
+
   // Collapsed states per accordion section
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     labelingType: true,
@@ -83,8 +92,8 @@ export default function SidebarFilters({
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Helper to retrieve criterion from first group
-  const getGroup = () => query.groups[0] || { uid: 'g1', criteria: [] };
+  // Helper to retrieve criterion from first group of draftQuery
+  const getGroup = () => draftQuery.groups[0] || { uid: 'g1', criteria: [] };
 
   const getCriterion = (type: CriterionType): Criterion | undefined => {
     return getGroup().criteria.find((c) => c.type === type);
@@ -92,34 +101,36 @@ export default function SidebarFilters({
 
   const updateCriterion = useCallback(
     (type: CriterionType, valueUpdater: (prevValue: Record<string, any>) => Record<string, any>) => {
-      const g = getGroup();
-      const existingIndex = g.criteria.findIndex((c) => c.type === type);
-      let updatedCriteria = [...g.criteria];
+      setDraftQuery((prev) => {
+        const g = prev.groups[0] || { uid: 'g1', criteria: [] };
+        const existingIndex = g.criteria.findIndex((c) => c.type === type);
+        let updatedCriteria = [...g.criteria];
 
-      if (existingIndex >= 0) {
-        const existing = g.criteria[existingIndex];
-        const nextValue = valueUpdater(existing.value as Record<string, any>);
-        const updatedCriterion = { ...existing, value: nextValue };
+        if (existingIndex >= 0) {
+          const existing = g.criteria[existingIndex];
+          const nextValue = valueUpdater(existing.value as Record<string, any>);
+          const updatedCriterion = { ...existing, value: nextValue };
 
-        if (isCriterionEmpty(updatedCriterion)) {
-          updatedCriteria.splice(existingIndex, 1);
+          if (isCriterionEmpty(updatedCriterion)) {
+            updatedCriteria.splice(existingIndex, 1);
+          } else {
+            updatedCriteria[existingIndex] = updatedCriterion;
+          }
         } else {
-          updatedCriteria[existingIndex] = updatedCriterion;
-        }
-      } else {
-        const fresh = makeCriterion(type);
-        const nextValue = valueUpdater(fresh.value as Record<string, any>);
-        const newCriterion = { ...fresh, value: nextValue };
+          const fresh = makeCriterion(type);
+          const nextValue = valueUpdater(fresh.value as Record<string, any>);
+          const newCriterion = { ...fresh, value: nextValue };
 
-        if (!isCriterionEmpty(newCriterion)) {
-          updatedCriteria.push(newCriterion);
+          if (!isCriterionEmpty(newCriterion)) {
+            updatedCriteria.push(newCriterion);
+          }
         }
-      }
 
-      const updatedGroups = [{ ...g, criteria: updatedCriteria }, ...query.groups.slice(1)];
-      onChange({ groups: updatedGroups });
+        const updatedGroups = [{ ...g, criteria: updatedCriteria }, ...prev.groups.slice(1)];
+        return { groups: updatedGroups };
+      });
     },
-    [query, onChange],
+    [],
   );
 
   // Quick helper to toggle array item values
@@ -233,9 +244,6 @@ export default function SidebarFilters({
     return kept
       .map((item, index) => ({ item, index }))
       .sort((a, b) => {
-        const aSel = isPickSelected(a.item.value, selectedValues) ? 1 : 0;
-        const bSel = isPickSelected(b.item.value, selectedValues) ? 1 : 0;
-        if (aSel !== bSel) return bSel - aSel;
         if (a.item.count !== b.item.count) return b.item.count - a.item.count;
         return a.index - b.index;
       })
@@ -405,35 +413,56 @@ export default function SidebarFilters({
       item.value.toLowerCase().includes(modalSearch.toLowerCase()),
   );
 
+  const hasPendingChanges = JSON.stringify(draftQuery) !== JSON.stringify(query);
+
+  const handleApplyFilters = () => {
+    onChange(draftQuery);
+  };
+
   return (
     <div className={`fdl-sidebar-filters ${className}`} aria-busy={loading}>
-      {/* Sidebar Header */}
-      <div className="fdl-sidebar-filters__head">
-        <div className="fdl-sidebar-filters__title-row">
-          <h3 className="fdl-sidebar-filters__title">Filter Results</h3>
+      {/* Sticky Header Container (Sticks to top when scrolling) */}
+      <div className="fdl-sidebar-filters__sticky-header">
+        <div className="fdl-sidebar-filters__head" style={{ marginBottom: '10px', borderBottom: 'none', paddingBottom: 0 }}>
+          <div className="fdl-sidebar-filters__title-row">
+            <h3 className="fdl-sidebar-filters__title">Filter Results</h3>
+          </div>
+
+          {/* Status spinner */}
+          <div className="fdl-sidebar-filters__status" role="status" aria-live="polite">
+            {loading || facetsLoading ? (
+              <>
+                <span className="fdl-sidebar-filters__spinner" aria-hidden="true" />
+                <span>{loading ? 'Updating results…' : 'Counting…'}</span>
+              </>
+            ) : null}
+          </div>
+          {totalFilled > 0 && onClearAll && (
+            <button
+              type="button"
+              className="fdl-sidebar-filters__clear"
+              onClick={onClearAll}
+            >
+              Clear All
+            </button>
+          )}
         </div>
 
-        {/* Every box ticked re-runs the query, and on Oracle that is seconds of
-            silence -- without this the click looks like it did nothing. The
-            result count itself isn't shown here -- the results panel header
-            already has it, right next to this sidebar. */}
-        <div className="fdl-sidebar-filters__status" role="status" aria-live="polite">
-          {loading || facetsLoading ? (
-            <>
-              <span className="fdl-sidebar-filters__spinner" aria-hidden="true" />
-              <span>{loading ? 'Updating results…' : 'Counting…'}</span>
-            </>
-          ) : null}
-        </div>
-        {totalFilled > 0 && onClearAll && (
-          <button
-            type="button"
-            className="fdl-sidebar-filters__clear"
-            onClick={onClearAll}
-          >
-            Clear All
-          </button>
-        )}
+        {/* Prominent Apply Filters Button at Top */}
+        <button
+          type="button"
+          className={`fdl-sidebar-filters__apply-btn ${hasPendingChanges ? 'has-changes' : ''}`}
+          onClick={handleApplyFilters}
+          disabled={loading}
+          style={{ marginBottom: 0 }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <span>
+            {hasPendingChanges ? 'Apply Filters (Pending Changes)' : 'Apply Filters'}
+          </span>
+        </button>
       </div>
 
       <div className="fdl-sidebar-filters__accordions">
@@ -501,21 +530,28 @@ export default function SidebarFilters({
                 <div className="fdl-filter-group__body">
                   <div className="fdl-radio-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {[
-                      { id: 'all', label: 'All Formats' },
-                      { id: 'plr', label: 'PLR Format' },
-                      { id: 'non_plr', label: 'non-PLR Format' },
-                      { id: 'unclassified', label: 'Unclassified / Other' },
+                      { id: 'all', label: 'All Formats', count: totalResults },
+                      { id: 'plr', label: 'PLR Format', count: getFacetCount('labelingFormat', 'plr') },
+                      { id: 'non_plr', label: 'non-PLR Format', count: getFacetCount('labelingFormat', 'non_plr') },
+                      { id: 'unclassified', label: 'Unclassified / Other', count: getFacetCount('labelingFormat', 'unclassified') },
                     ].map((fmt) => (
-                      <label key={fmt.id} className="fdl-radio-label">
-                        <input
-                          type="radio"
-                          name="labelingFormatOption"
-                          checked={ltPlr === fmt.id}
-                          onChange={() =>
-                            updateCriterion('labelingType', (prev) => ({ ...prev, plr: fmt.id }))
-                          }
-                        />
-                        <span>{fmt.label}</span>
+                      <label key={fmt.id} className="fdl-radio-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input
+                            type="radio"
+                            name="labelingFormatOption"
+                            checked={ltPlr === fmt.id}
+                            onChange={() =>
+                              updateCriterion('labelingType', (prev) => ({ ...prev, plr: fmt.id }))
+                            }
+                          />
+                          <span>{fmt.label}</span>
+                        </div>
+                        {fmt.count !== undefined && (
+                          <span className="fdl-filter-item__count" style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                            ({fmt.count.toLocaleString()})
+                          </span>
+                        )}
                       </label>
                     ))}
                   </div>
@@ -750,6 +786,23 @@ export default function SidebarFilters({
             )}
           </div>
         )}
+      </div>
+
+      {/* Prominent Apply Filters Button at Bottom */}
+      <div style={{ marginTop: '16px' }}>
+        <button
+          type="button"
+          className={`fdl-sidebar-filters__apply-btn ${hasPendingChanges ? 'has-changes' : ''}`}
+          onClick={handleApplyFilters}
+          disabled={loading}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <span>
+            {hasPendingChanges ? 'Apply Filters (Pending Changes)' : 'Apply Filters'}
+          </span>
+        </button>
       </div>
 
       {/* Sub-window Modal for "Other..." categories rendered via Portal to document.body */}
