@@ -3,7 +3,7 @@ Compiles an FDALabel-style criteria tree into high-performance Oracle SQL.
 
 Enforces a two-phase candidate isolation strategy:
 1. Relational filters (summary & normalized tables like DGV_SUM_RX_SPL, SUM_SPL_ROUTE,
-   SPL_PROD, SUM_SPL_GEN_PROD_ACT_INGR_UNII, SUM_SPL_RLD_RS) and precomputed MedDRA
+   SPL_PROD, SUM_SPL_GEN_PROD_ACT_INGR_UNII, SUM_SPL_RLD) and precomputed MedDRA
    occurrences (SPL_SEC_MEDDRA_LLT_OCC) evaluate inside a candidate CTE.
 2. Full-text search (CONTAINS over SPL_SEC.CONTENT_XML) is driven by the CTX domain
    index and hash-joined back to the candidate set.
@@ -11,8 +11,17 @@ Enforces a two-phase candidate isolation strategy:
 Join key: every detail table in DRUGLABEL keys on SPL_ID (NUMBER). SPL_GUID exists
 only on the five summary rollups (DGV_SUM_RX_SPL, DGV_SUM_SPL, DGV_SUM_SPL_PROD,
 SUM_SPL, SUM_SPL_GEN_PROD), so it can never appear in a join predicate against
-SPL_SEC, SPL_PROD, SUM_SPL_ROUTE, SUM_SPL_RLD_RS or the SUM_SPL_* detail tables.
+SPL_SEC, SPL_PROD, SUM_SPL_ROUTE, SUM_SPL_RLD or the SUM_SPL_* detail tables.
 It is the external identifier only, projected as SPL_ID in the result set.
+
+Reference Standard (RS) is not offered as a criterion or result field here.
+SUM_SPL_RLD_RS -- the Oracle table the old RLD/RS logic read -- gave RS results
+that did not line up with what reviewers expected, and there is no other RS
+source on the Oracle side to fall back to. RLD alone is matched against
+SUM_SPL_RLD, a purpose-built table where a row means the SPL is a Reference
+Listed Drug. Postgres keeps its own independent RLD/RS columns (populated at
+import time from Orange Book data, see db_07_import_labels.py) -- this file
+only speaks for the Oracle path.
 """
 
 import re
@@ -414,11 +423,11 @@ def _compile_market_status(value, bag, alias='s'):
         p_max = bag.add(max_date)
         conds.append(f"mkt.LOW_DATE <= {p_max}")
 
-    rld_rs_cond = None
+    rld_cond = None
     if 'rld' in values:
-        rld_rs_cond = f"EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = {alias}.SPL_ID)"
+        rld_cond = f"EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = {alias}.SPL_ID)"
 
-    if not conds and not rld_rs_cond:
+    if not conds and not rld_cond:
         return None
 
     res = []
@@ -426,8 +435,8 @@ def _compile_market_status(value, bag, alias='s'):
         res.append(
             f"EXISTS (SELECT 1 FROM druglabel.PROD_MKT_ACT mkt WHERE mkt.SPL_ID = {alias}.SPL_ID AND {' AND '.join(conds)})"
         )
-    if rld_rs_cond:
-        res.append(rld_rs_cond)
+    if rld_cond:
+        res.append(rld_cond)
 
     return '(' + ' AND '.join(res) + ')' if res else None
 
