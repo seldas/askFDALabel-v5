@@ -1,4 +1,6 @@
 import os
+import random
+import threading
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import current_app
@@ -14,6 +16,10 @@ except ImportError:
 class FDALabelDBService:
     _is_connected = None  # Tri-state: None (unknown), True (connected), False (failed)
     _db_type = None       # 'oracle' or 'postgres' — cached after first successful connection
+
+    _oracle_pool = None       # oracledb.ConnectionPool, created lazily on first use
+    _oracle_pool_key = None   # (user, dsn) the current pool was built for
+    _oracle_pool_lock = threading.Lock()
 
     @classmethod
     def get_postgres_connection(cls):
@@ -54,12 +60,45 @@ class FDALabelDBService:
         try:
             if psw and host and port and service:
                 dsnStr = oracledb.makedsn(host, port, service)
-                connection = oracledb.connect(user=user, password=psw, dsn=dsnStr)
+                pool = cls._get_oracle_pool(user, psw, dsnStr)
+                connection = pool.acquire()
                 cls._db_type = 'oracle'
                 return connection
         except Exception as e:
             print(f"  [!] Direct Oracle Connection Exception ({oracle_env}): {e}")
         return None
+
+    @classmethod
+    def _get_oracle_pool(cls, user, psw, dsnStr):
+        """
+        Returns a cached oracledb.ConnectionPool for (user, dsn), creating one on
+        first use. Every call site acquires via this pool and releases with the
+        connection's own .close() (unchanged elsewhere) -- python-oracledb treats
+        close() on a pooled connection as "return to pool", not "tear down the
+        session", so no other call site needs to change.
+
+        Rebuilds the pool if the target (user/host/port/service) changes, which
+        happens when an admin flips the oracle_db_env dev/tst setting.
+        """
+        key = (user, dsnStr)
+        if cls._oracle_pool is not None and cls._oracle_pool_key == key:
+            return cls._oracle_pool
+
+        with cls._oracle_pool_lock:
+            if cls._oracle_pool is not None and cls._oracle_pool_key == key:
+                return cls._oracle_pool
+            if cls._oracle_pool is not None:
+                try:
+                    cls._oracle_pool.close(force=True)
+                except Exception:
+                    pass
+            cls._oracle_pool = oracledb.create_pool(
+                user=user, password=psw, dsn=dsnStr,
+                min=1, max=10, increment=1,
+                getmode=oracledb.POOL_GETMODE_WAIT,
+            )
+            cls._oracle_pool_key = key
+            return cls._oracle_pool
 
     @classmethod
     def execute_oracle_query(cls, sql, params=None):
@@ -991,6 +1030,82 @@ class FDALabelDBService:
         finally: conn.close()
 
     @classmethod
+    def _get_random_labels_oracle_via_id_sample(cls, cursor, limit, where_clauses, min_pool=30, max_attempts=3, pool_growth=6):
+        """
+        Cheap random sample for Oracle: pick random SPL_IDs from the indexed ID
+        range (DGV_SUM_SPL_ID) and do a single indexed IN-list lookup, instead of
+        sorting the *entire* filtered table by DBMS_RANDOM.VALUE on every call.
+        DGV_SUM_SPL has no index we're allowed to add, but SPL_ID already is one
+        (DGV_SUM_SPL_ID / PK-equivalent), so this stays index-only.
+
+        Retries with a larger candidate pool if filters (human_rx_only/rld_only)
+        leave too few matches; caller falls back to the exact old query if this
+        still comes up short.
+        """
+        cursor.execute("SELECT MIN(SPL_ID), MAX(SPL_ID) FROM druglabel.DGV_SUM_SPL")
+        lo, hi = cursor.fetchone()
+        if lo is None or hi is None or hi <= lo:
+            return []
+
+        extra_where = f"AND {' AND '.join(where_clauses)}" if where_clauses else ""
+        pool_size = max(min_pool, limit * pool_growth)
+        rows = []
+        for _ in range(max_attempts):
+            pool_size = min(pool_size, hi - lo + 1)
+            candidate_ids = random.sample(range(lo, hi + 1), pool_size)
+            placeholders = ", ".join(f":id{i}" for i in range(len(candidate_ids)))
+            params = {f"id{i}": v for i, v in enumerate(candidate_ids)}
+            params["limit"] = limit
+            sql = f"""
+                SELECT * FROM (
+                    SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME,
+                           APPR_NUM, NDC_CODES, EFF_TIME, MARKET_CATEGORIES, DOCUMENT_TYPE, SPL_GUID as SPL_ID
+                    FROM druglabel.DGV_SUM_SPL
+                    WHERE SPL_ID IN ({placeholders}) {extra_where}
+                    ORDER BY DBMS_RANDOM.VALUE
+                ) WHERE ROWNUM <= :limit
+            """
+            cursor.execute(sql, params)
+            rows = cursor.fetchall()
+            if len(rows) >= limit or pool_size >= (hi - lo + 1):
+                break
+            pool_size *= pool_growth
+        return rows
+
+    @classmethod
+    def _get_random_labels_postgres_via_tablesample(cls, cursor, limit, w_stmt, schema, min_pct=1, max_attempts=4, pct_growth=8):
+        """
+        Cheap random sample for Postgres: TABLESAMPLE SYSTEM grabs a random subset
+        of table *blocks* instead of visiting every row, so ORDER BY RANDOM() only
+        has to sort that small subset -- not the full labeling.sum_spl table on
+        every call. spl_id is a text PK (not sequential), so the ID-range trick
+        used for Oracle doesn't apply here; block sampling is the Postgres analog.
+
+        Retries with a larger sample percentage if filters leave too few matches
+        (SYSTEM sampling is block-level, so a restrictive WHERE can come up dry
+        on a small sample); caller falls back to the exact old query if this
+        still comes up short.
+        """
+        pct = min_pct
+        rows = []
+        for _ in range(max_attempts):
+            sql = f"""
+                SELECT s.set_id, s.product_names, s.generic_names, s.manufacturer, s.appr_num,
+                       s.ndc_codes, s.revised_date, s.market_categories, s.doc_type, s.local_path, s.spl_id,
+                       (SELECT COUNT(*) > 1 FROM {schema}sum_spl h WHERE h.set_id = s.set_id) as has_history
+                FROM {schema}sum_spl TABLESAMPLE SYSTEM (%(pct)s) AS s
+                {w_stmt}
+                ORDER BY RANDOM()
+                LIMIT %(limit)s
+            """
+            cursor.execute(sql, {"limit": limit, "pct": pct})
+            rows = cursor.fetchall()
+            if len(rows) >= limit or pct >= 100:
+                break
+            pct = min(100, pct * pct_growth)
+        return rows
+
+    @classmethod
     def get_random_labels(cls, limit=5, human_rx_only=False, rld_only=False, rs_only=False):
         if not cls.check_connectivity(): return []
         conn = cls.get_connection()
@@ -1001,9 +1116,16 @@ class FDALabelDBService:
                 where = []
                 if human_rx_only: where.append("DOCUMENT_TYPE_LOINC_CODE IN ('34391-3', '48401-4', '48402-2')")
                 if rld_only: where.append("EXISTS (SELECT 1 FROM druglabel.sum_spl_rld rld WHERE rld.SPL_ID = druglabel.DGV_SUM_SPL.SPL_ID)")
-                w_stmt = f"WHERE {' AND '.join(where)}" if where else ""
-                sql = f"SELECT * FROM (SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, APPR_NUM, NDC_CODES, EFF_TIME, MARKET_CATEGORIES, DOCUMENT_TYPE, SPL_GUID as SPL_ID FROM druglabel.DGV_SUM_SPL {w_stmt} ORDER BY DBMS_RANDOM.VALUE) WHERE ROWNUM <= :limit"
-                cursor.execute(sql, {"limit": limit})
+
+                rows = cls._get_random_labels_oracle_via_id_sample(cursor, limit, where)
+                if len(rows) < limit:
+                    # Filters left too few candidates in the sampled ID pool (or
+                    # the pool ran dry) -- fall back to the exact, full-scan
+                    # query so correctness never regresses versus the old code.
+                    w_stmt = f"WHERE {' AND '.join(where)}" if where else ""
+                    sql = f"SELECT * FROM (SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, APPR_NUM, NDC_CODES, EFF_TIME, MARKET_CATEGORIES, DOCUMENT_TYPE, SPL_GUID as SPL_ID FROM druglabel.DGV_SUM_SPL {w_stmt} ORDER BY DBMS_RANDOM.VALUE) WHERE ROWNUM <= :limit"
+                    cursor.execute(sql, {"limit": limit})
+                    rows = cursor.fetchall()
             else:
                 schema = "labeling."
                 where = ["is_latest = TRUE"]
@@ -1012,17 +1134,23 @@ class FDALabelDBService:
                 elif rld_only: where.append("is_rld = 1")
                 elif rs_only: where.append("is_rs = 1")
                 w_stmt = f"WHERE {' AND '.join(where)}" if where else ""
-                sql = f"""
-                    SELECT s.set_id, s.product_names, s.generic_names, s.manufacturer, s.appr_num, 
-                           s.ndc_codes, s.revised_date, s.market_categories, s.doc_type, s.local_path, s.spl_id,
-                           (SELECT COUNT(*) > 1 FROM {schema}sum_spl h WHERE h.set_id = s.set_id) as has_history
-                    FROM {schema}sum_spl s
-                    {w_stmt} 
-                    ORDER BY RANDOM() 
-                    LIMIT %(limit)s
-                """
-                cursor.execute(sql, {"limit": limit})
-            rows = cursor.fetchall()
+
+                rows = cls._get_random_labels_postgres_via_tablesample(cursor, limit, w_stmt, schema)
+                if len(rows) < limit:
+                    # Filters left too few candidates in the sampled blocks (or
+                    # the sample ran dry) -- fall back to the exact, full-scan
+                    # query so correctness never regresses versus the old code.
+                    sql = f"""
+                        SELECT s.set_id, s.product_names, s.generic_names, s.manufacturer, s.appr_num,
+                               s.ndc_codes, s.revised_date, s.market_categories, s.doc_type, s.local_path, s.spl_id,
+                               (SELECT COUNT(*) > 1 FROM {schema}sum_spl h WHERE h.set_id = s.set_id) as has_history
+                        FROM {schema}sum_spl s
+                        {w_stmt}
+                        ORDER BY RANDOM()
+                        LIMIT %(limit)s
+                    """
+                    cursor.execute(sql, {"limit": limit})
+                    rows = cursor.fetchall()
             results = []
             for r in rows:
                 if cls._db_type == 'oracle':
