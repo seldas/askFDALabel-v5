@@ -30,6 +30,7 @@ export interface LabelRow {
   routes: string | null;
   epc: string | null;
   is_rld: number | null;
+  is_rs: number | null;
   initial_approval_year: number | null;
   /** Active-ingredient UNIIs, "; "-joined. Null when the label declares none. */
   active_uniis: string | null;
@@ -283,6 +284,8 @@ export interface ColumnDef {
   render: (row: LabelRow) => React.ReactNode;
   strong?: boolean;
   accent?: boolean;
+  /** Keep an optional database field out of the table until the user enables it. */
+  initiallyHidden?: boolean;
 }
 
 const LINKS_COLUMN: ColumnDef = {
@@ -397,6 +400,62 @@ const EXPANDED_COLUMNS: ColumnDef[] = [
     sort: 'approval_year',
     render: (row) => row.initial_approval_year || '',
   },
+  {
+    key: 'ingredients',
+    header: 'Active Ingredient(s)',
+    initiallyHidden: true,
+    render: (row) => joined(row.active_ingredients),
+  },
+  {
+    key: 'ndc',
+    header: 'NDC Code(s)',
+    initiallyHidden: true,
+    render: (row) => joined(row.ndc_codes),
+  },
+  {
+    key: 'ndc3',
+    header: 'NDC3 Code(s)',
+    initiallyHidden: true,
+    render: (row) => joined(row.ndc3_codes),
+  },
+  {
+    key: 'moiety',
+    header: 'Active Moiety',
+    initiallyHidden: true,
+    render: (row) => joined(row.active_moiety),
+  },
+  {
+    key: 'moiety-unii',
+    header: 'Active Moiety UNII(s)',
+    initiallyHidden: true,
+    render: (row) => joined(row.active_moiety_uniis),
+  },
+  {
+    key: 'rld',
+    header: 'Reference Listed Drug',
+    initiallyHidden: true,
+    render: (row) => (row.is_rld ? 'Yes (RLD)' : 'No'),
+  },
+  {
+    key: 'rs',
+    header: 'Reference Standard',
+    initiallyHidden: true,
+    render: (row) => (row.is_rs ? 'Yes (RS)' : 'No'),
+  },
+  {
+    key: 'set-id',
+    header: 'Set ID',
+    sort: 'set_id',
+    initiallyHidden: true,
+    render: (row) => row.set_id,
+  },
+  {
+    key: 'spl-id',
+    header: 'SPL ID',
+    sort: 'spl_id',
+    initiallyHidden: true,
+    render: (row) => row.spl_id,
+  },
 ];
 
 export function ResultsTable({
@@ -417,7 +476,11 @@ export function ResultsTable({
   const allColumns = extraColumns && extraColumns.length > 0
     ? [...extraColumns, ...baseColumns]
     : baseColumns;
-  const [hiddenColumns, setHiddenColumns] = useState<Record<string, boolean>>({});
+  const [hiddenColumns, setHiddenColumns] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      EXPANDED_COLUMNS.filter((column) => column.initiallyHidden).map((column) => [column.key, true]),
+    ),
+  );
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [colPickerOpen, setColPickerOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -587,6 +650,12 @@ export function ResultsTable({
                                   <dd>{joined(row.product_names) || '—'}</dd>
                                   <dt>Generic Name:</dt>
                                   <dd>{joined(row.generic_names) || '—'}</dd>
+                                </dl>
+                              </div>
+
+                              <div className="fdl-card-section">
+                                <div className="fdl-card-section__head">Active Ingredients &amp; Moieties</div>
+                                <dl className="fdl-card-dl">
                                   <dt>Active Ingredients:</dt>
                                   <dd>{joined(row.active_ingredients) || '—'}</dd>
                                   <dt>Ingr. UNII Code(s):</dt>
@@ -619,6 +688,12 @@ export function ResultsTable({
                                       ) : null}
                                     </>
                                   ) : null}
+                                </dl>
+                              </div>
+
+                              <div className="fdl-card-section">
+                                <div className="fdl-card-section__head">NDC Codes</div>
+                                <dl className="fdl-card-dl">
                                   <dt>NDC Code(s):</dt>
                                   <dd>
                                     <div>{joined(row.ndc_codes) || '—'}</div>

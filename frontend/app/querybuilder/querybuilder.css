@@ -1092,8 +1092,10 @@
 .fdl-label-card {
   position: sticky;
   left: var(--afl-space-3);
-  width: 100%;
-  max-width: min(840px, calc(100vw - 40px));
+  /* This lives in a colspan cell whose table may be thousands of pixels wide.
+     Size the detail panel from the viewport instead of that overflowing table. */
+  width: min(1320px, calc(100vw - 40px));
+  max-width: calc(100vw - 40px);
   box-sizing: border-box;
   background: #ffffff;
   border: 1px solid var(--afl-border-strong);
@@ -1156,7 +1158,7 @@
 
 .fdl-label-card__grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--afl-space-3);
 }
 
@@ -1199,6 +1201,12 @@
   color: var(--afl-text-primary);
   word-break: break-word;
   line-height: 1.4;
+}
+
+@media (max-width: 1050px) {
+  .fdl-label-card__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 680px) {
