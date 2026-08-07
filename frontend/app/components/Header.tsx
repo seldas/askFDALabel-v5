@@ -210,7 +210,7 @@ export default function Header({
             href={process.env.NEXT_PUBLIC_DASHBOARD_BASE || '/fdalabel-v3'}
             style={{ color: "inherit", textDecoration: "none" }}
           >
-            FDALabel - V3.0
+            AskFDALabel -V3.0
           </a>
           <span style={{
             fontSize: '0.65rem',
@@ -625,7 +625,7 @@ export default function Header({
               textAlign: 'center'
             }}>
               <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <span>FDALabel - V3.0</span>
+                <span>AskFDALabel -V3.0</span>
                 <span style={{ 
                   fontSize: '0.65rem', 
                   fontWeight: 700, 
