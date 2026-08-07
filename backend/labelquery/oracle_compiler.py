@@ -188,8 +188,10 @@ def _compile_application_type(value, bag, alias='s', base_table=BASE_TABLE_HUMAN
     normalized marketing-category detail tables — DGV_SUM_SPL_MKT_CAT for the
     CDER-CBER scope (DGV_SUM_RX_SPL) and SUM_SPL_MKT_CAT for the FDA/all scope
     (SUM_SPL) — rather than the denormalised MARKET_CATEGORIES varchar column.
-    This prevents NDA matches from bleeding into ANDA rows.  The APPR_NUM LIKE
-    fallback is preserved so application-number tokens still resolve correctly.
+    The CATEGORY_SPL_ACCEPTABLE_TERM column is compared with = (exact match), not
+    LIKE, because the table stores canonical terms and a substring match would let
+    "NDA" bleed into "ANDA" rows.  The APPR_NUM LIKE fallback is preserved so
+    application-number tokens still resolve correctly.
 
     RLD is matched with a plain EXISTS against SUM_SPL_RLD, which is a
     purpose-built table: a row there means the SPL is a Reference Listed Drug.
@@ -214,12 +216,16 @@ def _compile_application_type(value, bag, alias='s', base_table=BASE_TABLE_HUMAN
             v_clean = v.strip().upper()
             if not v_clean:
                 continue
-            p_contain = bag.add(f'%{v_clean}%')
+            # Exact match against the normalized category table — LIKE/%/% would
+            # let "NDA" bleed into "ANDA" rows (and vice-versa). The table holds
+            # canonical acceptable terms, so = is both correct and faster.
+            p_exact = bag.add(v_clean)
             p_prefix = bag.add(f'{v_clean} %')
+            p_contain = bag.add(f'%{v_clean}%')
             app_clauses.append(
                 f"(EXISTS (SELECT 1 FROM {mkt_cat_table} mkt "
                 f"WHERE mkt.SPL_ID = {alias}.SPL_ID "
-                f"AND UPPER(mkt.CATEGORY_SPL_ACCEPTABLE_TERM) LIKE {p_contain}) "
+                f"AND UPPER(mkt.CATEGORY_SPL_ACCEPTABLE_TERM) = {p_exact}) "
                 f"OR UPPER({alias}.APPR_NUM) LIKE {p_prefix} "
                 f"OR UPPER({alias}.APPR_NUM) LIKE {p_contain})"
             )

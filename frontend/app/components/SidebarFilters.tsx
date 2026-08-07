@@ -67,6 +67,7 @@ export default function SidebarFilters({
     labelingType: true,
     labelingFormat: true,
     applicationType: true,
+    rldFilter: true,
     marketStatus: false,
     route: true,
     dosageForm: false,
@@ -519,7 +520,7 @@ export default function SidebarFilters({
         })()}
 
         {/* 3. Marketing Categories / Application Types */}
-        {isCriterionSupported('applicationType', targetDb) && (appPicks.length > 0 || rldCount > 0 || isRld) && (
+        {isCriterionSupported('applicationType', targetDb) && (appPicks.length > 0 || appValues.length > 0) && (
           <div className={`fdl-filter-group ${openSections.applicationType ? 'is-open' : ''}`}>
             <button
               type="button"
@@ -528,10 +529,8 @@ export default function SidebarFilters({
             >
               <span className="fdl-filter-group__name">Marketing Category</span>
               <span className="fdl-filter-group__right">
-                {appValues.length + (isRld ? 1 : 0) > 0 && (
-                  <span className="fdl-filter-group__count">
-                    {appValues.length + (isRld ? 1 : 0)}
-                  </span>
+                {appValues.length > 0 && (
+                  <span className="fdl-filter-group__count">{appValues.length}</span>
                 )}
                 <span className="fdl-filter-group__arrow">
                   {openSections.applicationType ? '▲' : '▼'}
@@ -542,29 +541,46 @@ export default function SidebarFilters({
             {openSections.applicationType && (
               <div className="fdl-filter-group__body">
                 {renderCategorySection('applicationType', 'Marketing Categories', appPicks, appValues, 'applicationType')}
+              </div>
+            )}
+          </div>
+        )}
 
-                {/* RLD Flag Checkbox */}
-                {(rldCount > 0 || isRld || !hasFacets) && (
-                  <div className="fdl-filter-subgroup" style={{ marginTop: '10px' }}>
-                    <span className="fdl-filter-subgroup__title">Reference Status:</span>
-                    <div className="fdl-filter-checkboxes">
-                      <label className="fdl-checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={isRld}
-                          onChange={(e) =>
-                            updateCriterion('applicationType', (prev) => ({
-                              ...prev,
-                              isRld: e.target.checked,
-                            }))
-                          }
-                        />
-                        <span>Reference Listed Drug (RLD)</span>
-                        {rldCount > 0 && <span className="fdl-facet-count">({rldCount.toLocaleString()})</span>}
-                      </label>
-                    </div>
-                  </div>
-                )}
+        {/* 3b. Reference Listed Drug (RLD) — standalone filter */}
+        {isCriterionSupported('applicationType', targetDb) && (rldCount > 0 || isRld || !hasFacets) && (
+          <div className={`fdl-filter-group ${openSections.rldFilter ? 'is-open' : ''}`}>
+            <button
+              type="button"
+              className="fdl-filter-group__header"
+              onClick={() => toggleAccordion('rldFilter')}
+            >
+              <span className="fdl-filter-group__name">Reference Listed Drug</span>
+              <span className="fdl-filter-group__right">
+                {isRld && <span className="fdl-filter-group__count">1</span>}
+                <span className="fdl-filter-group__arrow">
+                  {openSections.rldFilter ? '▲' : '▼'}
+                </span>
+              </span>
+            </button>
+
+            {openSections.rldFilter && (
+              <div className="fdl-filter-group__body">
+                <div className="fdl-filter-checkboxes">
+                  <label className="fdl-checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={isRld}
+                      onChange={(e) =>
+                        updateCriterion('applicationType', (prev) => ({
+                          ...prev,
+                          isRld: e.target.checked,
+                        }))
+                      }
+                    />
+                    <span>Reference Listed Drug (RLD)</span>
+                    {rldCount > 0 && <span className="fdl-facet-count">({rldCount.toLocaleString()})</span>}
+                  </label>
+                </div>
               </div>
             )}
           </div>
