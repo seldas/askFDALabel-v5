@@ -180,93 +180,106 @@ export default function SidebarFilters({
   // Filter 0-count items PubMed style
   const hasFacets = Boolean(facets && Object.keys(facets).length > 0);
 
+  /**
+   * Drops the options nothing in the current result set matches -- except in a
+   * category the user has already narrowed. The counts describe the *filtered*
+   * set, so once "Human OTC" is ticked every other labeling type reads 0 and
+   * would vanish, taking away the only control for widening the filter back.
+   */
+  const visibleItems = <T extends { value: string; count: number }>(
+    items: T[],
+    selectedValues: string[],
+  ): T[] => {
+    const kept = items.filter((item) => {
+      if (isPickSelected(item.value, selectedValues)) return true;
+      if (!hasFacets || selectedValues.length > 0) return true;
+      return item.count > 0;
+    });
+    if (!hasFacets) return kept;
+    // Only the first five are shown outright, so what the result set actually
+    // contains has to lead -- otherwise a retained 0-count sibling pushes a
+    // real option into the "Other…" modal.
+    return kept
+      .map((item, index) => ({ item, index }))
+      .sort((a, b) => {
+        const aSel = isPickSelected(a.item.value, selectedValues) ? 1 : 0;
+        const bSel = isPickSelected(b.item.value, selectedValues) ? 1 : 0;
+        if (aSel !== bSel) return bSel - aSel;
+        if (a.item.count !== b.item.count) return b.item.count - a.item.count;
+        return a.index - b.index;
+      })
+      .map(({ item }) => item);
+  };
+
   // 1. Labeling Types
-  const labelingPicks = (CRITERION_DEFS.labelingType.quickPicks || [])
-    .map((pick) => ({
+  const labelingPicks = visibleItems(
+    (CRITERION_DEFS.labelingType.quickPicks || []).map((pick) => ({
       value: pick.value,
       label: pick.label,
       count: getFacetCount('labelingTypes', pick.value),
       disabledReason: pick.unavailableOn?.targets.includes(targetDb) ? pick.unavailableOn.reason : null,
-    }))
-    .filter((pick) => {
-      const isChecked = isPickSelected(pick.value, ltValues);
-      if (hasFacets && pick.count === 0 && !isChecked) return false;
-      return true;
-    });
+    })),
+    ltValues,
+  );
 
   // 2. Application Types
-  const appPicks = (CRITERION_DEFS.applicationType.quickPicks || [])
-    .map((pick) => ({
+  const appPicks = visibleItems(
+    (CRITERION_DEFS.applicationType.quickPicks || []).map((pick) => ({
       value: pick.value,
       label: pick.label,
       count: getFacetCount('applicationTypes', pick.value),
-    }))
-    .filter((pick) => {
-      const isChecked = isPickSelected(pick.value, appValues);
-      if (hasFacets && pick.count === 0 && !isChecked) return false;
-      return true;
-    });
+    })),
+    appValues,
+  );
   const rldCount = getFacetCount('applicationTypes', 'RLD');
   const rsCount = getFacetCount('applicationTypes', 'RS');
 
   // 3. Market Status
-  const statusPicks = ['Prescription', 'OTC', 'Discontinued']
-    .map((st) => ({
+  const statusPicks = visibleItems(
+    ['Prescription', 'OTC', 'Discontinued'].map((st) => ({
       value: st,
       label: st,
       count: getFacetCount('marketStatus', st),
-    }))
-    .filter((st) => {
-      const isChecked = isPickSelected(st.value, msValues);
-      if (hasFacets && st.count === 0 && !isChecked) return false;
-      return true;
-    });
+    })),
+    msValues,
+  );
 
   // 4. Routes
   const facetRoutes = (facets?.routes || []).filter((r) => r.count > 0 || routeValues.includes(r.value));
-  const fallbackRoutes = (CRITERION_DEFS.route.quickPicks || [])
-    .map((pick) => ({
+  const fallbackRoutes = visibleItems(
+    (CRITERION_DEFS.route.quickPicks || []).map((pick) => ({
       value: pick.value,
       label: pick.label,
       count: getFacetCount('routes', pick.value),
-    }))
-    .filter((pick) => {
-      const isChecked = isPickSelected(pick.value, routeValues);
-      if (hasFacets && pick.count === 0 && !isChecked) return false;
-      return true;
-    });
+    })),
+    routeValues,
+  );
   const routeItems = facetRoutes.length > 0 ? facetRoutes : fallbackRoutes;
 
   // 5. Dosage Forms
   const facetDosages = (facets?.dosageForms || []).filter((d) => d.count > 0 || dosageValues.includes(d.value));
-  const fallbackDosages = (CRITERION_DEFS.dosageForm.quickPicks || [])
-    .map((pick) => ({
+  const fallbackDosages = visibleItems(
+    (CRITERION_DEFS.dosageForm.quickPicks || []).map((pick) => ({
       value: pick.value,
       label: pick.label,
       count: getFacetCount('dosageForms', pick.value),
-    }))
-    .filter((pick) => {
-      const isChecked = isPickSelected(pick.value, dosageValues);
-      if (hasFacets && pick.count === 0 && !isChecked) return false;
-      return true;
-    });
+    })),
+    dosageValues,
+  );
   const dosageItems = facetDosages.length > 0 ? facetDosages : fallbackDosages;
 
   // 6. Pharm Classes (EPC)
   const facetEpcs = (facets?.pharmClasses || []).filter((p) => p.count > 0 || pcTerms.includes(p.value));
 
   // 7. DEA Schedule
-  const deaPicks = (CRITERION_DEFS.deaSchedule.quickPicks || [])
-    .map((pick) => ({
+  const deaPicks = visibleItems(
+    (CRITERION_DEFS.deaSchedule.quickPicks || []).map((pick) => ({
       value: pick.value,
       label: pick.label,
       count: getFacetCount('deaSchedule', pick.value),
-    }))
-    .filter((pick) => {
-      const isChecked = isPickSelected(pick.value, deaValues);
-      if (hasFacets && pick.count === 0 && !isChecked) return false;
-      return true;
-    });
+    })),
+    deaValues,
+  );
 
   const totalFilled = countFilled(query);
 
@@ -357,7 +370,7 @@ export default function SidebarFilters({
   );
 
   return (
-    <div className={`fdl-sidebar-filters ${className}`}>
+    <div className={`fdl-sidebar-filters ${className}`} aria-busy={loading}>
       {/* Sidebar Header */}
       <div className="fdl-sidebar-filters__head">
         <div className="fdl-sidebar-filters__title-row">
@@ -366,6 +379,19 @@ export default function SidebarFilters({
           {totalFilled > 0 && (
             <span className="fdl-sidebar-filters__badge">{totalFilled} active</span>
           )}
+        </div>
+
+        {/* Every box ticked re-runs the query, and on Oracle that is seconds of
+            silence -- without this the click looks like it did nothing. */}
+        <div className="fdl-sidebar-filters__status" role="status" aria-live="polite">
+          {loading ? (
+            <>
+              <span className="fdl-sidebar-filters__spinner" aria-hidden="true" />
+              <span>Updating results…</span>
+            </>
+          ) : typeof totalResults === 'number' ? (
+            <span>{totalResults.toLocaleString()} matching label{totalResults === 1 ? '' : 's'}</span>
+          ) : null}
         </div>
         {totalFilled > 0 && onClearAll && (
           <button

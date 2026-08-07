@@ -492,8 +492,10 @@ function ResultsPage() {
               <h1 className="fdl-resultshead__count">
                 {!activeWireQuery
                   ? 'Query results'
-                  : busy && !data
-                    ? 'Searching…'
+                  : busy
+                    ? data
+                      ? 'Updating results…'
+                      : 'Searching…'
                     : data?.capped
                       ? `Most Recent ${browsable.toLocaleString()}/${total.toLocaleString()} Labeling Results`
                       : `${total.toLocaleString()} labeling result${total === 1 ? '' : 's'}`}
@@ -777,7 +779,10 @@ function ResultsPage() {
             ) : null}
 
             {rows.length > 0 ? (
-              <>
+              // The rows on screen belong to the previous filter set until the
+              // refetch lands; dimming them says so, instead of letting a stale
+              // table read as "the filter did nothing".
+              <div className={busy ? 'fdl-results-stale' : undefined} aria-busy={busy}>
                 <ResultsTable rows={rows} view={view} sortState={sortState} onSort={onSort} />
                 <div className="fdl-results__bar fdl-results__bar--bottom">
                   <span className="fdl-results__count">
@@ -802,7 +807,7 @@ function ResultsPage() {
                     </button>
                   </div>
                 </div>
-              </>
+              </div>
             ) : !busy ? (
               <div className="fdl-empty">
                 <p>No labeling matched your criteria.</p>

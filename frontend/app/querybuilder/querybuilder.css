@@ -2207,3 +2207,40 @@
 
 
 
+
+/* Live filter feedback: a ticked box re-runs the query, so the sidebar says
+   so and the rows it is about to replace are dimmed while it is in flight. */
+.fdl-sidebar-filters__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #64748b;
+  min-height: 16px;
+}
+
+.fdl-sidebar-filters__spinner {
+  width: 11px;
+  height: 11px;
+  border: 2px solid #cbd5e1;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: fdl-facet-spin 0.7s linear infinite;
+}
+
+@keyframes fdl-facet-spin {
+  to { transform: rotate(360deg); }
+}
+
+.fdl-results-stale {
+  opacity: 0.45;
+  pointer-events: none;
+  transition: opacity 0.12s ease-in;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fdl-sidebar-filters__spinner { animation: none; }
+  .fdl-results-stale { transition: none; }
+}
