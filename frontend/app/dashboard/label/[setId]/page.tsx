@@ -403,14 +403,16 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
                     onClick={(e) => toggleFavoriteTool(t.id, e)}
                     title={isFav ? 'Unstar tool' : 'Star tool'}
                     style={{
-                      background: 'none',
-                      border: 'none',
+                      background: isFav ? '#fef9c3' : isHovered ? '#ffffff' : 'rgba(255, 255, 255, 0.72)',
+                      border: isFav ? '1px solid #facc15' : isHovered ? `1px solid ${t.accentColor}` : '1px solid #cbd5e1',
                       cursor: 'pointer',
                       fontSize: '1.4rem',
-                      color: isFav ? '#eab308' : '#cbd5e1',
-                      padding: '4px',
+                      color: isFav ? '#a16207' : isHovered ? t.accentColor : '#64748b',
+                      padding: '3px 7px',
+                      borderRadius: '999px',
                       lineHeight: 1,
-                      transition: 'color 0.2s ease'
+                      boxShadow: isHovered && !isFav ? `0 2px 8px ${t.accentColor}33` : 'none',
+                      transition: 'all 0.2s ease'
                     }}
                   >
                     {isFav ? '★' : '☆'}

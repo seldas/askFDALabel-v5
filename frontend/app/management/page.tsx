@@ -105,7 +105,12 @@ export default function ManagementPage() {
 
   useEffect(() => {
     if (session && !initialTabSet) {
-      if (session.username === 'guest') {
+      const requestedTab = typeof window === 'undefined'
+        ? null
+        : new URLSearchParams(window.location.search).get('tab');
+      if (requestedTab === 'ai' && session.username !== 'guest') {
+        setActiveTab('ai');
+      } else if (session.username === 'guest') {
         setActiveTab('tokens');
       } else {
         setActiveTab('ai');
@@ -749,7 +754,7 @@ export default function ManagementPage() {
 
 
             {activeTab === 'ai' && session?.username !== 'guest' && (
-              <section className="mgmt-card" style={{ maxWidth: '800px' }}>
+              <section id="ai-settings" className="mgmt-card" style={{ maxWidth: '800px' }}>
                 <h2 className="section-title">AI Model Preferences</h2>
                 <p style={{ color: 'var(--afl-n-500)', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.5 }}>
                   Select your active AI provider and customize the connection settings for toxicity analysis.

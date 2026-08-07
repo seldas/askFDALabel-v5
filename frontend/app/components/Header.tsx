@@ -537,26 +537,34 @@ export default function Header({
               </button>
 
               {activeDropdown === 'user' && (
-                <div className="dropdown-menu" style={{ right: 0, left: 'auto' }}>
+                <div className="dropdown-menu account-dropdown-menu" style={{ right: 0, left: 'auto' }}>
                   <div className="account-block">
                     <div className="account-label">ACCOUNT</div>
                     <div className="account-name">{session.username}</div>
-                    <div style={{ marginTop: '8px', padding: '4px 8px', background: '#f1f5f9', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.7rem', fontWeight: 700, color: '#475569' }}>
+                    <div className="account-ai-status">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>
                         AI: {session.ai_provider?.toUpperCase()}
                     </div>
+                    {session?.username !== 'guest' ? (
+                      <Link
+                        href="/management?tab=ai#ai-settings"
+                        className="account-ai-config"
+                        onClick={() => setActiveDropdown(null)}
+                      >
+                        Change AI Engine
+                        <span aria-hidden="true">→</span>
+                      </Link>
+                    ) : null}
                   </div>
 
                   <div className="account-actions">
-                    <Link href="/dashboard" className="dropdown-item" onClick={() => setActiveDropdown(null)} style={{ color: '#2563eb', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    <Link href="/dashboard" className="dropdown-item dropdown-item--secondary-action" onClick={() => setActiveDropdown(null)}>
                       My Dashboard
                     </Link>
-                    <Link href="/dashboard/query_history" className="dropdown-item" onClick={() => setActiveDropdown(null)} style={{ color: '#4f46e5', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <Link href="/dashboard/query_history" className="dropdown-item dropdown-item--secondary-action" onClick={() => setActiveDropdown(null)}>
                       Search & Query History
                     </Link>
-                    <Link href="/management" className="dropdown-item" style={{ color: '#6366f1', fontWeight: 700 }}>
+                    <Link href="/management" className="dropdown-item dropdown-item--secondary-action" onClick={() => setActiveDropdown(null)}>
                       {session?.is_admin ? 'System Management' : 'Settings & Preferences'}
                     </Link>
                     {session?.username === 'guest' && (
@@ -565,7 +573,7 @@ export default function Header({
                       </button>
                     )}
                     {session?.username !== 'guest' && (
-                      <button onClick={() => { openAuthModal('change_password'); setActiveDropdown(null); }} className="dropdown-item">
+                      <button onClick={() => { openAuthModal('change_password'); setActiveDropdown(null); }} className="dropdown-item dropdown-item--secondary-action">
                         Change Password
                       </button>
                     )}
