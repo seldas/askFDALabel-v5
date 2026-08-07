@@ -447,6 +447,8 @@ export function isCriterionEmpty(c: Criterion): boolean {
   switch (c.type) {
     case 'route':
     case 'marketStatus':
+    case 'dosageForm':
+    case 'deaSchedule':
       return !(v.values?.length > 0);
     case 'labelingType':
       return !(v.values?.length > 0) && (!v.plr || v.plr === 'all');
@@ -457,6 +459,7 @@ export function isCriterionEmpty(c: Criterion): boolean {
       );
     case 'meddra':
     case 'pharmClass':
+    case 'activeMoiety':
       return !(v.terms?.length > 0);
     case 'labelingSection':
       return !String(v.text || '').trim() && !(v.sections?.length > 0);
