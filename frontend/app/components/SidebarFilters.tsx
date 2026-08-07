@@ -404,21 +404,18 @@ export default function SidebarFilters({
       <div className="fdl-sidebar-filters__head">
         <div className="fdl-sidebar-filters__title-row">
           <h3 className="fdl-sidebar-filters__title">Filter Results</h3>
-          {totalFilled > 0 && (
-            <span className="fdl-sidebar-filters__badge">{totalFilled} active</span>
-          )}
         </div>
 
         {/* Every box ticked re-runs the query, and on Oracle that is seconds of
-            silence -- without this the click looks like it did nothing. */}
+            silence -- without this the click looks like it did nothing. The
+            result count itself isn't shown here -- the results panel header
+            already has it, right next to this sidebar. */}
         <div className="fdl-sidebar-filters__status" role="status" aria-live="polite">
           {loading || facetsLoading ? (
             <>
               <span className="fdl-sidebar-filters__spinner" aria-hidden="true" />
               <span>{loading ? 'Updating results…' : 'Counting…'}</span>
             </>
-          ) : typeof totalResults === 'number' ? (
-            <span>{totalResults.toLocaleString()} matching label{totalResults === 1 ? '' : 's'}</span>
           ) : null}
         </div>
         {totalFilled > 0 && onClearAll && (
@@ -459,46 +456,67 @@ export default function SidebarFilters({
         )}
 
         {/* 2. Standalone Labeling Format Panel */}
-        <div className={`fdl-filter-group ${openSections.labelingFormat ? 'is-open' : ''}`}>
-          <button
-            type="button"
-            className="fdl-filter-group__header"
-            onClick={() => toggleAccordion('labelingFormat')}
-          >
-            <span className="fdl-filter-group__name">Labeling Format</span>
-            <span className="fdl-filter-group__right">
-              {ltPlr !== 'all' && (
-                <span className="fdl-filter-group__count">1</span>
-              )}
-              <span className="fdl-filter-group__arrow">{openSections.labelingFormat ? '▲' : '▼'}</span>
-            </span>
-          </button>
+        {/*
+          FORMAT_GROUP (PLR / non-PLR) is only classified on the CDER-CBER
+          Oracle rollup (DGV_SUM_RX_SPL) -- see oracle_compiler._compile_labeling_type.
+          Local Postgres and the "FDA ver." Oracle scope (SUM_SPL) have no such
+          column, so the panel is folded shut and unclickable there rather than
+          left open to a filter that silently does nothing.
+        */}
+        {(() => {
+          const labelingFormatSupported = targetDb === 'oracle';
+          const labelingFormatReason =
+            'Labeling Format (PLR / non-PLR) is only classified for the CDER-CBER Oracle database and is not available here.';
+          const isOpen = labelingFormatSupported && openSections.labelingFormat;
+          return (
+            <div
+              className={`fdl-filter-group ${isOpen ? 'is-open' : ''} ${
+                labelingFormatSupported ? '' : 'is-disabled'
+              }`}
+              title={labelingFormatSupported ? undefined : labelingFormatReason}
+            >
+              <button
+                type="button"
+                className="fdl-filter-group__header"
+                disabled={!labelingFormatSupported}
+                onClick={() => labelingFormatSupported && toggleAccordion('labelingFormat')}
+              >
+                <span className="fdl-filter-group__name">Labeling Format</span>
+                <span className="fdl-filter-group__right">
+                  {ltPlr !== 'all' && (
+                    <span className="fdl-filter-group__count">1</span>
+                  )}
+                  <span className="fdl-filter-group__arrow">{isOpen ? '▲' : '▼'}</span>
+                </span>
+              </button>
 
-          {openSections.labelingFormat && (
-            <div className="fdl-filter-group__body">
-              <div className="fdl-radio-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {[
-                  { id: 'all', label: 'All Formats' },
-                  { id: 'plr', label: 'PLR Format' },
-                  { id: 'non_plr', label: 'non-PLR Format' },
-                  { id: 'unclassified', label: 'Unclassified / Other' },
-                ].map((fmt) => (
-                  <label key={fmt.id} className="fdl-radio-label">
-                    <input
-                      type="radio"
-                      name="labelingFormatOption"
-                      checked={ltPlr === fmt.id}
-                      onChange={() =>
-                        updateCriterion('labelingType', (prev) => ({ ...prev, plr: fmt.id }))
-                      }
-                    />
-                    <span>{fmt.label}</span>
-                  </label>
-                ))}
-              </div>
+              {isOpen && (
+                <div className="fdl-filter-group__body">
+                  <div className="fdl-radio-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {[
+                      { id: 'all', label: 'All Formats' },
+                      { id: 'plr', label: 'PLR Format' },
+                      { id: 'non_plr', label: 'non-PLR Format' },
+                      { id: 'unclassified', label: 'Unclassified / Other' },
+                    ].map((fmt) => (
+                      <label key={fmt.id} className="fdl-radio-label">
+                        <input
+                          type="radio"
+                          name="labelingFormatOption"
+                          checked={ltPlr === fmt.id}
+                          onChange={() =>
+                            updateCriterion('labelingType', (prev) => ({ ...prev, plr: fmt.id }))
+                          }
+                        />
+                        <span>{fmt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          );
+        })()}
 
         {/* 3. Marketing Categories / Application Types */}
         {isCriterionSupported('applicationType', targetDb) && (appPicks.length > 0 || rldCount > 0 || isRld) && (

@@ -817,14 +817,14 @@ function ResultsPage() {
                   <span className="fdl-sql-panel__title">Generated SQL Query</span>
                   <button
                     type="button"
-                    className="fdl-link"
+                    className={`fdl-sql-panel__copy${sqlCopied ? ' is-copied' : ''}`}
                     onClick={() => {
                       navigator.clipboard.writeText(data.sql!);
                       setSqlCopied(true);
                       setTimeout(() => setSqlCopied(false), 2000);
                     }}
                   >
-                    {sqlCopied ? 'Copied!' : 'Copy SQL'}
+                    {sqlCopied ? '✓ Copied!' : 'Copy SQL'}
                   </button>
                 </div>
                 <pre className="fdl-sql-panel__code">{data.sql}</pre>
