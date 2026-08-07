@@ -28,6 +28,7 @@ interface SidebarFiltersProps {
   loading?: boolean;
   onClearAll?: () => void;
   facets?: QueryFacets;
+  facetsLoading?: boolean;
   className?: string;
 }
 
@@ -51,6 +52,7 @@ export default function SidebarFilters({
   loading = false,
   onClearAll,
   facets,
+  facetsLoading = false,
   className = '',
 }: SidebarFiltersProps) {
   // Collapsed states per accordion section
@@ -181,21 +183,31 @@ export default function SidebarFilters({
   const hasFacets = Boolean(facets && Object.keys(facets).length > 0);
 
   /**
-   * Drops the options nothing in the current result set matches -- except in a
-   * category the user has already narrowed. The counts describe the *filtered*
-   * set, so once "Human OTC" is ticked every other labeling type reads 0 and
-   * would vanish, taking away the only control for widening the filter back.
+   * Whether the backend actually counted this category. A category it never
+   * computed reads as all-zero, which is not the same claim as "nothing
+   * matches" -- hiding its options on that basis emptied the whole panel.
+   */
+  const isCounted = (cat: keyof QueryFacets) => Array.isArray(facets?.[cat]);
+
+  /**
+   * Drops the options nothing in the current result set matches. Two things
+   * are never dropped: what the user has ticked, and everything in a category
+   * they have already narrowed -- the backend counts such a category with its
+   * own filter lifted, so those counts are real and are what the user needs to
+   * widen the filter again.
    */
   const visibleItems = <T extends { value: string; count: number }>(
+    cat: keyof QueryFacets,
     items: T[],
     selectedValues: string[],
   ): T[] => {
+    const counted = isCounted(cat);
     const kept = items.filter((item) => {
       if (isPickSelected(item.value, selectedValues)) return true;
-      if (!hasFacets || selectedValues.length > 0) return true;
+      if (!counted || selectedValues.length > 0) return true;
       return item.count > 0;
     });
-    if (!hasFacets) return kept;
+    if (!counted) return kept;
     // Only the first five are shown outright, so what the result set actually
     // contains has to lead -- otherwise a retained 0-count sibling pushes a
     // real option into the "Other…" modal.
@@ -213,6 +225,7 @@ export default function SidebarFilters({
 
   // 1. Labeling Types
   const labelingPicks = visibleItems(
+    'labelingTypes',
     (CRITERION_DEFS.labelingType.quickPicks || []).map((pick) => ({
       value: pick.value,
       label: pick.label,
@@ -224,6 +237,7 @@ export default function SidebarFilters({
 
   // 2. Application Types
   const appPicks = visibleItems(
+    'applicationTypes',
     (CRITERION_DEFS.applicationType.quickPicks || []).map((pick) => ({
       value: pick.value,
       label: pick.label,
@@ -236,6 +250,7 @@ export default function SidebarFilters({
 
   // 3. Market Status
   const statusPicks = visibleItems(
+    'marketStatus',
     ['Prescription', 'OTC', 'Discontinued'].map((st) => ({
       value: st,
       label: st,
@@ -247,6 +262,7 @@ export default function SidebarFilters({
   // 4. Routes
   const facetRoutes = (facets?.routes || []).filter((r) => r.count > 0 || routeValues.includes(r.value));
   const fallbackRoutes = visibleItems(
+    'routes',
     (CRITERION_DEFS.route.quickPicks || []).map((pick) => ({
       value: pick.value,
       label: pick.label,
@@ -259,6 +275,7 @@ export default function SidebarFilters({
   // 5. Dosage Forms
   const facetDosages = (facets?.dosageForms || []).filter((d) => d.count > 0 || dosageValues.includes(d.value));
   const fallbackDosages = visibleItems(
+    'dosageForms',
     (CRITERION_DEFS.dosageForm.quickPicks || []).map((pick) => ({
       value: pick.value,
       label: pick.label,
@@ -273,6 +290,7 @@ export default function SidebarFilters({
 
   // 7. DEA Schedule
   const deaPicks = visibleItems(
+    'deaSchedule',
     (CRITERION_DEFS.deaSchedule.quickPicks || []).map((pick) => ({
       value: pick.value,
       label: pick.label,
@@ -384,10 +402,10 @@ export default function SidebarFilters({
         {/* Every box ticked re-runs the query, and on Oracle that is seconds of
             silence -- without this the click looks like it did nothing. */}
         <div className="fdl-sidebar-filters__status" role="status" aria-live="polite">
-          {loading ? (
+          {loading || facetsLoading ? (
             <>
               <span className="fdl-sidebar-filters__spinner" aria-hidden="true" />
-              <span>Updating results…</span>
+              <span>{loading ? 'Updating results…' : 'Counting…'}</span>
             </>
           ) : typeof totalResults === 'number' ? (
             <span>{totalResults.toLocaleString()} matching label{totalResults === 1 ? '' : 's'}</span>

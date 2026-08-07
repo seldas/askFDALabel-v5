@@ -683,17 +683,18 @@ def _compile_identifier(value, bag):
     return '(' + ' AND '.join(alts) + ')'
 
 
-def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0, expand_meddra=None,
-                         capabilities=None, base_table=BASE_TABLE_HUMAN):
+def compile_oracle_predicates(query, expand_meddra=None, capabilities=None,
+                              base_table=BASE_TABLE_HUMAN):
     """
-    Compiles an FDALabel criteria tree into an Oracle SQL query with candidate isolation.
+    Compiles the criteria tree down to its WHERE clause and full-text CTEs,
+    stopping short of a statement.
 
-    ``base_table`` selects the summary rollup the query is based on -- see
-    BASE_TABLE_HUMAN and BASE_TABLE_ALL. It is not a pure substitution: the
-    moiety and FORMAT_GROUP columns exist on only one rollup each, so it is
-    threaded into the criterion compilers that read them.
+    Split out of compile_oracle_query so the facet aggregates can be built over
+    the identical predicate -- a facet count that disagrees with the result
+    count is worse than no count at all, and the only way to guarantee they
+    agree is to compile the predicate once.
 
-    Returns: (sql_statement, parameters_dict, warnings_list)
+    Returns: (text_cte_sql, where_sql, params_dict, warnings_list)
     """
     if base_table not in (BASE_TABLE_HUMAN, BASE_TABLE_ALL):
         raise OracleQueryCompileError(f'Unknown base table: {base_table!r}')
@@ -801,6 +802,47 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
     # `R1 AND R2 AND T1 AND T2`.
     where_sql = ' OR '.join(group_exprs) if group_exprs else '1=1'
 
+    # Each text criterion is resolved once, on its own, into a set of SPL_IDs.
+    #
+    # MATERIALIZE matters here: it forces the CTX domain index on CONTENT_XML to
+    # drive its own scan exactly once, independent of the candidate set. The
+    # alternative -- a correlated EXISTS against SPL_SEC -- would be a full scan
+    # per candidate row, because SPL_SEC carries no index on SPL_ID (only
+    # PK_SPLSEC on ID). Membership is then a hash semi-join against the
+    # materialized set.
+    #
+    # Only SPL_ID is selected. Deduplicating fifteen VARCHAR2(4000) columns, as
+    # this once did, sorts ~60KB rows to remove duplicates a single NUMBER
+    # identifies just as well.
+    text_cte_sql = ''.join(
+        f"""{name} AS (
+            SELECT /*+ MATERIALIZE */ DISTINCT sec.SPL_ID
+            FROM druglabel.SPL_SEC sec
+            WHERE {clause}
+        ),
+        """
+        for name, clause in text_ctes
+    )
+
+    return text_cte_sql, where_sql, bag, warnings
+
+
+def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0, expand_meddra=None,
+                         capabilities=None, base_table=BASE_TABLE_HUMAN):
+    """
+    Compiles an FDALabel criteria tree into an Oracle SQL query with candidate isolation.
+
+    ``base_table`` selects the summary rollup the query is based on -- see
+    BASE_TABLE_HUMAN and BASE_TABLE_ALL. It is not a pure substitution: the
+    moiety and FORMAT_GROUP columns exist on only one rollup each, so it is
+    threaded into the criterion compilers that read them.
+
+    Returns: (sql_statement, parameters_dict, warnings_list)
+    """
+    text_cte_sql, where_sql, bag, warnings = compile_oracle_predicates(
+        query, expand_meddra=expand_meddra, capabilities=capabilities, base_table=base_table,
+    )
+
     if limit is not None:
         p_offset = bag.add(offset)
         p_limit = bag.add(limit)
@@ -828,28 +870,6 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
     sort_column_name = oracle_sort_map.get(str(sort).lower(), 'EFF_TIME')
     sort_dir = 'ASC' if str(direction).lower() == 'asc' else 'DESC'
     order_clause = f"ORDER BY {sort_column_name} {sort_dir} NULLS LAST"
-
-    # Each text criterion is resolved once, on its own, into a set of SPL_IDs.
-    #
-    # MATERIALIZE matters here: it forces the CTX domain index on CONTENT_XML to
-    # drive its own scan exactly once, independent of the candidate set. The
-    # alternative -- a correlated EXISTS against SPL_SEC -- would be a full scan
-    # per candidate row, because SPL_SEC carries no index on SPL_ID (only
-    # PK_SPLSEC on ID). Membership is then a hash semi-join against the
-    # materialized set.
-    #
-    # Only SPL_ID is selected. Deduplicating fifteen VARCHAR2(4000) columns, as
-    # this once did, sorts ~60KB rows to remove duplicates a single NUMBER
-    # identifies just as well.
-    text_cte_sql = ''.join(
-        f"""{name} AS (
-            SELECT /*+ MATERIALIZE */ DISTINCT sec.SPL_ID
-            FROM druglabel.SPL_SEC sec
-            WHERE {clause}
-        ),
-        """
-        for name, clause in text_ctes
-    )
 
     # SPL_ID is carried through because it is the only key the detail tables
     # share with the summary rollup; SPL_GUID exists on DGV_SUM_RX_SPL and four

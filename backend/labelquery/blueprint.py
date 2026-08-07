@@ -30,6 +30,13 @@ from .compiler import (
     sort_column_sql,
     sort_direction_sql,
 )
+from .facets import (
+    active_categories,
+    oracle_facet_sql,
+    postgres_facet_sql,
+    rows_to_facets,
+    strip_category,
+)
 
 labelquery_bp = Blueprint('labelquery', __name__)
 
@@ -742,132 +749,100 @@ def _expand_meddra(level, terms):
     return (names + list(terms))[:400] if names else []
 
 
-def _compute_python_facets(results):
-    if not results:
-        return {}
+def _facets_once(query, target_db):
+    """
+    The full facet payload for one criteria tree, or {} when it cannot be
+    computed. Facets are decoration: a failure here must never take the result
+    list with it, which is why every path swallows and returns empty.
+    """
+    use_oracle = (target_db in _ORACLE_TARGETS) or (
+        target_db != 'local' and FDALabelDBService.is_internal()
+    )
 
-    human_rx = 0
-    human_otc = 0
-    animal_rx = 0
-    animal_otc = 0
-    vaccine = 0
+    if use_oracle:
+        conn = FDALabelDBService.get_oracle_connection()
+        if not conn:
+            return {}
+        try:
+            from .oracle_compiler import compile_oracle_predicates
+            text_cte_sql, where_sql, bag, _warnings = compile_oracle_predicates(
+                query,
+                expand_meddra=_expand_meddra,
+                capabilities=_capabilities(),
+                base_table=_oracle_base_table(target_db),
+            )
+            sql = oracle_facet_sql(text_cte_sql, where_sql, _oracle_base_table(target_db))
+            cur = conn.cursor()
+            cur.execute(sql, bag.params)
+            rows = cur.fetchall()
+            cur.close()
+            return rows_to_facets(rows)
+        except Exception as e:
+            print(f"[WARN] Oracle facet calculation failed: {e}")
+            return {}
+        finally:
+            conn.close()
 
-    anda = 0
-    nda = 0
-    bla = 0
-    monograph = 0
-    rld = 0
-    rs = 0
-
-    status_rx = 0
-    status_otc = 0
-
-    routes_cnt = {}
-    dosage_cnt = {}
-    epc_cnt = {}
-
-    for r in results:
-        doc = str(r.get('doc_type') or '').upper()
-        mc = str(r.get('market_categories') or '').upper()
-
-        if 'HUMAN PRESCRIPTION' in doc:
-            human_rx += 1
-            status_rx += 1
-        elif 'HUMAN OTC' in doc:
-            human_otc += 1
-            status_otc += 1
-        elif 'ANIMAL' in doc and 'PRESCRIPTION' in doc:
-            animal_rx += 1
-            status_rx += 1
-        elif 'ANIMAL' in doc and 'OTC' in doc:
-            animal_otc += 1
-            status_otc += 1
-
-        if 'VACCINE' in doc:
-            vaccine += 1
-
-        if 'ANDA' in mc:
-            anda += 1
-        elif 'NDA' in mc:
-            nda += 1
-        elif 'BLA' in mc:
-            bla += 1
-
-        if 'MONOGRAPH' in mc:
-            monograph += 1
-
-        if r.get('is_rld'):
-            rld += 1
-        if r.get('is_rs'):
-            rs += 1
-
-        r_raw = r.get('routes')
-        if r_raw:
-            for rt in str(r_raw).split(';'):
-                rt_clean = rt.strip().upper()
-                if rt_clean:
-                    routes_cnt[rt_clean] = routes_cnt.get(rt_clean, 0) + 1
-
-        df_raw = r.get('dosage_forms')
-        if df_raw:
-            for df in str(df_raw).split(';'):
-                df_clean = df.strip().upper()
-                if df_clean:
-                    dosage_cnt[df_clean] = dosage_cnt.get(df_clean, 0) + 1
-
-        ep_raw = r.get('epc')
-        if ep_raw:
-            for ep in str(ep_raw).split(';'):
-                ep_clean = ep.strip()
-                if ep_clean:
-                    epc_cnt[ep_clean] = epc_cnt.get(ep_clean, 0) + 1
-
-    return {
-        'labelingTypes': [
-            {'value': '%HUMAN PRESCRIPTION%', 'label': 'Human Rx', 'count': human_rx},
-            {'value': '%HUMAN OTC%', 'label': 'Human OTC', 'count': human_otc},
-            {'value': '%ANIMAL%PRESCRIPTION%', 'label': 'Animal Rx', 'count': animal_rx},
-            {'value': '%ANIMAL%OTC%', 'label': 'Animal OTC', 'count': animal_otc},
-            {'value': '%VACCINE%', 'label': 'Vaccine', 'count': vaccine},
-        ],
-        'applicationTypes': [
-            {'value': 'ANDA', 'label': 'ANDA', 'count': anda},
-            {'value': 'NDA', 'label': 'NDA', 'count': nda},
-            {'value': 'BLA', 'label': 'BLA', 'count': bla},
-            {'value': '%OTC monograph%', 'label': 'OTC Monograph Drug', 'count': monograph},
-            {'value': 'RLD', 'label': 'Reference Listed Drug (RLD)', 'count': rld},
-            {'value': 'RS', 'label': 'Reference Standard (RS)', 'count': rs},
-        ],
-        'marketStatus': [
-            {'value': 'Prescription', 'label': 'Prescription', 'count': status_rx},
-            {'value': 'OTC', 'label': 'OTC', 'count': status_otc},
-        ],
-        'routes': [{'value': k, 'label': k, 'count': v} for k, v in sorted(routes_cnt.items(), key=lambda x: x[1], reverse=True)[:30]],
-        'dosageForms': [{'value': k, 'label': k, 'count': v} for k, v in sorted(dosage_cnt.items(), key=lambda x: x[1], reverse=True)[:30]],
-        'pharmClasses': [{'value': k, 'label': k, 'count': v} for k, v in sorted(epc_cnt.items(), key=lambda x: x[1], reverse=True)[:30]],
-    }
-
-
-def _compute_postgres_facets(conn, relational_where, section_where, params):
+    conn = None
     try:
-        sec_join = ""
-        if section_where:
-            sec_join = f"INNER JOIN (SELECT DISTINCT sec.spl_id FROM labeling.spl_sections sec WHERE {section_where}) sc ON sc.spl_id = s.spl_id"
-
-        sql = f"""
-            SELECT s.doc_type, s.market_categories, s.routes, s.dosage_forms, s.epc, s.is_rld, s.is_rs
-            FROM labeling.sum_spl s
-            {sec_join}
-            WHERE {relational_where}
-            LIMIT 3000
-        """
+        relational_where, section_where, params, _warnings = compile_where(
+            query, expand_meddra=_expand_meddra, capabilities=_capabilities()
+        )
+        conn = _pg()
         with conn.cursor() as cur:
-            cur.execute(sql, params)
-            matched_rows = [dict(r) for r in cur.fetchall()]
-        return _compute_python_facets(matched_rows)
+            cur.execute(postgres_facet_sql(relational_where, section_where), params)
+            rows = [(r['cat'], r['token'], r['n']) for r in cur.fetchall()]
+        return rows_to_facets(rows)
     except Exception as e:
         print(f"[WARN] Postgres facet calculation failed: {e}")
         return {}
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def _compute_facets(query, target_db):
+    """
+    Facet counts for the sidebar, one aggregate pass per category that needs
+    its own.
+
+    A category is counted with its own filter removed, so the numbers answer
+    "what would I get if I ticked this" rather than "how many of the rows I
+    have already narrowed to are the thing I narrowed to". Counting against the
+    query as-is reports 0 for every unticked value in that category, which is
+    the one number that cannot help anyone. The trade is that the counts stop
+    summing to the result total -- the same trade PubMed makes.
+
+    Cost is one pass plus one per *filtered* category, so an unfiltered search
+    is a single query.
+    """
+    facets = _facets_once(query, target_db)
+    if not facets:
+        return {}
+
+    for category in active_categories(query):
+        widened = _facets_once(strip_category(query, category), target_db)
+        if widened.get(category):
+            facets[category] = widened[category]
+
+    return facets
+
+
+@labelquery_bp.route('/facets', methods=['POST'])
+def facets():
+    """
+    Sidebar facet counts, deliberately not part of /execute.
+
+    Exact counts cost a full aggregate pass over the matched set -- on Oracle,
+    roughly what the search itself costs -- and the result table should not
+    wait on them. The frontend fires both requests together and fills the
+    counts in when they land.
+    """
+    payload = request.get_json(silent=True) or {}
+    query = payload.get('query') or {}
+    target_db = str(payload.get('target_db') or payload.get('source') or '').lower()
+
+    return jsonify({'facets': _compute_facets(query, target_db)})
 
 
 # ---------------------------------------------------------------------------
@@ -974,9 +949,6 @@ def execute():
                 browsable = min(total, BROWSE_CAP)
                 capped = total > BROWSE_CAP
 
-                # Compute real-time PubMed facets
-                facets = _compute_python_facets(results)
-
                 # Annotate with bound params for the debug box.
                 debug_sql = sql
                 if params and isinstance(params, dict):
@@ -993,7 +965,6 @@ def execute():
                     'offset': offset,
                     'warnings': warnings,
                     'sql': debug_sql,
-                    'facets': facets,
                 })
             except Exception as e:
                 formatted_sql = sql
@@ -1078,9 +1049,6 @@ def execute():
         results = [{k: v for k, v in r.items() if k != 'total_count'}
                    for r in rows if r.get('spl_id')]
 
-        # Compute real-time PubMed facets for local Postgres DB
-        facets = _compute_postgres_facets(conn, relational_where, section_where, params)
-
         # Annotate the returned SQL with the bound parameter values so the
         # frontend debug box is readable without a separate params list.
         debug_sql = sql
@@ -1098,7 +1066,6 @@ def execute():
             'offset': offset,
             'warnings': warnings,
             'sql': debug_sql,
-            'facets': facets,
         })
     except Exception as e:
         formatted_sql = sql if 'sql' in locals() else None

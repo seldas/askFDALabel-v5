@@ -20,6 +20,7 @@ import { useCapabilities } from '../platform/capabilities';
 import {
   ResultsTable,
   type LabelRow,
+  type QueryFacets,
   type ResultSet,
   type ResultView,
   type SortState,
@@ -113,6 +114,8 @@ function ResultsPage() {
   });
 
   const [data, setData] = useState<ResultSet | null>(null);
+  const [facets, setFacets] = useState<QueryFacets | undefined>(undefined);
+  const [facetsBusy, setFacetsBusy] = useState(true);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorQuery, setErrorQuery] = useState<string | null>(null);
@@ -249,6 +252,41 @@ function ResultsPage() {
       cancelled = true;
     };
   }, [activeWireQuery, currentTargetDb, offset, sortState]);
+
+  // Facets ride a separate request. Exact counts mean an aggregate pass over
+  // the whole matched set, which on Oracle costs about what the search does --
+  // the table should not wait on it, and a facet failure should not take the
+  // results down with it.
+  useEffect(() => {
+    if (!activeWireQuery) {
+      setFacets(undefined);
+      return;
+    }
+
+    let cancelled = false;
+    setFacetsBusy(true);
+
+    (async () => {
+      try {
+        const res = await fetch('/api/labelquery/facets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: activeWireQuery, target_db: currentTargetDb }),
+        });
+        const json = await res.json();
+        if (cancelled) return;
+        setFacets(res.ok ? (json.facets as QueryFacets) : undefined);
+      } catch {
+        if (!cancelled) setFacets(undefined);
+      } finally {
+        if (!cancelled) setFacetsBusy(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWireQuery, currentTargetDb]);
 
   const handleSidebarQueryChange = useCallback(
     (newLabelQuery: LabelQuery) => {
@@ -483,7 +521,8 @@ function ResultsPage() {
               totalResults={total}
               loading={busy}
               onClearAll={handleClearAllSidebarFilters}
-              facets={data?.facets}
+              facets={facets}
+              facetsLoading={facetsBusy}
             />
           </aside>
 
