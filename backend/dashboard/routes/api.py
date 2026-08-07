@@ -38,7 +38,7 @@ def get_label_history(set_id):
     Returns the version history (lineage) for a specific set_id from local database.
     """
     try:
-        conn = FDALabelDBService.get_connection()
+        conn = FDALabelDBService.get_connection(force_local=True)
         if not conn:
             return jsonify({'error': 'Local database not connected'}), 503
             
@@ -87,7 +87,7 @@ def get_label_history_by_appr_num(appr_num):
     Returns the version history for all set_ids associated with a specific application number.
     """
     try:
-        conn = FDALabelDBService.get_connection()
+        conn = FDALabelDBService.get_connection(force_local=True)
         if not conn:
             return jsonify({'error': 'Local database not connected'}), 503
             
@@ -100,7 +100,15 @@ def get_label_history_by_appr_num(appr_num):
                 a.executive_summary, a.is_regulatory_notable, a.last_analyzed_at
             FROM labeling.sum_spl s
             LEFT JOIN labeling.history_analysis a ON s.spl_id = a.current_spl_id
-            WHERE s.appr_num = %s
+            -- Application numbers are stored in more than one presentation
+            -- (for example, NDA205767, NDA 205767, or a semicolon-separated
+            -- list). Match a normalized individual application identifier.
+            WHERE EXISTS (
+                SELECT 1
+                FROM regexp_split_to_table(COALESCE(s.appr_num, ''), '[;,]') AS app_no
+                WHERE regexp_replace(UPPER(TRIM(app_no)), '[^A-Z0-9]', '', 'g')
+                    = regexp_replace(UPPER(%s), '[^A-Z0-9]', '', 'g')
+            )
             ORDER BY s.version_number DESC, s.revised_date DESC
         """
         cursor.execute(sql, (appr_num,))

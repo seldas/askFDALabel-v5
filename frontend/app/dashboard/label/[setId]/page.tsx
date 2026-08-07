@@ -139,6 +139,11 @@ function ExportSectionItem({
 
 function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
   const brandName = data?.brand_name || data?.drug_name || 'this product';
+  const applicationNumber = String(data?.application_number || data?.metadata?.application_number || '').trim();
+  // A label can carry several application numbers, separated by commas or
+  // semicolons. The application profile follows one identifier at a time.
+  const historyApplicationNumber = applicationNumber.split(/[;,]/, 1)[0].trim();
+  const hasApplicationNumber = Boolean(historyApplicationNumber && !/^n\/?a$/i.test(historyApplicationNumber));
   const [favoriteToolIds, setFavoriteToolIds] = useState<string[]>([]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -275,6 +280,36 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
       badgeBorder: '1px solid rgba(217, 70, 239, 0.4)',
       accentColor: '#c026d3',
     },
+    {
+      id: 'label-history-set-id',
+      name: 'Archived Version Track',
+      blurb: 'Track historical versions of this label in the local label database.',
+      iconId: 'document',
+      href: withAppBase(`/dashboard/history/${encodeURIComponent(setId)}`),
+      cardBg: 'radial-gradient(circle at 88% 12%, rgba(79, 70, 229, 0.18) 0%, transparent 55%), linear-gradient(to right, rgba(79, 70, 229, 0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(79, 70, 229, 0.06) 1px, transparent 1px), linear-gradient(135deg, rgba(238, 242, 255, 0.92) 0%, rgba(224, 231, 255, 0.6) 100%)',
+      bgSize: '100% 100%, 18px 18px, 18px 18px, 100% 100%',
+      cardBorder: 'rgba(79, 70, 229, 0.32)',
+      cardShadow: '0 4px 16px rgba(79, 70, 229, 0.1)',
+      badgeBg: 'linear-gradient(135deg, rgba(79, 70, 229, 0.22) 0%, rgba(129, 140, 248, 0.35) 100%)',
+      badgeColor: '#4f46e5',
+      badgeBorder: '1px solid rgba(79, 70, 229, 0.4)',
+      accentColor: '#4f46e5',
+    },
+    ...(hasApplicationNumber ? [{
+      id: 'label-history-application',
+      name: 'FDA Application Profile',
+      blurb: `Track versions associated with ${historyApplicationNumber} in the local label database.`,
+      iconId: 'document',
+      href: withAppBase(`/dashboard/history_by_appr_num/${encodeURIComponent(historyApplicationNumber)}`),
+      cardBg: 'radial-gradient(circle at 88% 12%, rgba(8, 145, 178, 0.18) 0%, transparent 55%), repeating-linear-gradient(45deg, rgba(8, 145, 178, 0.05) 0px, rgba(8, 145, 178, 0.05) 2px, transparent 2px, transparent 10px), linear-gradient(135deg, rgba(236, 254, 255, 0.92) 0%, rgba(207, 250, 254, 0.6) 100%)',
+      bgSize: '100% 100%, 100% 100%, 100% 100%',
+      cardBorder: 'rgba(8, 145, 178, 0.32)',
+      cardShadow: '0 4px 16px rgba(8, 145, 178, 0.1)',
+      badgeBg: 'linear-gradient(135deg, rgba(8, 145, 178, 0.22) 0%, rgba(34, 211, 238, 0.35) 100%)',
+      badgeColor: '#0891b2',
+      badgeBorder: '1px solid rgba(8, 145, 178, 0.4)',
+      accentColor: '#0891b2',
+    }] : []),
   ];
 
   const sortedTools = [...toolsList].sort((a, b) => {
