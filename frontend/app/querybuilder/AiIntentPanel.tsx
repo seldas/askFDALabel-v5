@@ -189,14 +189,6 @@ export function AiIntentPanel({
             ))}
           </div>
 
-          {error ? <p className="fdl-ai__error">{error}</p> : null}
-          {notes.length > 0 ? (
-            <ul className="fdl-ai__notes">
-              {notes.map((n) => (
-                <li key={n}>{n}</li>
-              ))}
-            </ul>
-          ) : null}
         </>
       )}
 
@@ -244,6 +236,43 @@ export function AiIntentPanel({
           </span>
         </div>
       )}
+
+      {/*
+       * Outside the !isFolded block on purpose. A successful translate() sets
+       * these and folds the panel on the very next line, so while they lived
+       * with the textarea every translation note and error was written and
+       * hidden in the same render — the user only ever saw the prompt chip.
+       */}
+      {error ? (
+        <p className="fdl-ai__error" style={{ marginTop: '12px' }}>
+          {error}
+        </p>
+      ) : null}
+      {notes.length > 0 ? (
+        <ul className="fdl-ai__notes" style={{ marginTop: '12px', paddingLeft: '0', listStyle: 'none' }}>
+          {notes.map((n) => {
+            const isWarn = n.toLowerCase().includes('warning') || n.toLowerCase().includes('not available') || n.toLowerCase().includes('omitted');
+            return (
+              <li
+                key={n}
+                style={{
+                  color: isWarn ? '#b45309' : '#475569',
+                  fontWeight: isWarn ? 700 : 500,
+                  backgroundColor: isWarn ? '#fef3c7' : 'transparent',
+                  padding: isWarn ? '8px 14px' : '3px 0',
+                  borderRadius: isWarn ? '8px' : '0',
+                  border: isWarn ? '1px solid #f59e0b' : 'none',
+                  marginBottom: isWarn ? '8px' : '4px',
+                  fontSize: '0.86rem',
+                  lineHeight: '1.4',
+                }}
+              >
+                {isWarn && !n.startsWith('⚠️') ? `⚠️ ${n}` : n}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
     </section>
   );
 }

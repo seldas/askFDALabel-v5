@@ -65,6 +65,8 @@ function HomePage() {
   const [options, setOptions] = useState<OptionLists>(EMPTY_OPTIONS);
   const [error, setError] = useState<string | null>(null);
   const [hasSaved, setHasSaved] = useState(false);
+  // The target the user clicked, held until they confirm losing the query.
+  const [pendingDb, setPendingDb] = useState<TargetDb | null>(null);
 
   // Auto-switch to local DB if Oracle is unavailable in this environment
   useEffect(() => {
@@ -76,6 +78,16 @@ function HomePage() {
   useEffect(() => {
     setHasSaved(Boolean(window.localStorage.getItem(LAST_QUERY_KEY)));
   }, []);
+
+  // Escape cancels the switch, matching the backdrop click.
+  useEffect(() => {
+    if (!pendingDb) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPendingDb(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [pendingDb]);
 
   /* Coming back from the results page: the criteria tree travels in the same
    * `q` parameter the results page reads, so "Back to search" reopens the panel
@@ -140,7 +152,7 @@ function HomePage() {
   const runSearch = useCallback(() => {
     setError(null);
     try {
-      const wire = toWire(query);
+      const wire = toWire(query, targetDb);
       window.localStorage.setItem(LAST_QUERY_KEY, JSON.stringify(wire));
       setHasSaved(true);
       window.location.href = withAppBase(resultsPath(wire, targetDb));
@@ -164,6 +176,31 @@ function HomePage() {
     setQuery(makeEmptyQuery());
     setError(null);
   }, []);
+
+  /* Switching target is destructive, so a configured query gets a confirmation
+   * first. The two backends do not share fields or vocabularies — the criteria
+   * one supports the other silently ignores, and the option lists behind the
+   * dropdowns are refetched per target — so carrying the old tree across would
+   * leave criteria that look configured but cannot run. */
+  const requestTargetDb = useCallback(
+    (next: TargetDb) => {
+      if (next === targetDb) return;
+      if (countFilled(query) > 0) {
+        setPendingDb(next);
+        return;
+      }
+      setTargetDb(next);
+    },
+    [targetDb, query],
+  );
+
+  const confirmTargetDb = useCallback(() => {
+    if (!pendingDb) return;
+    setTargetDb(pendingDb);
+    setQuery(makeEmptyQuery());
+    setError(null);
+    setPendingDb(null);
+  }, [pendingDb]);
 
   const handleGuestLogin = async () => {
     try {
@@ -217,7 +254,7 @@ function HomePage() {
           <button
             type="button"
             className={`fdl-target-db-pill ${targetDb === 'local' ? 'active' : ''}`}
-            onClick={() => setTargetDb('local')}
+            onClick={() => requestTargetDb('local')}
             title="Local DB — Search local structured drug and SPL records"
           >
             {TARGET_DB_LABELS.local}
@@ -226,7 +263,7 @@ function HomePage() {
           <button
             type="button"
             className={`fdl-target-db-pill ${targetDb === 'oracle' ? 'active' : ''}`}
-            onClick={() => oracleAvailable && setTargetDb('oracle')}
+            onClick={() => oracleAvailable && requestTargetDb('oracle')}
             disabled={!oracleAvailable}
             title="CDER-CBER ver. — Search human prescription and OTC drug labeling"
           >
@@ -235,7 +272,7 @@ function HomePage() {
           <button
             type="button"
             className={`fdl-target-db-pill ${targetDb === 'oracle_all' ? 'active' : ''}`}
-            onClick={() => oracleAvailable && setTargetDb('oracle_all')}
+            onClick={() => oracleAvailable && requestTargetDb('oracle_all')}
             disabled={!oracleAvailable}
             title="FDA ver. — Search all drug labeling including human and animal records"
           >
@@ -271,6 +308,84 @@ function HomePage() {
 
         {error ? <p className="fdl-error">{error}</p> : null}
       </main>
+
+      {/* Outside actionBar on purpose — that helper is mounted twice. */}
+      {pendingDb ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="fdl-dbswitch-title"
+          onClick={() => setPendingDb(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.6)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#ffffff',
+              borderRadius: '14px',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 24px 60px -12px rgba(15, 23, 42, 0.35)',
+              padding: '24px',
+              maxWidth: '480px',
+              width: '100%',
+            }}
+          >
+            <h2
+              id="fdl-dbswitch-title"
+              style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}
+            >
+              ⚠️ Switch to {TARGET_DB_LABELS[pendingDb]}?
+            </h2>
+            <p
+              style={{
+                marginTop: '10px',
+                marginBottom: 0,
+                color: '#475569',
+                fontSize: '0.9rem',
+                lineHeight: 1.5,
+              }}
+            >
+              You have {filled} active {filled === 1 ? 'criterion' : 'criteria'} configured.
+              Switching from <strong>{TARGET_DB_LABELS[targetDb]}</strong> to{' '}
+              <strong>{TARGET_DB_LABELS[pendingDb]}</strong> will clear the current query — the
+              two databases do not offer the same fields or value lists, so the criteria cannot
+              carry across.
+            </p>
+            <div
+              style={{
+                marginTop: '20px',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '10px',
+              }}
+            >
+              <button
+                type="button"
+                className="fdl-btn fdl-btn--quiet"
+                onClick={() => setPendingDb(null)}
+              >
+                Keep current query
+              </button>
+              <button type="button" className="fdl-btn fdl-btn--search" onClick={confirmTargetDb}>
+                Switch and clear
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <Footer />
     </Page>

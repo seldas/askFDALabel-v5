@@ -1354,9 +1354,12 @@ Rules:
 _TRANSLATE_SCOPE_NOTES = {
     'local': """
 Target database: LOCAL import (PostgreSQL).
-- "deaSchedule", "activeMoiety", "applicationType", "fullText", "labelingSection" (text search) and "meddra" are NOT available on the local database. Do not emit them; put the requirement in "notes" instead.
-- Chemical structure search is handled by the dedicated Chemical Structure Search
-  tool (/chemsearch), not the query builder. Do not emit "chemicalStructure".
+- "fullText", "labelingSection" (section text search) and "meddra" criteria are NOT available on the Local DB. Do not generate these criteria.
+- Adapt the query to use available criteria on Local DB: "productName", "pharmClass", "identifier", or virtual section "Product Title" / "Initial U.S. Approval".
+- If full-text search, section text, or MedDRA safety terms were explicitly requested and cannot be expressed with available criteria, DO NOT generate those criteria. Instead, add a prominent warning in "notes":
+  "Warning: The requested section text, full-text, or MedDRA safety terms are unavailable on the Local DB and were omitted. To search section text or MedDRA terms, please switch to a CDER-CBER (Oracle) database version."
+- "deaSchedule", "activeMoiety", and "applicationType" are also NOT available on the Local DB.
+- Chemical structure search is handled by the dedicated Chemical Structure Search tool (/chemsearch), not the query builder. Do not emit "chemicalStructure".
 """,
     'oracle': """
 Target database: FDALabel Oracle, CDER-CBER scope.
@@ -1461,10 +1464,16 @@ def _sanitize_translation(parsed, target_db='local'):
     if dropped:
         notes.append('Dropped unsupported criteria: ' + ', '.join(sorted(set(dropped))))
     if unavailable:
-        notes.append(
-            'Not available on the selected database, so left out: '
-            + ', '.join(sorted(set(unavailable)))
-        )
+        unsupported_names = sorted(set(unavailable))
+        if target_db == 'local' and any(u in ('fullText', 'labelingSection', 'meddra') for u in unsupported_names):
+            notes.append(
+                'Warning: The requested section text, full-text, or MedDRA safety terms are unavailable on the Local DB and were omitted. To search section text or MedDRA terms, please switch to a CDER-CBER (Oracle) database version.'
+            )
+        else:
+            notes.append(
+                'Not available on the selected database, so left out: '
+                + ', '.join(unsupported_names)
+            )
     return {'groups': groups}, notes
 
 

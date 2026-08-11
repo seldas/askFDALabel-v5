@@ -83,7 +83,8 @@ export function QueryPanel({
             {sectionsToRender.map((sec, secIdx) => {
               const stepNumber = secIdx + 1;
               const secKey = `${group.uid}_${sec.id}`;
-              const isCollapsed = Boolean(collapsedSections[secKey]);
+              const isSectionDisabled = sec.id === 'textMatch' && targetDb === 'local';
+              const isCollapsed = isSectionDisabled || Boolean(collapsedSections[secKey]);
 
               // Filter criteria belonging to this section
               const sectionCriteria = group.criteria.filter(
@@ -105,15 +106,20 @@ export function QueryPanel({
               return (
                 <section
                   key={sec.id}
-                  className={`fdl-step-section fdl-step-section--step-${stepNumber} fdl-step-section--${sec.id} ${isCollapsed ? 'is-collapsed' : ''}`}
+                  className={`fdl-step-section fdl-step-section--step-${stepNumber} fdl-step-section--${sec.id} ${isCollapsed ? 'is-collapsed' : ''} ${isSectionDisabled ? 'is-disabled' : ''}`}
                 >
                   <header
                     className="fdl-step-header"
-                    onClick={() => toggleSection(secKey)}
+                    onClick={() => {
+                      if (!isSectionDisabled) {
+                        toggleSection(secKey);
+                      }
+                    }}
                     role="button"
-                    tabIndex={0}
+                    tabIndex={isSectionDisabled ? -1 : 0}
+                    style={{ cursor: isSectionDisabled ? 'not-allowed' : 'pointer' }}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
+                      if (!isSectionDisabled && (e.key === 'Enter' || e.key === ' ')) {
                         e.preventDefault();
                         toggleSection(secKey);
                       }
@@ -122,12 +128,38 @@ export function QueryPanel({
                     <div className="fdl-step-header__left">
                       <span className="fdl-step-badge">{stepNumber}</span>
                       <div className="fdl-step-header__titles">
-                        <h3 className="fdl-step-title">{sec.title}</h3>
+                        <h3 className="fdl-step-title">
+                          {sec.title}
+                          {isSectionDisabled && (
+                            <span
+                              className="fdl-header-disabled-badge"
+                              style={{
+                                marginLeft: '10px',
+                                backgroundColor: '#fef3c7',
+                                color: '#92400e',
+                                border: '1px solid #f59e0b',
+                                padding: '2px 8px',
+                                borderRadius: '10px',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                            >
+                              ⚠️ Unavailable for Local DB (Ignored)
+                            </span>
+                          )}
+                        </h3>
                         <p className="fdl-step-subtitle">{sec.subtitle}</p>
                       </div>
                     </div>
                     <div className="fdl-step-header__right">
-                      {activeCount > 0 ? (
+                      {isSectionDisabled ? (
+                        <span className="fdl-active-tag fdl-active-tag--disabled" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                          Folded (Ignored)
+                        </span>
+                      ) : activeCount > 0 ? (
                         <span className="fdl-active-tag fdl-active-tag--highlight">
                           {activeCount} active
                         </span>
@@ -136,7 +168,7 @@ export function QueryPanel({
                       ) : (
                         <span className="fdl-active-tag fdl-active-tag--none">Optional</span>
                       )}
-                      <span className="fdl-collapse-arrow">{isCollapsed ? '▼' : '▲'}</span>
+                      <span className="fdl-collapse-arrow">{isSectionDisabled ? '🔒' : isCollapsed ? '▼' : '▲'}</span>
                     </div>
                   </header>
 

@@ -421,10 +421,24 @@ export function makeEmptyQuery(): LabelQuery {
 }
 
 /** Drops client-only ids so the tree matches what the compiler expects. */
-export function toWire(query: LabelQuery): WireQuery {
+export function toWire(query: LabelQuery, targetDb?: TargetDb): WireQuery {
   return {
     groups: query.groups.map((g) => ({
-      criteria: g.criteria.map((c) => ({ type: c.type, value: c.value })),
+      criteria: g.criteria
+        .filter((c) => {
+          if (targetDb === 'local') {
+            if (c.type === 'fullText' || c.type === 'meddra') return false;
+            if (c.type === 'labelingSection') {
+              const v = c.value as any;
+              const rawSections = v?.sections || [];
+              const isProductTitle = rawSections.some((s: string) => s === 'SPLTITLE' || s === 'Product Title');
+              const isApprovalYear = rawSections.some((s: string) => s === '43683-2' || s === 'Initial U.S. Approval [4 Digit Year]');
+              if (!isProductTitle && !isApprovalYear) return false;
+            }
+          }
+          return true;
+        })
+        .map((c) => ({ type: c.type, value: c.value })),
     })),
   };
 }
