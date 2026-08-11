@@ -37,29 +37,11 @@ def _clamp01(x: float) -> float:
     return x
 
 def run_semantic_retriever(state):
-    state.agent_flow.append("semantic_retriever")
-
-    query = (state.conversation.get("user_query") or "").strip()
-    top_k = int((state.config or {}).get("top_k", 50) or 50)
-
-    if not query:
-        state.trace_log.append("SemanticRetriever: Empty query; skipping.")
-        state.flags["next_step"] = "reranker"
-        return
-
-    # Ensure plan exists early (avoids KeyError if called from keyword path)
+    state.trace_log.append("SemanticRetriever: spl_sections table disabled for local PG database; skipping semantic retrieval.")
     state.retrieval = state.retrieval or {}
-    state.retrieval.setdefault("plan", {})
-    plan = state.retrieval["plan"]
-
-    query_emb = None
-    use_fts = True
-
-    database_url = os.getenv("DATABASE_URL")
-    if not database_url:
-        state.trace_log.append("SemanticRetriever: Missing DATABASE_URL.")
-        state.flags["next_step"] = "reranker"
-        return
+    state.retrieval["results"] = []
+    state.flags["next_step"] = "reranker"
+    return
 
     # Optional constraints passed from keyword_retriever/planner/controller
     filter_set_ids = _normalize_set_id_filter(plan.get("filter_set_ids"))

@@ -158,7 +158,7 @@ def get_drugs():
         
     if is_plr:
         where_clauses.append(
-            "EXISTS (SELECT 1 FROM labeling.spl_sections sec WHERE sec.spl_id = s.spl_id AND sec.loinc_code = '43685-7')"
+            "(s.doc_type ILIKE '%HUMAN PRESCRIPTION%' OR s.doc_type IN ('34391-3', '48401-4', '48402-2'))"
         )
 
     where_clause = " AND ".join(where_clauses)
@@ -525,7 +525,7 @@ def autocomplete():
 
     if is_plr:
         where_clauses.append(
-            "EXISTS (SELECT 1 FROM labeling.spl_sections sec WHERE sec.spl_id = s.spl_id AND sec.loinc_code = '43685-7')"
+            "(s.doc_type ILIKE '%HUMAN PRESCRIPTION%' OR s.doc_type IN ('34391-3', '48401-4', '48402-2'))"
         )
 
     where_clause = " AND ".join(where_clauses)

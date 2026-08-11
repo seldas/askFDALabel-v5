@@ -474,16 +474,14 @@ def _c_product_name(criterion, bag, warnings):
 
 
 def _c_full_text(criterion, bag, warnings):
-    tsquery = _tsquery_sql(criterion.get('mode') or 'simple', criterion.get('text'), bag)
-    if not tsquery:
-        return None
-    return _sections_exists(tsquery, None, bag)
+    if (criterion.get('text') or '').strip():
+        warnings.append('Full-text search is disabled for the local database.')
+    return None
 
 
 def _c_labeling_section(criterion, bag, warnings):
     raw_sections = _as_list(criterion.get('sections'))
     text = (criterion.get('text') or '').strip()
-    mode = criterion.get('mode') or 'simple'
 
     if not text and not raw_sections:
         return None
@@ -491,6 +489,9 @@ def _c_labeling_section(criterion, bag, warnings):
     is_product_title = any(s in ('SPLTITLE', 'Product Title') for s in raw_sections)
     is_approval_year = any(s in ('43683-2', 'Initial U.S. Approval [4 Digit Year]') for s in raw_sections)
     other_sections = [s for s in raw_sections if s not in ('SPLTITLE', 'Product Title', '43683-2', 'Initial U.S. Approval [4 Digit Year]')]
+
+    if text or other_sections:
+        warnings.append('Section text and LOINC section search are disabled for the local database.')
 
     preds = []
 
@@ -512,13 +513,6 @@ def _c_labeling_section(criterion, bag, warnings):
             preds.append(f"(CAST(s.initial_approval_year AS TEXT) ILIKE {p_val})")
         else:
             preds.append("(s.initial_approval_year IS NOT NULL)")
-
-    # 3. LOINC & Section Title Sections
-    if other_sections or (not is_product_title and not is_approval_year):
-        tsquery = _tsquery_sql(mode, text, bag)
-        sec_pred = _sections_exists(tsquery, other_sections if other_sections else None, bag)
-        if sec_pred:
-            preds.append(sec_pred)
 
     if not preds:
         return None
@@ -561,24 +555,9 @@ def _c_market_status(criterion, bag, warnings):
 
 def _c_meddra(criterion, bag, warnings, expand_meddra=None):
     terms = _as_list(criterion.get('terms')) or _split_terms(criterion.get('text'))
-    if not terms:
-        return None
-    level = (criterion.get('level') or 'pt').lower()
-    # Every level expands, PT included: labels write the LLT, so a PT that is
-    # not resolved to its descendants matches only the labels that happen to
-    # use the PT's own wording. LLT is already the leaf and expands to itself.
-    if expand_meddra and level != 'llt':
-        expanded = expand_meddra(level, terms)
-        if expanded:
-            terms = expanded
-        else:
-            warnings.append(
-                f'No MedDRA {level.upper()} terms matched; searched the text as entered.'
-            )
-    tsquery = _tsquery_union(terms, bag)
-    if not tsquery:
-        return None
-    return _sections_exists(tsquery, _as_list(criterion.get('sections')), bag)
+    if terms:
+        warnings.append('MedDRA search is disabled for the local database.')
+    return None
 
 
 def _c_pharm_class(criterion, bag, warnings):
@@ -816,90 +795,10 @@ def order_by_sql(sort, direction):
 
 
 def _section_criterion_clause(criterion, bag, warnings, expand_meddra):
-    ctype = criterion.get('type')
-    value = criterion.get('value') or {}
-    
-    if ctype == 'fullText':
-        tsquery = _tsquery_sql(value.get('mode') or 'simple', value.get('text'), bag)
-        if not tsquery:
-            return None
-        return f'sec.search_vector @@ {tsquery}'
-
-    if ctype == 'labelingSection':
-        raw_sections = _as_list(value.get('sections'))
-        text = (value.get('text') or '').strip()
-        mode = value.get('mode') or 'simple'
-        
-        # Exclude virtual sections handled at sum_spl level
-        other_sections = [s for s in raw_sections if s not in ('SPLTITLE', 'Product Title', '43683-2', 'Initial U.S. Approval [4 Digit Year]')]
-        tsquery = _tsquery_sql(mode, text, bag)
-        
-        conds = []
-        if tsquery:
-            conds.append(f'sec.search_vector @@ {tsquery}')
-        if other_sections:
-            loincs_set = set()
-            for f in other_sections:
-                if re.match(r'^[\d.\-]+$', f):
-                    loincs_set.add(f)
-                else:
-                    clean = re.sub(r'^[0-9]+(\.[0-9]+)*\s*', '', f).strip().upper()
-                    if clean in TITLE_TO_LOINCS:
-                        for l in TITLE_TO_LOINCS[clean]:
-                            loincs_set.add(l)
-                    else:
-                        for key, l_list in TITLE_TO_LOINCS.items():
-                            if clean and (clean in key or key in clean):
-                                for l in l_list:
-                                    loincs_set.add(l)
-            loincs = list(loincs_set)
-            if loincs:
-                conds.append(f'sec.loinc_code = ANY({bag.add(loincs)})')
-
-        if not conds:
-            return None
-        return '(' + ' AND '.join(conds) + ')'
-
-    if ctype == 'meddra':
-        terms = _as_list(value.get('terms')) or _split_terms(value.get('text'))
-        if not terms:
-            return None
-        level = (value.get('level') or 'pt').lower()
-        # Same rule as _c_meddra: everything above LLT expands down to the LLTs,
-        # because that is the wording labels actually use. These two paths are
-        # both live -- this one runs whenever the query splits into a section
-        # half -- so a change to one is wrong unless it is made to both.
-        if expand_meddra and level != 'llt':
-            expanded = expand_meddra(level, terms)
-            if expanded:
-                terms = expanded
-            else:
-                warnings.append(
-                    f'No MedDRA {level.upper()} terms matched; searched the text as entered.'
-                )
-        tsquery = _tsquery_union(terms, bag)
-        if not tsquery:
-            return None
-        sec_list = _as_list(value.get('sections'))
-        conds = [f'sec.search_vector @@ {tsquery}']
-        if sec_list:
-            loincs_set = set()
-            for f in sec_list:
-                if re.match(r'^[\d.\-]+$', f):
-                    loincs_set.add(f)
-                else:
-                    clean = re.sub(r'^[0-9]+(\.[0-9]+)*\s*', '', f).strip().upper()
-                    if clean in TITLE_TO_LOINCS:
-                        for l in TITLE_TO_LOINCS[clean]:
-                            loincs_set.add(l)
-            if loincs_set:
-                conds.append(f'sec.loinc_code = ANY({bag.add(list(loincs_set))})')
-        return '(' + ' AND '.join(conds) + ')'
-
     return None
 
 
-SECTION_CRITERION_TYPES = ('fullText', 'labelingSection', 'meddra')
+SECTION_CRITERION_TYPES = ()
 
 VIRTUAL_SECTIONS = (
     'SPLTITLE', 'Product Title',

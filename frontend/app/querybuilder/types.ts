@@ -351,6 +351,9 @@ export const CRITERION_SUPPORT: Partial<Record<CriterionType, TargetDb[]>> = {
   deaSchedule: ['oracle', 'oracle_all'],
   activeMoiety: ['oracle', 'oracle_all'],
   applicationType: ['oracle', 'oracle_all'],
+  fullText: ['oracle', 'oracle_all'],
+  labelingSection: ['oracle', 'oracle_all'],
+  meddra: ['oracle', 'oracle_all'],
 };
 
 /**
@@ -360,6 +363,12 @@ export const CRITERION_SUPPORT: Partial<Record<CriterionType, TargetDb[]>> = {
 export const CRITERION_UNAVAILABLE_REASON: Partial<Record<CriterionType, string>> = {
   applicationType:
     'Application Types / Marketing Categories is currently not available for the Local DB.',
+  fullText:
+    'Labeling Full Text Search is disabled for the Local DB.',
+  labelingSection:
+    'Labeling Text & Section Search is disabled for the Local DB.',
+  meddra:
+    'MedDRA Terms Search is disabled for the Local DB.',
 };
 
 /**

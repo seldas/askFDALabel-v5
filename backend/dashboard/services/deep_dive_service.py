@@ -332,7 +332,6 @@ class DeepDiveService:
                         )
                         SELECT DISTINCT s.set_id, s.is_rld, s.doc_type
                         FROM {schema}sum_spl s
-                        JOIN {schema}spl_sections sec ON s.spl_id = sec.spl_id
                         JOIN {schema}active_ingredients_map m ON s.spl_id = m.spl_id
                         WHERE m.unii IN (SELECT substance_unii FROM related_unii)
                         LIMIT 100
@@ -357,11 +356,9 @@ class DeepDiveService:
 
             # 2. Gather by Generic Names (Direct)
             for gn in name_list[:3]:
-                # Join with spl_sections to ensure we only pick labels with actual XML content
                 sql = f"""
                     SELECT DISTINCT s.set_id, s.is_rld, s.doc_type 
                     FROM {schema}sum_spl s
-                    JOIN {schema}spl_sections sec ON s.spl_id = sec.spl_id
                     WHERE s.generic_names ILIKE %s LIMIT 100
                 """
                 cursor.execute(sql, (f"%{gn}%",))
@@ -402,7 +399,6 @@ class DeepDiveService:
                     sql_peers = f"""
                         SELECT DISTINCT s.set_id, s.is_rld, s.doc_type
                         FROM {schema}sum_spl s
-                        JOIN {schema}spl_sections sec ON s.spl_id = sec.spl_id
                         WHERE {' OR '.join(where_parts)}
                         LIMIT 100
                     """

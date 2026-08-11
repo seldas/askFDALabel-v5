@@ -251,20 +251,12 @@ class FDALabelDBService:
                         ndc_clauses.append(f"REPLACE({c_ndc}, '-', '') LIKE :ndc_{i}")
                 where_clauses.append(f"({ ' OR '.join(ndc_clauses) })")
 
-            if filters.get("adverseEvents"):
-                ae_terms = filters["adverseEvents"]
-                key = "ae_combined"
-                if is_pg:
-                    # Postgres: plainto_tsquery naturally ANDs multiple words together
-                    params[key] = " ".join(ae_terms)
-                    ae_subquery = f"EXISTS (SELECT 1 FROM labeling.spl_sections s WHERE s.spl_id = {schema}{table}.spl_id AND s.search_vector @@ plainto_tsquery('english', %(ae_combined)s))"
-                else:
+                if not is_pg:
                     # Oracle: CONTAINS uses explicit AND operators
                     oracle_term = " AND ".join([f"{{{term}}}" for term in ae_terms])  # Wrap in braces to handle spaces in terms
                     params[key] = oracle_term
                     ae_subquery = f"EXISTS (SELECT 1 FROM druglabel.SPL_SEC s WHERE s.SPL_ID = druglabel.DGV_SUM_SPL.SPL_ID AND CONTAINS(s.CONTENT_XML, :ae_combined) > 0)"
-                
-                where_clauses.append(ae_subquery)
+                    where_clauses.append(ae_subquery)
 
             if filters.get("labelingTypes"):
                 key = "doc_types"
@@ -627,11 +619,9 @@ class FDALabelDBService:
             else:
                 schema = "labeling."
                 if generic_name and not epc:
-                    # Only count labels with XML content
                     sql = f"""
                         SELECT COUNT(DISTINCT s.set_id) 
                         FROM {schema}sum_spl s
-                        JOIN {schema}spl_sections sec ON s.spl_id = sec.spl_id
                         WHERE s.generic_names ILIKE %(q)s AND s.is_latest = TRUE
                     """
                     cursor.execute(sql, {"q": f"%{generic_name}%"})
@@ -661,22 +651,20 @@ class FDALabelDBService:
                             if gn.strip(): all_gns.add(gn.strip().upper())
 
                     if all_gns:
-                        # 2. Count labels with XML content that have ANY of these generic names
+                        # 2. Count labels that have ANY of these generic names
                         where_parts = [f"s.generic_names ILIKE %s"] * len(all_gns)
                         sql_count = f"""
                             SELECT COUNT(DISTINCT s.set_id) 
                             FROM {schema}sum_spl s
-                            JOIN {schema}spl_sections sec ON s.spl_id = sec.spl_id
                             WHERE ({' OR '.join(where_parts)}) AND s.is_latest = TRUE
                         """
                         cursor.execute(sql_count, [f"%{gn}%" for gn in all_gns])
                         results["epc_count"] = cls._get_count(cursor.fetchone())
                     else:
-                        # Fallback to direct EPC count with XML join
+                        # Fallback to direct EPC count
                         sql = f"""
                             SELECT COUNT(DISTINCT s.set_id) 
                             FROM {schema}sum_spl s 
-                            JOIN {schema}spl_sections sec ON s.spl_id = sec.spl_id
                             LEFT JOIN {schema}epc_map e ON s.spl_id = e.spl_id 
                             WHERE (s.epc ILIKE %(q)s OR e.epc_term ILIKE %(q)s) AND s.is_latest = TRUE
                         """
@@ -728,8 +716,10 @@ class FDALabelDBService:
     def get_structured_sections_by_spl_id(cls, spl_id):
         """
         Returns stored sections for one SPL version in a structured form.
-        Adapts to actual column names present in labeling.spl_sections.
+        Disabled for local PostgreSQL database mode.
         """
+        if cls._db_type == 'postgres' or cls.is_local():
+            return []
         if not cls.check_connectivity():
             return []
         conn = cls.get_connection()
