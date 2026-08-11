@@ -17,6 +17,12 @@ The search pulls SMILES strings from the Oracle DRUGLABEL.UNII_CHEM_STRUCT
 table, screens them with RDKit in Python (exact / substructure / similarity),
 then resolves the matching UNIIs to drug-label rows via SUM_SPL.
 
+Two caches keep that off the hot path. The structure library — parsed
+molecules plus Morgan and pattern fingerprints — is built once per worker and
+reused for a day. Screening results are keyed by the query and held for
+minutes, so paging through a result set does not re-screen the library.
+GET /status reports the state of both.
+
 If RDKit is not installed, exact match is still offered via a plain SQL
 equality on the SMILES column. Substructure and similarity return 501.
 If RDKit is present but exposes no usable Morgan fingerprint API, only
@@ -28,7 +34,15 @@ import re
 import urllib.request
 import urllib.error
 import json
+import os
+import time
+import hashlib
+import logging
+import threading
+from collections import OrderedDict
 from flask import Blueprint, request, jsonify
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Optional RDKit import — degrades gracefully when not installed.
@@ -46,19 +60,23 @@ try:
     except ImportError:
         # Older RDKit versions expose it directly on Chem
         MolFromInchi = getattr(Chem, 'MolFromInchi', None)
+    import rdkit as _rdkit
+    RDKIT_VERSION = getattr(_rdkit, '__version__', None)
     RDKIT_AVAILABLE = True
 except ImportError:
     RDKIT_AVAILABLE = False
+    RDKIT_VERSION = None
     MolFromInchi = None
 
 # Morgan fingerprint backend: the generator API is current (RDKit >= 2022.09);
 # GetMorganFingerprintAsBitVect is the deprecated fallback for older builds.
+_FP_BITS = 2048
 _MORGAN_GEN = None
 _MORGAN_LEGACY = None
 if RDKIT_AVAILABLE:
     try:
         from rdkit.Chem import rdFingerprintGenerator as _rfg
-        _MORGAN_GEN = _rfg.GetMorganGenerator(radius=2, fpSize=2048)
+        _MORGAN_GEN = _rfg.GetMorganGenerator(radius=2, fpSize=_FP_BITS)
     except Exception:
         try:
             from rdkit.Chem.rdMolDescriptors import (
@@ -72,6 +90,16 @@ FINGERPRINT_AVAILABLE = _MORGAN_GEN is not None or _MORGAN_LEGACY is not None
 # Oracle allows at most 1000 expressions in an IN (...) list, so UNII lookups
 # are issued in chunks below that ceiling.
 _ORACLE_IN_CHUNK = 900
+
+# --- Cache tuning ----------------------------------------------------------
+# UNII_CHEM_STRUCT changes rarely, so the parsed structure library is held for
+# a day. Screening results are held far more briefly — just long enough to
+# cover a user paging through one result set.
+_STRUCT_TTL      = int(os.getenv('CHEMSEARCH_STRUCT_TTL', 24 * 3600))
+_RESULT_TTL      = int(os.getenv('CHEMSEARCH_RESULT_TTL', 900))
+_RESULT_MAX_KEYS = int(os.getenv('CHEMSEARCH_RESULT_MAX_KEYS', 16))
+# Result sets larger than this are screened but never cached, to bound memory.
+_RESULT_MAX_ROWS = int(os.getenv('CHEMSEARCH_RESULT_MAX_ROWS', 20000))
 
 # InChIKey pattern: 3 blocks of uppercase letters separated by hyphens (27 chars total)
 _INCHIKEY_RE = re.compile(r'^[A-Z]{14}-[A-Z]{10}-[A-Z]$')
@@ -202,7 +230,7 @@ def _parse_input(raw: str):
     return result
 
 
-def _morgan_fp(mol, radius=2, nbits=2048):
+def _morgan_fp(mol, radius=2, nbits=_FP_BITS):
     """Morgan (ECFP4) bit-vector fingerprint, generator API preferred."""
     if _MORGAN_GEN is not None:
         return _MORGAN_GEN.GetFingerprint(mol)
@@ -220,6 +248,211 @@ def _fetch_all_structures(conn):
     rows = cursor.fetchall()
     cursor.close()
     return [(r[0], r[1]) for r in rows if r[1]]
+
+
+# ---------------------------------------------------------------------------
+# Structure library cache
+#
+# Parsing 10 k SMILES on every request dominated the cost of substructure and
+# similarity search. The library is parsed once per worker into three parallel
+# arrays and reused: Morgan fingerprints for bulk Tanimoto, pattern
+# fingerprints as a substructure screen, and binary mol blobs so survivors of
+# that screen can be rehydrated (~4x faster than re-parsing SMILES) instead of
+# holding 10 k live molecules in memory.
+# ---------------------------------------------------------------------------
+
+class _StructureLibrary:
+    __slots__ = ('uniis', 'blobs', 'morgans', 'patterns', 'built_at', 'build_seconds', 'skipped')
+
+    def __init__(self):
+        self.uniis = []
+        self.blobs = []
+        self.morgans = []
+        self.patterns = []
+        self.built_at = 0.0
+        self.build_seconds = 0.0
+        self.skipped = 0
+
+    @property
+    def size(self):
+        return len(self.uniis)
+
+    @property
+    def age(self):
+        return time.time() - self.built_at
+
+
+_struct_lib = None
+_struct_lock = threading.Lock()
+
+
+def _build_structure_library(conn):
+    """Parse every stored SMILES once and precompute its fingerprints."""
+    started = time.perf_counter()
+    lib = _StructureLibrary()
+
+    for unii, smi in _fetch_all_structures(conn):
+        try:
+            mol = Chem.MolFromSmiles(smi)
+        except Exception:
+            mol = None
+        if mol is None:
+            lib.skipped += 1
+            continue
+        try:
+            pattern = Chem.PatternFingerprint(mol, fpSize=_FP_BITS)
+            morgan = _morgan_fp(mol) if FINGERPRINT_AVAILABLE else None
+            blob = mol.ToBinary()
+        except Exception:
+            lib.skipped += 1
+            continue
+        lib.uniis.append(unii)
+        lib.blobs.append(blob)
+        lib.patterns.append(pattern)
+        if morgan is not None:
+            lib.morgans.append(morgan)
+
+    lib.built_at = time.time()
+    lib.build_seconds = time.perf_counter() - started
+    logger.info(
+        'chemsearch: structure library built — %d structures, %d unparseable, %.2fs',
+        lib.size, lib.skipped, lib.build_seconds,
+    )
+    return lib
+
+
+def _get_structure_library(conn):
+    """Return the cached structure library, rebuilding it when stale."""
+    global _struct_lib
+
+    lib = _struct_lib
+    if lib is not None and lib.age < _STRUCT_TTL:
+        return lib
+
+    with _struct_lock:
+        # Another thread may have rebuilt it while we waited for the lock.
+        lib = _struct_lib
+        if lib is not None and lib.age < _STRUCT_TTL:
+            return lib
+        _struct_lib = _build_structure_library(conn)
+        return _struct_lib
+
+
+# ---------------------------------------------------------------------------
+# Screening-result cache
+#
+# Paging through a result set re-ran the whole screen for every page. Screen
+# output (matched UNIIs + scores) is keyed by the query itself, so pages after
+# the first — and repeat queries — skip the structure work entirely.
+#
+# Redis is shared across gunicorn workers, so a page served by a different
+# worker still hits. The in-process ring is the fallback when Redis is absent
+# (local dev, or a Redis outage) and never grows past _RESULT_MAX_KEYS.
+# ---------------------------------------------------------------------------
+
+_local_results = OrderedDict()
+_local_lock = threading.Lock()
+_redis_client = False        # False = not yet probed, None = unavailable
+
+
+def _redis():
+    global _redis_client
+    if _redis_client is not False:
+        return _redis_client
+    try:
+        import redis
+        url = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+        client = redis.Redis.from_url(url, socket_timeout=2, socket_connect_timeout=2)
+        client.ping()
+        _redis_client = client
+    except Exception as e:
+        logger.info('chemsearch: Redis unavailable (%s); using in-process result cache', e)
+        _redis_client = None
+    return _redis_client
+
+
+def _result_key(canonical, match_type, threshold):
+    raw = f'{canonical}|{match_type}|{threshold if match_type == "similarity" else ""}'
+    return 'chemsearch:screen:' + hashlib.sha256(raw.encode()).hexdigest()[:32]
+
+
+def _cache_get(key):
+    """Return {'uniis': [...], 'scores': {...}} or None."""
+    client = _redis()
+    if client is not None:
+        try:
+            blob = client.get(key)
+            if blob:
+                return json.loads(blob)
+        except Exception as e:
+            logger.warning('chemsearch: Redis read failed (%s)', e)
+
+    with _local_lock:
+        entry = _local_results.get(key)
+        if entry is None:
+            return None
+        if time.time() - entry['stored_at'] > _RESULT_TTL:
+            _local_results.pop(key, None)
+            return None
+        _local_results.move_to_end(key)
+        return entry['value']
+
+
+def _cache_put(key, uniis, scores):
+    if len(uniis) > _RESULT_MAX_ROWS:
+        return
+    value = {'uniis': uniis, 'scores': scores}
+
+    client = _redis()
+    if client is not None:
+        try:
+            client.setex(key, _RESULT_TTL, json.dumps(value))
+            return
+        except Exception as e:
+            logger.warning('chemsearch: Redis write failed (%s)', e)
+
+    with _local_lock:
+        _local_results[key] = {'value': value, 'stored_at': time.time()}
+        _local_results.move_to_end(key)
+        while len(_local_results) > _RESULT_MAX_KEYS:
+            _local_results.popitem(last=False)
+
+
+def _screen(conn, query_mol, match_type, threshold):
+    """
+    Run substructure or similarity screening over the cached structure library.
+    Returns (matched_uniis, scores).
+    """
+    lib = _get_structure_library(conn)
+    matched = []
+    scores = {}
+
+    if match_type == 'substructure':
+        query_pattern = Chem.PatternFingerprint(query_mol, fpSize=_FP_BITS)
+        for i, pattern in enumerate(lib.patterns):
+            # Cheap bit-level screen first; only survivors are rehydrated and
+            # put through the real (expensive) graph match.
+            if not DataStructs.AllProbeBitsMatch(query_pattern, pattern):
+                continue
+            try:
+                mol = Chem.Mol(lib.blobs[i])
+            except Exception:
+                continue
+            if mol.HasSubstructMatch(query_mol):
+                matched.append(lib.uniis[i])
+        return matched, scores
+
+    # Similarity — one bulk C++ loop over precomputed fingerprints.
+    query_fp = _morgan_fp(query_mol)
+    sims = DataStructs.BulkTanimotoSimilarity(query_fp, lib.morgans)
+    for i, sim in enumerate(sims):
+        if sim >= threshold:
+            unii = lib.uniis[i]
+            matched.append(unii)
+            scores[unii] = sim
+
+    matched.sort(key=lambda u: scores.get(u, 0), reverse=True)
+    return matched, scores
 
 
 def _labels_for_uniis(conn, unii_list):
@@ -325,6 +558,41 @@ def _row_to_result(row: dict, scores: dict, match_type: str) -> dict:
 # Routes
 # ---------------------------------------------------------------------------
 
+@chemsearch_bp.route('/status', methods=['GET'])
+def status():
+    """
+    Diagnostics for the chemistry backend: which match modes are live and
+    whether the structure library is warm. Reports capability only — it never
+    touches Oracle, so it answers even when the FDA network is unreachable.
+    """
+    lib = _struct_lib
+    return jsonify({
+        'rdkit_available':       RDKIT_AVAILABLE,
+        'rdkit_version':         RDKIT_VERSION,
+        'fingerprint_available': FINGERPRINT_AVAILABLE,
+        'morgan_backend':        ('generator' if _MORGAN_GEN is not None
+                                  else 'legacy' if _MORGAN_LEGACY is not None else None),
+        'modes': {
+            'exact':        True,
+            'substructure': RDKIT_AVAILABLE,
+            'similarity':   RDKIT_AVAILABLE and FINGERPRINT_AVAILABLE,
+        },
+        'structure_library': {
+            'loaded':        lib is not None,
+            'structures':    lib.size if lib else 0,
+            'unparseable':   lib.skipped if lib else 0,
+            'age_seconds':   round(lib.age, 1) if lib else None,
+            'build_seconds': round(lib.build_seconds, 2) if lib else None,
+            'ttl_seconds':   _STRUCT_TTL,
+        },
+        'result_cache': {
+            'backend':     'redis' if _redis() is not None else 'in-process',
+            'ttl_seconds': _RESULT_TTL,
+            'local_keys':  len(_local_results),
+        },
+    })
+
+
 @chemsearch_bp.route('/validate', methods=['GET'])
 def validate():
     """
@@ -398,6 +666,12 @@ def search():
     if parsed['warning']:
         warnings.append(parsed['warning'])
 
+    # A cached screen makes pagination cheap: pages after the first skip the
+    # structure work entirely and go straight to the label lookup.
+    cache_key = _result_key(canonical, match_type, threshold)
+    cached = _cache_get(cache_key) if match_type != 'exact' else None
+    cache_hit = cached is not None
+
     try:
         conn = _oracle()
     except RuntimeError as e:
@@ -405,9 +679,16 @@ def search():
 
     try:
         # ----------------------------------------------------------------
+        # Cached screen — matched UNIIs and scores are already known
+        # ----------------------------------------------------------------
+        if cache_hit:
+            matched_uniis = cached['uniis']
+            scores = cached['scores']
+
+        # ----------------------------------------------------------------
         # Exact match — pure SQL, no full-table fetch needed
         # ----------------------------------------------------------------
-        if match_type == 'exact':
+        elif match_type == 'exact':
             cursor = conn.cursor()
             cursor.execute(
                 'SELECT UNII FROM druglabel.UNII_CHEM_STRUCT WHERE SMILES = :s',
@@ -436,42 +717,15 @@ def search():
             scores = {}     # no score for exact
 
         # ----------------------------------------------------------------
-        # Substructure / similarity — fetch all, screen in Python
+        # Substructure / similarity — screen the cached structure library
         # ----------------------------------------------------------------
         else:
-            all_structs = _fetch_all_structures(conn)
             query_mol = Chem.MolFromSmiles(canonical)
             if query_mol is None:
                 return jsonify({'error': 'Could not build query molecule from SMILES.'}), 400
 
-            matched_uniis = []
-            scores = {}
-
-            if match_type == 'substructure':
-                for unii, smi in all_structs:
-                    try:
-                        mol = Chem.MolFromSmiles(smi)
-                        if mol and mol.HasSubstructMatch(query_mol):
-                            matched_uniis.append(unii)
-                    except Exception:
-                        pass
-            else:  # similarity
-                qfp = _morgan_fp(query_mol)
-                for unii, smi in all_structs:
-                    try:
-                        mol = Chem.MolFromSmiles(smi)
-                        if not mol:
-                            continue
-                        fp = _morgan_fp(mol)
-                        sim = DataStructs.TanimotoSimilarity(qfp, fp)
-                        if sim >= threshold:
-                            matched_uniis.append(unii)
-                            scores[unii] = sim
-                    except Exception:
-                        pass
-
-                # Sort by descending similarity before we go to SQL
-                matched_uniis.sort(key=lambda u: scores.get(u, 0), reverse=True)
+            matched_uniis, scores = _screen(conn, query_mol, match_type, threshold)
+            _cache_put(cache_key, matched_uniis, scores)
 
         # ----------------------------------------------------------------
         # Resolve UNIIs → label rows
@@ -493,6 +747,7 @@ def search():
             'match':        match_type,
             'threshold':    threshold if match_type == 'similarity' else None,
             'matched_uniis_count': len(matched_uniis),
+            'cached':       cache_hit,
             'warnings':     warnings,
         })
 
