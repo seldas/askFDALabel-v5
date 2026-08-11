@@ -19,7 +19,9 @@ then resolves the matching UNIIs to drug-label rows via SUM_SPL.
 
 If RDKit is not installed, exact match is still offered via a plain SQL
 equality on the SMILES column. Substructure and similarity return 501.
-If Oracle is unreachable the whole search returns a clear 503.
+If RDKit is present but exposes no usable Morgan fingerprint API, only
+similarity returns 501. If Oracle is unreachable the whole search returns
+a clear 503.
 """
 
 import re
@@ -30,11 +32,15 @@ from flask import Blueprint, request, jsonify
 
 # ---------------------------------------------------------------------------
 # Optional RDKit import — degrades gracefully when not installed.
+#
+# Only Chem + DataStructs gate RDKIT_AVAILABLE (parsing, canonicalization and
+# substructure need nothing else). Morgan fingerprints are resolved separately
+# so that a fingerprint API change in a future RDKit release disables only
+# similarity search instead of silently switching the whole module off.
 # ---------------------------------------------------------------------------
 try:
     from rdkit import Chem
-    from rdkit.Chem import DataStructs
-    from rdkit.Chem.rdMorganDescriptors import GetMorganFingerprintAsBitVect
+    from rdkit import DataStructs
     try:
         from rdkit.Chem.inchi import MolFromInchi
     except ImportError:
@@ -44,6 +50,28 @@ try:
 except ImportError:
     RDKIT_AVAILABLE = False
     MolFromInchi = None
+
+# Morgan fingerprint backend: the generator API is current (RDKit >= 2022.09);
+# GetMorganFingerprintAsBitVect is the deprecated fallback for older builds.
+_MORGAN_GEN = None
+_MORGAN_LEGACY = None
+if RDKIT_AVAILABLE:
+    try:
+        from rdkit.Chem import rdFingerprintGenerator as _rfg
+        _MORGAN_GEN = _rfg.GetMorganGenerator(radius=2, fpSize=2048)
+    except Exception:
+        try:
+            from rdkit.Chem.rdMolDescriptors import (
+                GetMorganFingerprintAsBitVect as _MORGAN_LEGACY,
+            )
+        except ImportError:
+            _MORGAN_LEGACY = None
+
+FINGERPRINT_AVAILABLE = _MORGAN_GEN is not None or _MORGAN_LEGACY is not None
+
+# Oracle allows at most 1000 expressions in an IN (...) list, so UNII lookups
+# are issued in chunks below that ceiling.
+_ORACLE_IN_CHUNK = 900
 
 # InChIKey pattern: 3 blocks of uppercase letters separated by hyphens (27 chars total)
 _INCHIKEY_RE = re.compile(r'^[A-Z]{14}-[A-Z]{10}-[A-Z]$')
@@ -175,7 +203,10 @@ def _parse_input(raw: str):
 
 
 def _morgan_fp(mol, radius=2, nbits=2048):
-    return GetMorganFingerprintAsBitVect(mol, radius, nBits=nbits)
+    """Morgan (ECFP4) bit-vector fingerprint, generator API preferred."""
+    if _MORGAN_GEN is not None:
+        return _MORGAN_GEN.GetFingerprint(mol)
+    return _MORGAN_LEGACY(mol, radius, nBits=nbits)
 
 
 def _fetch_all_structures(conn):
@@ -200,27 +231,64 @@ def _labels_for_uniis(conn, unii_list):
     if not unii_list:
         return []
 
-    # Oracle doesn't support psycopg2-style IN (:v1, :v2, ...) with variable
-    # length easily, so we build a bind-variable list dynamically.
-    placeholders = ', '.join(f':u{i}' for i in range(len(unii_list)))
-    params = {f'u{i}': v for i, v in enumerate(unii_list)}
-
-    sql = f"""
-        SELECT DISTINCT {_SUM_SPL_COLS},
-               ai.UNII as MATCH_UNII,
-               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld
-                WHERE rld.SPL_ID = s.SPL_ID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD
-        FROM druglabel.SUM_SPL s
-        JOIN druglabel.SUM_SPL_ACT_INGR_UNII ai ON ai.SPL_ID = s.SPL_ID
-        WHERE ai.UNII IN ({placeholders})
-        ORDER BY s.EFF_TIME DESC NULLS LAST
-    """
+    rows = []
+    seen = set()
     cursor = conn.cursor()
-    cursor.execute(sql, params)
-    columns = [d[0].lower() for d in cursor.description]
-    rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
-    cursor.close()
+    try:
+        # Oracle caps an IN (...) list at 1000 expressions, and a broad
+        # substructure query can easily match more UNIIs than that, so the
+        # lookup is chunked and the result sets merged here.
+        for start in range(0, len(unii_list), _ORACLE_IN_CHUNK):
+            chunk = unii_list[start:start + _ORACLE_IN_CHUNK]
+
+            # Oracle doesn't support psycopg2-style IN (:v1, :v2, ...) with
+            # variable length easily, so we build a bind-variable list
+            # dynamically.
+            placeholders = ', '.join(f':u{i}' for i in range(len(chunk)))
+            params = {f'u{i}': v for i, v in enumerate(chunk)}
+
+            sql = f"""
+                SELECT DISTINCT {_SUM_SPL_COLS},
+                       ai.UNII as MATCH_UNII,
+                       (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD_RS rld
+                        WHERE rld.SPL_ID = s.SPL_ID AND rld.REFERENCE_DRUG = 'Y') as IS_RLD
+                FROM druglabel.SUM_SPL s
+                JOIN druglabel.SUM_SPL_ACT_INGR_UNII ai ON ai.SPL_ID = s.SPL_ID
+                WHERE ai.UNII IN ({placeholders})
+            """
+            cursor.execute(sql, params)
+            columns = [d[0].lower() for d in cursor.description]
+            for row in cursor.fetchall():
+                d = dict(zip(columns, row))
+                key = (d.get('spl_id'), d.get('match_unii'))
+                if key in seen:
+                    continue
+                seen.add(key)
+                rows.append(d)
+    finally:
+        cursor.close()
     return rows
+
+
+def _eff_time_key(row: dict):
+    """Sort key for EFF_TIME that tolerates NULLs and DATE/VARCHAR columns."""
+    return str(row.get('revised_date') or '')
+
+
+def _sort_rows(rows: list, scores: dict, match_type: str) -> list:
+    """
+    Order label rows for presentation. ORDER BY moved out of SQL because the
+    UNII lookup is chunked, so no single query sees the whole result set.
+    Similarity ranks by Tanimoto first — otherwise the best matches can fall
+    off the far side of pagination.
+    """
+    if match_type == 'similarity':
+        return sorted(
+            rows,
+            key=lambda r: (scores.get(r.get('match_unii'), 0.0), _eff_time_key(r)),
+            reverse=True,
+        )
+    return sorted(rows, key=_eff_time_key, reverse=True)
 
 
 def _row_to_result(row: dict, scores: dict, match_type: str) -> dict:
@@ -312,6 +380,14 @@ def search():
             'hint': 'Use "exact" match, or contact the administrator to install rdkit.'
         }), 501
 
+    if match_type == 'similarity' and not FINGERPRINT_AVAILABLE:
+        return jsonify({
+            'error': 'Similarity search requires Morgan fingerprint support, which this '
+                     'RDKit build does not expose.',
+            'hint': 'Use "exact" or "substructure" match, or contact the administrator '
+                    'to upgrade rdkit.'
+        }), 501
+
     # Parse / canonicalize — handles SMILES, InChI, InChIKey
     parsed = _parse_input(raw_input)
     if parsed['error']:
@@ -340,12 +416,12 @@ def search():
             exact_uniis = [r[0] for r in cursor.fetchall()]
             cursor.close()
 
-            if not exact_uniis and RDKIT_AVAILABLE:
+            if not exact_uniis and RDKIT_AVAILABLE and raw_input != canonical:
                 # Try the original SMILES too in case the stored string isn't canonical
                 cursor = conn.cursor()
                 cursor.execute(
                     'SELECT UNII FROM druglabel.UNII_CHEM_STRUCT WHERE SMILES = :s',
-                    {'s': raw_smiles}
+                    {'s': raw_input}
                 )
                 extra = [r[0] for r in cursor.fetchall()]
                 cursor.close()
@@ -400,7 +476,7 @@ def search():
         # ----------------------------------------------------------------
         # Resolve UNIIs → label rows
         # ----------------------------------------------------------------
-        label_rows = _labels_for_uniis(conn, matched_uniis)
+        label_rows = _sort_rows(_labels_for_uniis(conn, matched_uniis), scores, match_type)
         total = len(label_rows)
 
         # Pagination
