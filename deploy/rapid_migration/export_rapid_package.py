@@ -122,13 +122,12 @@ def export_mounted_files(target_dir):
     files = [
         "start_server.py",
         ".env",
-        ".env.template.txt",
+        ".env.template",
         "AGENTS.md",
         "README.md"
     ]
     dirs = [
         "deploy/nginx",
-        "deploy/rapid_migration",
         "backend/webtest/results",
         "backend/webtest/history",
         "frontend/public",

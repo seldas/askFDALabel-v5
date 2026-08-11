@@ -62,3 +62,6 @@ docker-compose.yml
 
 ./archive/
 backups/
+*.dump
+deploy/rapid_migration/*.tar
+deploy/rapid_migration/*.zip
