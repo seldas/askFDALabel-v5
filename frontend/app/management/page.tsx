@@ -130,6 +130,99 @@ export default function ManagementPage() {
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const logScrollRef = useRef<HTMLDivElement | null>(null);
 
+  // Oracle (FDALabel) connection panel
+  const [oracleForm, setOracleForm] = useState({
+    oracle_db_env: 'tst',
+    host: '',
+    port: '',
+    service: '',
+    user: '',
+    password: ''
+  });
+  const [oraclePresets, setOraclePresets] = useState<Record<string, any> | null>(null);
+  const [oracleLoaded, setOracleLoaded] = useState(false);
+  const [showOraclePassword, setShowOraclePassword] = useState(false);
+  const [savingOracle, setSavingOracle] = useState(false);
+  const [testingOracle, setTestingOracle] = useState(false);
+  const [oracleTestResult, setOracleTestResult] = useState<{ success: boolean; message: string; elapsed_ms?: number | null } | null>(null);
+
+  useEffect(() => {
+    if (activeTab !== 'database' || !session?.is_admin || oracleLoaded) return;
+    (async () => {
+      try {
+        const res = await fetch('/api/dashboard/admin/oracle-settings');
+        const data = await res.json();
+        if (data.success) {
+          setOracleForm({
+            oracle_db_env: data.settings.oracle_db_env || 'tst',
+            host: data.settings.host || '',
+            port: data.settings.port || '',
+            service: data.settings.service || '',
+            user: data.settings.user || '',
+            password: data.settings.password || ''
+          });
+          setOraclePresets(data.presets || null);
+        }
+      } catch (e) {
+        console.error('Failed to load Oracle settings', e);
+      }
+      setOracleLoaded(true);
+    })();
+  }, [activeTab, session, oracleLoaded]);
+
+  const applyOraclePreset = (env: 'dev' | 'tst') => {
+    const preset = oraclePresets?.[env];
+    if (!preset) return;
+    setOracleForm(prev => ({
+      ...prev,
+      oracle_db_env: env,
+      host: preset.host || '',
+      port: preset.port || '',
+      service: preset.service || '',
+      user: preset.user || prev.user,
+      password: preset.password || prev.password
+    }));
+    setOracleTestResult(null);
+  };
+
+  const handleTestOracle = async () => {
+    setTestingOracle(true);
+    setOracleTestResult(null);
+    try {
+      const res = await fetch('/api/dashboard/admin/oracle-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(oracleForm)
+      });
+      const data = await res.json();
+      setOracleTestResult({ success: !!data.success, message: data.message || data.error || 'No response', elapsed_ms: data.elapsed_ms });
+    } catch (e: any) {
+      setOracleTestResult({ success: false, message: e?.message || 'Request failed' });
+    }
+    setTestingOracle(false);
+  };
+
+  const handleSaveOracle = async () => {
+    setSavingOracle(true);
+    try {
+      const res = await fetch('/api/dashboard/admin/oracle-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(oracleForm)
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Oracle connection settings saved.');
+      } else {
+        alert(data.error || 'Failed to save Oracle settings');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error saving Oracle settings');
+    }
+    setSavingOracle(false);
+  };
+
   // New user form
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -1480,6 +1573,7 @@ export default function ManagementPage() {
             )}
 
             {activeTab === 'database' && session?.is_admin && (
+              <>
               <section className="mgmt-card">
                 <h2 className="section-title">Database Maintenance</h2>
                 <p style={{ color: 'var(--afl-n-500)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
@@ -1575,6 +1669,116 @@ export default function ManagementPage() {
                   </p>
                 </div>
               </section>
+
+              <section className="mgmt-card" style={{ marginTop: '1.5rem' }}>
+                <h2 className="section-title">FDALabel Oracle Connection</h2>
+                <p style={{ color: 'var(--afl-n-500)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                  Target used when label queries run against Oracle. Values default to the TST server
+                  defined in <code>.env</code>; clearing a field falls back to that <code>.env</code> value.
+                </p>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Quick apply from .env:</span>
+                  <button
+                    type="button"
+                    onClick={() => applyOraclePreset('dev')}
+                    disabled={!oraclePresets}
+                    className={oracleForm.oracle_db_env === 'dev' ? 'btn-primary' : 'btn-ghost'}
+                    style={{ padding: '6px 16px', fontSize: '0.8rem' }}
+                  >
+                    DEV
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyOraclePreset('tst')}
+                    disabled={!oraclePresets}
+                    className={oracleForm.oracle_db_env === 'tst' ? 'btn-primary' : 'btn-ghost'}
+                    style={{ padding: '6px 16px', fontSize: '0.8rem' }}
+                  >
+                    TST
+                  </button>
+                </div>
+
+                <div className="mgmt-form" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>
+                    Host / URL
+                    <input
+                      className="mgmt-input"
+                      value={oracleForm.host}
+                      onChange={e => setOracleForm({ ...oracleForm, host: e.target.value })}
+                      placeholder="ncsvmlbldbtst2.fda.gov"
+                    />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>
+                    Port
+                    <input
+                      className="mgmt-input"
+                      value={oracleForm.port}
+                      onChange={e => setOracleForm({ ...oracleForm, port: e.target.value })}
+                      placeholder="1521"
+                    />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>
+                    SID / Service
+                    <input
+                      className="mgmt-input"
+                      value={oracleForm.service}
+                      onChange={e => setOracleForm({ ...oracleForm, service: e.target.value })}
+                      placeholder="lbltst2"
+                    />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>
+                    User
+                    <input
+                      className="mgmt-input"
+                      value={oracleForm.user}
+                      onChange={e => setOracleForm({ ...oracleForm, user: e.target.value })}
+                      autoComplete="off"
+                    />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>
+                    Password
+                    <span style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <input
+                        className="mgmt-input"
+                        type={showOraclePassword ? 'text' : 'password'}
+                        value={oracleForm.password}
+                        onChange={e => setOracleForm({ ...oracleForm, password: e.target.value })}
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowOraclePassword(v => !v)}
+                        className="btn-ghost"
+                        style={{ padding: '6px 10px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                      >
+                        {showOraclePassword ? 'Hide' : 'Show'}
+                      </button>
+                    </span>
+                  </label>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button onClick={handleTestOracle} className="btn-ghost" disabled={testingOracle}>
+                    {testingOracle ? 'Testing...' : 'Test Connection'}
+                  </button>
+                  <button onClick={handleSaveOracle} className="btn-primary" disabled={savingOracle}>
+                    {savingOracle ? 'Saving...' : 'Save Settings'}
+                  </button>
+                  {oracleTestResult && (
+                    <span style={{
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      color: oracleTestResult.success ? 'var(--afl-success-700)' : 'var(--afl-danger-500)'
+                    }}>
+                      {oracleTestResult.success ? '✓ ' : '✕ '}
+                      {oracleTestResult.message}
+                      {oracleTestResult.success && oracleTestResult.elapsed_ms != null ? ` (${oracleTestResult.elapsed_ms} ms)` : ''}
+                    </span>
+                  )}
+                </div>
+              </section>
+              </>
             )}
           </div>
         </div>

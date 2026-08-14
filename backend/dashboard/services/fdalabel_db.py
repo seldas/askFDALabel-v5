@@ -1,3 +1,4 @@
+import hashlib
 import os
 import random
 import threading
@@ -35,28 +36,83 @@ class FDALabelDBService:
             return None
 
     @classmethod
+    def get_oracle_env_preset(cls, oracle_env):
+        """
+        Returns the host/port/service baked into .env for 'dev' or 'tst'.
+
+        These are the values the admin panel offers behind its DEV / TST quick
+        buttons; they are also the fallback whenever the admin override for a
+        field is blank.
+        """
+        prefix = 'FDALABEL_DEV' if oracle_env == 'dev' else 'FDALABEL_TST'
+
+        def cfg(name):
+            try:
+                return current_app.config.get(name)
+            except Exception:
+                return None
+
+        host = os.getenv(f'{prefix}_HOST') or cfg(f'{prefix}_HOST') or os.getenv('FDALabel_HOST') or os.getenv('FDALabel_SERV') or os.getenv('FDALABEL_HOST')
+        port = os.getenv(f'{prefix}_PORT') or cfg(f'{prefix}_PORT') or os.getenv('FDALabel_PORT') or os.getenv('FDALABEL_PORT')
+        service = os.getenv(f'{prefix}_SERVICE') or cfg(f'{prefix}_SERVICE') or os.getenv('FDALabel_SERVICE') or os.getenv('FDALabel_APP') or os.getenv('FDALABEL_SERVICE')
+        return {
+            'host': host or '',
+            'port': str(port or ''),
+            'service': service or '',
+        }
+
+    @classmethod
+    def get_oracle_env_credentials(cls):
+        """Returns the (user, password) pair from .env, shared by both DEV and TST."""
+
+        def cfg(name):
+            try:
+                return current_app.config.get(name)
+            except Exception:
+                return None
+
+        user = cfg('FDALabel_USER') or cfg('FDALABEL_USER') or os.getenv('FDALabel_USER') or os.getenv('FDALABEL_USER')
+        psw = (cfg('FDALabel_PASSWORD') or cfg('FDALabel_PSW') or
+               cfg('FDALABEL_PASSWORD') or cfg('FDALABEL_PSW') or
+               os.getenv('FDALabel_PASSWORD') or os.getenv('FDALabel_PSW') or
+               os.getenv('FDALABEL_PASSWORD') or os.getenv('FDALABEL_PSW'))
+        return user or '', psw or ''
+
+    @classmethod
+    def resolve_oracle_target(cls):
+        """
+        Resolves the Oracle target actually used for connections.
+
+        Admin overrides stored by EnvService win field by field; any field left
+        blank falls back to the .env preset for the selected oracle_db_env.
+        Returns a dict with host/port/service/user/password plus the env name.
+        """
+        from dashboard.services.env_service import EnvService
+
+        config = EnvService.get_config()
+        oracle_env = config.get("oracle_db_env") or "tst"
+        preset = cls.get_oracle_env_preset(oracle_env)
+        env_user, env_psw = cls.get_oracle_env_credentials()
+
+        return {
+            'oracle_db_env': oracle_env,
+            'host': (config.get('oracle_host') or '').strip() or preset['host'],
+            'port': str(config.get('oracle_port') or '').strip() or preset['port'],
+            'service': (config.get('oracle_service') or '').strip() or preset['service'],
+            'user': (config.get('oracle_user') or '').strip() or env_user,
+            'password': config.get('oracle_password') or env_psw,
+        }
+
+    @classmethod
     def get_oracle_connection(cls):
         """Attempts connection directly to Oracle DB without checking labeling_source setting or falling back."""
         if not ORACLE_AVAILABLE:
             return None
-        user = current_app.config.get('FDALabel_USER') or current_app.config.get('FDALABEL_USER') or os.getenv('FDALabel_USER') or os.getenv('FDALABEL_USER')
-        psw = (current_app.config.get('FDALabel_PASSWORD') or current_app.config.get('FDALabel_PSW') or 
-               current_app.config.get('FDALABEL_PASSWORD') or current_app.config.get('FDALABEL_PSW') or
-               os.getenv('FDALabel_PASSWORD') or os.getenv('FDALabel_PSW') or
-               os.getenv('FDALABEL_PASSWORD') or os.getenv('FDALABEL_PSW'))
-        
-        from dashboard.services.env_service import EnvService
-        oracle_env = EnvService.get_setting("oracle_db_env") or "tst"
-        
-        if oracle_env == "dev":
-            host = os.getenv('FDALABEL_DEV_HOST') or current_app.config.get('FDALABEL_DEV_HOST') or os.getenv('FDALabel_HOST') or os.getenv('FDALabel_SERV') or os.getenv('FDALABEL_HOST')
-            port = os.getenv('FDALABEL_DEV_PORT') or current_app.config.get('FDALABEL_DEV_PORT') or os.getenv('FDALabel_PORT') or os.getenv('FDALABEL_PORT')
-            service = os.getenv('FDALABEL_DEV_SERVICE') or current_app.config.get('FDALABEL_DEV_SERVICE') or os.getenv('FDALabel_SERVICE') or os.getenv('FDALabel_APP') or os.getenv('FDALABEL_SERVICE')
-        else:
-            host = os.getenv('FDALABEL_TST_HOST') or current_app.config.get('FDALABEL_TST_HOST') or os.getenv('FDALabel_HOST') or os.getenv('FDALabel_SERV') or os.getenv('FDALABEL_HOST')
-            port = os.getenv('FDALABEL_TST_PORT') or current_app.config.get('FDALABEL_TST_PORT') or os.getenv('FDALabel_PORT') or os.getenv('FDALABEL_PORT')
-            service = os.getenv('FDALABEL_TST_SERVICE') or current_app.config.get('FDALABEL_TST_SERVICE') or os.getenv('FDALabel_SERVICE') or os.getenv('FDALabel_APP') or os.getenv('FDALABEL_SERVICE')
-        
+
+        target = cls.resolve_oracle_target()
+        user, psw = target['user'], target['password']
+        host, port, service = target['host'], target['port'], target['service']
+
         try:
             if psw and host and port and service:
                 dsnStr = oracledb.makedsn(host, port, service)
@@ -65,8 +121,52 @@ class FDALabelDBService:
                 cls._db_type = 'oracle'
                 return connection
         except Exception as e:
-            print(f"  [!] Direct Oracle Connection Exception ({oracle_env}): {e}")
+            print(f"  [!] Direct Oracle Connection Exception ({target['oracle_db_env']}): {e}")
         return None
+
+    @classmethod
+    def test_oracle_connection(cls, host, port, service, user, password):
+        """
+        Opens a throwaway (non-pooled) Oracle connection with the supplied
+        parameters and runs `SELECT 1 FROM DUAL`.
+
+        Deliberately bypasses the pool so an admin can probe a target without
+        disturbing the pool the app is serving traffic from. Returns
+        (ok: bool, message: str, elapsed_ms: int|None).
+        """
+        import time
+
+        if not ORACLE_AVAILABLE:
+            return False, "The 'oracledb' driver is not installed on the server.", None
+
+        missing = [n for n, v in (('host', host), ('port', port), ('service', service), ('password', password)) if not v]
+        if missing:
+            return False, f"Missing required field(s): {', '.join(missing)}", None
+
+        try:
+            port_num = int(str(port).strip())
+        except (TypeError, ValueError):
+            return False, f"Port must be a number (got '{port}').", None
+
+        started = time.time()
+        conn = None
+        try:
+            dsn = oracledb.makedsn(host.strip(), port_num, service.strip())
+            conn = oracledb.connect(user=(user or '').strip(), password=password, dsn=dsn)
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM DUAL")
+            cursor.fetchone()
+            cursor.close()
+            elapsed = int((time.time() - started) * 1000)
+            return True, f"Connected to {host}:{port_num}/{service}", elapsed
+        except Exception as e:
+            return False, str(e).strip().splitlines()[0] if str(e).strip() else repr(e), None
+        finally:
+            if conn is not None:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     @classmethod
     def _get_oracle_pool(cls, user, psw, dsnStr):
@@ -79,8 +179,15 @@ class FDALabelDBService:
 
         Rebuilds the pool if the target (user/host/port/service) changes, which
         happens when an admin flips the oracle_db_env dev/tst setting.
+
+        The password is part of the key -- hashed, so it never sits in a class
+        attribute in the clear. Without it, a password-only edit in the admin
+        panel would leave every *other* Gunicorn/Celery process serving from a
+        pool built with the old credentials, since only the process that handled
+        the save calls reset_oracle_pool().
         """
-        key = (user, dsnStr)
+        psw_digest = hashlib.sha256((psw or '').encode('utf-8')).hexdigest()
+        key = (user, dsnStr, psw_digest)
         if cls._oracle_pool is not None and cls._oracle_pool_key == key:
             return cls._oracle_pool
 
@@ -162,9 +269,26 @@ class FDALabelDBService:
 
     @classmethod
     def reset_cache(cls):
-        """Clears the cached connection state."""
+        """Clears the cached connection state and tears down the Oracle pool."""
         cls._is_connected = None
         cls._db_type = None
+        cls.reset_oracle_pool()
+
+    @classmethod
+    def reset_oracle_pool(cls):
+        """
+        Drops the cached Oracle pool so the next connection is built from the
+        current settings. `_get_oracle_pool` already rebuilds when the (user,
+        dsn) key changes, but a password-only edit keeps the same key.
+        """
+        with cls._oracle_pool_lock:
+            if cls._oracle_pool is not None:
+                try:
+                    cls._oracle_pool.close(force=True)
+                except Exception:
+                    pass
+            cls._oracle_pool = None
+            cls._oracle_pool_key = None
 
     @classmethod
     def is_internal(cls):

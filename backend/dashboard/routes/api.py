@@ -3355,6 +3355,80 @@ def admin_system_settings():
         return jsonify({"success": True, "message": "Settings updated"})
 
 
+@api_bp.route("/admin/oracle-settings", methods=["GET", "POST"])
+@login_required
+def admin_oracle_settings():
+    """
+    Reads/writes the FDALabel Oracle connection used when LABEL_DB=ORACLE.
+
+    GET also returns the DEV and TST presets straight from .env so the panel's
+    quick buttons can fill the form without a second round trip. The password is
+    returned in full — the panel masks it by default and lets the admin unhide
+    it — so the route is admin-only.
+    """
+    if not current_user.is_admin:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+
+    from dashboard.services.fdalabel_db import FDALabelDBService
+
+    if request.method == "GET":
+        target = FDALabelDBService.resolve_oracle_target()
+        env_user, env_password = FDALabelDBService.get_oracle_env_credentials()
+        return jsonify({
+            "success": True,
+            "settings": target,
+            "presets": {
+                "dev": {**FDALabelDBService.get_oracle_env_preset("dev"), "user": env_user, "password": env_password},
+                "tst": {**FDALabelDBService.get_oracle_env_preset("tst"), "user": env_user, "password": env_password},
+            },
+        })
+
+    data = request.json or {}
+    oracle_env = data.get("oracle_db_env")
+    payload = {
+        "oracle_host": (data.get("host") or "").strip(),
+        "oracle_port": str(data.get("port") or "").strip(),
+        "oracle_service": (data.get("service") or "").strip(),
+        "oracle_user": (data.get("user") or "").strip(),
+        "oracle_password": data.get("password") or "",
+    }
+    if oracle_env in ("dev", "tst"):
+        payload["oracle_db_env"] = oracle_env
+
+    if payload["oracle_port"]:
+        try:
+            int(payload["oracle_port"])
+        except ValueError:
+            return jsonify({"success": False, "error": f"Port must be a number (got '{payload['oracle_port']}')."}), 400
+
+    EnvService.set_config(payload)
+    # Drop the pool so the very next Oracle query dials the new target.
+    FDALabelDBService.reset_oracle_pool()
+
+    return jsonify({"success": True, "settings": FDALabelDBService.resolve_oracle_target()})
+
+
+@api_bp.route("/admin/oracle-test", methods=["POST"])
+@login_required
+def admin_oracle_test():
+    """Probes an Oracle target with `SELECT 1 FROM DUAL` without saving it."""
+    if not current_user.is_admin:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+
+    from dashboard.services.fdalabel_db import FDALabelDBService
+
+    data = request.json or {}
+    saved = FDALabelDBService.resolve_oracle_target()
+    ok, message, elapsed_ms = FDALabelDBService.test_oracle_connection(
+        host=data.get("host") if data.get("host") is not None else saved["host"],
+        port=data.get("port") if data.get("port") is not None else saved["port"],
+        service=data.get("service") if data.get("service") is not None else saved["service"],
+        user=data.get("user") if data.get("user") is not None else saved["user"],
+        password=data.get("password") if data.get("password") is not None else saved["password"],
+    )
+    return jsonify({"success": ok, "message": message, "elapsed_ms": elapsed_ms})
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # EXAMINE FEATURE — Clinical Query Engine
 # ─────────────────────────────────────────────────────────────────────────────

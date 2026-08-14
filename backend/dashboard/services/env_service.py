@@ -17,6 +17,13 @@ DEFAULT_CONFIG = {
     "external_pg_password": "",
     "external_pg_database": "",
     "oracle_db_env": "dev",          # 'dev' or 'tst'
+    # Admin-editable Oracle override. Empty strings mean "fall back to the
+    # matching FDALABEL_{DEV,TST}_* / FDALabel_* value from .env".
+    "oracle_host": "",
+    "oracle_port": "",
+    "oracle_service": "",
+    "oracle_user": "",
+    "oracle_password": "",
     "ai_model_provider": os.getenv("DEFAULT_AI_MODEL", "elsa"),   # 'gemini', 'elsa', 'customized'
     "custom_llm_url": "",
     "custom_llm_key": ""
