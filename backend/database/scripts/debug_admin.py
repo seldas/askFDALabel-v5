@@ -48,7 +48,7 @@ def debug_admin():
             return
 
         # 2. Check admin user
-        admin = User.query.filter_by(username='admin').first()
+        admin = User.query.filter(db.func.lower(User.username) == 'admin').first()
         if not admin:
             print("User 'admin' NOT FOUND in database.")
         else:

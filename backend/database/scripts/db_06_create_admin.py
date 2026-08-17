@@ -27,7 +27,7 @@ def create_admin():
         password = "1986414"
         
         # Check if user already exists
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter(db.func.lower(User.username) == username.lower()).first()
         
         if user:
             print(f"User '{username}' already exists. Updating to admin and resetting password...")

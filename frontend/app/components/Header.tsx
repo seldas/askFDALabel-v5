@@ -545,7 +545,7 @@ export default function Header({
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>
                         AI: {session.ai_provider?.toUpperCase()}
                     </div>
-                    {session?.username !== 'guest' ? (
+                    {session?.username?.toLowerCase() !== 'guest' ? (
                       <Link
                         href="/management?tab=ai#ai-settings"
                         className="account-ai-config"
@@ -567,12 +567,12 @@ export default function Header({
                     <Link href="/management" className="dropdown-item dropdown-item--secondary-action" onClick={() => setActiveDropdown(null)}>
                       {session?.is_admin ? 'System Management' : 'Settings & Preferences'}
                     </Link>
-                    {session?.username === 'guest' && (
+                    {session?.username?.toLowerCase() === 'guest' && (
                       <button onClick={() => { openAuthModal('login'); setActiveDropdown(null); }} className="dropdown-item">
                         Log In
                       </button>
                     )}
-                    {session?.username !== 'guest' && (
+                    {session?.username?.toLowerCase() !== 'guest' && (
                       <button onClick={() => { openAuthModal('change_password'); setActiveDropdown(null); }} className="dropdown-item dropdown-item--secondary-action">
                         Change Password
                       </button>

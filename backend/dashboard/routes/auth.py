@@ -12,7 +12,7 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/login', methods=['POST'])
 def login():
     if current_user.is_authenticated:
-        if current_user.username == 'guest':
+        if (current_user.username or '').lower() == 'guest':
             logout_user()
         else:
             return jsonify({'success': True, 'message': 'Already authenticated'})
@@ -21,10 +21,13 @@ def login():
     if not data:
         return jsonify({'success': False, 'error': 'Missing JSON data'}), 400
 
-    username = data.get('username')
+    username = (data.get('username') or '').strip()
     password = data.get('password')
 
-    user = User.query.filter_by(username=username).first()
+    if not username or not password:
+        return jsonify({'success': False, 'error': 'Invalid username or password'}), 401
+
+    user = User.query.filter(db.func.lower(User.username) == username.lower()).first()
     if user and user.check_password(password):
         if hasattr(user, 'is_active') and getattr(user, 'is_active') is False:
             return jsonify({'success': False, 'error': 'Account has been deactivated. Please contact an administrator.'}), 401
@@ -44,7 +47,7 @@ def login():
 @auth_bp.route('/register', methods=['POST'])
 def register():
     if current_user.is_authenticated:
-        if current_user.username == 'guest':
+        if (current_user.username or '').lower() == 'guest':
             logout_user()
         else:
             return jsonify({'success': True, 'message': 'Already authenticated'})
@@ -65,7 +68,7 @@ def register():
             'error': 'Invalid username. Use only letters, numbers, and . @ _ - + (no spaces)'
         }), 400
 
-    if User.query.filter_by(username=username).first():
+    if User.query.filter(db.func.lower(User.username) == username.lower()).first():
         return jsonify({'success': False, 'error': 'Username already exists'}), 400
     
     new_user = User(username=username, is_admin=False)
@@ -87,7 +90,7 @@ def guest_login():
     if current_user.is_authenticated:
         return jsonify({'success': True, 'message': 'Already authenticated'})
         
-    guest_user = User.query.filter_by(username='guest').first()
+    guest_user = User.query.filter(db.func.lower(User.username) == 'guest').first()
     if not guest_user:
         guest_user = User(username='guest', is_admin=False)
         guest_user.set_password('guest')
@@ -107,7 +110,7 @@ def guest_login():
 @auth_bp.route('/change_password', methods=['POST'])
 @login_required
 def change_password():
-    if current_user.username == 'guest':
+    if (current_user.username or '').lower() == 'guest':
         return jsonify({'success': False, 'error': 'Guest account cannot change password'}), 403
 
     data = request.get_json()

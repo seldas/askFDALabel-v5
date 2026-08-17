@@ -244,7 +244,7 @@ const Header: React.FC = () => {
                   </div>
                   <div style={{ borderTop: '1px solid #f1f5f9', marginTop: '4px' }}>
                     <Link href="/dashboard" className="dropdown-item">My Dashboard</Link>
-                    {session?.username !== 'guest' && (
+                    {session?.username?.toLowerCase() !== 'guest' && (
                       <button 
                         onClick={() => { openAuthModal('change_password'); setActiveDropdown(null); }}
                         style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', display: 'block', padding: 10, fontSize: '0.875rem', color: '#1e293b' }} 

@@ -71,11 +71,39 @@ def create_app(config_class=Config):
                 print(f"Error initializing database extension/schema: {e}")
                 db.session.rollback()
         db.create_all()
+        ensure_user_schema()
         migrate_projects()
         seed_examine_prompts()
         check_meddra_data()
 
     return app
+
+def ensure_user_schema():
+    """Ensure user table has citext for username and columns are up to date."""
+    try:
+        from sqlalchemy import text
+        dialect = db.engine.dialect.name
+        if dialect == 'postgresql':
+            db.session.execute(text("CREATE EXTENSION IF NOT EXISTS citext;"))
+            db.session.commit()
+            
+            type_sql = text("""
+                SELECT udt_name 
+                FROM information_schema.columns 
+                WHERE table_name='user' 
+                  AND column_name='username' 
+                  AND table_schema = current_schema();
+            """)
+            type_res = db.session.execute(type_sql).fetchone()
+            if type_res and type_res[0].lower() != 'citext':
+                print("Updating 'username' column in 'user' table to 'citext' type for case-insensitivity...")
+                alter_type_sql = text('ALTER TABLE "user" ALTER COLUMN username TYPE citext;')
+                db.session.execute(alter_type_sql)
+                db.session.commit()
+                print("'username' column successfully altered to 'citext'.")
+    except Exception as e:
+        print(f"Schema check error (citext): {e}")
+        db.session.rollback()
 
 def check_meddra_data():
     """Checks if MedDRA tables are populated and warns the user if not."""

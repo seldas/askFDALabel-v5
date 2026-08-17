@@ -40,14 +40,14 @@ def get_users():
 @admin_required
 def create_user():
     data = request.get_json()
-    username = data.get('username')
+    username = (data.get('username') or '').strip()
     password = data.get('password')
     is_admin = data.get('is_admin', False)
 
     if not username or not password:
         return jsonify({'success': False, 'error': 'Username and password required'}), 400
 
-    if User.query.filter_by(username=username).first():
+    if User.query.filter(db.func.lower(User.username) == username.lower()).first():
         return jsonify({'success': False, 'error': 'Username already exists'}), 400
 
     new_user = User(username=username, is_admin=is_admin)
@@ -70,7 +70,12 @@ def update_user(user_id):
     if 'password' in data and data['password']:
         user.set_password(data['password'])
     if 'username' in data:
-        user.username = data['username']
+        new_username = (data['username'] or '').strip()
+        if new_username:
+            existing = User.query.filter(db.func.lower(User.username) == new_username.lower(), User.id != user_id).first()
+            if existing:
+                return jsonify({'success': False, 'error': 'Username already exists'}), 400
+            user.username = new_username
     if 'ai_provider' in data:
         user.ai_provider = data['ai_provider']
 

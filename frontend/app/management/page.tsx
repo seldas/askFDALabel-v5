@@ -108,9 +108,9 @@ export default function ManagementPage() {
       const requestedTab = typeof window === 'undefined'
         ? null
         : new URLSearchParams(window.location.search).get('tab');
-      if (requestedTab === 'ai' && session.username !== 'guest') {
+      if (requestedTab === 'ai' && session.username?.toLowerCase() !== 'guest') {
         setActiveTab('ai');
-      } else if (session.username === 'guest') {
+      } else if (session.username?.toLowerCase() === 'guest') {
         setActiveTab('tokens');
       } else {
         setActiveTab('ai');
@@ -805,8 +805,8 @@ export default function ManagementPage() {
             <button
               className={`sidebar-tab ${activeTab === 'ai' ? 'active' : ''}`}
               onClick={() => setActiveTab('ai')}
-              disabled={session?.username === 'guest'}
-              style={{ opacity: session?.username === 'guest' ? 0.5 : 1, cursor: session?.username === 'guest' ? 'not-allowed' : 'pointer' }}
+              disabled={session?.username?.toLowerCase() === 'guest'}
+              style={{ opacity: session?.username?.toLowerCase() === 'guest' ? 0.5 : 1, cursor: session?.username?.toLowerCase() === 'guest' ? 'not-allowed' : 'pointer' }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
@@ -818,8 +818,8 @@ export default function ManagementPage() {
             <button
               className={`sidebar-tab ${activeTab === 'users' ? 'active' : ''}`}
               onClick={() => setActiveTab('users')}
-              disabled={session?.username === 'guest'}
-              style={{ opacity: session?.username === 'guest' ? 0.5 : 1, cursor: session?.username === 'guest' ? 'not-allowed' : 'pointer' }}
+              disabled={session?.username?.toLowerCase() === 'guest'}
+              style={{ opacity: session?.username?.toLowerCase() === 'guest' ? 0.5 : 1, cursor: session?.username?.toLowerCase() === 'guest' ? 'not-allowed' : 'pointer' }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
               {session?.is_admin ? 'User Management' : 'My Account'}
@@ -846,7 +846,7 @@ export default function ManagementPage() {
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
 
-            {activeTab === 'ai' && session?.username !== 'guest' && (
+            {activeTab === 'ai' && session?.username?.toLowerCase() !== 'guest' && (
               <section id="ai-settings" className="mgmt-card" style={{ maxWidth: '800px' }}>
                 <h2 className="section-title">AI Model Preferences</h2>
                 <p style={{ color: 'var(--afl-n-500)', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.5 }}>
@@ -1223,7 +1223,7 @@ export default function ManagementPage() {
               </section>
             )}
 
-            {activeTab === 'users' && session?.username !== 'guest' && (
+            {activeTab === 'users' && session?.username?.toLowerCase() !== 'guest' && (
               <section className="mgmt-card">
                 <h2 className="section-title">User Management</h2>
 
