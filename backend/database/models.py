@@ -179,6 +179,36 @@ class DrugToxicity(db.Model):
     Assessment_Date = db.Column(db.String(50))
 
 
+class DiliRo2Reference(db.Model):
+    """Fixed reference drugs for the Rule-of-Two (DILI) quadrant plot.
+
+    Seeded from backend/database/seed/dili_ro2_reference.csv — see the README
+    there for per-column provenance. alogp is computed at import by RDKit from
+    smiles, so reference points and the drug under assessment always share one
+    logP implementation.
+    """
+    __tablename__ = 'dili_ro2_reference'
+    id = db.Column(db.Integer, primary_key=True)
+    drug_name = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    dilirank_compound = db.Column(db.String(200))
+    dili_concern = db.Column(db.String(40), index=True)
+    dili_severity_class = db.Column(db.String(10))
+    max_daily_dose_mg = db.Column(db.Float, nullable=False)
+    dose_basis = db.Column(db.String(40))
+    dose_note = db.Column(db.Text)
+    dose_review_status = db.Column(db.String(40), default='needs-sme-review')
+    route = db.Column(db.String(40), default='oral')
+    pubchem_cid = db.Column(db.String(30))
+    inchikey = db.Column(db.String(30), index=True)
+    smiles = db.Column(db.Text)
+    mol_weight = db.Column(db.Float)
+    pubchem_xlogp3 = db.Column(db.Float)
+    # Computed at import from smiles via rdkit Crippen.MolLogP. Null when RDKit
+    # is unavailable — the tool must then fall back to pubchem_xlogp3 and say so.
+    alogp = db.Column(db.Float, index=True)
+    alogp_method = db.Column(db.String(60))
+
+
 class ProjectAeReport(db.Model):
     __tablename__ = 'project_ae_report'
     id = db.Column(db.Integer, primary_key=True)
