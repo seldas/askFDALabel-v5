@@ -101,6 +101,23 @@ def ensure_user_schema():
                 db.session.execute(alter_type_sql)
                 db.session.commit()
                 print("'username' column successfully altered to 'citext'.")
+
+            # `role` postdates the table, and db.create_all() only creates
+            # missing tables -- it never adds a column to one that exists. Add
+            # it here and backfill from is_admin so an upgraded deployment
+            # authorizes correctly on first boot.
+            db.session.execute(text(
+                'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role VARCHAR(20) '
+                "NOT NULL DEFAULT 'user';"
+            ))
+            # Existing admins keep admin; everyone else lands on 'user', so no
+            # account silently gains database selection during the upgrade.
+            # Guarded on the default value: this must not overwrite a role an
+            # admin has since assigned.
+            db.session.execute(text(
+                "UPDATE \"user\" SET role = 'admin' WHERE is_admin IS TRUE AND role = 'user';"
+            ))
+            db.session.commit()
     except Exception as e:
         print(f"Schema check error (citext): {e}")
         db.session.rollback()

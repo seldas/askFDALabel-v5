@@ -6,6 +6,7 @@ import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { Badge, Button, ButtonLink, EmptyState, Input, Select } from '../../platform/primitives';
 import { useUser } from '../../context/UserContext';
+import GuestRestricted from '../../components/GuestRestricted';
 import '../dashboard.css';
 
 interface QueryHistoryItem {
@@ -33,7 +34,10 @@ export default function QueryHistoryPage() {
   const [page, setPage] = useState(1);
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
+  const isGuest = session?.is_guest ?? (session?.username?.toLowerCase() === 'guest');
+
   const fetchHistory = async () => {
+    if (isGuest) { setLoading(false); return; }
     setLoading(true);
     try {
       const res = await fetch('/api/dashboard/query_history?sort=desc');
@@ -50,7 +54,8 @@ export default function QueryHistoryPage() {
 
   useEffect(() => {
     fetchHistory();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGuest]);
 
   // Reset page to 1 when filters change
   useEffect(() => {
@@ -178,6 +183,17 @@ export default function QueryHistoryPage() {
   const totalResultsCount = useMemo(() => {
     return history.reduce((sum, item) => sum + (item.result_count || 0), 0);
   }, [history]);
+
+  // Reachable by URL even though the header hides the link; the API returns
+  // 403 for a guest regardless, so this only makes the refusal readable.
+  if (!userLoading && isGuest) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--afl-bg-page, #f8fafc)' }}>
+        <Header activeApp="dashboard" />
+        <GuestRestricted feature="Search & Query History" />
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--afl-bg-page, #f8fafc)' }}>

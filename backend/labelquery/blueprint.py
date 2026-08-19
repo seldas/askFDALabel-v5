@@ -14,10 +14,11 @@ which is also why it returns `notes` describing what it could not express.
 import csv
 import io
 import json
+import os
 import re
 from datetime import datetime
 
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, current_app
 from flask_login import current_user
 
 from dashboard.services.fdalabel_db import FDALabelDBService
@@ -292,7 +293,7 @@ def options():
     to come from the local import regardless of target, so against Oracle they
     offered whatever this deployment happened to have loaded.
     """
-    target_db = (request.args.get('target_db') or request.args.get('targetDb') or 'local').lower()
+    target_db = _resolve_target_db(request.args.get('target_db') or request.args.get('targetDb'))
     try:
         if target_db in _ORACLE_TARGETS:
             oracle = _oracle_options(target_db)
@@ -460,7 +461,7 @@ _ORACLE_MEDDRA_LEVELS = {
 def suggest_meddra():
     q = (request.args.get('q') or '').strip()
     level = (request.args.get('level') or 'pt').lower()
-    target_db = (request.args.get('target_db') or request.args.get('targetDb') or 'local').lower()
+    target_db = _resolve_target_db(request.args.get('target_db') or request.args.get('targetDb'))
     if len(q) < 2 or level not in _MEDDRA_LEVELS:
         return jsonify({'suggestions': []})
 
@@ -490,7 +491,7 @@ def suggest_meddra():
 def get_meddra_hierarchy():
     term = (request.args.get('term') or '').strip()
     level = (request.args.get('level') or 'pt').lower()
-    target_db = (request.args.get('target_db') or request.args.get('targetDb') or 'local').lower()
+    target_db = _resolve_target_db(request.args.get('target_db') or request.args.get('targetDb'))
     if not term:
         return jsonify({'term': term, 'path': [], 'formatted': ''})
 
@@ -595,7 +596,7 @@ def get_meddra_llts():
     gets displayed.
     """
     term = (request.args.get('term') or '').strip()
-    target_db = (request.args.get('target_db') or request.args.get('targetDb') or 'local').lower()
+    target_db = _resolve_target_db(request.args.get('target_db') or request.args.get('targetDb'))
     if not term:
         return jsonify({'term': term, 'llts': []})
 
@@ -659,6 +660,45 @@ def _capabilities():
 #: target_db values that mean Oracle. 'oracle_all' additionally widens the base
 #: table from the human-only rollup to the raw one; see _oracle_base_table.
 _ORACLE_TARGETS = ('oracle', 'fdalabel', 'oracle_all')
+
+#: Every target the compiler knows how to run. Anything else is a typo or a
+#: crafted request, and is treated as unset rather than passed through.
+_KNOWN_TARGETS = ('local',) + _ORACLE_TARGETS
+
+#: The scope a normal user is pinned to -- FDALabel's curated CDER-CBER rollup.
+_DEFAULT_TARGET = 'oracle'
+
+
+def _oracle_reachable():
+    """
+    Whether this deployment can reach Oracle at all.
+
+    Same signal /api/check-fdalabel reports as cderAccessible, so the pin below
+    agrees with what the frontend was told.
+    """
+    name = (os.environ.get('ELSA_API_NAME')
+            or current_app.config.get('ELSA_API_NAME')
+            or '')
+    return bool(name.strip())
+
+
+def _resolve_target_db(requested):
+    """
+    The target this request is actually allowed to run against.
+
+    Hiding the switch in the UI is cosmetic -- target_db arrives from the client
+    on every query route, so the restriction has to be applied here or it can be
+    bypassed with a direct API call. Developers and admins get what they asked
+    for; everyone else is pinned to CDER-CBER, falling back to the local
+    database where Oracle is not reachable (a public deployment), which is what
+    the home page already did on its own.
+    """
+    requested = (requested or '').strip().lower()
+
+    if current_user.is_authenticated and current_user.can_select_database:
+        return requested if requested in _KNOWN_TARGETS else 'local'
+
+    return _DEFAULT_TARGET if _oracle_reachable() else 'local'
 
 
 def _oracle_base_table(target_db):
@@ -823,7 +863,7 @@ def facets():
     """
     payload = request.get_json(silent=True) or {}
     query = payload.get('query') or {}
-    target_db = str(payload.get('target_db') or payload.get('source') or '').lower()
+    target_db = _resolve_target_db(payload.get('target_db') or payload.get('source'))
 
     return jsonify({'facets': _compute_facets(query, target_db)})
 
@@ -843,7 +883,7 @@ def execute():
         return jsonify({'error': 'limit and offset must be integers'}), 400
 
     # Target database selection: check explicit target_db payload first
-    target_db = str(payload.get('target_db') or payload.get('source') or '').lower()
+    target_db = _resolve_target_db(payload.get('target_db') or payload.get('source'))
     use_oracle = (target_db in _ORACLE_TARGETS) or (target_db != 'local' and FDALabelDBService.is_internal())
 
     if use_oracle:
@@ -1204,7 +1244,7 @@ def export():
     if fmt not in ('csv', 'xlsx'):
         return jsonify({'error': "format must be 'csv' or 'xlsx'"}), 400
 
-    target_db = str(payload.get('target_db') or payload.get('source') or '').lower()
+    target_db = _resolve_target_db(payload.get('target_db') or payload.get('source'))
 
     try:
         rows = _export_rows(payload.get('query') or {}, payload.get('sort'), payload.get('dir'), target_db=target_db)
@@ -1435,7 +1475,7 @@ def translate():
     if not intent:
         return jsonify({'error': 'intent is required'}), 400
 
-    target_db = (payload.get('target_db') or payload.get('targetDb') or 'local').lower()
+    target_db = _resolve_target_db(payload.get('target_db') or payload.get('targetDb'))
     if target_db not in _TRANSLATE_SCOPE_NOTES:
         target_db = 'oracle' if target_db in _ORACLE_TARGETS else 'local'
 

@@ -3,7 +3,7 @@ import subprocess
 import sys
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
-from database import db, User, SystemTask
+from database import db, User, SystemTask, ROLES, ROLE_USER
 from dashboard.services.task_service import TaskService
 from functools import wraps
 
@@ -30,6 +30,8 @@ def get_users():
             'id': u.id,
             'username': u.username,
             'is_admin': u.is_admin,
+            'role': u.effective_role,
+            'can_select_db': u.can_select_database,
             'ai_provider': u.ai_provider,
             'is_active': getattr(u, 'is_active', True)
         } for u in users]
@@ -42,7 +44,13 @@ def create_user():
     data = request.get_json()
     username = (data.get('username') or '').strip()
     password = data.get('password')
-    is_admin = data.get('is_admin', False)
+    # `role` is authoritative; `is_admin` is still honoured so an older client
+    # that only knows the boolean keeps working.
+    role = (data.get('role') or '').strip().lower()
+    if not role:
+        role = 'admin' if data.get('is_admin', False) else ROLE_USER
+    if role not in ROLES:
+        return jsonify({'success': False, 'error': f'Unknown role: {role}'}), 400
 
     if not username or not password:
         return jsonify({'success': False, 'error': 'Username and password required'}), 400
@@ -50,7 +58,8 @@ def create_user():
     if User.query.filter(db.func.lower(User.username) == username.lower()).first():
         return jsonify({'success': False, 'error': 'Username already exists'}), 400
 
-    new_user = User(username=username, is_admin=is_admin)
+    new_user = User(username=username)
+    new_user.set_role(role)
     new_user.set_password(password)
     db.session.add(new_user)
     db.session.commit()
@@ -63,8 +72,18 @@ def update_user(user_id):
     user = User.query.get_or_404(user_id)
     data = request.get_json()
 
-    if 'is_admin' in data:
-        user.is_admin = data['is_admin']
+    # set_role keeps is_admin in step, so role wins when both are sent.
+    if 'role' in data:
+        role = (data.get('role') or '').strip().lower()
+        if role not in ROLES:
+            return jsonify({'success': False, 'error': f'Unknown role: {role}'}), 400
+        if user.id == current_user.id and role != 'admin' and user.is_admin:
+            return jsonify({'success': False, 'error': 'Cannot remove your own admin role'}), 400
+        user.set_role(role)
+    elif 'is_admin' in data:
+        if user.id == current_user.id and not data['is_admin'] and user.is_admin:
+            return jsonify({'success': False, 'error': 'Cannot remove your own admin role'}), 400
+        user.set_role('admin' if data['is_admin'] else ROLE_USER)
     if 'is_active' in data:
         user.is_active = data['is_active']
     if 'password' in data and data['password']:

@@ -29,14 +29,78 @@ class Project(db.Model):
 
 import os
 
+#: Account roles, least to most privileged.
+#:
+#: 'developer' is exactly 'user' plus the ability to choose which labeling
+#: database a query runs against. That is the only difference between the two
+#: -- everything else a developer can do, a plain user can do. Normal users are
+#: pinned to the CDER-CBER scope and never see the database switch.
+ROLE_USER = 'user'
+ROLE_DEVELOPER = 'developer'
+ROLE_ADMIN = 'admin'
+ROLES = (ROLE_USER, ROLE_DEVELOPER, ROLE_ADMIN)
+
+#: Roles allowed to pick a target database.
+_DB_SELECT_ROLES = frozenset({ROLE_DEVELOPER, ROLE_ADMIN})
+
+#: The shared anonymous account created by /auth/guest-login. It is a real row
+#: rather than a session flag, so everyone signing in as a guest shares one
+#: user id -- which is exactly why per-account features are closed to it: one
+#: guest's query history and AI credentials would be visible to the next.
+GUEST_USERNAME = 'guest'
+
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(CITEXT, unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    
-    # AI Preferences
+
+    # `role` is the source of truth. `is_admin` is kept in lockstep with it by
+    # `set_role` because a lot of existing code (admin_required, the management
+    # UI, several routes) still reads the boolean; dropping it would have meant
+    # touching all of that in the same change.
+    role = db.Column(db.String(20), nullable=False, default=ROLE_USER, server_default=ROLE_USER)
     is_admin = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True, server_default='true')
+
+    def set_role(self, role):
+        """Assigns a role, keeping the legacy is_admin flag consistent."""
+        role = (role or ROLE_USER).strip().lower()
+        if role not in ROLES:
+            raise ValueError(f"Unknown role: {role!r}")
+        self.role = role
+        self.is_admin = (role == ROLE_ADMIN)
+        return self.role
+
+    @property
+    def effective_role(self):
+        """
+        The role to act on.
+
+        Falls back to is_admin for rows written before the column existed, so a
+        database that has not run the startup backfill still authorizes
+        correctly instead of silently demoting every admin.
+        """
+        if self.role in ROLES:
+            return self.role
+        return ROLE_ADMIN if self.is_admin else ROLE_USER
+
+    @property
+    def is_guest(self):
+        """
+        The shared anonymous account.
+
+        Query history and preferences are disabled for it -- both are per-user
+        state on a row every anonymous visitor shares, so one visitor would be
+        reading and overwriting another's. `username` is CITEXT, so this
+        comparison is already case-insensitive.
+        """
+        return (self.username or '') == GUEST_USERNAME
+
+    @property
+    def can_select_database(self):
+        """Whether this account may choose the labeling database to query."""
+        return self.effective_role in _DB_SELECT_ROLES
 
     @staticmethod
     def _default_ai_provider():

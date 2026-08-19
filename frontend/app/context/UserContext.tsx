@@ -3,10 +3,18 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 
+export type UserRole = 'user' | 'developer' | 'admin';
+
 export interface UserSession {
   is_authenticated: boolean;
   id?: number;
   is_admin?: boolean;
+  /** 'user' | 'developer' | 'admin'. Developer is user plus DB selection. */
+  role?: UserRole;
+  /** Whether the labeling-database switch is offered. Enforced server-side too. */
+  can_select_db?: boolean;
+  /** The shared anonymous account: no query history, no saved preferences. */
+  is_guest?: boolean;
   username?: string;
   ai_provider?: string;
   custom_gemini_key?: string;

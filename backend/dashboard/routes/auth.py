@@ -2,7 +2,7 @@ import os
 import re
 from flask import Blueprint, request, jsonify
 from flask_login import login_user, login_required, logout_user, current_user
-from database import db, User
+from database import db, User, ROLE_USER
 import logging
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,10 @@ def login():
             'user': {
                 'id': user.id,
                 'username': user.username,
-                'is_admin': user.is_admin
+                'is_admin': user.is_admin,
+                'role': user.effective_role,
+                'can_select_db': user.can_select_database,
+                'is_guest': user.is_guest
             }
         })
     else:
@@ -71,7 +74,8 @@ def register():
     if User.query.filter(db.func.lower(User.username) == username.lower()).first():
         return jsonify({'success': False, 'error': 'Username already exists'}), 400
     
-    new_user = User(username=username, is_admin=False)
+    new_user = User(username=username)
+    new_user.set_role(ROLE_USER)
     new_user.set_password(password)
     db.session.add(new_user)
     db.session.commit()
@@ -92,7 +96,8 @@ def guest_login():
         
     guest_user = User.query.filter(db.func.lower(User.username) == 'guest').first()
     if not guest_user:
-        guest_user = User(username='guest', is_admin=False)
+        guest_user = User(username='guest')
+        guest_user.set_role(ROLE_USER)
         guest_user.set_password('guest')
         db.session.add(guest_user)
         db.session.commit()
@@ -103,7 +108,10 @@ def guest_login():
         'user': {
             'id': guest_user.id,
             'username': guest_user.username,
-            'is_admin': guest_user.is_admin
+            'is_admin': guest_user.is_admin,
+            'role': guest_user.effective_role,
+            'can_select_db': guest_user.can_select_database,
+            'is_guest': guest_user.is_guest
         }
     })
 
@@ -143,6 +151,15 @@ def session():
             'id': current_user.id,
             'username': current_user.username,
             'is_admin': current_user.is_admin,
+            'role': current_user.effective_role,
+            # Whether the database switch is offered at all. Normal users are
+            # pinned to the CDER-CBER scope; see labelquery._resolve_target_db,
+            # which enforces the same rule server-side.
+            'can_select_db': current_user.can_select_database,
+            # Query history and saved preferences are per-user state on a row
+            # every anonymous visitor shares, so both are closed to the guest
+            # account. Enforced on the routes as well as hidden in the UI.
+            'is_guest': current_user.is_guest,
             'ai_provider': current_user.ai_provider or os.getenv("DEFAULT_AI_MODEL") or ('elsa' if is_internal else 'gemini'),
             'custom_gemini_key': current_user.custom_gemini_key,
             'openai_api_key': current_user.openai_api_key,

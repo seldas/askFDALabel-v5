@@ -50,6 +50,11 @@ export default function Header({
 }) {
   const { session, loading, updateAiProvider, refreshSession, openAuthModal, activeTasks } = useUser();
 
+  /* The shared anonymous account. Prefer the server's flag; fall back to the
+     username so a cached session from before the flag existed still hides the
+     right things. */
+  const isGuest = session?.is_guest ?? (session?.username?.toLowerCase() === 'guest');
+
   const pathname = usePathname();
   const resolvedActiveApp = useMemo(
     () => activeApp ?? inferActiveApp(pathname || ''),
@@ -545,7 +550,7 @@ export default function Header({
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>
                         AI: {session.ai_provider?.toUpperCase()}
                     </div>
-                    {session?.username?.toLowerCase() !== 'guest' ? (
+                    {!isGuest ? (
                       <Link
                         href="/management?tab=ai#ai-settings"
                         className="account-ai-config"
@@ -561,18 +566,26 @@ export default function Header({
                     <Link href="/dashboard" className="dropdown-item dropdown-item--secondary-action" onClick={() => setActiveDropdown(null)}>
                       My Dashboard
                     </Link>
-                    <Link href="/dashboard/query_history" className="dropdown-item dropdown-item--secondary-action" onClick={() => setActiveDropdown(null)}>
-                      Search & Query History
-                    </Link>
-                    <Link href="/management" className="dropdown-item dropdown-item--secondary-action" onClick={() => setActiveDropdown(null)}>
-                      {session?.is_admin ? 'System Management' : 'Settings & Preferences'}
-                    </Link>
-                    {session?.username?.toLowerCase() === 'guest' && (
+                    {/* Query history and preferences are per-user state on a
+                        row every anonymous visitor shares, so both are closed
+                        to the guest account. The routes behind them return 403
+                        for a guest too -- this only removes the entry points. */}
+                    {!isGuest && (
+                      <Link href="/dashboard/query_history" className="dropdown-item dropdown-item--secondary-action" onClick={() => setActiveDropdown(null)}>
+                        Search & Query History
+                      </Link>
+                    )}
+                    {!isGuest && (
+                      <Link href="/management" className="dropdown-item dropdown-item--secondary-action" onClick={() => setActiveDropdown(null)}>
+                        {session?.is_admin ? 'System Management' : 'Settings & Preferences'}
+                      </Link>
+                    )}
+                    {isGuest && (
                       <button onClick={() => { openAuthModal('login'); setActiveDropdown(null); }} className="dropdown-item">
                         Log In
                       </button>
                     )}
-                    {session?.username?.toLowerCase() !== 'guest' && (
+                    {!isGuest && (
                       <button onClick={() => { openAuthModal('change_password'); setActiveDropdown(null); }} className="dropdown-item dropdown-item--secondary-action">
                         Change Password
                       </button>

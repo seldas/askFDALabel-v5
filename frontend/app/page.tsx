@@ -59,6 +59,15 @@ function HomePage() {
   const isAuthed = Boolean(session?.is_authenticated);
 
   const oracleAvailable = capReady && Boolean(capabilities.isInternal || capabilities.fdaAccessible || capabilities.cderAccessible);
+
+  /* Only developers and admins choose a database. Everyone else is pinned to
+   * the CDER-CBER scope, and the switch is not rendered at all.
+   *
+   * This is presentation only -- target_db travels with every query request, so
+   * the real restriction is labelquery._resolve_target_db on the backend, which
+   * applies the same rule to whatever actually arrives. */
+  const canSelectDb = Boolean(session?.can_select_db);
+
   const [targetDb, setTargetDb] = useState<TargetDb>('oracle');
 
   const [query, setQuery] = useState<LabelQuery>(makeEmptyQuery);
@@ -68,12 +77,23 @@ function HomePage() {
   // The target the user clicked, held until they confirm losing the query.
   const [pendingDb, setPendingDb] = useState<TargetDb | null>(null);
 
-  // Auto-switch to local DB if Oracle is unavailable in this environment
+  /* Pin the target for anyone who cannot choose one.
+   *
+   * Oracle is the intended scope, but it is unreachable on a public deployment,
+   * and leaving a pinned user there would mean no search at all -- so fall back
+   * to the local database exactly as this page already did when Oracle was
+   * down. The backend resolver makes the same substitution.
+   *
+   * Runs for privileged users too, to keep the pre-existing behaviour of
+   * dropping off an unreachable Oracle. */
   useEffect(() => {
-    if (capReady && !oracleAvailable) {
+    if (!capReady) return;
+    if (!canSelectDb) {
+      setTargetDb(oracleAvailable ? 'oracle' : 'local');
+    } else if (!oracleAvailable) {
       setTargetDb('local');
     }
-  }, [capReady, oracleAvailable]);
+  }, [capReady, oracleAvailable, canSelectDb]);
 
   useEffect(() => {
     setHasSaved(Boolean(window.localStorage.getItem(LAST_QUERY_KEY)));
@@ -107,10 +127,13 @@ function HomePage() {
     if (!wire) return;
     hydratedFrom.current = encodedParam;
     setQuery(fromWire(wire));
-    if (targetParam === 'local' || targetParam === 'oracle' || targetParam === 'oracle_all') {
+    // Ignored for pinned accounts: a shared link must not hand someone a scope
+    // their role does not allow. The effect above puts them back regardless,
+    // but not re-setting it here avoids a visible flip.
+    if (canSelectDb && (targetParam === 'local' || targetParam === 'oracle' || targetParam === 'oracle_all')) {
       setTargetDb(targetParam);
     }
-  }, [encodedParam, targetParam]);
+  }, [encodedParam, targetParam, canSelectDb]);
 
   /* Dropdown contents come from the live database, so a deployment with a
    * partial label import offers only what it actually has.
@@ -244,42 +267,45 @@ function HomePage() {
         Clear All
       </button>
 
-      {/* Target DB Switch (Oracle vs Local) */}
-      <div
-        className="fdl-target-db-container"
-        title={!oracleAvailable ? "Oracle FDALabel DB is unavailable in public environment (locked to Local DB)" : "Switch search target database"}
-      >
-        <span className="fdl-target-db-label">DB:</span>
-        <div className="fdl-target-db-pills">
-          <button
-            type="button"
-            className={`fdl-target-db-pill ${targetDb === 'local' ? 'active' : ''}`}
-            onClick={() => requestTargetDb('local')}
-            title="Local DB — Search local structured drug and SPL records"
-          >
-            {TARGET_DB_LABELS.local}
-          </button>
-          {/* Human and All are the same Oracle database; they differ only in scope */}
-          <button
-            type="button"
-            className={`fdl-target-db-pill ${targetDb === 'oracle' ? 'active' : ''}`}
-            onClick={() => oracleAvailable && requestTargetDb('oracle')}
-            disabled={!oracleAvailable}
-            title="CDER-CBER ver. — Search human prescription and OTC drug labeling"
-          >
-            {TARGET_DB_LABELS.oracle}
-          </button>
-          <button
-            type="button"
-            className={`fdl-target-db-pill ${targetDb === 'oracle_all' ? 'active' : ''}`}
-            onClick={() => oracleAvailable && requestTargetDb('oracle_all')}
-            disabled={!oracleAvailable}
-            title="FDA ver. — Search all drug labeling including human and animal records"
-          >
-            {TARGET_DB_LABELS.oracle_all}
-          </button>
+      {/* Target DB Switch — developers and admins only; normal users are
+          pinned to CDER-CBER and never see it. */}
+      {canSelectDb && (
+        <div
+          className="fdl-target-db-container"
+          title={!oracleAvailable ? "Oracle FDALabel DB is unavailable in public environment (locked to Local DB)" : "Switch search target database"}
+        >
+          <span className="fdl-target-db-label">DB:</span>
+          <div className="fdl-target-db-pills">
+            <button
+              type="button"
+              className={`fdl-target-db-pill ${targetDb === 'local' ? 'active' : ''}`}
+              onClick={() => requestTargetDb('local')}
+              title="Local DB — Search local structured drug and SPL records"
+            >
+              {TARGET_DB_LABELS.local}
+            </button>
+            {/* Human and All are the same Oracle database; they differ only in scope */}
+            <button
+              type="button"
+              className={`fdl-target-db-pill ${targetDb === 'oracle' ? 'active' : ''}`}
+              onClick={() => oracleAvailable && requestTargetDb('oracle')}
+              disabled={!oracleAvailable}
+              title="CDER-CBER ver. — Search human prescription and OTC drug labeling"
+            >
+              {TARGET_DB_LABELS.oracle}
+            </button>
+            <button
+              type="button"
+              className={`fdl-target-db-pill ${targetDb === 'oracle_all' ? 'active' : ''}`}
+              onClick={() => oracleAvailable && requestTargetDb('oracle_all')}
+              disabled={!oracleAvailable}
+              title="FDA ver. — Search all drug labeling including human and animal records"
+            >
+              {TARGET_DB_LABELS.oracle_all}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <button type="button" className="fdl-btn fdl-btn--search" onClick={runSearch}>
         Search Labels »

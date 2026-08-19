@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useUser } from '../context/UserContext';
+import GuestRestricted from '../components/GuestRestricted';
 import Header from '../components/Header';
 import { useRouter } from 'next/navigation';
 
@@ -9,6 +10,7 @@ interface User {
   id: number;
   username: string;
   is_admin: boolean;
+  role?: 'user' | 'developer' | 'admin';
   ai_provider: string;
   is_active?: boolean;
   created_at?: string;
@@ -226,7 +228,7 @@ export default function ManagementPage() {
   // New user form
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [newIsAdmin, setNewIsAdmin] = useState(false);
+  const [newRole, setNewRole] = useState<'user' | 'developer' | 'admin'>('user');
 
   // Edit user state
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
@@ -349,6 +351,7 @@ export default function ManagementPage() {
           id: session.id || 0,
           username: session.username || 'Unknown',
           is_admin: false,
+          role: 'user',
           ai_provider: session.ai_provider || 'elsa',
           is_active: true,
           created_at: new Date().toISOString()
@@ -438,14 +441,14 @@ export default function ManagementPage() {
         body: JSON.stringify({
           username: newUsername,
           password: newPassword,
-          is_admin: newIsAdmin
+          role: newRole
         })
       });
       const data = await res.json();
       if (data.success) {
         setNewUsername('');
         setNewPassword('');
-        setNewIsAdmin(false);
+        setNewRole('user');
         fetchUsers();
       } else {
         alert(data.error || 'Failed to create user');
@@ -455,14 +458,19 @@ export default function ManagementPage() {
     }
   };
 
-  const handleUpdateRole = async (userId: number, isAdmin: boolean) => {
+  const handleUpdateRole = async (userId: number, role: string) => {
     try {
       const res = await fetch(`/api/dashboard/admin/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_admin: isAdmin })
+        body: JSON.stringify({ role })
       });
-      if (res.ok) fetchUsers();
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
+        fetchUsers();
+      } else {
+        alert(data.error || 'Could not update role.');
+      }
     } catch (err) {
       console.error('Update role error', err);
     }
@@ -683,6 +691,12 @@ export default function ManagementPage() {
 
   if (sessionLoading || !session?.is_authenticated) {
     return <div style={{ padding: '2rem', textAlign: 'center' }}>Verifying access...</div>;
+  }
+
+  // Reachable by URL even though the header hides the link; /preferences
+  // returns 403 for a guest regardless.
+  if (session?.is_guest ?? (session?.username?.toLowerCase() === 'guest')) {
+    return <GuestRestricted feature="Settings & Preferences" />;
   }
 
   // AI Action History Filtering & Pagination logic
@@ -1247,13 +1261,16 @@ export default function ManagementPage() {
                       className="mgmt-input"
                       required
                     />
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', fontWeight: 700 }}>
-                      <input
-                        type="checkbox"
-                        checked={newIsAdmin}
-                        onChange={e => setNewIsAdmin(e.target.checked)}
-                      /> Admin
-                    </label>
+                    <select
+                      value={newRole}
+                      onChange={e => setNewRole(e.target.value as 'user' | 'developer' | 'admin')}
+                      className="mgmt-select"
+                      title="Developer is User plus the labeling-database switch"
+                    >
+                      <option value="user">User</option>
+                      <option value="developer">Developer</option>
+                      <option value="admin">Admin</option>
+                    </select>
                     <button type="submit" className="btn-primary">Add</button>
                   </div>
                 </form>
@@ -1279,12 +1296,14 @@ export default function ManagementPage() {
                           </td>
                           <td>
                             <select
-                              value={user.is_admin ? 'admin' : 'user'}
-                              onChange={e => handleUpdateRole(user.id, e.target.value === 'admin')}
+                              value={user.role ?? (user.is_admin ? 'admin' : 'user')}
+                              onChange={e => handleUpdateRole(user.id, e.target.value)}
                               className="mgmt-select"
                               disabled={user.is_active === false || !session?.is_admin}
+                              title="Developer is User plus the labeling-database switch"
                             >
                               <option value="user">User</option>
+                              <option value="developer">Developer</option>
                               <option value="admin">Admin</option>
                             </select>
                           </td>
