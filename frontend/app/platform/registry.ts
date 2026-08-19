@@ -42,6 +42,15 @@ export interface ToolDef {
   contexts: ContextKind[];
   /** All must be satisfied for the tool to be offered. */
   requires?: Requirement[];
+  /**
+   * Restricted to developer and admin accounts.
+   *
+   * Unlike `requires`, which describes what the *deployment* can reach, this
+   * describes what the *account* is allowed to use. The blueprint behind each
+   * such tool refuses a plain user independently, so this only controls
+   * whether the entry point is offered.
+   */
+  developerOnly?: boolean;
   /** Marks AI-backed tools so the UI can badge them, as the label tabs do today. */
   ai?: boolean;
   /**
@@ -156,6 +165,7 @@ const PLATFORM_TOOLS: ToolDef[] = [
     kind: 'embedded',
     group: 'discover',
     contexts: ['global'],
+    developerOnly: true,
     ai: true,
     target: '_blank',
     href: (ctx) => queryRoute('/search', ctx),
@@ -169,6 +179,7 @@ const PLATFORM_TOOLS: ToolDef[] = [
     group: 'discover',
     contexts: ['global'],
     requires: ['localQuery'],
+    developerOnly: true,
     href: (ctx) => queryRoute('/localquery', ctx),
   },
   {
@@ -222,6 +233,7 @@ const PLATFORM_TOOLS: ToolDef[] = [
     kind: 'embedded',
     group: 'validate',
     contexts: ['global'],
+    developerOnly: true,
     target: '_blank',
     href: () => '/webtest',
   },

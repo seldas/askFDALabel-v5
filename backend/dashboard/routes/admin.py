@@ -32,6 +32,7 @@ def get_users():
             'is_admin': u.is_admin,
             'role': u.effective_role,
             'can_select_db': u.can_select_database,
+            'has_developer_access': u.has_developer_access,
             'ai_provider': u.ai_provider,
             'is_active': getattr(u, 'is_active', True)
         } for u in users]

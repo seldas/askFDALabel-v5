@@ -8,7 +8,7 @@ import { useCapabilities } from '../platform/capabilities';
 import { cx } from '../platform/primitives';
 import { ToolIcon } from '../platform/icons';
 import { getTool } from '../platform/registry';
-import { isToolAvailable } from '../platform/ToolLauncher';
+import { isToolAvailable, useToolAccess } from '../platform/ToolLauncher';
 import { withAppBase } from '../utils/appPaths';
 
 type DropdownKey = 'user' | 'nav' | 'more' | 'ai' | 'updates' | null;
@@ -62,6 +62,7 @@ export default function Header({
   );
 
   const { capabilities } = useCapabilities();
+  const toolAccess = useToolAccess();
 
   const [activeDropdown, setActiveDropdown] = useState<DropdownKey | 'tasks'>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -280,7 +281,7 @@ export default function Header({
 
               {(() => {
                 const localquery = getTool('localquery')!;
-                return isToolAvailable(localquery, GLOBAL_CTX, capabilities) ? (
+                return isToolAvailable(localquery, GLOBAL_CTX, capabilities, toolAccess) ? (
                   <Link
                     href={localquery.href(GLOBAL_CTX)}
                     className={cx('hp-dropdown-item', resolvedActiveApp === 'localquery' && 'is-active')}
@@ -299,7 +300,7 @@ export default function Header({
 
               {(() => {
                 const chemsearch = getTool('chemsearch')!;
-                return (
+                return isToolAvailable(chemsearch, GLOBAL_CTX, capabilities, toolAccess) ? (
                   <a
                     href={chemsearch.href(GLOBAL_CTX)}
                     target="_blank"
@@ -315,12 +316,12 @@ export default function Header({
                       <div style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 500 }}>{chemsearch.blurb}</div>
                     </div>
                   </a>
-                );
+                ) : null;
               })()}
 
               {(['fdalabel-fda', 'fdalabel-cder', 'fdalabel-public'] as const).map((toolId) => {
                 const tool = getTool(toolId)!;
-                const available = isToolAvailable(tool, GLOBAL_CTX, capabilities);
+                const available = isToolAvailable(tool, GLOBAL_CTX, capabilities, toolAccess);
                 if (!available) {
                   return (
                     <div
@@ -376,7 +377,7 @@ export default function Header({
 
               {(() => {
                 const searchTool = getTool('search');
-                if (!searchTool || !isToolAvailable(searchTool, GLOBAL_CTX, capabilities)) return null;
+                if (!searchTool || !isToolAvailable(searchTool, GLOBAL_CTX, capabilities, toolAccess)) return null;
                 return (
                   <a
                     href={searchTool.href(GLOBAL_CTX)}
@@ -411,7 +412,7 @@ export default function Header({
 
               {(() => {
                 const drugtox = getTool('drugtox');
-                if (!drugtox || !isToolAvailable(drugtox, GLOBAL_CTX, capabilities)) return null;
+                if (!drugtox || !isToolAvailable(drugtox, GLOBAL_CTX, capabilities, toolAccess)) return null;
                 return (
                   <a
                     href={drugtox.href(GLOBAL_CTX)}
@@ -433,7 +434,7 @@ export default function Header({
 
               {(() => {
                 const webtest = getTool('webtest')!;
-                return (
+                return isToolAvailable(webtest, GLOBAL_CTX, capabilities, toolAccess) ? (
                   <a
                     href={webtest.href(GLOBAL_CTX)}
                     target="_blank"
@@ -447,7 +448,7 @@ export default function Header({
                       <div className="dropdown-subtitle">{webtest.blurb}</div>
                     </div>
                   </a>
-                );
+                ) : null;
               })()}
             </div>
           )}

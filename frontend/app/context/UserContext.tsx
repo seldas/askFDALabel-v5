@@ -15,6 +15,8 @@ export interface UserSession {
   can_select_db?: boolean;
   /** The shared anonymous account: no query history, no saved preferences. */
   is_guest?: boolean;
+  /** Developer-only modules: LabelChat, Web-test, Local Database Search. */
+  has_developer_access?: boolean;
   username?: string;
   ai_provider?: string;
   custom_gemini_key?: string;

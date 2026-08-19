@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useUser } from '../context/UserContext';
-import GuestRestricted from '../components/GuestRestricted';
+import AccessRestricted from '../components/AccessRestricted';
 import Header from '../components/Header';
 import { useRouter } from 'next/navigation';
 
@@ -696,7 +696,7 @@ export default function ManagementPage() {
   // Reachable by URL even though the header hides the link; /preferences
   // returns 403 for a guest regardless.
   if (session?.is_guest ?? (session?.username?.toLowerCase() === 'guest')) {
-    return <GuestRestricted feature="Settings & Preferences" />;
+    return <AccessRestricted feature="Settings & Preferences" />;
   }
 
   // AI Action History Filtering & Pagination logic

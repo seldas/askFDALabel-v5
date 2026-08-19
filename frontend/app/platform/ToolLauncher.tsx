@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
 import { useCapabilities, type Capabilities } from './capabilities';
+import { useUser } from '../context/UserContext';
 import { ToolIcon } from './icons';
 import { Badge, Grid, Tabs } from './primitives';
 import { contextKinds, labelRoute, type ContextKind, type LaunchContext } from './context';
@@ -43,15 +44,35 @@ function meetsRequirement(req: Requirement, caps: Capabilities): boolean {
   }
 }
 
+/**
+ * What the *account* is allowed to reach, as opposed to what the deployment
+ * can reach. Optional so existing call sites keep compiling; omitted means no
+ * developer access, which is the safe default for a tool marked developerOnly.
+ */
+export interface ToolAccess {
+  hasDeveloperAccess?: boolean;
+}
+
 export function isToolAvailable(
   tool: ToolDef,
   ctx: LaunchContext,
   caps: Capabilities,
+  access?: ToolAccess,
 ): boolean {
   if (tool.enabled === false) return false;
+  if (tool.developerOnly && !access?.hasDeveloperAccess) return false;
   const kinds = contextKinds(ctx);
   if (!tool.contexts.some((kind) => kinds.includes(kind))) return false;
   return (tool.requires ?? []).every((req) => meetsRequirement(req, caps));
+}
+
+/** Reads the current account's tool access from the session. */
+export function useToolAccess(): ToolAccess {
+  const { session } = useUser();
+  return useMemo(
+    () => ({ hasDeveloperAccess: Boolean(session?.has_developer_access) }),
+    [session?.has_developer_access],
+  );
 }
 
 /** Tools reachable from `ctx`, optionally filtered to specific ids or groups. */
@@ -65,6 +86,7 @@ export function useAvailableTools(
   },
 ): ToolDef[] {
   const { capabilities } = useCapabilities();
+  const access = useToolAccess();
   const { include, exclude, groups, matchContexts } = opts ?? {};
 
   return useMemo(() => {
@@ -75,9 +97,9 @@ export function useAvailableTools(
       if (matchContexts && !tool.contexts.some((k) => matchContexts.includes(k))) {
         return false;
       }
-      return isToolAvailable(tool, ctx, capabilities);
+      return isToolAvailable(tool, ctx, capabilities, access);
     });
-  }, [ctx, capabilities, include, exclude, groups, matchContexts]);
+  }, [ctx, capabilities, access, include, exclude, groups, matchContexts]);
 }
 
 function ToolAnchor({

@@ -41,6 +41,7 @@ def login():
                 'is_admin': user.is_admin,
                 'role': user.effective_role,
                 'can_select_db': user.can_select_database,
+                'has_developer_access': user.has_developer_access,
                 'is_guest': user.is_guest
             }
         })
@@ -111,6 +112,7 @@ def guest_login():
             'is_admin': guest_user.is_admin,
             'role': guest_user.effective_role,
             'can_select_db': guest_user.can_select_database,
+            'has_developer_access': guest_user.has_developer_access,
             'is_guest': guest_user.is_guest
         }
     })
@@ -156,6 +158,10 @@ def session():
             # pinned to the CDER-CBER scope; see labelquery._resolve_target_db,
             # which enforces the same rule server-side.
             'can_select_db': current_user.can_select_database,
+            # LabelChat, Web-test and Local Database Search. The blueprints
+            # behind all three refuse a plain user, so this only decides
+            # whether the entry points are offered.
+            'has_developer_access': current_user.has_developer_access,
             # Query history and saved preferences are per-user state on a row
             # every anonymous visitor shares, so both are closed to the guest
             # account. Enforced on the routes as well as hidden in the UI.

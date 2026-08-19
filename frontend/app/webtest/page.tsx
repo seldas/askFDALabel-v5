@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { useUser } from '../context/UserContext';
+import RequireDeveloper from '../components/RequireDeveloper';
 import { 
     LineChart, Line, XAxis, YAxis, CartesianGrid, 
     Tooltip, ResponsiveContainer
@@ -80,7 +81,7 @@ function countColor(c: string | null | undefined): string {
     return 'var(--afl-success-500)';
 }
 
-export default function WebTestingPage() {
+function WebTestingPageInner() {
     const { session, openAuthModal } = useUser();
     const [status, setStatus] = useState<'idle' | 'running' | 'completed' | 'failed'>('idle');
     const [totalTasks, setTotalTasks] = useState(0);
@@ -783,5 +784,13 @@ export default function WebTestingPage() {
                 .row-hover:hover { background-color: var(--afl-n-50) !important; }
             `}</style>
         </div>
+    );
+}
+
+export default function WebTestingPage() {
+    return (
+        <RequireDeveloper feature="Web-test Tool" activeApp="webtest">
+            <WebTestingPageInner />
+        </RequireDeveloper>
     );
 }

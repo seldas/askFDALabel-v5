@@ -4,7 +4,14 @@ from openpyxl import Workbook
 from io import BytesIO
 from datetime import datetime
 
+from dashboard.routes.guards import require_developer_access
+
 localquery_bp = Blueprint('localquery', __name__)
+
+# LabelChat / Web-test / Local Database Search are developer-only modules.
+# Gated on the blueprint rather than per route so any route added later is
+# covered by default; see dashboard.routes.guards.
+localquery_bp.before_request(require_developer_access)
 
 @localquery_bp.route('/stats', methods=['GET'])
 def get_stats():

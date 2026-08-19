@@ -1,12 +1,13 @@
 'use client';
 
 /*
- * Shown in place of a page the guest account cannot use.
+ * Shown in place of a page the current account may not use.
  *
- * Query history and saved preferences are per-user state stored against a row
- * that every anonymous visitor shares, so one visitor would be reading and
- * overwriting another's. The entry points are hidden in the header, but the
- * routes are still reachable by typing the URL — this is what they get.
+ * Two rules land here. Query history and saved preferences are per-user state
+ * on a row every anonymous visitor shares, so the guest account cannot use
+ * them. LabelChat, Web-test and Local Database Search are developer-only. In
+ * both cases the entry points are hidden in the header, but the routes are
+ * still reachable by typing the URL — this is what they get.
  *
  * The API returns 403 for these features independently; this is the friendly
  * face of the same rule, not the rule itself.
@@ -14,7 +15,17 @@
 
 import Link from 'next/link';
 
-export default function GuestRestricted({ feature }: { feature: string }) {
+export default function AccessRestricted({
+  feature,
+  title,
+  body,
+}: {
+  feature: string;
+  /** Overrides the heading; defaults to the guest wording. */
+  title?: string;
+  /** Overrides the explanation; defaults to the guest wording. */
+  body?: string;
+}) {
   return (
     <div
       style={{
@@ -28,12 +39,11 @@ export default function GuestRestricted({ feature }: { feature: string }) {
         🔒
       </div>
       <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--afl-n-900, #0f172a)', marginBottom: '0.5rem' }}>
-        {feature} is not available for guests
+        {title ?? `${feature} is not available for guests`}
       </h1>
       <p style={{ color: 'var(--afl-n-500, #64748b)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-        The guest account is shared by everyone browsing without signing in, so it
-        cannot keep per-account data. Register or sign in with your own account to
-        use {feature.toLowerCase()}.
+        {body ??
+          `The guest account is shared by everyone browsing without signing in, so it cannot keep per-account data. Register or sign in with your own account to use ${feature.toLowerCase()}.`}
       </p>
       <Link
         href="/"

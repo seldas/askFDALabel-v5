@@ -31,17 +31,19 @@ import os
 
 #: Account roles, least to most privileged.
 #:
-#: 'developer' is exactly 'user' plus the ability to choose which labeling
-#: database a query runs against. That is the only difference between the two
-#: -- everything else a developer can do, a plain user can do. Normal users are
-#: pinned to the CDER-CBER scope and never see the database switch.
+#: 'developer' is 'user' plus the tooling a plain account has no business
+#: reaching: choosing which labeling database a query runs against, and the
+#: LabelChat, Web-test and Local Database Search modules. Normal users are
+#: pinned to the CDER-CBER scope and are not offered those three tools.
 ROLE_USER = 'user'
 ROLE_DEVELOPER = 'developer'
 ROLE_ADMIN = 'admin'
 ROLES = (ROLE_USER, ROLE_DEVELOPER, ROLE_ADMIN)
 
-#: Roles allowed to pick a target database.
-_DB_SELECT_ROLES = frozenset({ROLE_DEVELOPER, ROLE_ADMIN})
+#: Roles with developer tooling. Both capabilities below key off this set --
+#: they have the same answer today, and are named separately so a future split
+#: does not have to untangle call sites.
+_DEVELOPER_ROLES = frozenset({ROLE_DEVELOPER, ROLE_ADMIN})
 
 #: The shared anonymous account created by /auth/guest-login. It is a real row
 #: rather than a session flag, so everyone signing in as a guest shares one
@@ -98,9 +100,20 @@ class User(UserMixin, db.Model):
         return (self.username or '') == GUEST_USERNAME
 
     @property
+    def has_developer_access(self):
+        """
+        Whether this account may reach developer-only modules.
+
+        Covers LabelChat (/api/search), the Web-test tool (/api/webtest) and
+        Local Database Search (/api/localquery), each gated at the blueprint
+        level so every route inside is covered.
+        """
+        return self.effective_role in _DEVELOPER_ROLES
+
+    @property
     def can_select_database(self):
         """Whether this account may choose the labeling database to query."""
-        return self.effective_role in _DB_SELECT_ROLES
+        return self.effective_role in _DEVELOPER_ROLES
 
     @staticmethod
     def _default_ai_provider():

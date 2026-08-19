@@ -6,7 +6,7 @@ import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { Badge, Button, ButtonLink, EmptyState, Input, Select } from '../../platform/primitives';
 import { useUser } from '../../context/UserContext';
-import GuestRestricted from '../../components/GuestRestricted';
+import AccessRestricted from '../../components/AccessRestricted';
 import '../dashboard.css';
 
 interface QueryHistoryItem {
@@ -190,7 +190,7 @@ export default function QueryHistoryPage() {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--afl-bg-page, #f8fafc)' }}>
         <Header activeApp="dashboard" />
-        <GuestRestricted feature="Search & Query History" />
+        <AccessRestricted feature="Search & Query History" />
       </div>
     );
   }

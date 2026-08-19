@@ -44,3 +44,50 @@ def guest_forbidden(f):
             }), 403
         return f(*args, **kwargs)
     return decorated_function
+
+
+#: Sent back when a plain user reaches a developer-only module.
+DEVELOPER_ONLY_MESSAGE = (
+    'This tool is available to developer and admin accounts only. '
+    'Contact an administrator to request access.'
+)
+
+
+def _developer_access_denied():
+    return jsonify({
+        'success': False,
+        'error': DEVELOPER_ONLY_MESSAGE,
+        'developer_only': True,
+    }), 403
+
+
+def require_developer_access():
+    """
+    Blueprint-level gate for developer-only modules.
+
+    Registered as a `before_request` on the whole blueprint rather than applied
+    per route, so a route added later is covered by default instead of being
+    forgotten. Returns None to let the request through.
+
+    Unauthenticated callers get 401 so the client prompts to sign in; an
+    authenticated plain user gets 403, because signing in again will not help.
+    """
+    if not current_user.is_authenticated:
+        return jsonify({
+            'success': False,
+            'error': 'Authentication required.',
+        }), 401
+    if not current_user.has_developer_access:
+        return _developer_access_denied()
+    return None
+
+
+def developer_required(f):
+    """Single-route form of :func:`require_developer_access`."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        denied = require_developer_access()
+        if denied is not None:
+            return denied
+        return f(*args, **kwargs)
+    return decorated_function
