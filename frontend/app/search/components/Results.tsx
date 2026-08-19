@@ -61,95 +61,6 @@ interface ResultItem {
   is_metadata_only?: boolean;
 }
 
-const SQLHighlighter = ({ sql }: { sql: string }) => {
-  const tokens = sql.split(/(\s+|\(|\)|'[^']*'|,|\bAND\b|\bOR\b|\bLIKE\b|=|>|<|\bNOT\b|\bCONTAINS\b)/i);
-
-  return (
-    <div style={{
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '4px 6px',
-      alignItems: 'center',
-      fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace',
-      padding: '8px',
-      backgroundColor: 'var(--afl-n-50)',
-      borderRadius: '6px',
-      lineHeight: '1.6'
-    }}>
-      {tokens.map((token, i) => {
-        const t = token.trim();
-        if (!t) return null;
-
-        const upperT = t.toUpperCase();
-
-        if (upperT === 'AND' || upperT === 'OR' || upperT === 'NOT') {
-          const isOr = upperT === 'OR';
-          return (
-            <span key={i} style={{
-              backgroundColor: isOr ? 'var(--afl-danger-50)' : 'var(--afl-n-50)',
-              color: isOr ? 'var(--afl-danger-500)' : 'var(--afl-n-600)',
-              padding: '1px 6px',
-              borderRadius: '4px',
-              fontWeight: 700,
-              fontSize: '0.7rem',
-              border: `1px solid ${isOr ? 'var(--afl-danger-100)' : 'var(--afl-n-200)'}`,
-              boxShadow: '0 1px 1px rgba(0,0,0,0.02)'
-            }}>{upperT}</span>
-          );
-        }
-
-        if (t === '(' || t === ')') {
-          return (
-            <span key={i} style={{
-              color: 'var(--afl-info-500)',
-              fontWeight: 800,
-              fontSize: '1.1rem',
-              padding: '0 2px'
-            }}>{t}</span>
-          );
-        }
-
-        if (t.startsWith("'") && t.endsWith("'")) {
-          return (
-            <span key={i} style={{
-              color: 'var(--afl-success-700)',
-              backgroundColor: 'var(--afl-success-50)',
-              padding: '0 4px',
-              borderRadius: '4px',
-              border: '1px solid var(--afl-success-50)',
-              fontSize: '0.85rem'
-            }}>{t}</span>
-          );
-        }
-
-        if (['=', 'LIKE', '>', '<', 'CONTAINS'].includes(upperT)) {
-          return (
-            <span key={i} style={{
-              color: 'var(--afl-a-700)',
-              fontWeight: 600,
-              fontSize: '0.8rem',
-              textTransform: 'uppercase'
-            }}>{upperT}</span>
-          );
-        }
-
-        if (t.includes('.') || /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(t)) {
-          const isField = t.includes('.');
-          return (
-            <span key={i} style={{
-              color: isField ? 'var(--afl-info-700)' : 'var(--afl-n-700)',
-              fontWeight: isField ? 600 : 400,
-              fontSize: '0.85rem'
-            }}>{t}</span>
-          );
-        }
-
-        return <span key={i} style={{ color: 'var(--afl-n-500)', fontSize: '0.85rem' }}>{t}</span>;
-      })}
-    </div>
-  );
-};
-
 const SavedHistoriesView = () => {
   const { setChatHistory, setCurrentHistoryId, setHasUnsavedChanges } = useSearchContext();
   const [histories, setHistories] = useState<any[]>([]);
@@ -223,14 +134,7 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
     setCurrentPage,
     searchTerm,
     chatHistory,
-    generatedSql,
-    setGeneratedSql,
-    setMedAnswer,
     highlightedSetId,
-    searchMode,
-    setSearchMode,
-    agentFlow,
-    reasoning,
 
     filters,
     setFilters,
@@ -246,29 +150,17 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
     refineResponseWithLabel,
 
     // optional richer debug payloads (won’t break if not populated)
-    debugIntent,
-    debugPlan,
-    debugStats,
-    traceLog,
   } = useSearchContext();
 
-  const isAgentic = searchMode === 'v2' || searchMode === 'v3';
-  const isStandard = searchMode === 'v1';
 
   const baseResults = (resultsRaw as ResultItem[]);
   const results = baseResults.slice(0, resultsLimit);
   const totalResults = (totalResultsRaw > resultsLimit ? resultsLimit : totalResultsRaw);
 
   // --- Result limit warning (only show when we hit the backend cap) ---
-  const inferredLimitRaw =
-    (debugPlan && (debugPlan.limit ?? debugPlan.retrieval?.limit)) ??
-    (debugStats && (debugStats.limit ?? debugStats.retrieval_limit)) ??
-    null;
-
-  const inferredLimit = (() => {
-    const n = Number(inferredLimitRaw);
-    return Number.isFinite(n) && n > 0 ? n : 100; // fallback to your common cap
-  })();
+  // The backend no longer reports its own cap (the debug payloads came from the
+  // retired agentic stream), so this is the common cap the search routes use.
+  const inferredLimit = 100;
 
   // "Hit the limit" = backend returned as many rows as it's willing to return
   const hitResultLimit = results.length >= inferredLimit;
@@ -335,7 +227,7 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
   // Manual Filter Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newTerm, setNewTerm] = useState('');
-  const [newType, setNewType] = useState<'drugNames' | 'adverseEvents' | 'ndcs'>('drugNames');
+  const [newType, setNewType] = useState<'drugNames' | 'ndcs'>('drugNames');
 
   const AddFilterModal = () => {
     if (!isAddModalOpen) return null;
@@ -372,7 +264,6 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
               style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--afl-n-300)' }}
             >
               <option value="drugNames">💊 Drug Name</option>
-              <option value="adverseEvents">⚠️ Adverse Event</option>
               <option value="ndcs">🔢 NDC Code</option>
             </select>
           </div>
@@ -443,7 +334,6 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
 
   const FilterChips = () => {
     const activeDrugNames = filters.drugNames || [];
-    const activeAEs = filters.adverseEvents || [];
     const activeNDCs = filters.ndcs || [];
 
     // We always show the bar now, so users can add filters or toggle flags.
@@ -468,13 +358,6 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
           <div key={`drug-${term}`} className="filter-chip highlight-drug" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '4px 10px' }}>
             <span>💊 {term}</span>
             <button onClick={() => toggleFilterTerm('drugNames', term)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontSize: '1rem', lineHeight: 1 }}>×</button>
-          </div>
-        ))}
-
-        {activeAEs.map(term => (
-          <div key={`ae-${term}`} className="filter-chip highlight-adverse_events" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '4px 10px' }}>
-            <span>⚠️ {term}</span>
-            <button onClick={() => toggleFilterTerm('adverseEvents', term)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontSize: '1rem', lineHeight: 1 }}>×</button>
           </div>
         ))}
 
@@ -522,7 +405,6 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
               setFilters(prev => ({ 
                 ...prev, 
                 drugNames: [], 
-                adverseEvents: [], 
                 ndcs: [],
                 isRx: false
               }));
@@ -577,235 +459,6 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
       }
     }
   }, [highlightedSetId, results, localResultsPerPage, currentPage, setCurrentPage]);
-
-  // -----------------------
-  // SQL Editor State (V1 only)
-  // -----------------------
-  const [localSql, setLocalSql] = useState('');
-  const [isSqlRunning, setIsSqlRunning] = useState(false);
-
-  const [baseQuery, setBaseQuery] = useState('');
-  const [sqlSuffix, setSqlSuffix] = useState(''); // preserve ORDER BY / outer WHERE etc
-  const [conditions, setConditions] = useState<any[]>([]);
-
-  useEffect(() => {
-    // Only parse/build conditions for V1 filter editing.
-    if (!isStandard) return;
-
-    if (generatedSql) {
-      setLocalSql(generatedSql);
-      parseSqlToConditions(generatedSql);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [generatedSql, isStandard]);
-
-  const ensureLabelSectionCondition = (conds: any[]) => {
-    const has = conds.some(c => c.type === 'simple' && (c.field || '').toUpperCase() === 'S.LOINC_CODE');
-    if (has) return conds;
-
-    return [
-      ...conds,
-      {
-        id: conds.length,
-        type: 'simple',
-        field: 's.LOINC_CODE',
-        operator: 'IN',
-        value: [],
-        raw: '',
-        disabled: true
-      }
-    ];
-  };
-
-  /**
-   * Improved SQL parsing:
-   * - edits only the *first* WHERE block
-   * - preserves suffix like "ORDER BY ... ) WHERE ROWNUM <= ..."
-   */
-  const parseSqlToConditions = (sql: string) => {
-    try {
-      const whereIndex = sql.search(/\bWHERE\b/i);
-      if (whereIndex === -1) {
-        setBaseQuery(sql);
-        setSqlSuffix('');
-        setConditions([]);
-        return;
-      }
-
-      const base = sql.substring(0, whereIndex).trim();
-      const afterWhere = sql.substring(whereIndex + 5); // after "WHERE"
-
-      // Find end of the editable WHERE region
-      const endCandidates: number[] = [];
-      const orderIdx = afterWhere.search(/\bORDER\s+BY\b/i);
-      const groupIdx = afterWhere.search(/\bGROUP\s+BY\b/i);
-      const outerWhereIdx = afterWhere.search(/\)\s*WHERE\b/i);
-
-      if (orderIdx !== -1) endCandidates.push(orderIdx);
-      if (groupIdx !== -1) endCandidates.push(groupIdx);
-      if (outerWhereIdx !== -1) endCandidates.push(outerWhereIdx);
-
-      const endRel = endCandidates.length ? Math.min(...endCandidates) : afterWhere.length;
-
-      const whereOnly = afterWhere.substring(0, endRel).trim();
-      const suffix = afterWhere.substring(endRel); // keep everything else
-      setBaseQuery(base);
-      setSqlSuffix(suffix || '');
-
-      const parts = whereOnly.split(/\s+AND\s+(?![^()]*\))/i);
-
-      const parsedConditions = parts.map((part, index) => {
-        const trimmed = part.trim();
-
-        const simpleMatch = trimmed.match(/^(?:UPPER\s*\(\s*)?([a-zA-Z0-9_.]+)(?:\s*\))?\s+(=|LIKE|NOT\s+LIKE)\s+(?:UPPER\s*\(\s*)?'([^']*)'(?:\s*\))?$/i);
-        if (simpleMatch) {
-          return {
-            id: index,
-            type: 'simple',
-            field: simpleMatch[1],
-            operator: simpleMatch[2].toUpperCase(),
-            value: simpleMatch[3],
-            raw: trimmed
-          };
-        }
-
-        const inMatch = trimmed.match(/^(?:UPPER\s*\(\s*)?([a-zA-Z0-9_.]+)(?:\s*\))?\s+IN\s*\(\s*([^)]+?)\s*\)\s*$/i);
-        if (inMatch) {
-          const field = inMatch[1];
-          const listRaw = inMatch[2];
-          const values = Array.from(listRaw.matchAll(/'([^']*)'/g)).map(m => m[1]);
-          return {
-            id: index,
-            type: 'simple',
-            field,
-            operator: 'IN',
-            value: values,
-            raw: trimmed
-          };
-        }
-
-        const containsMatch = trimmed.match(/^CONTAINS\s*\(\s*s\.CONTENT_XML\s*,\s*'([^']*)'\s*\)\s*>\s*0$/i);
-        if (containsMatch) {
-          return {
-            id: index,
-            type: 'contains',
-            field: 's.CONTENT_XML',
-            operator: 'CONTAINS',
-            value: containsMatch[1],
-            raw: trimmed
-          };
-        }
-
-        return { id: index, type: 'complex', raw: trimmed };
-      });
-
-      setConditions(ensureLabelSectionCondition(parsedConditions));
-    } catch (e) {
-      console.error("Failed to parse SQL:", e);
-      setBaseQuery(sql);
-      setSqlSuffix('');
-      setConditions([]);
-    }
-  };
-
-  const reconstructSql = (base: string, currentConditions: any[]) => {
-    const activeConditions = currentConditions.filter(c => c.raw && c.raw.trim() && !c.disabled);
-
-    if (activeConditions.length === 0) {
-      const newSql = base + (sqlSuffix ? ` ${sqlSuffix.trimStart()}` : '');
-      setLocalSql(newSql);
-      setGeneratedSql(newSql);
-      return;
-    }
-
-    const whereString = activeConditions.map(c => c.raw.trim()).join(' AND ');
-    const newSql = `${base} WHERE ${whereString}${sqlSuffix ? ` ${sqlSuffix.trimStart()}` : ''}`;
-    setLocalSql(newSql);
-    setGeneratedSql(newSql);
-  };
-
-  const updateCondition = (index: number, updates: any) => {
-    const newConditions = [...conditions];
-    const oldCond = newConditions[index];
-    const newCond = { ...oldCond, ...updates };
-
-    if (newCond.type === 'simple') {
-      if (newCond.operator === 'IN' && Array.isArray(newCond.value)) {
-        const vals = Array.isArray(newCond.value) ? newCond.value : [];
-        if (vals.length === 0) {
-          newCond.disabled = true;
-          newCond.raw = '';
-        } else {
-          newCond.disabled = false;
-          const quoted = vals.map((v: string) => `'${v}'`).join(',');
-          newCond.raw = `${newCond.field} IN (${quoted})`;
-        }
-      } else if ((newCond.operator || '').includes('LIKE')) {
-        newCond.raw = `UPPER(${newCond.field}) ${newCond.operator} UPPER('${newCond.value}')`;
-      } else {
-        newCond.raw = `${newCond.field} ${newCond.operator} '${newCond.value}'`;
-      }
-    } else if (newCond.type === 'contains') {
-      newCond.raw = `CONTAINS(s.CONTENT_XML, '${newCond.value}') > 0`;
-    } else {
-      newCond.raw = updates.raw;
-    }
-
-    newConditions[index] = newCond;
-    setConditions(newConditions);
-    reconstructSql(baseQuery, newConditions);
-  };
-
-  const removeCondition = (index: number) => {
-    const newConditions = conditions.filter((_, i) => i !== index);
-    setConditions(newConditions);
-    reconstructSql(baseQuery, newConditions);
-  };
-
-  const handleRunSql = async () => {
-    if (!localSql.trim()) return;
-    setIsSqlRunning(true);
-    setRefError(null);
-
-    try {
-      const response = await fetch("/api/search/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ manual_sql: localSql }),
-      });
-
-      const jsonData = await response.json();
-
-      if (jsonData.error) {
-        if (jsonData.error.includes("internet environment")) {
-            setMedAnswer(jsonData.error);
-        } else {
-            alert(`Error: ${jsonData.error}`);
-        }
-        setIsSqlRunning(false);
-        return;
-      }
-
-      if (jsonData.results) {
-        const extractedIds = (jsonData.results || []).map((r: any) => r?.SET_ID || r?.set_id || "");
-        setSetIds(extractedIds);
-        setTotalResults(jsonData.total_counts);
-        setMedAnswer(jsonData.med_answer || "Query executed successfully.");
-        setGeneratedSql(localSql);
-        await fetchMetadata(1, jsonData.results);
-      } else {
-        setResults([]);
-        setTotalResults(0);
-        setSetIds([]);
-        setMedAnswer("No results found for this SQL query.");
-      }
-    } catch (error) {
-      console.error("Error running manual SQL:", error);
-      alert("An unexpected error occurred.");
-    } finally {
-      setIsSqlRunning(false);
-    }
-  };
 
   const fetchMetadata = async (page: number, allSetIds: string[]) => {
     try {
@@ -1073,437 +726,8 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
     return map[field] || field;
   };
 
-  // -----------------------
-  // Reasoning Panel (Agentic modes)
-  // -----------------------
-  const ReasoningPanel = () => {
-    const intentType =
-      (debugIntent && (debugIntent.type || debugIntent.intent?.type || debugIntent.intent)) ||
-      '—';
-
-    const planType =
-      (debugPlan && (debugPlan.plan_type || debugPlan.retrieval?.plan_type || (debugPlan.pipeline ? debugPlan.pipeline.join(' -> ') : null))) ||
-      '—';
-
-    const templateHint =
-      (debugPlan && (debugPlan.sql_template_hint || debugPlan.retrieval?.sql_template_hint)) ||
-      '—';
-
-    const snippetsReturned =
-      (debugStats && (debugStats.snippets_returned ?? debugStats.snippet_count ?? debugStats.evidence_count)) ??
-      null;
-
-    const evidenceFetched =
-      snippetsReturned !== null ? (snippetsReturned > 0 ? 'Yes' : 'No') : '—';
-
-    return (
-      <div style={{ padding: 16, background: 'var(--afl-n-50)', borderRadius: 10, border: '1px solid var(--afl-n-200)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: 'var(--afl-n-700)' }}>Reasoning</h3>
-          <button
-            onClick={() => setShowReasoningPanel(prev => !prev)}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              color: 'var(--afl-info-500)',
-              textDecoration: 'underline'
-            }}
-          >
-            {showReasoningPanel ? '(Hide)' : '(Show)'}
-          </button>
-        </div>
-
-        {showReasoningPanel && (
-          <>
-            {/* Summary cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
-              <div style={{ border: '1px solid var(--afl-n-200)', borderRadius: 10, padding: 10, background: 'var(--afl-n-0)' }}>
-                <div style={{ fontSize: 12, color: 'var(--afl-n-500)', fontWeight: 800, textTransform: 'uppercase' }}>Intent</div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--afl-n-900)' }}>{String(intentType)}</div>
-              </div>
-              <div style={{ border: '1px solid var(--afl-n-200)', borderRadius: 10, padding: 10, background: 'var(--afl-n-0)' }}>
-                <div style={{ fontSize: 12, color: 'var(--afl-n-500)', fontWeight: 800, textTransform: 'uppercase' }}>Evidence fetched</div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--afl-n-900)' }}>{evidenceFetched}</div>
-              </div>
-              <div style={{ border: '1px solid var(--afl-n-200)', borderRadius: 10, padding: 10, background: 'var(--afl-n-0)' }}>
-                <div style={{ fontSize: 12, color: 'var(--afl-n-500)', fontWeight: 800, textTransform: 'uppercase' }}>Strategy</div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--afl-n-900)' }}>{String(planType)}</div>
-              </div>
-              <div style={{ border: '1px solid var(--afl-n-200)', borderRadius: 10, padding: 10, background: 'var(--afl-n-0)' }}>
-                <div style={{ fontSize: 12, color: 'var(--afl-n-500)', fontWeight: 800, textTransform: 'uppercase' }}>Details</div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--afl-n-900)' }}>{templateHint}</div>
-              </div>
-            </div>
-
-            {/* Agent flow */}
-            <div style={{ marginTop: 16 }}>
-              <div style={{ fontSize: 12, color: 'var(--afl-n-500)', fontWeight: 900, textTransform: 'uppercase', marginBottom: 8 }}>
-                Agent flow
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {(agentFlow || []).map((step, idx) => (
-                  <span
-                    key={idx}
-                    style={{
-                      padding: '4px 10px',
-                      background: 'var(--afl-info-50)',
-                      color: 'var(--afl-info-700)',
-                      borderRadius: 999,
-                      fontSize: 12,
-                      fontWeight: 800,
-                      border: '1px solid var(--afl-info-100)',
-                    }}
-                  >
-                    {step}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Narrative */}
-            <div style={{ marginTop: 16 }}>
-              <div style={{ fontSize: 12, color: 'var(--afl-n-500)', fontWeight: 900, textTransform: 'uppercase', marginBottom: 8 }}>
-                Explanation
-              </div>
-              <div style={{ background: 'var(--afl-n-0)', border: '1px solid var(--afl-n-200)', borderRadius: 10, padding: 12, lineHeight: 1.6 }}>
-                {reasoning
-                  ? <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{reasoning}</ReactMarkdown>
-                  : <em>No reasoning available.</em>
-                }
-              </div>
-            </div>
-
-            {/* Trace log (optional) */}
-            {(traceLog || []).length > 0 && (
-              <details style={{ marginTop: 16 }}>
-                <summary style={{ cursor: 'pointer', fontWeight: 900, color: 'var(--afl-n-700)' }}>Show trace log</summary>
-                <div style={{ marginTop: 10, background: 'var(--afl-n-0)', border: '1px solid var(--afl-n-200)', borderRadius: 10, padding: 12 }}>
-                  <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--afl-n-700)' }}>
-                    {traceLog.map((t, i) => (
-                      <li key={i} style={{ marginBottom: 6, fontSize: 13 }}>{t}</li>
-                    ))}
-                  </ul>
-                </div>
-              </details>
-            )}
-
-            {/* Generated SQL */}
-            {generatedSql && (
-              <details style={{ marginTop: 16 }}>
-                <summary style={{ cursor: 'pointer', fontWeight: 900, color: 'var(--afl-n-700)' }}>Show generated SQL</summary>
-                <div style={{ marginTop: 10 }}>
-                  <SQLHighlighter sql={generatedSql} />
-                </div>
-              </details>
-            )}
-          </>
-        )}
-      </div>
-    );
-  };
-
-  // -----------------------
-  // Filter Panel (Standard only)
-  // -----------------------
-  const FilterPanel = () => {
-    return (
-      <div className="sql-editor-container">
-        <div className="sql-editor-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span>Active Filters</span>
-            <button
-              onClick={() => setShowFilterPanel(prev => !prev)}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '0.8rem',
-                color: 'var(--afl-info-500)',
-                textDecoration: 'underline'
-              }}
-            >
-              {showFilterPanel ? '(Hide)' : '(Show)'}
-            </button>
-          </div>
-
-          <button
-            className="sql-run-btn"
-            onClick={handleRunSql}
-            disabled={isSqlRunning}
-          >
-            {isSqlRunning ? 'Running...' : 'Update Results'}
-          </button>
-        </div>
-
-        {showFilterPanel && (
-          <div style={{ padding: '16px', backgroundColor: 'var(--afl-n-50)' }}>
-            {conditions.map((cond, i) => (
-              <div key={i} style={{ position: 'relative' }}>
-                {i > 0 && (
-                  <div style={{
-                    height: '24px',
-                    borderLeft: '2px dashed var(--afl-n-300)',
-                    marginLeft: '24px',
-                    position: 'relative'
-                  }}>
-                    <span style={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: '-14px',
-                      transform: 'translateY(-50%)',
-                      backgroundColor: 'var(--afl-n-0)',
-                      padding: '2px 6px',
-                      fontSize: '0.7rem',
-                      fontWeight: 'bold',
-                      color: 'var(--afl-n-500)',
-                      border: '1px solid var(--afl-n-200)',
-                      borderRadius: '12px'
-                    }}>AND</span>
-                  </div>
-                )}
-
-                <div style={{
-                  display: 'flex',
-                  gap: '12px',
-                  alignItems: 'center',
-                  padding: '12px',
-                  backgroundColor: 'var(--afl-n-0)',
-                  borderRadius: '8px',
-                  border: '1px solid var(--afl-n-200)',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                }}>
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    backgroundColor: cond.type === 'complex' ? 'var(--afl-warn-50)' : 'var(--afl-info-50)',
-                    color: cond.type === 'complex' ? 'var(--afl-warn-700)' : 'var(--afl-info-700)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1rem'
-                  }}>
-                    {cond.type === 'contains' ? 'T' : cond.type === 'complex' ? '⚡' : 'F'}
-                  </div>
-
-                  {cond.type === 'simple' && (() => {
-                    const isLabelSection = (cond.field || '').toUpperCase() === 'S.LOINC_CODE';
-                    const selectedCodes: string[] = Array.isArray(cond.value)
-                      ? cond.value
-                      : (typeof cond.value === 'string' && cond.value ? [cond.value] : []);
-
-                    return (
-                      <>
-                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: '140px' }}>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)', textTransform: 'uppercase', fontWeight: 600 }}>Field</span>
-                          <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--afl-n-700)' }}>
-                            {getFriendlyName(cond.field)}
-                          </span>
-                        </div>
-
-                        {isLabelSection ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)', textTransform: 'uppercase', fontWeight: 600 }}>
-                              Sections
-                            </span>
-
-                            <div
-                              style={{
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                gap: '8px',
-                                padding: '8px',
-                                border: '1px solid var(--afl-n-300)',
-                                borderRadius: '8px',
-                                background: 'var(--afl-n-0)',
-                                minHeight: '44px',
-                                alignItems: 'flex-start'
-                              }}
-                            >
-                              {sectionOptions.map(({ code, name }) => {
-                                const isSelected = selectedCodes.includes(code);
-
-                                return (
-                                  <button
-                                    key={code}
-                                    type="button"
-                                    className="section-badge"
-                                    data-tooltip={name}
-                                    onClick={() => {
-                                      const next = isSelected
-                                        ? selectedCodes.filter(v => v !== code)
-                                        : [...selectedCodes, code];
-
-                                      updateCondition(i, {
-                                        operator: 'IN',
-                                        value: next,
-                                        disabled: next.length === 0
-                                      });
-                                    }}
-                                    style={{
-                                      cursor: 'pointer',
-                                      borderRadius: '999px',
-                                      padding: '6px 10px',
-                                      fontSize: '0.85rem',
-                                      border: `1px solid ${isSelected ? 'var(--afl-info-500)' : 'var(--afl-n-300)'}`,
-                                      backgroundColor: isSelected ? 'var(--afl-info-50)' : 'var(--afl-n-50)',
-                                      color: isSelected ? 'var(--afl-info-700)' : 'var(--afl-n-700)',
-                                      fontWeight: isSelected ? 700 : 600,
-                                      boxShadow: isSelected ? '0 1px 2px rgba(29,78,216,0.15)' : 'none',
-                                      transition: 'all 0.15s ease'
-                                    }}
-                                  >
-                                    {code}
-                                  </button>
-                                );
-                              })}
-
-                              {selectedCodes.length === 0 && (
-                                <span style={{ color: 'var(--afl-n-400)', fontStyle: 'italic', padding: '6px 4px' }}>
-                                  Select one or more sections
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <div style={{ display: 'flex', flexDirection: 'column', width: '110px' }}>
-                              <span style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)', textTransform: 'uppercase', fontWeight: 600 }}>Condition</span>
-                              <select
-                                value={cond.operator}
-                                onChange={(e) => updateCondition(i, { operator: e.target.value })}
-                                style={{ padding: '6px', borderRadius: '6px', borderColor: 'var(--afl-n-300)', fontSize: '0.9rem' }}
-                              >
-                                <option value="=">Equals</option>
-                                <option value="LIKE">Contains</option>
-                                <option value="NOT LIKE">Excludes</option>
-                              </select>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                              <span style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)', textTransform: 'uppercase', fontWeight: 600 }}>Value</span>
-                              <input
-                                type="text"
-                                value={cond.value}
-                                onChange={(e) => updateCondition(i, { value: e.target.value })}
-                                style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--afl-n-300)', fontSize: '0.9rem' }}
-                              />
-                            </div>
-                          </>
-                        )}
-
-                        <button
-                          onClick={() => removeCondition(i)}
-                          title="Remove condition"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--afl-danger-500)', fontSize: '1.2rem', padding: '0 4px', marginLeft: '4px' }}
-                        >
-                          ✕
-                        </button>
-                      </>
-                    );
-                  })()}
-
-                  {cond.type === 'contains' && (
-                    <>
-                      <div className="filter-textsearch" style={{ flex: 1 }}>
-                        <div className="filter-textsearch__label">
-                          <span className="filter-textsearch__hint">section content</span>
-                        </div>
-
-                        <span className="filter-textsearch__op">contains</span>
-
-                        <div className="filter-textsearch__inputShell">
-                          <span className="filter-textsearch__icon">🔎</span>
-                          <input
-                            className="filter-textsearch__input"
-                            type="text"
-                            value={cond.value}
-                            onChange={(e) => updateCondition(i, { value: e.target.value })}
-                            placeholder="ibuprofen, aspirin, nausea..."
-                          />
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => removeCondition(i)}
-                        title="Remove full text filter"
-                        className="filter-textsearch__remove"
-                      >
-                        ✕
-                      </button>
-                    </>
-                  )}
-
-                  {cond.type === 'complex' && (
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--afl-warn-700)', fontWeight: 700, textTransform: 'uppercase' }}>Advanced Logic (OR / Group)</span>
-                          <button
-                            onClick={() => setEditingComplexIndex(editingComplexIndex === i ? null : i)}
-                            style={{
-                              background: 'var(--afl-warn-50)',
-                              border: '1px solid var(--afl-warn-500)',
-                              borderRadius: '4px',
-                              padding: '2px 8px',
-                              fontSize: '0.7rem',
-                              color: 'var(--afl-warn-700)',
-                              cursor: 'pointer',
-                              fontWeight: 600
-                            }}
-                          >
-                            {editingComplexIndex === i ? 'View Logic' : 'Edit Text'}
-                          </button>
-                        </div>
-                        <button
-                          onClick={() => removeCondition(i)}
-                          title="Remove condition"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--afl-danger-500)', fontSize: '1rem', fontWeight: 'bold' }}
-                        >
-                          Remove ✕
-                        </button>
-                      </div>
-
-                      {editingComplexIndex === i ? (
-                        <input
-                          type="text"
-                          value={cond.raw}
-                          onChange={(e) => updateCondition(i, { raw: e.target.value })}
-                          style={{ width: '100%', fontFamily: 'monospace', padding: '8px', borderRadius: '6px', border: '1px solid var(--afl-warn-500)', backgroundColor: 'var(--afl-warn-50)', color: 'var(--afl-warn-700)', fontSize: '0.85rem' }}
-                          autoFocus
-                        />
-                      ) : (
-                        <div onClick={() => setEditingComplexIndex(i)} style={{ cursor: 'pointer' }}>
-                          <SQLHighlighter sql={cond.raw} />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {conditions.length === 0 && (
-              <div style={{ padding: '20px', textAlign: 'center', color: 'var(--afl-n-400)', fontStyle: 'italic', border: '2px dashed var(--afl-n-200)', borderRadius: '8px' }}>
-                No active filters. Displaying all records.
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className="search-results">
-      {/* ✅ Agentic modes (V2 & V3): show Reasoning panel ONLY */}
-      {isAgentic && <ReasoningPanel />}
-
-      {/* ✅ Standard mode (V1): show Filter panel ONLY */}
-      {isStandard && <FilterPanel />}
-
       <FilterChips />
 
       {resultsMessage && (
@@ -1565,7 +789,7 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
           }}
         >
           <div className="result-count" style={{ fontWeight: 'bold', textAlign: 'center' }}>
-            {((filters.drugNames?.length ?? 0) > 0 || (filters.adverseEvents?.length ?? 0) > 0 || (filters.ndcs?.length ?? 0) > 0 || (filters.labelingType?.length ?? 0) > 0)
+            {((filters.drugNames?.length ?? 0) > 0 || (filters.ndcs?.length ?? 0) > 0 || (filters.labelingType?.length ?? 0) > 0)
               ? "No labeling documents found matching your current filters."
               : "Relevant labeling will be displayed here."
             }

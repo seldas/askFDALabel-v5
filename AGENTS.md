@@ -54,7 +54,7 @@ Drop `--pool=solo` on Mac/Linux. The README documents `celery -A backend.celery_
 Numbered, idempotent, run from the repo root with the venv active:
 
 ```bash
-python backend/database/scripts/db_02_init_labeling_schema.py   # labeling tables + FTS GIN index
+python backend/database/scripts/db_02_init_labeling_schema.py   # labeling tables + pg_trgm indexes
 python backend/database/scripts/db_03_init_public_schema.py
 python backend/database/scripts/db_04_import_orange_book.py     # RLD/RS identification
 python backend/database/scripts/db_05_import_epc_indexing.py    # Deep Dive pharmacologic class
@@ -62,7 +62,7 @@ python backend/database/scripts/db_06_create_admin.py
 python backend/database/scripts/db_07_import_labels.py --force --skip-unpack
 ```
 
-`db_01_enable_pgvector.py` is legacy — search is FTS-based now, not vector-based. `db_08_import_archive_labels.py` handles archived SPL sets.
+`db_08_import_archive_labels.py` handles archived SPL sets. `db_12_drop_fulltext_search.py` is the one-way migration that removed full-text search from an existing database — run it once on any environment imported before that change.
 
 ### Testing and linting — there is none
 
@@ -104,7 +104,7 @@ Consequence: write plain paths like `/api/dashboard/foo` in component code and t
 
 ### Two PostgreSQL schemas in one database
 
-- **`labeling`** — SPL content. `sum_spl` (label metadata, model `DrugLabel`), `spl_sections` (model `LabelSection`), `active_ingredients_map`, `epc_map`, `substance_indexing`, `processed_zips`. `spl_sections` has a **generated** `search_vector TSVECTOR` column over `content_xml` with a GIN index — this is the search backbone.
+- **`labeling`** — SPL content. `sum_spl` (label metadata, model `DrugLabel`), `active_ingredients_map`, `epc_map`, `substance_indexing`, `processed_zips`, `query_options_cache`. There is **no label-text search**: `spl_sections`, its generated `search_vector TSVECTOR`, and `sum_spl.full_search_vector` were all dropped to keep the database small at 700k-label scale. Label bodies are read from the SPL XML on disk via `sum_spl.local_path`. Criteria queries are served by `pg_trgm` GIN indexes over the name and category columns.
 - **`public`** — everything application-side: users, projects, favorites, annotations, MedDRA hierarchy, PGx, DrugTox, Orange Book, `system_tasks`, webtest, examine prompts.
 
 All models live in one file, `backend/database/models.py`; `labeling` ones are marked with `__table_args__ = {'schema': 'labeling'}`.

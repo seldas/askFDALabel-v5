@@ -15,7 +15,7 @@ from sqlalchemy import text
 backend_dir = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(backend_dir))
 
-from database import db, SystemTask, DrugLabel, LabelSection, ActiveIngredientMap
+from database import db, SystemTask, DrugLabel, ActiveIngredientMap
 from dashboard import create_app
 
 NS = {'ns': 'urn:hl7-org:v3'}
@@ -152,13 +152,8 @@ def parse_spl_file(file_path, ob_dict, is_archived=False):
                                 if prod['is_rld']: is_rld = 1
                                 if prod['is_rs']: is_rs = 1
 
-        sections = []
-        for sec in root.findall('.//ns:section', NS):
-            loinc = (sec.find('ns:code', NS).get('code')) if sec.find('ns:code', NS) is not None else ""
-            title = get_el_text(sec.find('ns:title', NS))
-            if (text_el := sec.find('ns:text', NS)) is not None:
-                content_xml = ET.tostring(text_el, encoding='unicode').strip()
-                sections.append({'spl_id': spl_id, 'loinc_code': loinc, 'title': title, 'content_xml': content_xml})
+        # Section bodies are not stored: labeling.spl_sections was dropped with
+        # full-text search, and the viewer reads SPL XML from disk.
 
         all_appr = "; ".join(set(appr_nums))
 
@@ -174,7 +169,6 @@ def parse_spl_file(file_path, ob_dict, is_archived=False):
                 'local_path': os.path.basename(file_path)
             },
             'ingr_map': ingr_map,
-            'sections': sections,
             'spl_id': spl_id,
             'set_id': set_id,
             'revised_date': revised_date
@@ -329,7 +323,7 @@ def import_labels():
                 existing_spls = {r[2] for r in res}
 
             batch_size = 200
-            meta_batch, ingr_batch, sect_batch, spl_id_batch = [], [], [], []
+            meta_batch, ingr_batch, spl_id_batch = [], [], []
             processed, skipped = 0, 0
             total_files = len(target_files)
 
@@ -348,7 +342,6 @@ def import_labels():
                     
                     meta_batch.append(data['metadata'])
                     ingr_batch.extend(data['ingr_map'])
-                    sect_batch.extend(data['sections'])
                     spl_id_batch.append(data['spl_id'])
                     processed += 1
                     
@@ -364,11 +357,9 @@ def import_labels():
                             db.session.bulk_insert_mappings(DrugLabel, meta_batch)
                         if ingr_batch:
                             db.session.bulk_insert_mappings(ActiveIngredientMap, ingr_batch)
-                        if sect_batch:
-                            db.session.bulk_insert_mappings(LabelSection, sect_batch)
                         
                         db.session.commit()
-                        meta_batch, ingr_batch, sect_batch, spl_id_batch = [], [], [], []
+                        meta_batch, ingr_batch, spl_id_batch = [], [], []
                         
                     current_idx = i + 1
                     if current_idx % 100 == 0 or current_idx == total_files:

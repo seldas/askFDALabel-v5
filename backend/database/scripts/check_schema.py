@@ -32,10 +32,10 @@ import psycopg2
 load_dotenv()
 conn = psycopg2.connect(os.getenv('DATABASE_URL'))
 cur = conn.cursor()
-cur.execute("SELECT COUNT(*) FROM labeling.spl_sections")
+cur.execute("SELECT COUNT(*) FROM labeling.sum_spl")
 res = cur.fetchone()
 if res:
-    print(f"Total sections in spl_sections: {res[0]}")
+    print(f"Total labels in sum_spl: {res[0]}")
 else:
-    print("No sections found in labeling.spl_sections.")
+    print("No labels found in labeling.sum_spl.")
 conn.close()

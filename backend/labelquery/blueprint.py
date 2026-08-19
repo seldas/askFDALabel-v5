@@ -653,7 +653,6 @@ def _capabilities():
             # missing is worse than none if the column is really there.
             _capability_cache['unii'] = True
 
-    _capability_cache['full_fts'] = False
     return dict(_capability_cache)
 
 
@@ -746,12 +745,12 @@ def _facets_once(query, target_db):
     """
     conn = None
     try:
-        relational_where, section_where, params, _warnings = compile_where(
+        relational_where, params, _warnings = compile_where(
             query, expand_meddra=_expand_meddra, capabilities=_capabilities()
         )
         conn = _pg()
         with conn.cursor() as cur:
-            cur.execute(postgres_facet_sql(relational_where, section_where), params)
+            cur.execute(postgres_facet_sql(relational_where), params)
             rows = [(r['cat'], r['token'], r['n']) for r in cur.fetchall()]
         return rows_to_facets(rows)
     except Exception as e:
@@ -988,7 +987,7 @@ def execute():
                 conn.close()
 
     try:
-        relational_where, section_where, params, warnings = compile_where(
+        relational_where, params, warnings = compile_where(
             query, expand_meddra=_expand_meddra, capabilities=_capabilities()
         )
     except QueryCompileError as e:
@@ -1005,32 +1004,7 @@ def execute():
         page_params['_limit'] = limit
         page_params['_offset'] = offset
 
-        if section_where:
-            sql = f"""
-            WITH section_candidates AS (
-                SELECT DISTINCT sec.spl_id
-                FROM labeling.spl_sections sec
-                WHERE {section_where}
-            ),
-            matched AS MATERIALIZED (
-                SELECT s.spl_id, {sort_column} AS sort_key, s.set_id
-                FROM labeling.sum_spl s
-                INNER JOIN section_candidates sc ON sc.spl_id = s.spl_id
-                WHERE {relational_where}
-            ),
-            page AS (
-                SELECT spl_id FROM matched
-                ORDER BY sort_key {sort_dir} NULLS LAST, set_id
-                LIMIT %(_limit)s OFFSET %(_offset)s
-            )
-            SELECT t.n AS total_count, {SELECT_COLUMNS}
-            FROM (SELECT COUNT(*) AS n FROM matched) t
-            LEFT JOIN page ON TRUE
-            LEFT JOIN labeling.sum_spl s ON s.spl_id = page.spl_id
-            ORDER BY {order_by}
-            """
-        else:
-            sql = f"""
+        sql = f"""
             WITH matched AS MATERIALIZED (
                 SELECT s.spl_id, {sort_column} AS sort_key, s.set_id
                 FROM labeling.sum_spl s
@@ -1061,20 +1035,11 @@ def execute():
         if active_cats:
             try:
                 backbone_query = strip_all_categories(query)
-                b_rel, b_sec, b_params, _ = compile_where(
+                b_rel, b_params, _ = compile_where(
                     backbone_query, expand_meddra=_expand_meddra, capabilities=_capabilities()
                 )
                 b_pg_conn = _pg()
                 b_sql = f"SELECT count(*) AS n FROM labeling.sum_spl s WHERE {b_rel}"
-                if b_sec:
-                    b_sql = f"""
-                    WITH section_candidates AS (
-                        SELECT DISTINCT sec.spl_id FROM labeling.spl_sections sec WHERE {b_sec}
-                    )
-                    SELECT count(*) AS n FROM labeling.sum_spl s
-                    INNER JOIN section_candidates sc ON sc.spl_id = s.spl_id
-                    WHERE {b_rel}
-                    """
                 with b_pg_conn.cursor() as b_cur:
                     b_cur.execute(b_sql, b_params)
                     b_row = b_cur.fetchone()
@@ -1203,28 +1168,14 @@ def _export_rows(query, sort, direction, target_db=None):
             conn.close()
 
     # Postgres / Local mode: full result export without artificial limits
-    relational_where, section_where, params, warnings = compile_where(
+    relational_where, params, warnings = compile_where(
         query, expand_meddra=_expand_meddra, capabilities=_capabilities()
     )
     order_by = order_by_sql(sort, direction)
 
     conn = _pg()
     try:
-        if section_where:
-            sql = f"""
-            WITH section_candidates AS (
-                SELECT DISTINCT sec.spl_id
-                FROM labeling.spl_sections sec
-                WHERE {section_where}
-            )
-            SELECT {SELECT_COLUMNS}
-            FROM labeling.sum_spl s
-            INNER JOIN section_candidates sc ON sc.spl_id = s.spl_id
-            WHERE {relational_where}
-            ORDER BY {order_by}
-            """
-        else:
-            sql = f"""
+        sql = f"""
             SELECT {SELECT_COLUMNS}
             FROM labeling.sum_spl s
             WHERE {relational_where}

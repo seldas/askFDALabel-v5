@@ -19,49 +19,6 @@ const semanticSuggestions = [
   { title: "Contraindications", query: "What are the specific contraindications listed in the labeling for Mounjaro?" }
 ];
 
-const PROGRESS_STEPS = [
-  { key: "plan", label: "Planning" },
-  { key: "db", label: "Searching labels" },
-  { key: "evidence", label: "Fetching evidence" },
-  { key: "answer", label: "Writing answer" },
-  { key: "finalize", label: "Finalizing" },
-];
-
-function inferStage(status: string) {
-  const s = (status || "").toLowerCase();
-  if (s.includes("planning")) return 0;
-  if (s.includes("searching") || s.includes("database") || s.includes("query")) return 1;
-  if (s.includes("fetching") || s.includes("evidence") || s.includes("excerpts")) return 2;
-  if (s.includes("writing") || s.includes("generating") || s.includes("answer")) return 3;
-  if (s.includes("finalizing") || s.includes("reasoning")) return 4;
-  return 0;
-}
-
-const Spinner = () => (
-  <span className="afd-progress__spinner" aria-hidden />
-);
-
-const StepIcon = ({ state }: { state: "todo" | "active" | "done" }) => {
-  if (state === "done") return <span className="afd-progress__icon afd-progress__icon--done">✓</span>;
-  if (state === "active") return <span className="afd-progress__icon afd-progress__icon--active"><Spinner /></span>;
-  return <span className="afd-progress__icon afd-progress__icon--todo" />;
-};
-
-const SimpleProgress = ({ status }: { status: string }) => {
-  return (
-    <div className="afd-progress afd-progress--simple">
-      <div className="afd-progress__card">
-        <div className="afd-progress__header">
-          <Spinner />
-          <div className="afd-progress__headText">
-            <div className="afd-progress__title">{status || "AI is thinking..."}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const DiffHighlight: React.FC<{ original: string; refined: string }> = ({ original, refined }) => {
   const normalizeWord = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]/gi, "");
   const originalWords = new Set(
@@ -127,13 +84,6 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onSearch }) => {
     setHighlightedSetId,
     loadingStatus,
     setLoadingStatus,
-    searchMode,
-    setAgentFlow,
-    setReasoning,
-    setDebugIntent,
-    setDebugPlan,
-    setDebugStats,
-    setTraceLog,
     toggleFilterTerm,
     hasUnsavedChanges,
     setHasUnsavedChanges,
@@ -469,13 +419,15 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onSearch }) => {
                                     const cls = className || "";
                                     const content = children?.toString() || "";
                                     
+                                    // 'drug' is the only class the assistant is
+                                    // told to emit (see backend annotations.py);
+                                    // 'ndc' is kept because identifier lookups
+                                    // still resolve against sum_spl.ndc_codes.
                                     let onClick = undefined;
                                     if (cls === 'drug') {
                                         onClick = () => toggleFilterTerm('drugNames', content);
                                     } else if (cls === 'ndc') {
                                         onClick = () => toggleFilterTerm('ndcs', content);
-                                    } else if (cls === 'adverse_events') {
-                                        onClick = () => toggleFilterTerm('adverseEvents', content);
                                     }
 
                                     return (

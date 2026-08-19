@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchContext } from '../context/SearchContext';
 import { useUser } from '../../context/UserContext';
 import Link from 'next/link';
 
 const Header: React.FC = () => {
-  const { setSearchMode } = useSearchContext();
   const { session, loading, updateAiProvider, openAuthModal } = useUser();
   const [activeDropdown, setActiveDropdown] = useState<'ai' | 'user' | 'nav' | 'more' | null>(null);
   const [isInternal, setIsInternal] = useState(false);

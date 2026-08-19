@@ -1215,10 +1215,6 @@ body {
 .highlight-ndc { background-color: var(--afl-n-100); color: var(--afl-n-900); padding: 0 4px; border-radius: 4px; cursor: pointer; border-bottom: 2px solid var(--afl-n-900); font-family: monospace; font-weight: 600; transition: all 0.2s; }
 .highlight-ndc:hover { background-color: var(--afl-n-200); }
 
-.highlight-adverse_events { background-color: var(--afl-danger-100); color: #991b1b; padding: 0 4px; border-radius: 4px; border-bottom: 2px solid #991b1b; cursor: pointer; transition: all 0.2s; }
-.highlight-adverse_events:hover { background-color: #fecaca; }
-
-.highlight-temporal { background-color: #fef9c3; color: #854d0e; padding: 0 4px; border-radius: 4px; }
 .highlight-company { background-color: var(--afl-n-100); color: var(--afl-n-600); padding: 0 4px; border-radius: 4px; }
 
 /* Typing Indicator */

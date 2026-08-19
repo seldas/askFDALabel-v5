@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "askFDALabel | Scientific Drug Label Intelligence",
-  description: "Advanced semantic search and toxicological analysis for FDA drug labeling.",
+  description: "Drug label lookup, comparison and toxicological analysis for FDA drug labeling.",
   icons: {
     icon: withAppBase("/fdalabel-v3_icon.svg"),
   },

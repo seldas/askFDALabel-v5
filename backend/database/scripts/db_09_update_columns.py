@@ -5,7 +5,7 @@ db_09_update_columns.py
 High-performance fast column updater for PostgreSQL `labeling.sum_spl` and `labeling.active_ingredients_map`.
 Designed to update targeted metadata columns (e.g. application types / marketing categories, approval numbers,
 UNII, active ingredients, document types) across 700,000+ SPL records without re-parsing or re-inserting
-heavy section text / XML into `labeling.spl_sections`.
+the SPL XML.
 
 Scans XML and ZIP files from multiple storage directories (e.g., data/spl_storage, data/spl_storage_archived).
 

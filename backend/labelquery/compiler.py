@@ -12,25 +12,16 @@ never multiply rows, and the group/criterion nesting maps straight onto nested
 parentheses.
 
 Only Postgres is supported here. The Oracle paths in FDALabelDBService exist for
-the internal FDA deployment; this builder is deliberately local-only, which is
-also the only mode where ``labeling.spl_sections.search_vector`` exists.
+the internal FDA deployment; this builder is deliberately local-only.
 
-Free text runs against a generated TSVECTOR column, so anything text-shaped
-(full text, labeling sections, MedDRA terms) shares ``_tsquery_sql`` rather than
-falling back to ILIKE over content_xml, which would be a sequential scan.
-
-Which column depends on the criterion. A section-scoped search has to stay on
-``spl_sections.search_vector`` -- the scope *is* the row. An unscoped full-text
-search instead probes ``sum_spl.full_search_vector``, one document-level vector
-per label, which turns a scan-and-dedup over every section of every candidate
-into a single indexed lookup. That column is only trustworthy once it is fully
-populated, so the caller passes ``capabilities['full_fts']`` to say whether this
-deployment has it; see ``labelquery.blueprint._capabilities``.
-
-Section predicates come back separately from relational ones so the caller can
-run them as a CTE, but that split can only represent ``(R1 OR R2) AND
-(S1 OR S2)``. When the criteria tree means something else, compilation falls
-back to inline correlated EXISTS -- see :func:`_split_is_faithful`.
+Nothing here searches label *text*. ``labeling.spl_sections`` and the TSVECTOR
+columns that backed full-text search were dropped -- see
+``database/scripts/db_12_drop_fulltext_search.py`` -- so the Full Text, MedDRA
+and section-text criteria are rejected with a warning rather than compiled. The
+Labeling Section criterion survives only for its two ``sum_spl``-backed
+pseudo-sections, Product Title and Initial U.S. Approval. Every criterion that
+remains is a predicate over ``sum_spl`` alone, which is why compilation returns
+a single WHERE clause and no separate section half.
 """
 
 import re
@@ -78,11 +69,6 @@ _UNII_RE = re.compile(r'^[0-9A-Z]{10}$')
 # so a typed prefix is signal, not noise.
 _APPL_PREFIXES = ('ANADA', 'ANDA', 'NADA', 'BLA', 'NDA')
 _PREFIXED_APPL_RE = re.compile(r'^(' + '|'.join(_APPL_PREFIXES) + r')[\s-]*(\d{3,6})$', re.I)
-
-# to_tsquery input is not parameterizable as an operator string, so an advanced
-# query is rebuilt from scratch out of a validated token stream. Nothing from the
-# user reaches SQL as text; the assembled expression is still bound as a param.
-_ADVANCED_WORD_RE = re.compile(r'[\w][\w\-]*\*?')
 
 
 class QueryCompileError(ValueError):
@@ -137,220 +123,6 @@ def _like_any(columns, patterns, bag, negate=False):
 # Full-text
 # ---------------------------------------------------------------------------
 
-def _advanced_tsquery_expression(text):
-    """
-    Translates the FDALabel "Advanced Search" dialect into a to_tsquery string.
-
-    Accepted: AND/OR/NOT (and &|!), parentheses, quoted phrases "", exact span braces {},
-    and wildcard * for prefix matching.
-    """
-    tokens = []
-    i = 0
-    text = str(text)
-    while i < len(text):
-        ch = text[i]
-        if ch in '()':
-            tokens.append(ch)
-            i += 1
-        elif ch == '"':
-            end = text.find('"', i + 1)
-            if end == -1:
-                end = len(text)
-            phrase = _ADVANCED_WORD_RE.findall(text[i + 1:end])
-            if phrase:
-                tokens.append('(' + ' <-> '.join(phrase) + ')')
-            i = end + 1
-        elif ch == '{':
-            end = text.find('}', i + 1)
-            if end == -1:
-                end = len(text)
-            phrase = _ADVANCED_WORD_RE.findall(text[i + 1:end])
-            if phrase:
-                tokens.append('(' + ' <-> '.join(phrase) + ')')
-            i = end + 1
-        elif ch in '&|!':
-            tokens.append({'&': '&', '|': '|', '!': '!'}[ch])
-            i += 1
-        elif ch.isspace():
-            i += 1
-        else:
-            m = _ADVANCED_WORD_RE.match(text, i)
-            if not m:
-                i += 1
-                continue
-            word = m.group(0)
-            upper = word.upper()
-            if upper == 'AND':
-                tokens.append('&')
-            elif upper == 'OR':
-                tokens.append('|')
-            elif upper == 'NOT':
-                tokens.append('!')
-            else:
-                tokens.append(word.replace('*', ':*').replace('%', ':*'))
-            i = m.end()
-
-    # Insert an implicit & between adjacent operands
-    out = []
-    for tok in tokens:
-        prev = out[-1] if out else None
-        starts_operand = tok not in ('&', '|', ')')
-        prev_ends_operand = prev is not None and prev not in ('&', '|', '!', '(')
-        if starts_operand and prev_ends_operand:
-            out.append('&')
-        out.append(tok)
-
-    out = _repair_tsquery_tokens(out)
-    if not out:
-        raise QueryCompileError('Advanced search text contains no searchable words.')
-    return ' '.join(out)
-
-
-def _repair_tsquery_tokens(tokens):
-    """
-    Makes a token stream syntactically valid for to_tsquery.
-    """
-    balanced = []
-    depth = 0
-    for tok in tokens:
-        if tok == ')':
-            if depth == 0:
-                continue
-            depth -= 1
-        elif tok == '(':
-            depth += 1
-        balanced.append(tok)
-    balanced.extend([')'] * depth)
-
-    changed = True
-    while changed:
-        changed = False
-        for i, tok in enumerate(balanced):
-            prev = balanced[i - 1] if i > 0 else None
-            nxt = balanced[i + 1] if i + 1 < len(balanced) else None
-
-            if tok == '(' and nxt == ')':
-                del balanced[i:i + 2]
-            elif tok in ('&', '|') and (prev is None or prev in ('(', '&', '|', '!')):
-                del balanced[i]
-            elif tok in ('&', '|') and (nxt is None or nxt == ')'):
-                del balanced[i]
-            else:
-                continue
-            changed = True
-            break
-
-    return balanced if any(t not in ('(', ')', '&', '|', '!') for t in balanced) else []
-
-
-def _tsquery_sql(mode, text, bag):
-    """Returns the SQL expression producing a tsquery for `text`."""
-    text = (text or '').strip()
-    if not text:
-        return None
-    if mode == 'advanced':
-        return f"to_tsquery('english', {bag.add(_advanced_tsquery_expression(text))})"
-
-    # Simple Search logic: full span phrase match, supporting uppercase AND, OR, NOT
-    tokens = re.split(r'\b(AND|OR|NOT)\b', text)
-    if len(tokens) > 1 and any(t in ('AND', 'OR', 'NOT') for t in tokens):
-        parts = []
-        op = None
-        for tok in tokens:
-            t_strip = tok.strip()
-            if not t_strip:
-                continue
-            if t_strip in ('AND', 'OR', 'NOT'):
-                op = t_strip
-            else:
-                ts = f"phraseto_tsquery('english', {bag.add(t_strip)})"
-                if not parts:
-                    parts.append(ts)
-                else:
-                    if op == 'OR':
-                        parts.append(f"({parts.pop()} || {ts})")
-                    elif op == 'NOT':
-                        parts.append(f"({parts.pop()} && !{ts})")
-                    else:  # AND
-                        parts.append(f"({parts.pop()} && {ts})")
-                    op = None
-        if parts:
-            return parts[0]
-
-    # Full span phrase match
-    return f"phraseto_tsquery('english', {bag.add(text)})"
-
-
-def _tsquery_union(terms, bag):
-    """
-    OR-combines a list of terms into one tsquery.
-
-    Single-word terms are folded into a single ``a | b | c`` to_tsquery rather
-    than one phraseto_tsquery each. Phrase queries are lossy for GIN — every
-    candidate row has to be refetched from the heap and rechecked — so a MedDRA
-    selection that expands to a couple of hundred terms would otherwise pay that
-    penalty a couple of hundred times over. Only the genuinely multi-word terms
-    still need phrase semantics.
-    """
-    singles = []
-    phrases = []
-    for term in terms:
-        if not term:
-            continue
-        words = _ADVANCED_WORD_RE.findall(str(term))
-        if len(words) == 1:
-            # '*' would turn this into the prefix query the caller did not ask
-            # for, and a trailing '-' is the one leftover the word regex can
-            # produce that to_tsquery has no operand for.
-            word = words[0].replace('*', '').strip('-')
-            if word:
-                singles.append(word)
-        elif words:
-            phrases.append(term)
-
-    parts = []
-    if singles:
-        parts.append(f"to_tsquery('english', {bag.add(' | '.join(singles))})")
-    parts += [f"phraseto_tsquery('english', {bag.add(t)})" for t in phrases]
-    if not parts:
-        return None
-    return '(' + ' || '.join(parts) + ')'
-
-
-LOINC_TO_TITLES = {
-    '43685-7': ['%WARNINGS AND PRECAUTIONS%', '%WARNINGS%'],
-    '34071-1': ['%WARNINGS%'],
-    '42232-9': ['%PRECAUTIONS%'],
-    '34066-1': ['%BOXED WARNING%', '%BOX WARNING%'],
-    '34067-9': ['%INDICATIONS AND USAGE%', '%INDICATIONS%'],
-    '34068-7': ['%DOSAGE AND ADMINISTRATION%', '%DOSAGE%'],
-    '43678-2': ['%DOSAGE FORMS AND STRENGTHS%', '%DOSAGE FORMS%'],
-    '34070-3': ['%CONTRAINDICATIONS%'],
-    '34084-4': ['%ADVERSE REACTIONS%'],
-    '34073-7': ['%DRUG INTERACTIONS%'],
-    '43684-0': ['%USE IN SPECIFIC POPULATIONS%'],
-    '42228-7': ['%Pregnancy%'],
-    '77290-5': ['%Lactation%'],
-    '34079-4': ['%Labor and Delivery%'],
-    '77291-3': ['%Reproductive Potential%'],
-    '34080-2': ['%Nursing Mothers%'],
-    '34081-0': ['%Pediatric Use%'],
-    '34082-8': ['%Geriatric Use%'],
-    '42227-9': ['%DRUG ABUSE AND DEPENDENCE%', '%DRUG ABUSE%'],
-    '34088-5': ['%OVERDOSAGE%'],
-    '34089-3': ['%DESCRIPTION%'],
-    '34090-1': ['%CLINICAL PHARMACOLOGY%'],
-    '43679-0': ['%Mechanism of Action%'],
-    '43681-6': ['%Pharmacodynamics%'],
-    '43682-4': ['%Pharmacokinetics%'],
-    '34091-9': ['%NONCLINICAL TOXICOLOGY%'],
-    '34083-6': ['%Carcinogenesis%'],
-    '34092-7': ['%CLINICAL STUDIES%'],
-    '34093-5': ['%REFERENCES%'],
-    '34069-5': ['%HOW SUPPLIED%'],
-    '34076-0': ['%PATIENT COUNSELING%', '%INFORMATION FOR PATIENTS%']
-}
-
 TITLE_TO_LOINCS = {
     'WARNINGS AND PRECAUTIONS': ['43685-7', '34071-1', '42232-9'],
     'BOXED WARNING': ['34066-1'],
@@ -383,37 +155,6 @@ TITLE_TO_LOINCS = {
     'WARNINGS': ['34071-1', '43685-7'],
     'PRECAUTIONS': ['42232-9', '43685-7']
 }
-
-
-def _sections_exists(tsquery_sql, section_filters, bag):
-    """EXISTS over spl_sections, narrowed strictly by indexed LOINC codes and TSVECTOR search."""
-    conditions = ['sec.spl_id = s.spl_id']
-    if tsquery_sql:
-        conditions.append(f'sec.search_vector @@ {tsquery_sql}')
-    if section_filters:
-        loincs_set = set()
-        for f in section_filters:
-            if re.match(r'^[\d.\-]+$', f):
-                loincs_set.add(f)
-            else:
-                clean = re.sub(r'^[0-9]+(\.[0-9]+)*\s*', '', f).strip().upper()
-                if clean in TITLE_TO_LOINCS:
-                    for l in TITLE_TO_LOINCS[clean]:
-                        loincs_set.add(l)
-                else:
-                    for key, l_list in TITLE_TO_LOINCS.items():
-                        if clean and (clean in key or key in clean):
-                            for l in l_list:
-                                loincs_set.add(l)
-
-        loincs = list(loincs_set)
-        if loincs:
-            conditions.append(f'sec.loinc_code = ANY({bag.add(loincs)})')
-    return (
-        'EXISTS (SELECT 1 FROM labeling.spl_sections sec WHERE '
-        + ' AND '.join(conditions)
-        + ')'
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -794,174 +535,43 @@ def order_by_sql(sort, direction):
     )
 
 
-def _section_criterion_clause(criterion, bag, warnings, expand_meddra):
-    return None
-
-
-SECTION_CRITERION_TYPES = ()
-
-VIRTUAL_SECTIONS = (
-    'SPLTITLE', 'Product Title',
-    '43683-2', 'Initial U.S. Approval [4 Digit Year]',
-)
-
-
-def _has_virtual_section(query):
-    """
-    Whether any Labeling Section criterion names a sum_spl-backed pseudo-section.
-
-    Those can't be expressed on the section side, and selecting several sections
-    means "any of them" -- an OR that a split across the two halves would turn
-    into an AND. Compiling such a criterion whole, on the relational side, is the
-    only way to keep the OR.
-    """
-    for group in (query.get('groups') or []):
-        for criterion in (group.get('criteria') or []):
-            if criterion.get('type') != 'labelingSection':
-                continue
-            sections = _as_list((criterion.get('value') or {}).get('sections'))
-            if any(s in VIRTUAL_SECTIONS for s in sections):
-                return True
-    return False
-
-
-def _has_multi_section_group(query, capabilities):
-    """
-    Whether any group holds two or more criteria that read section text.
-
-    Those cannot share the section CTE. Its predicates all apply to one
-    ``spl_sections`` row, so two criteria in one group would have to be
-    satisfied by the *same* section -- and the first one's LOINC filter would
-    narrow the second as well. The intent is per-label: a boxed warning
-    mentioning one thing and an adverse reactions section mentioning another is
-    a match. Only the inline form, one correlated EXISTS per criterion, says
-    that.
-
-    fullText drops out of the count when the document-level vector is available,
-    since it then compiles to a relational predicate and never touches the CTE.
-    """
-    fts = bool((capabilities or {}).get('full_fts'))
-    for group in (query.get('groups') or []):
-        n = 0
-        for criterion in (group.get('criteria') or []):
-            ctype = criterion.get('type')
-            if ctype not in SECTION_CRITERION_TYPES:
-                continue
-            if ctype == 'fullText' and fts:
-                continue
-            n += 1
-            if n > 1:
-                return True
-    return False
-
-
-def _compile_groups(query, bag, warnings, expand_meddra, capabilities, inline_sections):
-    """
-    Compiles each group to ``(relational_sql, section_sql)``, either of which may
-    be None.
-
-    With ``inline_sections`` the section criteria compile to correlated EXISTS
-    predicates on the relational side instead, which keeps a group's criteria in
-    one boolean expression. See :func:`compile_where` for when that is required.
-    """
+def _compile_groups(query, bag, warnings, expand_meddra, capabilities):
+    """Compiles each group to a single AND-ed predicate, or None when empty."""
     compiled = []
 
     for group in (query.get('groups') or []):
         r_clauses = []
-        s_clauses = []
 
         for criterion in (group.get('criteria') or []):
-            ctype = criterion.get('type')
-            cval = criterion.get('value') or {}
+            rel_clause = _compile_criterion(criterion, bag, warnings, expand_meddra, capabilities)
+            if rel_clause:
+                r_clauses.append(rel_clause)
 
-            if ctype == 'fullText' and capabilities.get('full_fts'):
-                # One indexed probe per label against the document-level vector,
-                # instead of scanning and de-duplicating N section rows.
-                #
-                # Whether that column is fully populated is decided once per
-                # process by the caller, never per row: `full_search_vector IS
-                # NULL` is not GIN-indexable, so OR-ing a fallback in here would
-                # push the planner onto a sequential scan of sum_spl and defeat
-                # the index this clause exists to use.
-                tsquery = _tsquery_sql(cval.get('mode') or 'simple', cval.get('text'), bag)
-                if tsquery:
-                    r_clauses.append(f'(s.full_search_vector @@ {tsquery})')
-
-            elif ctype in SECTION_CRITERION_TYPES:
-                if inline_sections:
-                    pred = _compile_criterion(criterion, bag, warnings, expand_meddra, capabilities)
-                    if pred:
-                        r_clauses.append(pred)
-                else:
-                    sec_clause = _section_criterion_clause(criterion, bag, warnings, expand_meddra)
-                    if sec_clause:
-                        s_clauses.append(sec_clause)
-
-            else:
-                rel_clause = _compile_criterion(criterion, bag, warnings, expand_meddra, capabilities)
-                if rel_clause:
-                    r_clauses.append(rel_clause)
-
-        compiled.append((
-            '(' + ' AND '.join(r_clauses) + ')' if r_clauses else None,
-            '(' + ' AND '.join(s_clauses) + ')' if s_clauses else None,
-        ))
+        compiled.append('(' + ' AND '.join(r_clauses) + ')' if r_clauses else None)
 
     return compiled
 
 
-def _split_is_faithful(compiled):
-    """
-    Whether the caller's two-part query preserves the criteria tree's meaning.
-
-    The relational and section halves are handed to the caller separately and
-    recombined as ``(R1 OR R2 ...) AND (S1 OR S2 ...)``, but the tree means
-    ``(R1 AND S1) OR (R2 AND S2) ...``. Those agree only when at most one group
-    contributes, or when every contributing group sits entirely on one side --
-    otherwise the split silently ANDs criteria the user asked to OR.
-    """
-    contributing = [(r, s) for r, s in compiled if r or s]
-    if len(contributing) <= 1:
-        return True
-    return all(s is None for _, s in contributing) or all(r is None for r, _ in contributing)
-
-
 def compile_where(query, expand_meddra=None, capabilities=None):
     """
-    Turns a criteria tree into ``(where_sql, section_where_sql, params, warnings)``.
+    Turns a criteria tree into ``(where_sql, params, warnings)``.
 
-    ``section_where_sql`` is None when every predicate fits in ``where_sql``.
+    Every supported criterion is a predicate over ``labeling.sum_spl s``, so one
+    WHERE clause says everything: groups OR together, criteria within a group
+    AND together, and there is no second half to recombine.
     """
     capabilities = capabilities or {}
 
     bag = _ParamBag()
     warnings = []
-    inline_sections = _has_virtual_section(query) or _has_multi_section_group(query, capabilities)
-    compiled = _compile_groups(
-        query, bag, warnings, expand_meddra, capabilities, inline_sections
-    )
+    compiled = _compile_groups(query, bag, warnings, expand_meddra, capabilities)
 
-    if not inline_sections and not _split_is_faithful(compiled):
-        # Recompile from scratch -- the discarded pass wrote into `bag`, and the
-        # inline form is a different set of parameters, not an addition to it.
-        # Correlated EXISTS costs more than the section CTE, but it is the only
-        # form that keeps each group's criteria in one expression.
-        bag = _ParamBag()
-        warnings = []
-        compiled = _compile_groups(
-            query, bag, warnings, expand_meddra, capabilities, inline_sections=True
-        )
+    groups = [g for g in compiled if g]
 
-    relational_groups = [r for r, _ in compiled if r]
-    section_groups = [s for _, s in compiled if s]
-
-    relational_where = ['s.is_latest = TRUE']
-    if relational_groups:
-        relational_where.append('(' + ' OR '.join(relational_groups) + ')')
-
-    section_where = '(' + ' OR '.join(section_groups) + ')' if section_groups else None
-
-    if not relational_groups and not section_groups:
+    where = ['s.is_latest = TRUE']
+    if groups:
+        where.append('(' + ' OR '.join(groups) + ')')
+    else:
         warnings.append('No criteria were filled in; showing the most recent labels.')
 
-    return ' AND '.join(relational_where), section_where, bag.params, warnings
+    return ' AND '.join(where), bag.params, warnings

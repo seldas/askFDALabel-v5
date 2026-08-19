@@ -6,12 +6,6 @@ export interface ChatMessage {
   content: string;
 }
 
-/**
- * Optional debug payloads for better Reasoning UI.
- * These are safe to keep as loose objects because backend shapes may evolve.
- */
-export type DebugObject = Record<string, any> | null;
-
 interface SearchContextProps {
   // Core query controls
   searchTerm: string;
@@ -78,8 +72,6 @@ interface SearchContextProps {
   setChatHistory: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
 
   // SQL debugging / manual execution
-  generatedSql: string;
-  setGeneratedSql: React.Dispatch<React.SetStateAction<string>>;
 
   // UI helpers
   highlightedSetId: string | null;
@@ -89,27 +81,8 @@ interface SearchContextProps {
   setLoadingStatus: React.Dispatch<React.SetStateAction<string>>;
 
   // Fixed Mode: 'semantic'
-  searchMode: string;
-  setSearchMode: React.Dispatch<React.SetStateAction<string>>;
 
   // Agent debug panels
-  agentFlow: string[];
-  setAgentFlow: React.Dispatch<React.SetStateAction<string[]>>;
-
-  reasoning: string;
-  setReasoning: React.Dispatch<React.SetStateAction<string>>;
-
-  debugIntent: DebugObject;
-  setDebugIntent: React.Dispatch<React.SetStateAction<DebugObject>>;
-
-  debugPlan: DebugObject;
-  setDebugPlan: React.Dispatch<React.SetStateAction<DebugObject>>;
-
-  debugStats: DebugObject;
-  setDebugStats: React.Dispatch<React.SetStateAction<DebugObject>>;
-
-  traceLog: string[];
-  setTraceLog: React.Dispatch<React.SetStateAction<string[]>>;
 
   hasUnsavedChanges: boolean;
   setHasUnsavedChanges: React.Dispatch<React.SetStateAction<boolean>>;
@@ -126,9 +99,7 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [filters, setFilters] = useState<Filters>({
     labelingType: [],
     applicationType: [],
-    labelingSection: [],
     drugNames: [],
-    adverseEvents: [],
     ndcs: [],
     isRx: false,
   });
@@ -150,11 +121,6 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const toggleFilterFlag = (flag: 'isRx') => {
     setFilters(prev => ({ ...prev, [flag]: !prev[flag] }));
   };
-
-  const [searchMode, setSearchMode] = useState('semantic');
-
-  const [agentFlow, setAgentFlow] = useState<string[]>([]);
-  const [reasoning, setReasoning] = useState('');
 
   const [summary, setSummary] = useState('');
   const [medAnswer, setMedAnswer] = useState('');
@@ -179,13 +145,6 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [resultsMessage, setResultsMessage] = useState('');
 
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
-  const [generatedSql, setGeneratedSql] = useState('');
-
-  // NEW: debug payloads for reasoning panel
-  const [debugIntent, setDebugIntent] = useState<DebugObject>(null);
-  const [debugPlan, setDebugPlan] = useState<DebugObject>(null);
-  const [debugStats, setDebugStats] = useState<DebugObject>(null);
-  const [traceLog, setTraceLog] = useState<string[]>([]);
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [currentHistoryId, setCurrentHistoryId] = useState<number | null>(null);
@@ -390,36 +349,13 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         chatHistory,
         setChatHistory,
 
-        generatedSql,
-        setGeneratedSql,
-
         highlightedSetId,
         setHighlightedSetId,
 
         loadingStatus,
         setLoadingStatus,
 
-        searchMode,
-        setSearchMode,
-
-        agentFlow,
-        setAgentFlow,
-
-        reasoning,
-        setReasoning,
-
         // NEW debug fields
-        debugIntent,
-        setDebugIntent,
-
-        debugPlan,
-        setDebugPlan,
-
-        debugStats,
-        setDebugStats,
-
-        traceLog,
-        setTraceLog,
 
         hasUnsavedChanges,
         setHasUnsavedChanges,

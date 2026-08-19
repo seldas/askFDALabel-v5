@@ -6,7 +6,7 @@ from .models import (
     PgxBiomarker, PgxSynonym, PgxAssessment,
     ProjectAeReport, ProjectAeReportDetail,
     AeAiAssessment, OrangeBook, SystemTask,
-    DrugLabel, LabelSection, ActiveIngredientMap, LabelMeddraProfile, TokenUsage,
+    DrugLabel, ActiveIngredientMap, LabelMeddraProfile, TokenUsage,
     SearchHistory, UserQueryHistory,
     ExaminePrompt, ExamineHistory
 )

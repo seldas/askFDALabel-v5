@@ -375,13 +375,6 @@ class FDALabelDBService:
                         ndc_clauses.append(f"REPLACE({c_ndc}, '-', '') LIKE :ndc_{i}")
                 where_clauses.append(f"({ ' OR '.join(ndc_clauses) })")
 
-                if not is_pg:
-                    # Oracle: CONTAINS uses explicit AND operators
-                    oracle_term = " AND ".join([f"{{{term}}}" for term in ae_terms])  # Wrap in braces to handle spaces in terms
-                    params[key] = oracle_term
-                    ae_subquery = f"EXISTS (SELECT 1 FROM druglabel.SPL_SEC s WHERE s.SPL_ID = druglabel.DGV_SUM_SPL.SPL_ID AND CONTAINS(s.CONTENT_XML, :ae_combined) > 0)"
-                    where_clauses.append(ae_subquery)
-
             if filters.get("labelingTypes"):
                 key = "doc_types"
                 if is_pg:
@@ -839,92 +832,15 @@ class FDALabelDBService:
     @classmethod
     def get_structured_sections_by_spl_id(cls, spl_id):
         """
-        Returns stored sections for one SPL version in a structured form.
-        Disabled for local PostgreSQL database mode.
+        Always empty: there is no structured section store any more.
+
+        Sections used to be read from `labeling.spl_sections`, which was dropped
+        along with full-text search (see db_12_drop_fulltext_search.py). Every
+        caller already falls back to fetching the SPL XML and parsing it with
+        xml_handler.flatten_sections when this returns nothing, so the fallback
+        is now simply the only path.
         """
-        if cls._db_type == 'postgres' or cls.is_local():
-            return []
-        if not cls.check_connectivity():
-            return []
-        conn = cls.get_connection()
-        if not conn:
-            return []
-
-        try:
-            cursor = conn.cursor()
-            schema = "labeling"
-
-            # Discover actual columns
-            col_sql = """
-                SELECT column_name
-                FROM information_schema.columns
-                WHERE table_schema = %s
-                AND table_name = %s
-                ORDER BY ordinal_position
-            """
-            cursor.execute(col_sql, (schema, "spl_sections"))
-            cols = [row["column_name"] if isinstance(row, dict) else row[0] for row in cursor.fetchall()]
-            colset = set(cols)
-
-            # Pick best available columns
-            id_col = next((c for c in ["id", "section_id"] if c in colset), None)
-            title_col = next((c for c in ["section_title", "title", "sec_title", "name"] if c in colset), None)
-            code_col = next((c for c in ["section_code", "code", "loinc_code"] if c in colset), None)
-            content_col = next((c for c in ["content_xml", "content", "section_text", "text"] if c in colset), None)
-            order_col = next((c for c in ["id", "section_id", "display_order", "sort_order"] if c in colset), None)
-
-            if "spl_id" not in colset:
-                raise Exception("labeling.spl_sections is missing required column: spl_id")
-
-            if not content_col:
-                raise Exception(f"Could not find a content column in labeling.spl_sections. Found columns: {sorted(colset)}")
-
-            select_parts = ["spl_id"]
-            if id_col:
-                select_parts.append(id_col)
-            if title_col:
-                select_parts.append(title_col)
-            if code_col:
-                select_parts.append(code_col)
-            if content_col not in select_parts:
-                select_parts.append(content_col)
-
-            sql = f"""
-                SELECT {", ".join(select_parts)}
-                FROM {schema}.spl_sections
-                WHERE spl_id = %s
-                ORDER BY {order_col if order_col else 'spl_id'}
-            """
-            cursor.execute(sql, (spl_id,))
-            rows = cursor.fetchall()
-
-            results = []
-            for r in rows:
-                if isinstance(r, dict):
-                    results.append({
-                        "id": r.get(id_col) if id_col else None,
-                        "section_title": (r.get(title_col) or "") if title_col else "",
-                        "section_code": (r.get(code_col) or "") if code_col else "",
-                        "content_xml": r.get(content_col) or ""
-                    })
-                else:
-                    # Fallback if not dict-like
-                    row_map = dict(zip(select_parts, r))
-                    results.append({
-                        "id": row_map.get(id_col) if id_col else None,
-                        "section_title": (row_map.get(title_col) or "") if title_col else "",
-                        "section_code": (row_map.get(code_col) or "") if code_col else "",
-                        "content_xml": row_map.get(content_col) or ""
-                    })
-
-            cursor.close()
-            return results
-
-        except Exception as e:
-            print(f"Structured Sections Error: {e}")
-            return []
-        finally:
-            conn.close()
+        return []
 
     @classmethod
     def get_full_xml(cls, set_id, spl_id=None, force_local=False):

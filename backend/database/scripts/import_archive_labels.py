@@ -188,19 +188,8 @@ def parse_spl_xml(xml_path):
                                 if prod['is_rld']: is_rld = 1
                                 if prod['is_rs']: is_rs = 1
 
-        sections_db = []
-
-        for sec in root.findall('.//ns:section', NS):
-            sec_code_el = sec.find('ns:code', NS)
-            loinc = sec_code_el.get('code') if sec_code_el is not None else ""
-
-            sec_title_el = sec.find('ns:title', NS)
-            title = get_el_text(sec_title_el)
-
-            text_el = sec.find('ns:text', NS)
-            if text_el is not None:
-                raw_xml = ET.tostring(text_el, encoding='unicode').strip()
-                sections_db.append((spl_id, loinc, title, raw_xml))
+        # Section bodies are not extracted: labeling.spl_sections is gone along
+        # with full-text search, and archived SPL XML stays readable on disk.
 
         metadata = (
             spl_id,
@@ -230,7 +219,6 @@ def parse_spl_xml(xml_path):
             'revised_date': revised_date,
             'metadata': metadata,
             'ingr_map': ingr_map,
-            'sections': sections_db
         }
 
     except Exception:
@@ -382,7 +370,7 @@ def refresh_epc_mappings():
         print(f"Warning: Could not update EPC mappings: {e}")
 
 
-def _flush_batches(meta_batch, ingr_batch, sect_batch, reload_spl_ids):
+def _flush_batches(meta_batch, ingr_batch, reload_spl_ids):
     if not meta_batch:
         return
 
@@ -430,10 +418,6 @@ def _flush_batches(meta_batch, ingr_batch, sect_batch, reload_spl_ids):
                     (reload_spl_ids,)
                 )
                 cur.execute(
-                    "DELETE FROM labeling.spl_sections WHERE spl_id = ANY(%s)",
-                    (reload_spl_ids,)
-                )
-                cur.execute(
                     "DELETE FROM labeling.epc_map WHERE spl_id = ANY(%s)",
                     (reload_spl_ids,)
                 )
@@ -448,18 +432,6 @@ def _flush_batches(meta_batch, ingr_batch, sect_batch, reload_spl_ids):
                     """,
                     ingr_batch,
                     page_size=1000
-                )
-
-            if sect_batch:
-                execute_values(
-                    cur,
-                    """
-                    INSERT INTO labeling.spl_sections
-                    (spl_id, loinc_code, title, content_xml)
-                    VALUES %s
-                    """,
-                    sect_batch,
-                    page_size=500
                 )
 
         conn.commit()
@@ -502,7 +474,6 @@ def sync_from_storage(storage_dir, num_workers=4, force=False, refresh_existing=
     batch_size = 300
     meta_batch = []
     ingr_batch = []
-    sect_batch = []
     reload_spl_ids = []
 
     imported = 0
@@ -542,7 +513,6 @@ def sync_from_storage(storage_dir, num_workers=4, force=False, refresh_existing=
             else:
                 meta_batch.append(data['metadata'])
                 ingr_batch.extend(data['ingr_map'])
-                sect_batch.extend(data['sections'])
                 reload_spl_ids.append(spl_id)
                 imported += 1
 
@@ -552,7 +522,6 @@ def sync_from_storage(storage_dir, num_workers=4, force=False, refresh_existing=
                         _flush_batches(
                             meta_batch,
                             ingr_batch,
-                            sect_batch,
                             reload_spl_ids
                         )
                     except Exception as e:
@@ -560,7 +529,6 @@ def sync_from_storage(storage_dir, num_workers=4, force=False, refresh_existing=
 
                 meta_batch = []
                 ingr_batch = []
-                sect_batch = []
                 reload_spl_ids = []
 
             if i % 100 == 0 or i == total:
@@ -582,16 +550,15 @@ def sync_from_storage(storage_dir, num_workers=4, force=False, refresh_existing=
 
     try:
         try:
-            from db_07_import_labels import refresh_query_options_cache, refresh_full_search_vector
+            from db_07_import_labels import refresh_query_options_cache
             from db_02_init_labeling_schema import ensure_search_indexes
         except ImportError:
-            from database.scripts.db_07_import_labels import refresh_query_options_cache, refresh_full_search_vector
+            from database.scripts.db_07_import_labels import refresh_query_options_cache
             from database.scripts.db_02_init_labeling_schema import ensure_search_indexes
-        refresh_full_search_vector()
         refresh_query_options_cache()
         ensure_search_indexes()
     except Exception as e:
-        print(f"[WARN] Failed to refresh options cache, full_search_vector, or search indexes post-sync: {e}")
+        print(f"[WARN] Failed to refresh options cache or search indexes post-sync: {e}")
 
 
 def main():

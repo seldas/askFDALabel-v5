@@ -378,7 +378,7 @@ class PgxAssessment(db.Model):
     report_content = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-# --- Embedding Models ---
+# --- AI Assessment Models ---
 
 class AeAiAssessment(db.Model):
     __tablename__ = 'ae_ai_assessment'
@@ -416,17 +416,6 @@ class DrugLabel(db.Model):
     is_rld = db.Column(db.Integer, default=0)
     is_rs = db.Column(db.Integer, default=0)
     local_path = db.Column(db.Text)
-
-class LabelSection(db.Model):
-    __tablename__ = 'spl_sections'
-    __table_args__ = {'schema': 'labeling'}
-
-    id = db.Column(db.Integer, db.Identity(start=1, cycle=True), primary_key=True)
-    spl_id = db.Column(db.String(100), db.ForeignKey('labeling.sum_spl.spl_id', ondelete='CASCADE'), index=True)
-    loinc_code = db.Column(db.String(50))
-    title = db.Column(db.Text)
-    content_xml = db.Column(db.Text)
-    # search_vector is handled by DB triggers/stored column
 
 class ActiveIngredientMap(db.Model):
     __tablename__ = 'active_ingredients_map'

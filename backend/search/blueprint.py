@@ -1,22 +1,13 @@
-from flask import Blueprint, request, jsonify, Response, stream_with_context, send_file
+from flask import Blueprint, request, jsonify, send_file
 from flask_login import current_user
-import os
 import io
 import json
 import logging
-import threading
-import time
 import urllib.parse
 import pandas as pd
 from dashboard.services.ai_handler import call_llm as unified_call_llm
-from search.scripts.semantic_core.state import AgentState
-from search.scripts.semantic_core.controller import run_controller
-from search.scripts.semantic_core.helpers import (
-    convert_oracle_to_filtered_results,
-    build_debug_stats,
-)
-from search.scripts.semantic_core.agents.reasoning_generator import run_reasoning_generator
 from search.scripts.general_search import search_general
+from search.scripts.annotations import ANNOTATION_RULES
 
 search_bp = Blueprint('search', __name__)
 logger = logging.getLogger(__name__)
@@ -64,13 +55,12 @@ def _generate_single_label_answer(user, query: str, meta: dict, xml_content: str
 
     xml_snippet = (xml_content or "")[:80000]  # cap at 80 k chars
 
-    system_prompt = """You are a highly specialized FDA drug labeling assistant.
-In your response, wrap specific entities with annotation tags:
-1. <annotation class="drug">Drug Name</annotation>
-2. <annotation class="adverse_events">Reaction</annotation>
-3. <annotation class="ndc">NDC Code</annotation>
-4. <annotation class="temporal">Time</annotation>
-Do not explain these tags to the user."""
+    # This path summarizes the SPL XML read off disk via sum_spl.local_path, so
+    # it can still describe label content -- unlike the agentic pipeline, which
+    # lost its section text when labeling.spl_sections was dropped.
+    system_prompt = f"""You are a highly specialized FDA drug labeling assistant.
+
+{ANNOTATION_RULES}"""
 
     if xml_snippet:
         user_message = f"""The user searched for: "{query}"
@@ -92,7 +82,7 @@ Please provide a concise but informative summary of this labeling record, highli
 3. Key safety information (boxed warnings, contraindications if present)
 4. NDC code(s)
 
-Keep your answer focused and clinically useful. Use annotation tags for drug names, adverse events, and NDC codes."""
+Keep your answer focused and clinically useful. Wrap every drug name in a drug annotation tag."""
     else:
         user_message = f"""The user searched for: "{query}"
 
@@ -361,8 +351,8 @@ def refine_chat():
         IMPORTANT:
         1. Keep as much of the ORIGINAL RESPONSE as possible. 
         2. Only modify or add sentences if the reference document provides new evidence or requires a correction.
-        3. Preserve any existing <annotation class=\"...\">...</annotation> tags from the original response.
-        4. Add NEW <annotation> tags for any new clinical entities discovered in the reference document.
+        3. Preserve any existing <annotation class=\"drug\">...</annotation> tags from the original response.
+        4. Add NEW <annotation class=\"drug\"> tags for any drug names introduced from the reference document. "drug" is the only valid annotation class.
 
         
         OUTPUT FORMAT:
@@ -437,138 +427,6 @@ def filter_data():
         "total_counts": total_count,
         "message": message
     }), 200
-
-# --- Streaming Agentic Search (Semantic) ---
-def _humanize_trace(line: str) -> str:
-    s = (line or "").strip()
-    if s.startswith("Planner:"): return "Planning query strategy..."
-    if "semantic_retriever" in s.lower(): return "Searching label embeddings..."
-    if "keyword_retriever" in s.lower(): return "Performing keyword lookup..."
-    if "reranker" in s.lower(): return "Reranking results for precision..."
-    if "evidence_fetcher" in s or "evidence" in s.lower(): return "Preparing label excerpts..."
-    if "answer_composer" in s.lower() or "Composer" in s: return "Composing clinical answer..."
-    return s
-
-def stream_answer_tokens(state):
-    # For semantic search, we typically use the answer_composer logic
-    # We can either run it once or stream it if the composer supports it.
-    # Here we simulate the stream via unified_call_llm if possible, 
-    # but the simplest is to follow the v2 pattern.
-    
-    from search.scripts.semantic_core.agents.answer_composer import ANSWER_COMPOSER_SYSTEM_PROMPT
-    query = state.conversation.get("user_query", "")
-    snippets = state.evidence.get("snippets", [])
-    
-    if not snippets:
-        yield "I couldn’t find relevant label excerpts for your question."
-        return
-
-    snippets_text = ""
-    for i, s in enumerate(snippets):
-        snippets_text += f"--- Excerpt {i+1} ---\nDrug: {s['drug_name']}\nSection: {s['section']}\nText: {s['snippet']}\n\n"
-
-    system_prompt = ANSWER_COMPOSER_SYSTEM_PROMPT.format(snippets_text=snippets_text, query=query)
-    
-    stream = unified_call_llm(
-        user=state.user,
-        system_prompt=system_prompt,
-        user_message="Please generate the grounded answer based on the label excerpts.",
-        max_tokens=4096,
-        temperature=0.1,
-        stream=True
-    )
-
-    for chunk in stream:
-        text = ""
-        if hasattr(chunk, 'choices'):
-            if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
-                text = chunk.choices[0].delta.content
-        elif hasattr(chunk, 'text'):
-            text = chunk.text
-        elif isinstance(chunk, str):
-            text = chunk
-        if text:
-            yield text
-
-@search_bp.route("/search_agentic_stream", methods=["POST"])
-def search_agentic_stream():
-    payload = request.json or {}
-    ai_provider = payload.get("ai_provider")
-    user_obj = current_user._get_current_object() if current_user.is_authenticated else None
-    if user_obj and ai_provider:
-        user_obj.ai_provider = ai_provider
-
-    def generate():
-        state = AgentState(payload, user=user_obj)
-        done = threading.Event()
-        err = {}
-        
-        def worker():
-            try:
-                # Run everything except the final answer generation (which we stream)
-                run_controller(state, stop_before="answer_composer")
-            except Exception as e:
-                err["e"] = e
-                logger.error(f"Agent worker failed: {e}", exc_info=True)
-            finally:
-                done.set()
-        
-        threading.Thread(target=worker, daemon=True).start()
-        
-        sent = 0
-        yield json.dumps({"type": "status", "text": "Initializing Semantic Agent..."}) + "\n"
-        
-        while not done.is_set():
-            while sent < len(state.trace_log):
-                line = state.trace_log[sent]
-                yield json.dumps({"type": "status", "text": _humanize_trace(line)}) + "\n"
-                sent += 1
-            time.sleep(0.1)
-            
-        while sent < len(state.trace_log):
-            line = state.trace_log[sent]
-            yield json.dumps({"type": "status", "text": _humanize_trace(line)}) + "\n"
-            sent += 1
-            
-        if "e" in err:
-            yield json.dumps({"type": "error", "error": str(err["e"])}) + "\n"
-            return
-
-        yield json.dumps({"type": "status", "text": "Generating answer..."}) + "\n"
-        yield json.dumps({"type": "answer_start"}) + "\n"
-        
-        answer_text = ""
-        try:
-            for tok in stream_answer_tokens(state):
-                answer_text += tok
-                yield json.dumps({"type": "chunk", "text": tok}) + "\n"
-        except Exception as e:
-            yield json.dumps({"type": "error", "error": f"Streaming failed: {str(e)}"}) + "\n"
-            return
-            
-        state.answer["response_text"] = answer_text
-        yield json.dumps({"type": "answer_end"}) + "\n"
-        
-        # Final Reasoning
-        try:
-            run_reasoning_generator(state)
-        except Exception: pass
-        
-        # Build final response object (compatibility with UI)
-        debug_stats = build_debug_stats(state)
-        final_results = list(convert_oracle_to_filtered_results(state.retrieval.get("results", [])).values())
-        
-        resp = {
-            "med_answer": answer_text,
-            "results": final_results,
-            "agent_flow": state.agent_flow,
-            "reasoning": state.reasoning,
-            "debug_stats": debug_stats,
-            "trace_log": state.trace_log,
-        }
-        yield json.dumps({"type": "final", "status": 200, "payload": resp}) + "\n"
-
-    return Response(stream_with_context(generate()), mimetype="application/x-ndjson")
 
 # --- Helper Routes (Metadata, Exports) ---
 @search_bp.route("/get_metadata", methods=["POST"])

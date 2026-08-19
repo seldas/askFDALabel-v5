@@ -10,7 +10,7 @@ The authoritative implementation lives in `frontend/`, `backend/`, and the datab
 A grounded label-search workspace backed by the `backend/search` blueprint. The current search stack includes:
 - conversational search entry points (`/api/search/chat`, `/api/search/search_agentic_stream`)
 - a semantic pipeline under `backend/search/scripts/semantic_core/`
-- semantic retrieval over labeling sections using PostgreSQL Full-Text Search (FTS)
+- label lookup by drug name, identifier and metadata (label *text* search is not available on the local PostgreSQL database)
 - keyword retrieval, reranking, evidence fetching, and answer composition
 - export helpers for filtered result sets
 
@@ -94,7 +94,7 @@ The repo also includes:
 ### Data layer
 - PostgreSQL is the primary runtime database
 - the `labeling` schema stores SPL label metadata and sections
-- PostgreSQL Full-Text Search (FTS) over SPL sections is used for semantic label search
+- Label text search was removed; `pg_trgm` trigram indexes over the name and category columns serve the criteria builder
 - public-schema tables store users, tasks, favorites, reports, MedDRA, PGx, DrugTox, and system tasks
 - optional Oracle connectivity is supported through `FDALabelDBService`
 
@@ -299,7 +299,7 @@ The application uses a two-schema layout in PostgreSQL (`public` and `labeling`)
 ### Step-by-Step Initialization
 Run these from the repo root with your virtual environment activated:
 
-1. **Initialize Labeling Schema**: Creates the `labeling` tables and optimized Full-Text Search (FTS) indexes.
+1. **Initialize Labeling Schema**: Creates the `labeling` tables and the `pg_trgm` trigram indexes the criteria builder needs.
    ```bash
    python backend/database/scripts/db_02_init_labeling_schema.py
    ```
@@ -325,7 +325,7 @@ Run these from the repo root with your virtual environment activated:
    python backend/database/scripts/db_07_import_labels.py --force --skip-unpack
    ```
 
-*(Note: `backend/database/scripts/db_01_enable_pgvector.py` is a legacy script from when vector embeddings were used, and is no longer required for the current FTS-based search)*
+*(Note: an existing database created before full-text search was removed should be migrated once with `python backend/database/scripts/db_12_drop_fulltext_search.py`, which drops `labeling.spl_sections`, `sum_spl.full_search_vector` and their GIN indexes.)*
 
 ## Data and maintenance workflows
 

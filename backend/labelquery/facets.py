@@ -158,19 +158,13 @@ def strip_all_categories(query):
 # SQL
 # ---------------------------------------------------------------------------
 
-def postgres_facet_sql(relational_where, section_where):
+def postgres_facet_sql(relational_where):
     """
     One statement, long-format rows: (cat, token, n).
 
     MATERIALIZED is not optional -- without it the planner inlines `matched`
     into all sixteen branches and re-runs the whole predicate for each.
     """
-    sec_join = ''
-    if section_where:
-        sec_join = (
-            'INNER JOIN (SELECT DISTINCT sec.spl_id FROM labeling.spl_sections sec '
-            f'WHERE {section_where}) sc ON sc.spl_id = s.spl_id'
-        )
 
     branches = [
         f"SELECT '{cat}' AS cat, '{token}' AS token, count(*) AS n FROM matched WHERE {pg_pred}"
@@ -197,7 +191,6 @@ def postgres_facet_sql(relational_where, section_where):
             SELECT s.spl_id, s.doc_type, s.market_categories, s.routes,
                    s.dosage_forms, s.epc, s.is_rld
             FROM labeling.sum_spl s
-            {sec_join}
             WHERE {relational_where}
         )
         {union_sql}

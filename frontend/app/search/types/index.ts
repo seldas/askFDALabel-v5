@@ -1,9 +1,10 @@
+// No adverseEvents or labelingSection: both filtered on label section text,
+// which the backend can no longer search since labeling.spl_sections was
+// dropped. Chat search matches drug names, NDCs and label metadata only.
 export interface Filters {
   labelingType: string[];
   applicationType: string[];
-  labelingSection: string[];
   drugNames: string[];
-  adverseEvents: string[];
   ndcs: string[];
   isRx: boolean;
 }
