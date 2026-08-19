@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Header from "../components/Header";
 import Footer from '../components/Footer';
-import RequireDeveloper from '../components/RequireDeveloper';
+import RequireFeature from '../components/RequireFeature';
 import "../globals.css";
 import { withAppBase, withApiBase } from '../utils/appPaths';
 import { Badge, Button, ButtonLink, EmptyState, Input } from '../platform/primitives';
@@ -769,9 +769,9 @@ const LocalQueryPage = () => {
 };
 
 const LocalQueryPageGated = () => (
-  <RequireDeveloper feature="Local Database Search" activeApp="localquery">
+  <RequireFeature feature="Local Database Search" featureKey="localquery" activeApp="localquery">
     <LocalQueryPage />
-  </RequireDeveloper>
+  </RequireFeature>
 );
 
 export default LocalQueryPageGated;

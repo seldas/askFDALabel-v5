@@ -7,7 +7,7 @@ import Footer from '../components/Footer';
 import ChatPanel from "./components/ChatPanel";
 import Results from "./components/Results";
 import { SearchProvider } from "./context/SearchContext";
-import RequireDeveloper from "../components/RequireDeveloper";
+import RequireFeature from "../components/RequireFeature";
 
 const App = () => {
   const [hasSearched, setHasSearched] = useState(false);
@@ -33,9 +33,9 @@ const App = () => {
 };
 
 const SearchPage = () => (
-  <RequireDeveloper feature="LabelChat" activeApp="afl">
+  <RequireFeature feature="LabelChat" featureKey="labelchat" activeApp="afl">
     <App />
-  </RequireDeveloper>
+  </RequireFeature>
 );
 
 export default SearchPage;

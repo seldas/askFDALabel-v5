@@ -618,3 +618,31 @@ class ExamineHistory(db.Model):
     model_used = db.Column(db.String(100), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+
+class FeatureGate(db.Model):
+    """
+    Admin-configurable access rule for one gated feature.
+
+    Only the mutable part of a gate lives here. The human-readable name, the
+    blurb and where the rule is enforced stay in code -- see
+    `dashboard.services.feature_gates.FEATURE_CATALOG` -- so adding or
+    re-describing a feature never needs a data migration, and a row for a
+    feature that no longer exists is simply ignored.
+
+    Rows are seeded from the catalog defaults at startup, which reproduce the
+    behaviour these gates had while they were hardcoded.
+    """
+    __tablename__ = 'feature_gate'
+
+    id = db.Column(db.Integer, primary_key=True)
+    #: Catalog key, e.g. 'labelchat'. Stable identifier used by API and UI.
+    key = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    #: Least-privileged role allowed to use the feature: user | developer | admin.
+    min_role = db.Column(db.String(20), nullable=False, default=ROLE_USER)
+    #: Whether the shared anonymous account may use it. Tracked separately from
+    #: min_role because `guest` holds the 'user' role but must be excluded from
+    #: anything storing per-account state.
+    allow_guest = db.Column(db.Boolean, nullable=False, default=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)

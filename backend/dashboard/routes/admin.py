@@ -394,3 +394,48 @@ def get_db_stats(db_type):
         return jsonify({'success': True, 'stats': stats})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# --- Feature Gates -----------------------------------------------------------
+#
+# The gates are resolved per request (see dashboard.services.feature_gates), so
+# a change here applies to the next request in every process without a restart.
+
+@admin_bp.route('/feature_gates', methods=['GET'])
+@login_required
+@admin_required
+def get_feature_gates():
+    from dashboard.services import feature_gates
+    return jsonify({
+        'success': True,
+        'roles': list(ROLES),
+        'features': feature_gates.admin_view(),
+    })
+
+
+@admin_bp.route('/feature_gates/<key>', methods=['PUT'])
+@login_required
+@admin_required
+def update_feature_gate(key):
+    from dashboard.services import feature_gates
+
+    data = request.get_json() or {}
+    if 'min_role' not in data and 'allow_guest' not in data:
+        return jsonify({'success': False, 'error': 'Nothing to update'}), 400
+
+    try:
+        feature_gates.set_gate(
+            key,
+            min_role=data.get('min_role'),
+            allow_guest=data.get('allow_guest'),
+            updated_by_id=current_user.id,
+        )
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+    # An admin who locks themselves out of the panel could not undo it, so the
+    # gate list is returned with the response and the UI re-renders from it.
+    return jsonify({
+        'success': True,
+        'features': feature_gates.admin_view(),
+    })

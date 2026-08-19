@@ -34,10 +34,12 @@ export default function QueryHistoryPage() {
   const [page, setPage] = useState(1);
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
-  const isGuest = session?.is_guest ?? (session?.username?.toLowerCase() === 'guest');
+  // Gate verdict from the backend, so an admin opening this feature to guests
+  // takes effect here without a code change.
+  const historyAllowed = session?.permissions?.query_history ?? false;
 
   const fetchHistory = async () => {
-    if (isGuest) { setLoading(false); return; }
+    if (!historyAllowed) { setLoading(false); return; }
     setLoading(true);
     try {
       const res = await fetch('/api/dashboard/query_history?sort=desc');
@@ -55,7 +57,7 @@ export default function QueryHistoryPage() {
   useEffect(() => {
     fetchHistory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isGuest]);
+  }, [historyAllowed]);
 
   // Reset page to 1 when filters change
   useEffect(() => {
@@ -186,11 +188,15 @@ export default function QueryHistoryPage() {
 
   // Reachable by URL even though the header hides the link; the API returns
   // 403 for a guest regardless, so this only makes the refusal readable.
-  if (!userLoading && isGuest) {
+  if (!userLoading && !historyAllowed) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--afl-bg-page, #f8fafc)' }}>
         <Header activeApp="dashboard" />
-        <AccessRestricted feature="Search & Query History" />
+        <AccessRestricted
+          feature="Search & Query History"
+          title="Search & Query History is not available for your account"
+          body="An administrator controls which accounts can use search history from the Function Control panel."
+        />
       </div>
     );
   }

@@ -74,6 +74,7 @@ def create_app(config_class=Config):
         ensure_user_schema()
         migrate_projects()
         seed_examine_prompts()
+        seed_feature_gate_rows()
         check_meddra_data()
 
     return app
@@ -121,6 +122,15 @@ def ensure_user_schema():
     except Exception as e:
         print(f"Schema check error (citext): {e}")
         db.session.rollback()
+
+def seed_feature_gate_rows():
+    """Inserts a row for any gated feature that does not have one yet."""
+    try:
+        from dashboard.services.feature_gates import seed_feature_gates
+        seed_feature_gates()
+    except Exception as e:
+        print(f"Feature gate seeding error: {e}")
+
 
 def check_meddra_data():
     """Checks if MedDRA tables are populated and warns the user if not."""

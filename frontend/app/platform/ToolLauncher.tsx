@@ -46,11 +46,12 @@ function meetsRequirement(req: Requirement, caps: Capabilities): boolean {
 
 /**
  * What the *account* is allowed to reach, as opposed to what the deployment
- * can reach. Optional so existing call sites keep compiling; omitted means no
- * developer access, which is the safe default for a tool marked developerOnly.
+ * can reach. Omitted means "nothing gated", which is the safe default for a
+ * tool carrying a featureKey — better to hide briefly while the session loads
+ * than to offer a tool the API will refuse.
  */
 export interface ToolAccess {
-  hasDeveloperAccess?: boolean;
+  permissions?: Record<string, boolean>;
 }
 
 export function isToolAvailable(
@@ -60,18 +61,18 @@ export function isToolAvailable(
   access?: ToolAccess,
 ): boolean {
   if (tool.enabled === false) return false;
-  if (tool.developerOnly && !access?.hasDeveloperAccess) return false;
+  if (tool.featureKey && !access?.permissions?.[tool.featureKey]) return false;
   const kinds = contextKinds(ctx);
   if (!tool.contexts.some((kind) => kinds.includes(kind))) return false;
   return (tool.requires ?? []).every((req) => meetsRequirement(req, caps));
 }
 
-/** Reads the current account's tool access from the session. */
+/** Reads the current account's per-feature verdicts from the session. */
 export function useToolAccess(): ToolAccess {
   const { session } = useUser();
   return useMemo(
-    () => ({ hasDeveloperAccess: Boolean(session?.has_developer_access) }),
-    [session?.has_developer_access],
+    () => ({ permissions: session?.permissions }),
+    [session?.permissions],
   );
 }
 

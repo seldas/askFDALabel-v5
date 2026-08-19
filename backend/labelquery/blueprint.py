@@ -22,6 +22,7 @@ from flask import Blueprint, request, jsonify, send_file, current_app
 from flask_login import current_user
 
 from dashboard.services.fdalabel_db import FDALabelDBService
+from dashboard.services import feature_gates
 from .compiler import (
     CLASS_TYPE_FILTERS,
     SELECT_COLUMNS,
@@ -688,14 +689,17 @@ def _resolve_target_db(requested):
 
     Hiding the switch in the UI is cosmetic -- target_db arrives from the client
     on every query route, so the restriction has to be applied here or it can be
-    bypassed with a direct API call. Developers and admins get what they asked
-    for; everyone else is pinned to CDER-CBER, falling back to the local
-    database where Oracle is not reachable (a public deployment), which is what
-    the home page already did on its own.
+    bypassed with a direct API call. Accounts holding the 'db_selection'
+    feature get what they asked for; everyone else is pinned to CDER-CBER,
+    falling back to the local database where Oracle is not reachable (a public
+    deployment), which is what the home page already did on its own.
+
+    The role that gate requires is admin-configurable at runtime, so this is
+    resolved per request rather than cached.
     """
     requested = (requested or '').strip().lower()
 
-    if current_user.is_authenticated and current_user.can_select_database:
+    if feature_gates.is_allowed(current_user, 'db_selection'):
         return requested if requested in _KNOWN_TARGETS else 'local'
 
     return _DEFAULT_TARGET if _oracle_reachable() else 'local'

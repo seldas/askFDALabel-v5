@@ -3,6 +3,7 @@ import re
 from flask import Blueprint, request, jsonify
 from flask_login import login_user, login_required, logout_user, current_user
 from database import db, User, ROLE_USER
+from dashboard.services import feature_gates
 import logging
 
 logger = logging.getLogger(__name__)
@@ -162,6 +163,10 @@ def session():
             # behind all three refuse a plain user, so this only decides
             # whether the entry points are offered.
             'has_developer_access': current_user.has_developer_access,
+            # Per-feature verdicts from the same resolver the routes use, so
+            # the UI hides exactly what the backend would refuse. Resolved per
+            # request, so an admin's change lands on the next session fetch.
+            'permissions': feature_gates.permissions_for(current_user),
             # Query history and saved preferences are per-user state on a row
             # every anonymous visitor shares, so both are closed to the guest
             # account. Enforced on the routes as well as hidden in the UI.

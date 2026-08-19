@@ -17,6 +17,12 @@ export interface UserSession {
   is_guest?: boolean;
   /** Developer-only modules: LabelChat, Web-test, Local Database Search. */
   has_developer_access?: boolean;
+  /**
+   * Per-feature verdicts, keyed by feature. Computed by the same resolver the
+   * API routes use, so the UI hides exactly what the backend would refuse.
+   * Admin-configurable at runtime — never treat a value here as fixed.
+   */
+  permissions?: Record<string, boolean>;
   username?: string;
   ai_provider?: string;
   custom_gemini_key?: string;
@@ -126,6 +132,21 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     fetchSession();
   }, [fetchSession]);
+
+  /* Feature gates are admin-configurable at runtime, so an open tab has to
+     converge on its own — otherwise a user keeps a stale menu until they
+     happen to reload. Re-fetching on focus covers the common case cheaply;
+     the interval covers a tab left open in the foreground. */
+  useEffect(() => {
+    if (!session?.is_authenticated) return;
+    const onFocus = () => { fetchSession(); };
+    window.addEventListener('focus', onFocus);
+    const interval = setInterval(fetchSession, 60000);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      clearInterval(interval);
+    };
+  }, [session?.is_authenticated, fetchSession]);
 
   // Task polling effect - Poll on all pages if authenticated
   useEffect(() => {

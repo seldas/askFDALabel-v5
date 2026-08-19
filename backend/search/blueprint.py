@@ -9,14 +9,14 @@ from dashboard.services.ai_handler import call_llm as unified_call_llm
 from search.scripts.general_search import search_general
 from search.scripts.annotations import ANNOTATION_RULES
 
-from dashboard.routes.guards import require_developer_access
+from dashboard.routes.guards import feature_before_request
 
 search_bp = Blueprint('search', __name__)
 
-# LabelChat / Web-test / Local Database Search are developer-only modules.
-# Gated on the blueprint rather than per route so any route added later is
-# covered by default; see dashboard.routes.guards.
-search_bp.before_request(require_developer_access)
+# Gated on the blueprint rather than per route, so any route added later is
+# covered by default. The required role is admin-configurable at runtime --
+# see dashboard.services.feature_gates.
+search_bp.before_request(feature_before_request('labelchat'))
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------

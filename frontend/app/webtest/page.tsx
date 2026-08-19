@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { useUser } from '../context/UserContext';
-import RequireDeveloper from '../components/RequireDeveloper';
+import RequireFeature from '../components/RequireFeature';
 import { 
     LineChart, Line, XAxis, YAxis, CartesianGrid, 
     Tooltip, ResponsiveContainer
@@ -789,8 +789,8 @@ function WebTestingPageInner() {
 
 export default function WebTestingPage() {
     return (
-        <RequireDeveloper feature="Web-test Tool" activeApp="webtest">
+        <RequireFeature feature="Web-test Tool" featureKey="webtest" activeApp="webtest">
             <WebTestingPageInner />
-        </RequireDeveloper>
+        </RequireFeature>
     );
 }

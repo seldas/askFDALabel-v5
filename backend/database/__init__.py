@@ -9,5 +9,6 @@ from .models import (
     AeAiAssessment, OrangeBook, SystemTask,
     DrugLabel, ActiveIngredientMap, LabelMeddraProfile, TokenUsage,
     SearchHistory, UserQueryHistory,
-    ExaminePrompt, ExamineHistory
+    ExaminePrompt, ExamineHistory,
+    FeatureGate
 )

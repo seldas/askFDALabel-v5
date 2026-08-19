@@ -43,14 +43,16 @@ export interface ToolDef {
   /** All must be satisfied for the tool to be offered. */
   requires?: Requirement[];
   /**
-   * Restricted to developer and admin accounts.
+   * Feature-gate key, when this tool is gated per account.
    *
    * Unlike `requires`, which describes what the *deployment* can reach, this
-   * describes what the *account* is allowed to use. The blueprint behind each
-   * such tool refuses a plain user independently, so this only controls
-   * whether the entry point is offered.
+   * describes what the *account* is allowed to use. The verdict comes from the
+   * session's `permissions` map, which the backend computes with the same
+   * resolver its routes use — and which an admin can change at runtime, so it
+   * must never be treated as a constant. The module's blueprint refuses a
+   * disallowed account independently; this only controls the entry point.
    */
-  developerOnly?: boolean;
+  featureKey?: string;
   /** Marks AI-backed tools so the UI can badge them, as the label tabs do today. */
   ai?: boolean;
   /**
@@ -160,12 +162,12 @@ const PLATFORM_TOOLS: ToolDef[] = [
   {
     id: 'search',
     name: 'LabelChat',
-    blurb: 'Ask questions across all labels and get grounded answers.',
+    blurb: 'Find labeling records by drug name, NDC, application number or set ID.',
     iconId: 'chat',
     kind: 'embedded',
     group: 'discover',
     contexts: ['global'],
-    developerOnly: true,
+    featureKey: 'labelchat',
     ai: true,
     target: '_blank',
     href: (ctx) => queryRoute('/search', ctx),
@@ -179,7 +181,7 @@ const PLATFORM_TOOLS: ToolDef[] = [
     group: 'discover',
     contexts: ['global'],
     requires: ['localQuery'],
-    developerOnly: true,
+    featureKey: 'localquery',
     href: (ctx) => queryRoute('/localquery', ctx),
   },
   {
@@ -233,7 +235,7 @@ const PLATFORM_TOOLS: ToolDef[] = [
     kind: 'embedded',
     group: 'validate',
     contexts: ['global'],
-    developerOnly: true,
+    featureKey: 'webtest',
     target: '_blank',
     href: () => '/webtest',
   },

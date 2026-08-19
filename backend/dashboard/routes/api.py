@@ -15,7 +15,7 @@ from database import (
     ProjectAeReport, ProjectAeReportDetail, AeAiAssessment, SystemTask
 )
 import threading
-from dashboard.routes.guards import guest_forbidden
+from dashboard.routes.guards import require_feature
 from dashboard.services.task_service import TaskService
 from dashboard.services.fda_client import get_label_metadata, get_label_xml, get_faers_data, find_labels, find_labels_by_set_ids, get_label_counts, get_rich_metadata_by_generic
 from dashboard.services.ai_handler import chat_with_document, summarize_comparison, generate_assessment, get_search_helper_response
@@ -1541,7 +1541,7 @@ def api_my_favorites():
 # --- User Query History Routes ---
 
 @api_bp.route('/query_history', methods=['GET'])
-@guest_forbidden
+@require_feature('query_history')
 def get_user_query_history():
     user_obj = current_user._get_current_object() if current_user.is_authenticated else None
     if not user_obj:
@@ -1577,7 +1577,7 @@ def get_user_query_history():
 
 
 @api_bp.route('/query_history', methods=['POST'])
-@guest_forbidden
+@require_feature('query_history')
 def save_user_query_history():
     user_obj = current_user._get_current_object() if current_user.is_authenticated else None
     if not user_obj:
@@ -1623,7 +1623,7 @@ def save_user_query_history():
 
 @api_bp.route('/query_history/<int:history_id>', methods=['DELETE'])
 @login_required
-@guest_forbidden
+@require_feature('query_history')
 def delete_user_query_history(history_id):
     user_obj = current_user._get_current_object()
     record = UserQueryHistory.query.filter_by(id=history_id, user_id=user_obj.id).first()
@@ -1636,7 +1636,7 @@ def delete_user_query_history(history_id):
 
 @api_bp.route('/query_history/clear', methods=['DELETE'])
 @login_required
-@guest_forbidden
+@require_feature('query_history')
 def clear_user_query_history():
     user_obj = current_user._get_current_object()
     UserQueryHistory.query.filter_by(user_id=user_obj.id).delete()

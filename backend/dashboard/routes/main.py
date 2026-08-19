@@ -1,6 +1,6 @@
 from flask import Blueprint, request, redirect, url_for, jsonify, send_from_directory, current_app, send_file
 from flask_login import login_required, current_user
-from dashboard.routes.guards import guest_forbidden
+from dashboard.routes.guards import require_feature
 import os
 import zipfile
 import re
@@ -618,7 +618,7 @@ def export_sections():
 
 @main_bp.route('/preferences', methods=['POST'])
 @login_required
-@guest_forbidden
+@require_feature('preferences')
 def preferences():
     if request.is_json:
         data = request.get_json()

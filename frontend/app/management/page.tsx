@@ -149,6 +149,9 @@ export default function ManagementPage() {
   const [oracleTestResult, setOracleTestResult] = useState<{ success: boolean; message: string; elapsed_ms?: number | null } | null>(null);
 
   useEffect(() => {
+    if (activeTab === 'functions' && session?.is_admin && features.length === 0 && !loadingFeatures) {
+      fetchFeatureGates();
+    }
     if (activeTab !== 'database' || !session?.is_admin || oracleLoaded) return;
     (async () => {
       try {
@@ -226,6 +229,59 @@ export default function ManagementPage() {
   };
 
   // New user form
+  // --- Function Control (feature gates) ---
+  const [features, setFeatures] = useState<any[]>([]);
+  const [featureRoles, setFeatureRoles] = useState<string[]>(['user', 'developer', 'admin']);
+  const [loadingFeatures, setLoadingFeatures] = useState(false);
+  const [savingFeature, setSavingFeature] = useState<string | null>(null);
+  const [featureError, setFeatureError] = useState<string | null>(null);
+
+  const fetchFeatureGates = async () => {
+    setLoadingFeatures(true);
+    setFeatureError(null);
+    try {
+      const res = await fetch('/api/dashboard/admin/feature_gates');
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setFeatures(data.features || []);
+        if (Array.isArray(data.roles) && data.roles.length) setFeatureRoles(data.roles);
+      } else {
+        setFeatureError(data.error || 'Could not load function controls.');
+      }
+    } catch (e) {
+      setFeatureError('Could not load function controls.');
+    } finally {
+      setLoadingFeatures(false);
+    }
+  };
+
+  const updateFeatureGate = async (key: string, patch: Record<string, any>) => {
+    setSavingFeature(key);
+    setFeatureError(null);
+    try {
+      const res = await fetch(`/api/dashboard/admin/feature_gates/${key}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        // The response carries the full list, so the panel re-renders from the
+        // server's view rather than a locally patched guess.
+        setFeatures(data.features || []);
+        // The change may affect this admin's own session; pick it up now
+        // instead of waiting for the poll.
+        refreshSession();
+      } else {
+        setFeatureError(data.error || 'Could not update this function.');
+      }
+    } catch (e) {
+      setFeatureError('Could not update this function.');
+    } finally {
+      setSavingFeature(null);
+    }
+  };
+
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState<'user' | 'developer' | 'admin'>('user');
@@ -695,8 +751,16 @@ export default function ManagementPage() {
 
   // Reachable by URL even though the header hides the link; /preferences
   // returns 403 for a guest regardless.
-  if (session?.is_guest ?? (session?.username?.toLowerCase() === 'guest')) {
-    return <AccessRestricted feature="Settings & Preferences" />;
+  // Admins always reach this page — it is where Function Control lives, and
+  // locking themselves out of it would be unrecoverable.
+  if (!session?.is_admin && !(session?.permissions?.preferences ?? false)) {
+    return (
+      <AccessRestricted
+        feature="Settings & Preferences"
+        title="Settings & Preferences is not available for your account"
+        body="An administrator controls which accounts can use saved preferences from the Function Control panel."
+      />
+    );
   }
 
   // AI Action History Filtering & Pagination logic
@@ -845,6 +909,15 @@ export default function ManagementPage() {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
               {session?.is_admin ? 'Token Usage' : 'My Token Usage'}
             </button>
+            {session?.is_admin && (
+              <button
+                className={`sidebar-tab ${activeTab === 'functions' ? 'active' : ''}`}
+                onClick={() => setActiveTab('functions')}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                Function Control
+              </button>
+            )}
             {session?.is_admin && (
               <button
                 className={`sidebar-tab ${activeTab === 'database' ? 'active' : ''}`}
@@ -1589,6 +1662,104 @@ export default function ManagementPage() {
                   )}
                 </div>
               </section>
+            )}
+
+            {activeTab === 'functions' && session?.is_admin && (
+              <div className="mgmt-section">
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                  <h2 className="section-title" style={{ margin: 0 }}>Function Control</h2>
+                  <button className="btn-ghost" onClick={fetchFeatureGates} disabled={loadingFeatures}>
+                    {loadingFeatures ? 'Refreshing...' : 'Refresh'}
+                  </button>
+                </div>
+                <p style={{ color: 'var(--afl-n-500)', fontSize: '0.85rem', lineHeight: 1.6, marginTop: '4px' }}>
+                  Each function below is gated by account role. Changes apply immediately —
+                  no restart — and reach open sessions within a minute. Both the API and the
+                  interface read the same rule, so a function you close here cannot be reached
+                  by calling the endpoint directly.
+                </p>
+
+                {featureError && (
+                  <div style={{ background: 'var(--afl-danger-100)', color: '#991b1b', padding: '10px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, marginBottom: '12px' }}>
+                    ⚠️ {featureError}
+                  </div>
+                )}
+
+                {loadingFeatures && features.length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: 'var(--afl-n-400)' }}>Loading functions...</div>
+                ) : (
+                  <div className="user-table-wrapper">
+                    <table className="user-table">
+                      <thead>
+                        <tr>
+                          <th>Function</th>
+                          <th style={{ width: '170px' }}>Minimum role</th>
+                          <th style={{ width: '120px' }}>Guest</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {features.map((f: any) => {
+                          const changed =
+                            f.min_role !== f.default_min_role ||
+                            Boolean(f.allow_guest) !== Boolean(f.default_allow_guest);
+                          return (
+                            <tr key={f.key} style={{ opacity: savingFeature === f.key ? 0.6 : 1 }}>
+                              <td>
+                                <div style={{ fontWeight: 700, color: 'var(--afl-n-800)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  {f.name}
+                                  <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', background: 'var(--afl-n-100)', color: 'var(--afl-n-500)', padding: '2px 6px', borderRadius: '4px' }}>
+                                    {f.category}
+                                  </span>
+                                  {changed && (
+                                    <span title="Differs from the built-in default" style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', background: 'var(--afl-info-100, #dbeafe)', color: 'var(--afl-info-700, #1d4ed8)', padding: '2px 6px', borderRadius: '4px' }}>
+                                      Customized
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: '0.78rem', color: 'var(--afl-n-500)', marginTop: '2px' }}>{f.blurb}</div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--afl-n-400)', marginTop: '2px' }}>
+                                  Enforced at {f.enforced_at}
+                                </div>
+                              </td>
+                              <td>
+                                <select
+                                  className="mgmt-select"
+                                  value={f.min_role}
+                                  disabled={savingFeature === f.key}
+                                  onChange={e => updateFeatureGate(f.key, { min_role: e.target.value })}
+                                >
+                                  {featureRoles.map(r => (
+                                    <option key={r} value={r}>
+                                      {r.charAt(0).toUpperCase() + r.slice(1)} and above
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td>
+                                {f.guest_relevant ? (
+                                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(f.allow_guest)}
+                                      disabled={savingFeature === f.key}
+                                      onChange={e => updateFeatureGate(f.key, { allow_guest: e.target.checked })}
+                                    />
+                                    Allow
+                                  </label>
+                                ) : (
+                                  <span title="The role requirement already excludes the shared guest account" style={{ fontSize: '0.75rem', color: 'var(--afl-n-400)' }}>
+                                    n/a
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             )}
 
             {activeTab === 'database' && session?.is_admin && (

@@ -13,14 +13,14 @@ from dashboard.services.task_service import TaskService
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-from dashboard.routes.guards import require_developer_access
+from dashboard.routes.guards import feature_before_request
 
 webtest_bp = Blueprint('webtest', __name__)
 
-# LabelChat / Web-test / Local Database Search are developer-only modules.
-# Gated on the blueprint rather than per route so any route added later is
-# covered by default; see dashboard.routes.guards.
-webtest_bp.before_request(require_developer_access)
+# Gated on the blueprint rather than per route, so any route added later is
+# covered by default. The required role is admin-configurable at runtime --
+# see dashboard.services.feature_gates.
+webtest_bp.before_request(feature_before_request('webtest'))
 
 def get_cutoff_from_range(range_key: str):
     rk = (range_key or "1y").lower()
