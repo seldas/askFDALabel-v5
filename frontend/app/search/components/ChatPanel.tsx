@@ -12,11 +12,22 @@ interface ChatPanelProps {
   onSearch: () => void;
 }
 
+/*
+ * Starter prompts.
+ *
+ * These have to match what the assistant can actually do. It locates labeling
+ * records by drug name or identifier -- it cannot search the text inside a
+ * label, so questions about adverse events, indications, boxed warnings or
+ * contraindications (the previous four examples) now fall straight through to
+ * a plain LLM reply that says it cannot read label contents. Every prompt here
+ * is one _classify_query routes to a database lookup: a short name, or an NDC,
+ * application number or set ID.
+ */
 const semanticSuggestions = [
-  { title: "Adverse Events", query: "What are the most common adverse events reported in the labeling for Humira?" },
-  { title: "Indications", query: "What are the approved indications and usage for Keytruda?" },
-  { title: "Boxed Warning", query: "Does the labeling for Ozempic contain a boxed warning? If so, what does it state?" },
-  { title: "Contraindications", query: "What are the specific contraindications listed in the labeling for Mounjaro?" }
+  { title: "Generic Name", query: "metformin" },
+  { title: "Brand Name", query: "Caduet" },
+  { title: "NDC Code", query: "0069-2260" },
+  { title: "Application Number", query: "NDA 021540" }
 ];
 
 const DiffHighlight: React.FC<{ original: string; refined: string }> = ({ original, refined }) => {
@@ -379,7 +390,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onSearch }) => {
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Ask about clinical data, safety, or dosing..."
+                        placeholder="Search by drug name, NDC, application number, or set ID..."
                         disabled={isLoading}
                         autoFocus
                     />

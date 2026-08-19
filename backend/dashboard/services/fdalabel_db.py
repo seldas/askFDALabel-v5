@@ -649,6 +649,7 @@ class FDALabelDBService:
                     UPPER(TITLE) LIKE UPPER(:q) OR UPPER(PRODUCT_NAMES) LIKE UPPER(:q) OR
                     UPPER(PRODUCT_NORMD_GENERIC_NAMES) LIKE UPPER(:q) OR UPPER(ACT_INGR_NAMES) LIKE UPPER(:q)
                     OR NDC_CODES LIKE :q_exact OR UPPER(SET_ID) = UPPER(:q_exact_id)
+                    OR UPPER(APPR_NUM) LIKE UPPER(:q)
                 """
                 count_sql = f"SELECT COUNT(*) FROM druglabel.DGV_SUM_SPL WHERE {where}"
                 cursor.execute(count_sql, {"q": q, "q_exact": query, "q_exact_id": query})
@@ -680,7 +681,12 @@ class FDALabelDBService:
                 where = """
                     (product_names ILIKE %(q)s OR generic_names ILIKE %(q)s
                      OR active_ingredients ILIKE %(q)s OR manufacturer ILIKE %(q)s
-                     OR ndc_codes ILIKE %(q)s OR set_id ILIKE %(q_exact_id)s)
+                     OR ndc_codes ILIKE %(q)s OR set_id ILIKE %(q_exact_id)s
+                     -- appr_num is stored as "NDA 021540", and _classify_query
+                     -- already recognises that shape as an identifier query --
+                     -- without this column every application-number lookup
+                     -- matched nothing and fell through to the AI.
+                     OR appr_num ILIKE %(q)s)
                     AND is_latest = TRUE
                 """
                 count_sql = f"SELECT COUNT(*) FROM {schema}sum_spl WHERE {where}"
