@@ -24,6 +24,14 @@ export interface LaunchContext {
   projectId?: number;
   /** Free-text query, for search-shaped tools. */
   query?: string;
+  /**
+   * FDA application number for the primary label, when it has one.
+   *
+   * A label can carry several, separated by commas or semicolons; this holds
+   * the single identifier the application profile follows. Tools needing it
+   * declare `applies` so they drop out of a launcher when it is absent.
+   */
+  applicationNumber?: string;
 }
 
 /** Which context kinds a given LaunchContext can satisfy. */
@@ -115,6 +123,18 @@ export function dashboardRoute(ctx: LaunchContext = {}): string {
   const params = new URLSearchParams();
   if (ctx.projectId != null) params.set('projectId', String(ctx.projectId));
   return withQuery('/dashboard', params);
+}
+
+/**
+ * Version history for one label, and for every label sharing an application
+ * number. Both read the local label database.
+ */
+export function labelHistoryRoute(setId: string): string {
+  return `/dashboard/history/${encodeURIComponent(setId)}`;
+}
+
+export function labelHistoryByApplicationRoute(applicationNumber: string): string {
+  return `/dashboard/history_by_appr_num/${encodeURIComponent(applicationNumber)}`;
 }
 
 /** Query-shaped tools: search, localquery, device. */

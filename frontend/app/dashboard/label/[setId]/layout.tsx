@@ -31,6 +31,7 @@ const SEGMENT_TO_TOOL: Record<string, string> = {
   tox: 'label-tox',
   examine: 'label-examine',
   deepdive: 'label-deepdive',
+  ro2: 'label-ro2',
 };
 
 export default function LabelLayout({

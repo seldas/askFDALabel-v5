@@ -1,14 +1,16 @@
 'use client';
 
-import { useEffect, useState, Suspense, useCallback } from 'react';
+import { useEffect, useMemo, useState, Suspense, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import LegacyBridge from './LegacyBridge';
 import { TOOL_LABEL, useLabel } from './LabelContext';
-import { labelRoute } from '../../../platform/context';
+import { labelRoute, type LaunchContext } from '../../../platform/context';
 import { useUser } from '../../../context/UserContext';
-import { withApiBase, withAppBase } from '../../../utils/appPaths';
+import { withApiBase } from '../../../utils/appPaths';
 import { ToolIcon } from '../../../platform/icons';
+import { useToolboxTools } from '../../../platform/ToolLauncher';
+import type { ToolPattern } from '../../../platform/registry';
 
 // The reader body. FAERS, Deep Dive and Examine are sibling routes now, and
 // the Header / identity chrome belongs to ../layout.tsx.
@@ -137,6 +139,62 @@ function ExportSectionItem({
   );
 }
 
+/*
+ * Card treatment derived from a tool's single accent color.
+ *
+ * These nine cards used to carry eight hand-written gradient strings each,
+ * which is why adding a tool meant copying a block rather than adding a line.
+ * The registry now supplies one hex and an optional texture, and the rest is
+ * computed to the same values those strings held.
+ */
+const DEFAULT_ACCENT = '#475569';
+
+function rgbOf(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const n = parseInt(full, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function toolCardStyle(accent: string = DEFAULT_ACCENT, pattern: ToolPattern = 'dots') {
+  const [r, g, b] = rgbOf(accent);
+  const a = (alpha: number) => `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  // Mixed toward white rather than laid over it with alpha, so the wash does
+  // not change when the card sits on the dimmed (unfavorited) background.
+  const tint = (amount: number) =>
+    `rgb(${Math.round(r + (255 - r) * amount)}, ${Math.round(g + (255 - g) * amount)}, ${Math.round(b + (255 - b) * amount)})`;
+
+  const glow = `radial-gradient(circle at 88% 12%, ${a(0.18)} 0%, transparent 55%)`;
+  const wash = `linear-gradient(135deg, ${tint(0.93)} 0%, ${tint(0.965)} 100%)`;
+
+  const textures: Record<ToolPattern, { layers: string; size: string }> = {
+    dots: {
+      layers: `radial-gradient(${a(0.13)} 1.2px, transparent 1.2px)`,
+      size: '16px 16px',
+    },
+    grid: {
+      layers: `linear-gradient(to right, ${a(0.06)} 1px, transparent 1px), linear-gradient(to bottom, ${a(0.06)} 1px, transparent 1px)`,
+      size: '20px 20px, 20px 20px',
+    },
+    stripes: {
+      layers: `repeating-linear-gradient(45deg, ${a(0.05)} 0px, ${a(0.05)} 2px, transparent 2px, transparent 10px)`,
+      size: '100% 100%',
+    },
+  };
+  const texture = textures[pattern] ?? textures.dots;
+
+  return {
+    cardBg: `${glow}, ${texture.layers}, ${wash}`,
+    bgSize: `100% 100%, ${texture.size}, 100% 100%`,
+    cardBorder: a(0.32),
+    cardShadow: `0 4px 16px ${a(0.1)}`,
+    badgeBg: `linear-gradient(135deg, ${a(0.22)} 0%, ${a(0.35)} 100%)`,
+    badgeColor: accent,
+    badgeBorder: `1px solid ${a(0.4)}`,
+    accentColor: accent,
+  };
+}
+
 function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
   const brandName = data?.brand_name || data?.drug_name || 'this product';
   const applicationNumber = String(data?.application_number || data?.metadata?.application_number || '').trim();
@@ -174,143 +232,34 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
     });
   };
 
-  const toolsList = [
-    {
-      id: 'label-faers',
-      name: 'FAERS',
-      blurb: 'Adverse event reports and MedDRA term profile for this product.',
-      iconId: 'pulse',
-      href: labelRoute(setId, 'faers'),
-      cardBg: 'radial-gradient(circle at 90% 10%, rgba(2, 132, 199, 0.15) 0%, transparent 55%), radial-gradient(rgba(2, 132, 199, 0.12) 1.2px, transparent 1.2px), linear-gradient(135deg, rgba(240, 249, 255, 0.9) 0%, rgba(224, 242, 254, 0.6) 100%)',
-      bgSize: '100% 100%, 14px 14px, 100% 100%',
-      cardBorder: 'rgba(2, 132, 199, 0.3)',
-      cardShadow: '0 4px 16px rgba(2, 132, 199, 0.1)',
-      badgeBg: 'linear-gradient(135deg, rgba(2, 132, 199, 0.22) 0%, rgba(56, 189, 248, 0.35) 100%)',
-      badgeColor: '#0284c7',
-      badgeBorder: '1px solid rgba(2, 132, 199, 0.4)',
-      accentColor: '#0284c7',
-    },
-    {
-      id: 'label-tox-dili',
-      name: 'DILI Agent',
-      blurb: 'Drug-Induced Liver Injury risk assessment & signal detection.',
-      iconId: 'flask',
-      href: withAppBase(`/drugtox/${setId}?agent=dili`),
-      cardBg: 'radial-gradient(circle at 88% 12%, rgba(8, 145, 178, 0.18) 0%, transparent 60%), radial-gradient(rgba(8, 145, 178, 0.14) 1.2px, transparent 1.2px), linear-gradient(135deg, rgba(236, 254, 255, 0.92) 0%, rgba(207, 250, 254, 0.6) 100%)',
-      bgSize: '100% 100%, 16px 16px, 100% 100%',
-      cardBorder: 'rgba(8, 145, 178, 0.32)',
-      cardShadow: '0 4px 16px rgba(8, 145, 178, 0.1)',
-      badgeBg: 'linear-gradient(135deg, rgba(8, 145, 178, 0.22) 0%, rgba(6, 182, 212, 0.35) 100%)',
-      badgeColor: '#0891b2',
-      badgeBorder: '1px solid rgba(8, 145, 178, 0.4)',
-      accentColor: '#0891b2',
-    },
-    {
-      id: 'label-tox-dict',
-      name: 'DICT Agent',
-      blurb: 'Drug-Induced Cardiotoxicity risk assessment & signal detection.',
-      iconId: 'flask',
-      href: withAppBase(`/drugtox/${setId}?agent=dict`),
-      cardBg: 'radial-gradient(circle at 90% 15%, rgba(225, 29, 72, 0.18) 0%, transparent 55%), repeating-linear-gradient(45deg, rgba(225, 29, 72, 0.04) 0px, rgba(225, 29, 72, 0.04) 2px, transparent 2px, transparent 10px), linear-gradient(135deg, rgba(255, 241, 242, 0.92) 0%, rgba(254, 226, 226, 0.6) 100%)',
-      bgSize: '100% 100%, 100% 100%, 100% 100%',
-      cardBorder: 'rgba(225, 29, 72, 0.32)',
-      cardShadow: '0 4px 16px rgba(225, 29, 72, 0.1)',
-      badgeBg: 'linear-gradient(135deg, rgba(225, 29, 72, 0.22) 0%, rgba(244, 63, 94, 0.35) 100%)',
-      badgeColor: '#e11d48',
-      badgeBorder: '1px solid rgba(225, 29, 72, 0.4)',
-      accentColor: '#e11d48',
-    },
-    {
-      id: 'label-tox-diri',
-      name: 'DIRI Agent',
-      blurb: 'Drug-Induced Renal Injury risk assessment & signal detection.',
-      iconId: 'flask',
-      href: withAppBase(`/drugtox/${setId}?agent=diri`),
-      cardBg: 'radial-gradient(circle at 85% 15%, rgba(217, 119, 6, 0.18) 0%, transparent 55%), radial-gradient(rgba(217, 119, 6, 0.14) 1.5px, transparent 1.5px), linear-gradient(135deg, rgba(254, 243, 199, 0.88) 0%, rgba(253, 230, 138, 0.55) 100%)',
-      bgSize: '100% 100%, 18px 18px, 100% 100%',
-      cardBorder: 'rgba(217, 119, 6, 0.32)',
-      cardShadow: '0 4px 16px rgba(217, 119, 6, 0.1)',
-      badgeBg: 'linear-gradient(135deg, rgba(217, 119, 6, 0.22) 0%, rgba(245, 158, 11, 0.35) 100%)',
-      badgeColor: '#d97706',
-      badgeBorder: '1px solid rgba(217, 119, 6, 0.4)',
-      accentColor: '#d97706',
-    },
-    {
-      id: 'label-tox-pgx',
-      name: 'PGx Agent',
-      blurb: 'Pharmacogenomic biomarker associations & genetic variant guidance.',
-      iconId: 'flask',
-      href: withAppBase(`/drugtox/${setId}?agent=pgx`),
-      cardBg: 'radial-gradient(circle at 88% 12%, rgba(124, 58, 237, 0.18) 0%, transparent 55%), repeating-linear-gradient(-45deg, rgba(124, 58, 237, 0.05) 0px, rgba(124, 58, 237, 0.05) 1px, transparent 1px, transparent 8px), linear-gradient(135deg, rgba(245, 243, 255, 0.92) 0%, rgba(237, 233, 254, 0.6) 100%)',
-      bgSize: '100% 100%, 100% 100%, 100% 100%',
-      cardBorder: 'rgba(124, 58, 237, 0.32)',
-      cardShadow: '0 4px 16px rgba(124, 58, 237, 0.1)',
-      badgeBg: 'linear-gradient(135deg, rgba(124, 58, 237, 0.22) 0%, rgba(168, 85, 247, 0.35) 100%)',
-      badgeColor: '#7c3aed',
-      badgeBorder: '1px solid rgba(124, 58, 237, 0.4)',
-      accentColor: '#7c3aed',
-    },
-    {
-      id: 'label-examine',
-      name: 'Examine',
-      blurb: 'Run clinical prompt templates against this label.',
-      iconId: 'microscope',
-      href: labelRoute(setId, 'examine'),
-      cardBg: 'radial-gradient(circle at 88% 12%, rgba(16, 185, 129, 0.18) 0%, transparent 55%), linear-gradient(to right, rgba(16, 185, 129, 0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(16, 185, 129, 0.06) 1px, transparent 1px), linear-gradient(135deg, rgba(236, 253, 245, 0.92) 0%, rgba(209, 250, 229, 0.6) 100%)',
-      bgSize: '100% 100%, 20px 20px, 20px 20px, 100% 100%',
-      cardBorder: 'rgba(16, 185, 129, 0.32)',
-      cardShadow: '0 4px 16px rgba(16, 185, 129, 0.1)',
-      badgeBg: 'linear-gradient(135deg, rgba(16, 185, 129, 0.22) 0%, rgba(52, 211, 153, 0.35) 100%)',
-      badgeColor: '#059669',
-      badgeBorder: '1px solid rgba(16, 185, 129, 0.4)',
-      accentColor: '#059669',
-    },
-    {
-      id: 'labelcomp',
-      name: 'Compare Labels',
-      blurb: 'Side-by-side section diff of up to four labels.',
-      iconId: 'compare',
-      href: withAppBase(`/labelcomp?set_ids=${setId}`),
-      cardBg: 'radial-gradient(circle at 85% 15%, rgba(217, 70, 239, 0.18) 0%, transparent 55%), linear-gradient(to right, rgba(217, 70, 239, 0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(217, 70, 239, 0.06) 1px, transparent 1px), linear-gradient(135deg, rgba(253, 244, 255, 0.92) 0%, rgba(245, 208, 254, 0.6) 100%)',
-      bgSize: '100% 100%, 16px 16px, 16px 16px, 100% 100%',
-      cardBorder: 'rgba(217, 70, 239, 0.32)',
-      cardShadow: '0 4px 16px rgba(217, 70, 239, 0.1)',
-      badgeBg: 'linear-gradient(135deg, rgba(217, 70, 239, 0.22) 0%, rgba(240, 171, 252, 0.35) 100%)',
-      badgeColor: '#c026d3',
-      badgeBorder: '1px solid rgba(217, 70, 239, 0.4)',
-      accentColor: '#c026d3',
-    },
-    {
-      id: 'label-history-set-id',
-      name: 'Archived Version Track',
-      blurb: 'Track historical versions of this label in the local label database.',
-      iconId: 'document',
-      href: withAppBase(`/dashboard/history/${encodeURIComponent(setId)}`),
-      cardBg: 'radial-gradient(circle at 88% 12%, rgba(79, 70, 229, 0.18) 0%, transparent 55%), linear-gradient(to right, rgba(79, 70, 229, 0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(79, 70, 229, 0.06) 1px, transparent 1px), linear-gradient(135deg, rgba(238, 242, 255, 0.92) 0%, rgba(224, 231, 255, 0.6) 100%)',
-      bgSize: '100% 100%, 18px 18px, 18px 18px, 100% 100%',
-      cardBorder: 'rgba(79, 70, 229, 0.32)',
-      cardShadow: '0 4px 16px rgba(79, 70, 229, 0.1)',
-      badgeBg: 'linear-gradient(135deg, rgba(79, 70, 229, 0.22) 0%, rgba(129, 140, 248, 0.35) 100%)',
-      badgeColor: '#4f46e5',
-      badgeBorder: '1px solid rgba(79, 70, 229, 0.4)',
-      accentColor: '#4f46e5',
-    },
-    ...(hasApplicationNumber ? [{
-      id: 'label-history-application',
-      name: 'FDA Application Profile',
-      blurb: `Track versions associated with ${historyApplicationNumber} in the local label database.`,
-      iconId: 'document',
-      href: withAppBase(`/dashboard/history_by_appr_num/${encodeURIComponent(historyApplicationNumber)}`),
-      cardBg: 'radial-gradient(circle at 88% 12%, rgba(8, 145, 178, 0.18) 0%, transparent 55%), repeating-linear-gradient(45deg, rgba(8, 145, 178, 0.05) 0px, rgba(8, 145, 178, 0.05) 2px, transparent 2px, transparent 10px), linear-gradient(135deg, rgba(236, 254, 255, 0.92) 0%, rgba(207, 250, 254, 0.6) 100%)',
-      bgSize: '100% 100%, 100% 100%, 100% 100%',
-      cardBorder: 'rgba(8, 145, 178, 0.32)',
-      cardShadow: '0 4px 16px rgba(8, 145, 178, 0.1)',
-      badgeBg: 'linear-gradient(135deg, rgba(8, 145, 178, 0.22) 0%, rgba(34, 211, 238, 0.35) 100%)',
-      badgeColor: '#0891b2',
-      badgeBorder: '1px solid rgba(8, 145, 178, 0.4)',
-      accentColor: '#0891b2',
-    }] : []),
-  ];
+  /*
+   * The toolbox renders the platform registry, not a list of its own. A tool
+   * added to platform/registry.ts shows up here automatically, and one the
+   * account is not permitted to use is filtered out by the same resolver the
+   * navigation and the tool directory use.
+   */
+  const launchContext = useMemo<LaunchContext>(
+    () => ({
+      setIds: [setId],
+      applicationNumber: hasApplicationNumber ? historyApplicationNumber : undefined,
+    }),
+    [setId, hasApplicationNumber, historyApplicationNumber],
+  );
+
+  const registryTools = useToolboxTools(launchContext);
+
+  const toolsList = useMemo(
+    () =>
+      registryTools.map((tool) => ({
+        id: tool.id,
+        name: tool.name,
+        blurb: tool.blurbFor?.(launchContext) ?? tool.blurb,
+        iconId: tool.iconId,
+        href: tool.href(launchContext),
+        ...toolCardStyle(tool.accent, tool.pattern),
+      })),
+    [registryTools, launchContext],
+  );
 
   const sortedTools = [...toolsList].sort((a, b) => {
     const aFav = favoriteToolIds.includes(a.id);

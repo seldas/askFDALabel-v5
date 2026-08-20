@@ -64,6 +64,7 @@ export function isToolAvailable(
   if (tool.featureKey && !access?.permissions?.[tool.featureKey]) return false;
   const kinds = contextKinds(ctx);
   if (!tool.contexts.some((kind) => kinds.includes(kind))) return false;
+  if (tool.applies && !tool.applies(ctx)) return false;
   return (tool.requires ?? []).every((req) => meetsRequirement(req, caps));
 }
 
@@ -101,6 +102,21 @@ export function useAvailableTools(
       return isToolAvailable(tool, ctx, capabilities, access);
     });
   }, [ctx, capabilities, access, include, exclude, groups, matchContexts]);
+}
+
+/**
+ * Tools offered by the label workspace's Toolbox tab.
+ *
+ * The same catalog the navigation and the tool directory read, narrowed to the
+ * label context -- so a tool added to the registry appears here with no further
+ * change, and one gated away from the account disappears from here too. The
+ * reader is excluded because it is the view the toolbox is rendered beside.
+ */
+const TOOLBOX_OPTS = { matchContexts: ['label'] as ContextKind[] };
+
+export function useToolboxTools(ctx: LaunchContext): ToolDef[] {
+  const tools = useAvailableTools(ctx, TOOLBOX_OPTS);
+  return useMemo(() => tools.filter((tool) => !tool.hideInToolbox), [tools]);
 }
 
 function ToolAnchor({

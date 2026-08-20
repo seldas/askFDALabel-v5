@@ -25,11 +25,13 @@ def create_app(config_class=Config):
     from dashboard.routes.main import main_bp
     from dashboard.routes.api import api_bp
     from dashboard.routes.admin import admin_bp
+    from dashboard.routes.ro2 import ro2_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/dashboard/auth')
     app.register_blueprint(main_bp, url_prefix='/api/dashboard')
     app.register_blueprint(api_bp, url_prefix='/api/dashboard')
     app.register_blueprint(admin_bp, url_prefix='/api/dashboard/admin')
+    app.register_blueprint(ro2_bp, url_prefix='/api/dashboard/ro2')
 
     # Ensure data directories exist
     os.makedirs(app.config["DATA_DIR"], exist_ok=True)

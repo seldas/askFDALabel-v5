@@ -15,6 +15,8 @@
 import type { IconId } from './icons';
 import {
   dashboardRoute,
+  labelHistoryByApplicationRoute,
+  labelHistoryRoute,
   labelRoute,
   labelcompRoute,
   primarySetId,
@@ -29,6 +31,13 @@ export type ToolKind = 'embedded' | 'external';
 export type Requirement = 'internal' | 'fdaAccessible' | 'cderAccessible' | 'localQuery';
 
 export type ToolGroup = 'discover' | 'analyze' | 'manage' | 'validate' | 'reference';
+
+/**
+ * Background texture for a tool card. Presentation, but kept here rather than
+ * in the consumer so that adding a tool stays a single registry entry -- the
+ * duplication this catalog exists to prevent.
+ */
+export type ToolPattern = 'dots' | 'grid' | 'stripes';
 
 export interface ToolDef {
   id: string;
@@ -60,6 +69,26 @@ export interface ToolDef {
    * backend exists but whose frontend route does not.
    */
   enabled?: boolean;
+  /**
+   * Availability that depends on the *context* rather than the deployment or
+   * the account -- e.g. the application profile needs an application number,
+   * which not every label carries. Omitted means "always applies".
+   */
+  applies?: (ctx: LaunchContext) => boolean;
+  /** Context-dependent blurb, overriding `blurb` when it resolves. */
+  blurbFor?: (ctx: LaunchContext) => string;
+  /**
+   * The tool's identity color, as a hex string. The label toolbox derives its
+   * whole card treatment -- border, badge, glow, background wash -- from this
+   * one value, so a new tool needs one color rather than eight gradients.
+   */
+  accent?: string;
+  pattern?: ToolPattern;
+  /**
+   * Set for a tool that *is* the surface the toolbox is rendered on, so it is
+   * not offered as somewhere to navigate. Only the label reader today.
+   */
+  hideInToolbox?: boolean;
   href: (ctx: LaunchContext) => string;
   target?: '_self' | '_blank';
 }
@@ -77,6 +106,8 @@ const LABEL_TOOLS: ToolDef[] = [
     kind: 'embedded',
     group: 'analyze',
     contexts: ['label'],
+    accent: '#475569',
+    hideInToolbox: true,
     href: (ctx) => labelRoute(primarySetId(ctx)!),
   },
   {
@@ -87,6 +118,8 @@ const LABEL_TOOLS: ToolDef[] = [
     kind: 'embedded',
     group: 'analyze',
     contexts: ['label'],
+    accent: '#0284c7',
+    pattern: 'dots',
     href: (ctx) => labelRoute(primarySetId(ctx)!, 'faers'),
   },
   {
@@ -98,6 +131,8 @@ const LABEL_TOOLS: ToolDef[] = [
     group: 'analyze',
     contexts: ['label'],
     ai: true,
+    accent: '#0891b2',
+    pattern: 'dots',
     href: (ctx) => `/drugtox/${primarySetId(ctx)}?agent=dili`,
   },
   {
@@ -109,6 +144,8 @@ const LABEL_TOOLS: ToolDef[] = [
     group: 'analyze',
     contexts: ['label'],
     ai: true,
+    accent: '#e11d48',
+    pattern: 'stripes',
     href: (ctx) => `/drugtox/${primarySetId(ctx)}?agent=dict`,
   },
   {
@@ -120,6 +157,8 @@ const LABEL_TOOLS: ToolDef[] = [
     group: 'analyze',
     contexts: ['label'],
     ai: true,
+    accent: '#d97706',
+    pattern: 'dots',
     href: (ctx) => `/drugtox/${primarySetId(ctx)}?agent=diri`,
   },
   {
@@ -131,7 +170,21 @@ const LABEL_TOOLS: ToolDef[] = [
     group: 'analyze',
     contexts: ['label'],
     ai: true,
+    accent: '#7c3aed',
+    pattern: 'stripes',
     href: (ctx) => `/drugtox/${primarySetId(ctx)}?agent=pgx`,
+  },
+  {
+    id: 'label-ro2',
+    name: 'Rule of Two',
+    blurb: 'Plot daily dose against lipophilicity to place this drug in the DILI risk quadrant.',
+    iconId: 'bars',
+    kind: 'embedded',
+    group: 'analyze',
+    contexts: ['label'],
+    accent: '#1d4ed8',
+    pattern: 'grid',
+    href: (ctx) => labelRoute(primarySetId(ctx)!, 'ro2'),
   },
   {
     id: 'label-examine',
@@ -142,6 +195,8 @@ const LABEL_TOOLS: ToolDef[] = [
     group: 'analyze',
     contexts: ['label'],
     ai: true,
+    accent: '#059669',
+    pattern: 'grid',
     href: (ctx) => labelRoute(primarySetId(ctx)!, 'examine'),
   },
   {
@@ -153,7 +208,38 @@ const LABEL_TOOLS: ToolDef[] = [
     group: 'analyze',
     contexts: ['label'],
     ai: true,
+    accent: '#0f766e',
+    pattern: 'grid',
     href: (ctx) => labelRoute(primarySetId(ctx)!, 'deepdive'),
+  },
+  {
+    id: 'label-history-set-id',
+    name: 'Archived Version Track',
+    blurb: 'Track historical versions of this label in the local label database.',
+    iconId: 'document',
+    kind: 'embedded',
+    group: 'analyze',
+    contexts: ['label'],
+    accent: '#4f46e5',
+    pattern: 'grid',
+    href: (ctx) => labelHistoryRoute(primarySetId(ctx)!),
+  },
+  {
+    id: 'label-history-application',
+    name: 'FDA Application Profile',
+    blurb: 'Track versions associated with the FDA application number for this label.',
+    iconId: 'document',
+    kind: 'embedded',
+    group: 'analyze',
+    contexts: ['label'],
+    accent: '#0891b2',
+    pattern: 'stripes',
+    // Not every label carries an application number, and the profile follows
+    // exactly one -- so this drops out rather than linking nowhere.
+    applies: (ctx) => Boolean(ctx.applicationNumber),
+    blurbFor: (ctx) =>
+      `Track versions associated with ${ctx.applicationNumber} in the local label database.`,
+    href: (ctx) => labelHistoryByApplicationRoute(ctx.applicationNumber!),
   },
 ];
 
@@ -203,6 +289,8 @@ const PLATFORM_TOOLS: ToolDef[] = [
     group: 'analyze',
     // Also offered from a single label so the user can pick a second one there.
     contexts: ['label', 'labelSet', 'project', 'global'],
+    accent: '#c026d3',
+    pattern: 'grid',
     href: (ctx) => labelcompRoute(ctx),
   },
   {
