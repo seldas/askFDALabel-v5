@@ -535,20 +535,18 @@ export default function SidebarFilters({
                       { id: 'non_plr', label: 'non-PLR Format', count: getFacetCount('labelingFormat', 'non_plr') },
                       { id: 'unclassified', label: 'Unclassified / Other', count: getFacetCount('labelingFormat', 'unclassified') },
                     ].map((fmt) => (
-                      <label key={fmt.id} className="fdl-radio-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <input
-                            type="radio"
-                            name="labelingFormatOption"
-                            checked={ltPlr === fmt.id}
-                            onChange={() =>
-                              updateCriterion('labelingType', (prev) => ({ ...prev, plr: fmt.id }))
-                            }
-                          />
-                          <span>{fmt.label}</span>
-                        </div>
+                      <label key={fmt.id} className="fdl-radio-label">
+                        <input
+                          type="radio"
+                          name="labelingFormatOption"
+                          checked={ltPlr === fmt.id}
+                          onChange={() =>
+                            updateCriterion('labelingType', (prev) => ({ ...prev, plr: fmt.id }))
+                          }
+                        />
+                        <span>{fmt.label}</span>
                         {fmt.count !== undefined && (
-                          <span className="fdl-filter-item__count" style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                          <span className={`fdl-facet-count${fmt.count === 0 ? ' fdl-facet-count--zero' : ''}`}>
                             ({fmt.count.toLocaleString()})
                           </span>
                         )}

@@ -2360,12 +2360,17 @@
   }
 }
 
-/* PubMed style facet count badges */
+/* PubMed style facet count badges. margin-left:auto pins the number to the
+   right edge of its flex row, so every option in the panel lines its count up
+   in the same column no matter how long the label beside it runs. */
 .fdl-facet-count {
   font-size: 0.76rem;
   font-weight: 700;
   color: #64748b;
-  margin-left: 4px;
+  margin-left: auto;
+  padding-left: 8px;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 /* Zero-count badge — dimmed to signal "no results under current filters" */
