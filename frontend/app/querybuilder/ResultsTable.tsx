@@ -12,6 +12,7 @@
 
 import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCapabilities } from '../platform/capabilities';
 import { labelRoute } from '../platform/context';
 import { fdaLabelSplDocUrl } from '../platform/fdalabel';
 import type { TargetDb } from './types';
@@ -128,6 +129,9 @@ function applications(apprNum: string | null | undefined) {
 
 function LinksCell({ row, targetDb }: { row: LabelRow; targetDb?: TargetDb }) {
   const apps = applications(row.appr_num);
+  // Off the FDA network the internal hosts are unreachable, so the SPL link
+  // resolves to the public site instead of a link that cannot load.
+  const { capabilities } = useCapabilities();
   return (
     <div className="fdl-links">
       <Link
@@ -141,10 +145,10 @@ function LinksCell({ row, targetDb }: { row: LabelRow; targetDb?: TargetDb }) {
       <span className="fdl-links__row">
         <a
           className="fdl-link"
-          href={fdaLabelSplDocUrl(row.set_id, targetDb)}
+          href={fdaLabelSplDocUrl(row.set_id, targetDb, capabilities)}
           target="_blank"
           rel="noreferrer"
-          title="Open this SPL in the hosted FDALabel application (FDA network only)"
+          title="Open this SPL in the hosted FDALabel application"
         >
           FDALabel (SPL)
         </a>

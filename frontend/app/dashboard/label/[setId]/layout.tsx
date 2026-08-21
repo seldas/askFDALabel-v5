@@ -17,6 +17,7 @@ import { use, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { usePathname, useSearchParams } from 'next/navigation';
 import Header from '../../../components/Header';
+import { useCapabilities } from '../../../platform/capabilities';
 import { fdaLabelSplDocUrl } from '../../../platform/fdalabel';
 import { Badge } from '../../../platform/primitives';
 import { LabelToolStrip } from '../../../platform/ToolLauncher';
@@ -46,6 +47,10 @@ export default function LabelLayout({
   const pathname = usePathname() || '';
   const searchParams = useSearchParams();
   const splId = searchParams.get('spl_id');
+  // Decides whether the header's FDALabel link points at the internal host or
+  // the public site. This workspace has no database selector, so the target is
+  // left unset and resolves to CDER-CBER wherever it is reachable.
+  const { capabilities } = useCapabilities();
 
   const [data, setData] = useState<LabelData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -231,10 +236,10 @@ export default function LabelLayout({
                       <span style={{ fontWeight: 700, color: '#334155', fontFamily: 'ui-monospace, monospace', fontSize: '0.78rem' }}>{data.set_id || 'N/A'}</span>
                       {data.set_id ? (
                         <a
-                          href={fdaLabelSplDocUrl(data.set_id)}
+                          href={fdaLabelSplDocUrl(data.set_id, null, capabilities)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          title="Open this SPL in the hosted FDALabel application (FDA network only)"
+                          title="Open this SPL in the hosted FDALabel application"
                           style={{ display: 'inline-block', marginTop: '4px', fontSize: '0.72rem', fontWeight: 700, color: '#2563eb', textDecoration: 'none' }}
                         >
                           Open in FDALabel {"↗"}
