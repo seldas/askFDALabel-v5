@@ -96,10 +96,9 @@ class Config:
     UPLOAD_FOLDER = os.path.join(DATA_DIR, 'uploads')
     ANNOTATIONS_FILE = os.path.join(DATA_DIR, 'annotations.json')
 
-    # Internal FDALabel DB Configuration
-    # Modes: 'POSTGRES' (Local/Production Postgres), 'ORACLE' (Internal)
-    LABEL_DB = os.getenv('LABEL_DB', 'POSTGRES').upper() 
-    
+    # Whether this deployment offers Local Database Search at all. A
+    # deployment capability, reported by /api/check-fdalabel -- distinct from
+    # the per-account 'localquery' feature gate, which both must allow.
     LOCAL_QUERY = os.getenv('LOCAL_QUERY', 'True').lower() == 'true'
     
     # Path/DSN for Labeling DB

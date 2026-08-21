@@ -116,7 +116,7 @@ def get_label_xml(set_id, spl_id=None, force_local=False, local_only=False):
     """
     Retrieve SPL XML for set_id.
 
-    Resolution order is fixed and does not depend on LABEL_DB -- see
+    Resolution order is fixed and identical in every deployment -- see
     FDALabelDBService.resolve_spl_xml: local file first (by the requested
     version, then by any sibling version of the same set_id), then Oracle.
 

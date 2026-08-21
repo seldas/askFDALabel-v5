@@ -3364,7 +3364,9 @@ def admin_system_settings():
 @login_required
 def admin_oracle_settings():
     """
-    Reads/writes the FDALabel Oracle connection used when LABEL_DB=ORACLE.
+    Reads/writes the FDALabel Oracle connection, which SPL resolution falls
+    back to when a labeling has no local file. See
+    FDALabelDBService.resolve_spl_xml.
 
     GET also returns the DEV and TST presets straight from .env so the panel's
     quick buttons can fill the form without a second round trip. The password is

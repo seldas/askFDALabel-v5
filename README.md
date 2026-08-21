@@ -135,14 +135,12 @@ Create a root `.env` file before starting the app. A template file `.env.templat
 A few important notes before you copy values:
 - the running code reads `GEMINI_API_KEY` (with a backward-compatibility fallback to `GOOGLE_API_KEY` if set)
 - `DATABASE_URL` is required by the backend
-- `LABEL_DB=POSTGRES` is the safest default unless Oracle access is configured
 
 A minimal local `.env` usually looks like this:
 
 ```env
 # Core runtime
 LOCAL-PG=true
-COMPOSE_PROFILES=db
 PG_HOST=db
 PG_PORT=5432
 PG_DATABASE=fdalabel-v3
@@ -150,7 +148,6 @@ PG_USERNAME=afd_user
 PG_PASSWORD=afd_password
 DATABASE_URL=postgresql://${PG_USERNAME}:${PG_PASSWORD}@${PG_HOST}:${PG_PORT}/${PG_DATABASE}
 
-LABEL_DB=POSTGRES
 LOCAL_QUERY=True
 SECRET_KEY=change-me
 

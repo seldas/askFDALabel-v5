@@ -854,11 +854,12 @@ class FDALabelDBService:
     # ------------------------------------------------------------------
     # SPL XML resolution
     #
-    # Deliberately independent of LABEL_DB. The old implementation branched on
+    # One order, the same in every deployment. This used to branch on
     # `_db_type`, so an Oracle deployment never looked at local files and a
     # Postgres one never looked at Oracle. The cascade below always tries the
     # local store first and treats Oracle as the fallback, because reading a
-    # file already on disk beats a round trip either way.
+    # file already on disk beats a round trip either way. (The env switch that
+    # used to select between them is gone -- nothing read it any more.)
     #
     # There is no DailyMed fallback any more. Fetching by set_id returned the
     # *current* label regardless of the requested spl_id, so a version-pinned

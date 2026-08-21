@@ -60,6 +60,7 @@ python backend/database/scripts/db_04_import_orange_book.py     # RLD/RS identif
 python backend/database/scripts/db_05_import_epc_indexing.py    # Deep Dive pharmacologic class
 python backend/database/scripts/db_06_create_admin.py
 python backend/database/scripts/db_07_import_labels.py --force --skip-unpack
+python backend/database/scripts/db_11_import_dili_reference.py   # DILI Rule-of-Two reference set
 ```
 
 `db_08_import_archive_labels.py` handles archived SPL sets. `db_12_drop_fulltext_search.py` is the one-way migration that removed full-text search from an existing database — run it once on any environment imported before that change.
@@ -127,13 +128,80 @@ Schema management is split and slightly unusual: Flask-Migrate is initialized bu
 
 `Config` also rewrites `@db:` → `@localhost:` in `DATABASE_URL` whenever `/.dockerenv` is absent, so the same `.env` works in and out of Docker.
 
-### Agentic search pipeline
+### Search is DB-first routing, not a pipeline
 
-`/api/search/search_agentic_stream` runs a state machine, not a linear chain. `semantic_core/controller.py` loops on `state.flags["next_step"]` (capped at 30 steps) across agents in `semantic_core/agents/`: planner → semantic_retriever → keyword_retriever → reranker → postprocess → evidence_fetcher → answer_composer → reasoning_generator. Each agent mutates the shared `state` object (`state.py`) and sets the next step. To add a stage, add the agent module and have an existing agent route to it — there is no central registry.
+The agentic/semantic pipeline (`semantic_core/`, `/api/search/search_agentic_stream`) was
+removed along with full-text search. What remains in `backend/search/blueprint.py` is a
+much smaller decision tree: `_classify_query()` labels the input `uuid` | `ndc` | `appnum` |
+`keyword` | `general`, and `/api/search/db_search` routes it down one of four paths — DB
+multi-result, DB single-result (XML read from disk, then AI-summarised), AI fallback, or
+straight-to-chat for a general question. `/api/search/chat` and `/refine_chat` handle the
+conversational side. There is no controller, no shared state object, and no agent registry.
 
-### Label source abstraction
+### One tool catalog: `frontend/app/platform/registry.ts`
 
-`LABEL_DB` (`POSTGRES` | `ORACLE`) selects the backing store for label queries via `FDALabelDBService` (`backend/dashboard/services/fdalabel_db.py`). `POSTGRES` is the only mode that works without internal FDA network access; Oracle paths degrade gracefully rather than hard-failing.
+Every place that offers a tool — the header nav, the `/tools` directory, the dashboard
+selection bar, and the label workspace's Toolbox tab — renders from `TOOLS` in
+`platform/registry.ts`. A `ToolDef` carries its own `href(ctx)` builder, the `contexts` it can
+launch from, optional deployment `requires`, an optional `featureKey`, and the presentation
+hints (`accent`, `pattern`) the toolbox derives its card treatment from. **Adding a tool is one
+registry entry** — nothing downstream enumerates tools by hand.
+
+Route strings come from `platform/context.ts`, which is the only module that knows the URL
+contract. Its builders return **base-path-relative** routes; `FetchPrefix.tsx` adds the prefix at
+runtime, so never wrap a registry href in `withAppBase()`.
+
+Filtering runs in `ToolLauncher.tsx::isToolAvailable`, in this order: `enabled` → `featureKey`
+permission → context kind → `applies(ctx)` → deployment `requires`. `applies` is for
+availability that depends on the *context* rather than the deployment or the account — the FDA
+Application Profile uses it, since not every label has an application number.
+
+### Feature gates and account roles
+
+`User.role` is one of `user` | `developer` | `admin` (`ROLES` in `backend/database/models.py`);
+`is_admin` is kept in sync with the role. The shared `guest` account holds the `user` role but
+is excluded separately, because it must not touch anything storing per-account state.
+
+Access rules are **data, not code**. `backend/dashboard/services/feature_gates.py` holds
+`FEATURE_CATALOG` (the code half — key, blurb, where it is enforced, and the defaults that
+reproduce the previously hardcoded behaviour) and resolves it against `FeatureGate` rows (the
+data half — only `min_role` and `allow_guest`). Rows are seeded from the catalog on startup
+via `seed_feature_gate_rows()`; admins change them at runtime from the management panel
+(`/api/dashboard/admin/feature_gates`). Adding a feature is a catalog entry, never a migration.
+
+Enforcement is in three places and all three must agree:
+
+- `backend/dashboard/routes/guards.py` — `feature_before_request('key')` on a whole blueprint
+  (`search`/labelchat, `localquery`, `webtest`) or `@require_feature('key')` per route
+  (`query_history`, `preferences`). Apply the decorator *below* `@login_required`.
+- `frontend/app/components/RequireFeature.tsx` — page-level gate reading the session's
+  `permissions` map, rendering `AccessRestricted.tsx` instead of an app shell that 403s.
+- The frontend tool registry, which hides ungranted tools from navigation.
+
+**Never cache a gate across requests.** The panel's whole point is that a change applies without
+a restart, and the app runs multiple processes — a module-level cache (the pattern
+`_check_is_internal` uses) would strand every process but the writer. Gates are read per request
+and memoised only on `flask.g`.
+
+### Label source resolution
+
+SPL XML resolution follows one fixed cascade in
+`FDALabelDBService.resolve_spl_xml()`, the same in every deployment: the local
+file named by `labeling.sum_spl.local_path` (extension picks the directory —
+`.zip` → `data/spl_storage`, otherwise `data/spl_storage_archived`), then a
+sibling row for the same `set_id`, then Oracle `druglabel.spl.spl_xml`.
+`force_local=True` stops before Oracle. It returns `(xml, source)` so callers
+can see which step answered and whether a different version was substituted.
+
+**There is no DailyMed fallback**, and no `LABEL_DB` switch. DailyMed fetched by
+`set_id` only, so a version-pinned request silently got the current labeling, and
+a broken storage path looked like a working app that needed internet. A labeling
+this deployment cannot serve is an expected outcome, not a server error: routes
+should return 404 with `fda_client.label_not_found_payload()`, which carries
+links to DailyMed and public FDALabel. Only the label view does this today.
+
+Which Postgres and whether Oracle is reachable are runtime settings —
+`EnvService`'s `labeling_source` and the admin Oracle panel — not env constants.
 
 ## Repo conventions and known cruft
 

@@ -183,9 +183,25 @@ a restart, and the app runs multiple processes — a module-level cache (the pat
 `_check_is_internal` uses) would strand every process but the writer. Gates are read per request
 and memoised only on `flask.g`.
 
-### Label source abstraction
+### Label source resolution
 
-`LABEL_DB` (`POSTGRES` | `ORACLE`) selects the backing store for label queries via `FDALabelDBService` (`backend/dashboard/services/fdalabel_db.py`). `POSTGRES` is the only mode that works without internal FDA network access; Oracle paths degrade gracefully rather than hard-failing.
+SPL XML resolution follows one fixed cascade in
+`FDALabelDBService.resolve_spl_xml()`, the same in every deployment: the local
+file named by `labeling.sum_spl.local_path` (extension picks the directory —
+`.zip` → `data/spl_storage`, otherwise `data/spl_storage_archived`), then a
+sibling row for the same `set_id`, then Oracle `druglabel.spl.spl_xml`.
+`force_local=True` stops before Oracle. It returns `(xml, source)` so callers
+can see which step answered and whether a different version was substituted.
+
+**There is no DailyMed fallback**, and no `LABEL_DB` switch. DailyMed fetched by
+`set_id` only, so a version-pinned request silently got the current labeling, and
+a broken storage path looked like a working app that needed internet. A labeling
+this deployment cannot serve is an expected outcome, not a server error: routes
+should return 404 with `fda_client.label_not_found_payload()`, which carries
+links to DailyMed and public FDALabel. Only the label view does this today.
+
+Which Postgres and whether Oracle is reachable are runtime settings —
+`EnvService`'s `labeling_source` and the admin Oracle panel — not env constants.
 
 ## Repo conventions and known cruft
 
