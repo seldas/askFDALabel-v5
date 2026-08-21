@@ -79,6 +79,17 @@ FACET_SCALARS = [
 # Categories whose values are data rather than a fixed list. Ordered by count
 # and truncated in Python, since the sidebar only ever shows a handful.
 _GROUPED_CATEGORIES = ('routes', 'dosageForms', 'pharmClasses', 'applicationTypes', 'labelingTypes')
+
+# DEA schedule is grouped too, but it is the one category that lives outside
+# the label row: PROD_DEA is a separate per-product table, and the Postgres
+# import derives no DEA data at all (the compiler warns rather than widening).
+# So it is counted on Oracle only, and the Postgres payload has to keep
+# omitting the key -- an empty list would tell the sidebar the category was
+# counted and matched nothing, which is a different claim from "never counted"
+# and the one that makes it hide options.
+_ORACLE_ONLY_GROUPED_CATEGORIES = ('deaSchedule',)
+_ORACLE_GROUPED_CATEGORIES = _GROUPED_CATEGORIES + _ORACLE_ONLY_GROUPED_CATEGORIES
+
 _GROUPED_LIMIT = 30
 
 # Which criterion a category is driven by, and the value field to blank when
@@ -96,9 +107,6 @@ CATEGORY_CRITERION = {
     'routes': ('route', ('values',)),
     'dosageForms': ('dosageForm', ('values',)),
     'pharmClasses': ('pharmClass', ('terms',)),
-    # No facet bucket of its own (the sidebar renders its picks at zero), but
-    # it is still a sidebar filter, so it has to come out of the backbone --
-    # otherwise ticking a schedule moves every other count in the panel.
     'deaSchedule': ('deaSchedule', ('values',)),
 }
 
@@ -291,6 +299,23 @@ def _oracle_grouped_branch(category, scope, extra_sql):
             f"WHERE m.DOCUMENT_TYPE IS NOT NULL{extra_sql} "
             "GROUP BY UPPER(TRIM(REGEXP_SUBSTR(m.DOCUMENT_TYPE, '[^;]+', 1, lv.n)))"
         )
+    if category == 'deaSchedule':
+        # The only branch that leaves `matched`: the schedule lives on
+        # PROD_DEA, one row per product, so a label with several controlled
+        # products would count once per product without the DISTINCT. The
+        # sidebar sends the SPL acceptable term ("CII"), which is what
+        # NCIT_DEA_NAME carries, so grouping on it needs no join to
+        # DEA_SCHEDULE and lands on the same token _compile_dea_schedule
+        # matches.
+        return (
+            f"SELECT '{scope}' AS SCOPE, 'deaSchedule' AS CAT, "
+            "UPPER(TRIM(dea.NCIT_DEA_NAME)) AS TOKEN, "
+            "COUNT(DISTINCT m.SPL_ID) AS N "
+            "FROM matched m "
+            "JOIN druglabel.PROD_DEA dea ON dea.SPL_ID = m.SPL_ID "
+            f"WHERE dea.NCIT_DEA_NAME IS NOT NULL{extra_sql} "
+            "GROUP BY UPPER(TRIM(dea.NCIT_DEA_NAME))"
+        )
     raise ValueError(f'Not a grouped category: {category!r}')
 
 
@@ -310,13 +335,13 @@ def oracle_facet_sql_combined(text_cte_sql, backbone_where_sql, base_table, acti
         f"FROM matched m WHERE {ora_pred}{base_extra}"
         for cat, token, _value, _label, _pg_pred, ora_pred in FACET_SCALARS
     ]
-    for grouped_cat in _GROUPED_CATEGORIES:
+    for grouped_cat in _ORACLE_GROUPED_CATEGORIES:
         branches.append(_oracle_grouped_branch(grouped_cat, 'base', base_extra))
 
     for category in active_predicates:
         extra = and_others(exclude=category)
         scope = f'w:{category}'
-        if category in _GROUPED_CATEGORIES:
+        if category in _ORACLE_GROUPED_CATEGORIES:
             branches.append(_oracle_grouped_branch(category, scope, extra))
         else:
             for cat, token, _value, _label, _pg_pred, ora_pred in FACET_SCALARS:
@@ -343,7 +368,7 @@ def oracle_facet_sql_combined(text_cte_sql, backbone_where_sql, base_table, acti
 # Assembly
 # ---------------------------------------------------------------------------
 
-def rows_to_facets(rows):
+def rows_to_facets(rows, grouped_categories=_GROUPED_CATEGORIES):
     """
     Long-format (cat, token, n) rows -> the payload the sidebar reads.
 
@@ -351,9 +376,15 @@ def rows_to_facets(rows):
     difference between "this category counted nothing" and "this category was
     never computed" -- the latter is what it uses to decide whether hiding
     zero-count options is meaningful at all.
+
+    `grouped_categories` is that same distinction for the grouped half, and is
+    why it is a parameter rather than the module constant: the caller states
+    which categories its statement actually asked about, so a backend that
+    cannot count one of them (deaSchedule on Postgres) leaves the key out
+    instead of publishing a zeroed bucket.
     """
     counts = {}
-    grouped = {cat: {} for cat in _GROUPED_CATEGORIES}
+    grouped = {cat: {} for cat in grouped_categories}
 
     for row in rows or []:
         cat, token, n = (row[0], row[1], row[2]) if not isinstance(row, dict) else (
@@ -377,7 +408,7 @@ def rows_to_facets(rows):
             'count': counts.get((cat, token), 0),
         })
 
-    for cat in _GROUPED_CATEGORIES:
+    for cat in grouped_categories:
         ordered = sorted(grouped[cat].items(), key=lambda kv: kv[1], reverse=True)[:_GROUPED_LIMIT]
         facets[cat] = [{'value': k, 'label': k, 'count': v} for k, v in ordered]
 
@@ -405,4 +436,7 @@ def rows_to_scoped_facets(rows):
             continue
         by_scope.setdefault(scope, []).append((cat, token, n))
 
-    return {scope: rows_to_facets(scoped_rows) for scope, scoped_rows in by_scope.items()}
+    return {
+        scope: rows_to_facets(scoped_rows, grouped_categories=_ORACLE_GROUPED_CATEGORIES)
+        for scope, scoped_rows in by_scope.items()
+    }

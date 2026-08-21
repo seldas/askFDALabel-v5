@@ -337,7 +337,12 @@ export default function SidebarFilters({
     selectedValues: string[],
     type: CriterionType,
     field: string = 'values',
+    facetCategory?: keyof QueryFacets,
   ) => {
+    // getFacetCount reports 0 for a category the backend never counted, which
+    // reads as "no labels match" when it means "no number was computed". Only
+    // show the badge for a category the payload actually carries.
+    const showCounts = hasFacets && (!facetCategory || isCounted(facetCategory));
     const top5 = items.slice(0, 5);
     const remaining = items.slice(5);
 
@@ -359,7 +364,7 @@ export default function SidebarFilters({
                   onChange={() => toggleArrayValue(type, field, pick.value)}
                 />
                 <span>{pick.label}</span>
-                {hasFacets && <span className={`fdl-facet-count${pick.count === 0 ? ' fdl-facet-count--zero' : ''}`}>({pick.count.toLocaleString()})</span>}
+                {showCounts && <span className={`fdl-facet-count${pick.count === 0 ? ' fdl-facet-count--zero' : ''}`}>({pick.count.toLocaleString()})</span>}
               </label>
             );
           })}
@@ -485,7 +490,7 @@ export default function SidebarFilters({
 
             {openSections.labelingType && (
               <div className="fdl-filter-group__body">
-                {renderCategorySection('labelingType', 'Labeling Types', labelingPicks, ltValues, 'labelingType')}
+                {renderCategorySection('labelingType', 'Labeling Types', labelingPicks, ltValues, 'labelingType', 'values', 'labelingTypes')}
               </div>
             )}
           </div>
@@ -545,7 +550,7 @@ export default function SidebarFilters({
                           }
                         />
                         <span>{fmt.label}</span>
-                        {fmt.count !== undefined && (
+                        {hasFacets && isCounted('labelingFormat') && fmt.count !== undefined && (
                           <span className={`fdl-facet-count${fmt.count === 0 ? ' fdl-facet-count--zero' : ''}`}>
                             ({fmt.count.toLocaleString()})
                           </span>
@@ -580,7 +585,7 @@ export default function SidebarFilters({
 
             {openSections.applicationType && (
               <div className="fdl-filter-group__body">
-                {renderCategorySection('applicationType', 'Marketing Categories', appPicks, appValues, 'applicationType')}
+                {renderCategorySection('applicationType', 'Marketing Categories', appPicks, appValues, 'applicationType', 'values', 'applicationTypes')}
               </div>
             )}
           </div>
@@ -618,7 +623,9 @@ export default function SidebarFilters({
                       }
                     />
                     <span>Reference Listed Drug (RLD)</span>
-                    {hasFacets && <span className={`fdl-facet-count${rldCount === 0 ? ' fdl-facet-count--zero' : ''}`}>({rldCount.toLocaleString()})</span>}
+                    {hasFacets && isCounted('applicationTypes') && (
+                      <span className={`fdl-facet-count${rldCount === 0 ? ' fdl-facet-count--zero' : ''}`}>({rldCount.toLocaleString()})</span>
+                    )}
                   </label>
                 </div>
               </div>
@@ -649,7 +656,7 @@ export default function SidebarFilters({
 
             {openSections.marketStatus && (
               <div className="fdl-filter-group__body">
-                {renderCategorySection('marketStatus', 'Market Status', statusPicks, msValues, 'marketStatus')}
+                {renderCategorySection('marketStatus', 'Market Status', statusPicks, msValues, 'marketStatus', 'values', 'marketStatus')}
 
                 {/* Start Date Range */}
                 <div className="fdl-filter-subgroup" style={{ marginTop: '10px' }}>
@@ -705,7 +712,7 @@ export default function SidebarFilters({
 
           {openSections.route && (
             <div className="fdl-filter-group__body">
-              {renderCategorySection('route', 'Routes of Administration', routeItems, routeValues, 'route')}
+              {renderCategorySection('route', 'Routes of Administration', routeItems, routeValues, 'route', 'values', 'routes')}
             </div>
           )}
         </div>
@@ -728,7 +735,7 @@ export default function SidebarFilters({
 
           {openSections.dosageForm && (
             <div className="fdl-filter-group__body">
-              {renderCategorySection('dosageForm', 'Dosage Forms', dosageItems, dosageValues, 'dosageForm')}
+              {renderCategorySection('dosageForm', 'Dosage Forms', dosageItems, dosageValues, 'dosageForm', 'values', 'dosageForms')}
             </div>
           )}
         </div>
@@ -752,7 +759,7 @@ export default function SidebarFilters({
 
             {openSections.pharmClass && (
               <div className="fdl-filter-group__body">
-                {renderCategorySection('pharmClass', 'Pharmacologic Classes (EPC)', facetEpcs, pcTerms, 'pharmClass', 'terms')}
+                {renderCategorySection('pharmClass', 'Pharmacologic Classes (EPC)', facetEpcs, pcTerms, 'pharmClass', 'terms', 'pharmClasses')}
               </div>
             )}
           </div>
@@ -779,7 +786,7 @@ export default function SidebarFilters({
 
             {openSections.deaSchedule && (
               <div className="fdl-filter-group__body">
-                {renderCategorySection('deaSchedule', 'DEA Schedule', deaPicks, deaValues, 'deaSchedule')}
+                {renderCategorySection('deaSchedule', 'DEA Schedule', deaPicks, deaValues, 'deaSchedule', 'values', 'deaSchedule')}
               </div>
             )}
           </div>
