@@ -49,6 +49,11 @@ interface StructureStage {
   pubchem_cid: string | null;
   alogp: number | null;
   alogp_method: string | null;
+  /** True when the label named a salt and logP was computed on the free base. */
+  parent_resolved: boolean;
+  salt_cid: string | null;
+  /** True when a mixture had to be split locally — lower confidence. */
+  fragment_taken: boolean;
   route: string | null;
   ingredients: { substance_name: string; unii: string | null }[];
   reasons: string[];
@@ -420,10 +425,44 @@ export default function Ro2ToolPage() {
                 ? <>Computed by <code>{structure.alogp_method}</code>.</>
                 : structureStatus === 'done' ? <>Not computed.</> : null}
               {structure?.smiles_source && (
-                <> Structure from {structure.smiles_source.replace('pubchem-', 'PubChem, matched by ')}.</>
+                <> Structure from {structure.smiles_source
+                  .replace('pubchem-name-desalted', 'PubChem, matched by name without the salt former')
+                  .replace('pubchem-unii+desalted-name', 'PubChem, matched by UNII then the desalted name')
+                  .replace('pubchem-name+desalted-name', 'PubChem, matched by name then the desalted name')
+                  .replace('pubchem-unii', 'PubChem, matched by UNII')
+                  .replace('pubchem-name', 'PubChem, matched by name')}.</>
               )}
               {structure?.unii && <> UNII {structure.unii}.</>}
             </div>
+            {structure?.parent_resolved && (
+              /*
+               * The label names a salt; the reference rows are free bases. Say
+               * which structure was actually scored rather than letting the
+               * reader assume it was the salt on the label.
+               */
+              <div style={{
+                marginTop: '8px', fontSize: '0.8rem', color: '#0f172a',
+                background: '#eff6ff', border: '1px solid #bfdbfe',
+                borderRadius: '8px', padding: '7px 10px', lineHeight: 1.5,
+              }}>
+                The label names a salt. ALogP is computed on the free base
+                {structure.pubchem_cid ? <> (PubChem CID {structure.pubchem_cid}</> : null}
+                {structure.salt_cid ? <>, from salt CID {structure.salt_cid}</> : null}
+                {structure.pubchem_cid ? <>)</> : null}, matching how the reference
+                drugs were prepared.
+              </div>
+            )}
+            {structure?.fragment_taken && (
+              <div style={{
+                marginTop: '8px', fontSize: '0.8rem', color: '#78350f',
+                background: '#fffbeb', border: '1px solid #fde68a',
+                borderRadius: '8px', padding: '7px 10px', lineHeight: 1.5,
+              }}>
+                PubChem had no free-base record for this salt, so the largest
+                component of the mixture was used. Worth checking the structure
+                below before relying on this point.
+              </div>
+            )}
             {structure?.smiles && (
               <div style={{
                 marginTop: '8px', fontSize: '0.74rem', color: '#64748b',

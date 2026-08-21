@@ -103,53 +103,234 @@ def _pubchem_json(url):
         return None
 
 
+#: PubChem renamed its SMILES properties: what was `CanonicalSMILES` is now
+#: `ConnectivitySMILES`, and `IsomericSMILES` is now `SMILES`. Requesting an old
+#: name still succeeds -- the value simply comes back under the *new* key -- so
+#: reading only the old key silently yielded None for every drug. Ask for both
+#: spellings and accept whichever the service returns.
+_PUBCHEM_PROPS = 'SMILES,ConnectivitySMILES,XLogP,MolecularWeight,InChIKey'
+_SMILES_KEYS = ('SMILES', 'ConnectivitySMILES', 'IsomericSMILES', 'CanonicalSMILES')
+
+#: Salt formers stripped from a substance name as a last resort, when PubChem
+#: has no record under the full name. Parent-CID resolution handles the usual
+#: case; this only covers names PubChem cannot match at all.
+_SALT_SUFFIXES = (
+    'hydrochloride', 'dihydrochloride', 'hydrobromide', 'hydrate', 'sulfate',
+    'sulphate', 'bisulfate', 'mesylate', 'besylate', 'tosylate', 'maleate',
+    'fumarate', 'tartrate', 'bitartrate', 'citrate', 'acetate', 'phosphate',
+    'succinate', 'malate', 'lactate', 'gluconate', 'oxalate', 'nitrate',
+    'bromide', 'chloride', 'iodide', 'sodium', 'potassium', 'calcium',
+    'magnesium', 'lithium', 'meglumine', 'pamoate', 'palmitate', 'stearate',
+)
+
+
+def _smiles_from(row):
+    """The SMILES under whichever key this PubChem build uses."""
+    for key in _SMILES_KEYS:
+        value = row.get(key)
+        if value:
+            return value
+    return None
+
+
+def _strip_salt(name):
+    """'ABACAVIR SULFATE' -> 'ABACAVIR'. None when nothing was stripped."""
+    if not name:
+        return None
+    words = name.strip().split()
+    if len(words) < 2:
+        return None
+    if words[-1].lower().strip(',') in _SALT_SUFFIXES:
+        return ' '.join(words[:-1])
+    return None
+
+
+#: Two-letter element symbols that must be matched before their first letter
+#: is mistaken for a one-letter element.
+_TWO_LETTER_ELEMENTS = (
+    'Cl', 'Br', 'Si', 'Se', 'As', 'Al', 'Zn', 'Mg', 'Ca', 'Na', 'Li', 'Fe',
+    'Sn', 'Te', 'Ge', 'Sb', 'Bi', 'Cu', 'Mn', 'Cr', 'Co', 'Ni', 'Pt', 'Au',
+)
+_ORGANIC_SUBSET = set('BCNOPSFI')
+_AROMATIC_SUBSET = set('bcnops')
+
+
+def _heavy_atom_count(smiles):
+    """
+    Approximate heavy-atom count for a SMILES fragment.
+
+    Used to pick the drug out of a salt. It must not be a character count:
+    tartaric acid written with stereodescriptors
+    ("[C@@H]([C@H](C(=O)O)O)(C(=O)O)O", 10 heavy atoms) is a *longer string*
+    than metoprolol ("CC(C)NCC(COC1=CC=C(C=C1)CCOC)O", 19), so choosing by
+    length hands back the counter-ion.
+    """
+    if not smiles:
+        return 0
+    bracketed = re.findall(r'\[[^\]]*\]', smiles)
+    count = len(bracketed)
+    rest = re.sub(r'\[[^\]]*\]', '', smiles)
+    i = 0
+    while i < len(rest):
+        if rest[i:i + 2] in _TWO_LETTER_ELEMENTS:
+            count += 1
+            i += 2
+            continue
+        if rest[i] in _ORGANIC_SUBSET or rest[i] in _AROMATIC_SUBSET:
+            count += 1
+        i += 1
+    return count
+
+
+def _fragment_size(smiles):
+    """Heavy atoms in a fragment, via RDKit when it is installed."""
+    try:
+        from rdkit import Chem
+        mol = Chem.MolFromSmiles(smiles)
+        if mol is not None:
+            return mol.GetNumHeavyAtoms()
+    except ImportError:
+        pass
+    return _heavy_atom_count(smiles)
+
+
+def _largest_fragment(smiles):
+    """
+    The drug component of a multi-component SMILES, by heavy-atom count.
+
+    A last-resort guard: parent-CID resolution and a desalted name lookup both
+    run first. If something still arrives as a mixture, computing Crippen logP
+    across it would fold in the counter-ion and count the active moiety twice,
+    so the largest fragment is taken and the caller reports that it happened.
+    """
+    if not smiles or '.' not in smiles:
+        return smiles, False
+    parts = [p for p in smiles.split('.') if p]
+    if not parts:
+        return smiles, False
+    return max(parts, key=_fragment_size), True
+
+
 def _pubchem_properties(domain, identifier):
-    """Canonical SMILES + XLogP3 for one PubChem identifier, or None."""
-    props = 'CanonicalSMILES,XLogP,MolecularWeight'
+    """Structure + XLogP for one PubChem identifier, or None."""
     url = (
         'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/'
-        f'{domain}/{urllib.parse.quote(str(identifier))}/property/{props}/JSON'
+        f'{domain}/{urllib.parse.quote(str(identifier))}/property/{_PUBCHEM_PROPS}/JSON'
     )
     data = _pubchem_json(url)
     try:
         row = data['PropertyTable']['Properties'][0]
     except (TypeError, KeyError, IndexError):
         return None
-    smiles = row.get('CanonicalSMILES')
+    smiles = _smiles_from(row)
     if not smiles:
+        logger.info('PubChem returned no SMILES for %s/%s; keys were %s',
+                    domain, identifier, sorted(row.keys()))
         return None
     return {
         'smiles': smiles,
         'pubchem_cid': str(row.get('CID')) if row.get('CID') is not None else None,
         'pubchem_xlogp3': row.get('XLogP'),
         'mol_weight': row.get('MolecularWeight'),
+        'inchikey': row.get('InChIKey'),
     }
+
+
+def _pubchem_parent_cid(cid):
+    """The parent (free base) CID for a salt, or None."""
+    if not cid:
+        return None
+    url = (
+        'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/'
+        f'{urllib.parse.quote(str(cid))}/cids/JSON?cids_type=parent'
+    )
+    data = _pubchem_json(url)
+    try:
+        parent = data['IdentifierList']['CID'][0]
+    except (TypeError, KeyError, IndexError):
+        return None
+    return str(parent) if parent is not None else None
 
 
 def resolve_structure(substance_name, unii=None):
     """
-    Resolve a substance to a structure, preferring an exact identifier.
+    Resolve a substance to the structure its logP should be computed on.
 
-    Name lookup is the fallback, not the default: SPL substance names are often
-    salts ("metoprolol tartrate") and PubChem will happily return the salt,
-    whose logP differs from the free base the reference rows use.
+    SPL names the salt -- "ABACAVIR SULFATE" -- and PubChem will return the
+    salt: two abacavir molecules plus sulfuric acid in one SMILES. Crippen
+    logP across that is meaningless. The reference rows were built on parent
+    (free-base) structures, so the drug under assessment is resolved the same
+    way, via PubChem's parent-CID relationship, or the plot compares two
+    different things.
+
+    Lookup order: UNII, then the full substance name, then the name with a
+    trailing salt former removed.
     """
     key = (unii or '', (substance_name or '').lower())
     with _structure_lock:
         if key in _structure_cache:
             return _structure_cache[key]
 
-    resolved = None
+    attempts = []
     if unii:
-        found = _pubchem_properties('xref/RegistryID', unii)
+        attempts.append(('pubchem-unii', 'xref/RegistryID', unii))
+    if substance_name:
+        attempts.append(('pubchem-name', 'name', substance_name))
+        stripped = _strip_salt(substance_name)
+        if stripped:
+            attempts.append(('pubchem-name-desalted', 'name', stripped))
+
+    resolved = None
+    for source, domain, identifier in attempts:
+        found = _pubchem_properties(domain, identifier)
         if found:
-            found['smiles_source'] = 'pubchem-unii'
+            found['smiles_source'] = source
             resolved = found
-    if resolved is None and substance_name:
-        found = _pubchem_properties('name', substance_name)
-        if found:
-            found['smiles_source'] = 'pubchem-name'
-            resolved = found
+            break
+
+    if resolved is not None:
+        resolved['parent_resolved'] = False
+        resolved['fragment_taken'] = False
+
+        # A '.' means more than one component, i.e. a salt or co-crystal. Only
+        # then is the extra round trip for the parent worth making.
+        if '.' in (resolved['smiles'] or ''):
+            parent_cid = _pubchem_parent_cid(resolved.get('pubchem_cid'))
+            if parent_cid and parent_cid != resolved.get('pubchem_cid'):
+                parent = _pubchem_properties('cid', parent_cid)
+                if parent:
+                    parent.update({
+                        'smiles_source': resolved['smiles_source'],
+                        'parent_resolved': True,
+                        'fragment_taken': False,
+                        'salt_cid': resolved.get('pubchem_cid'),
+                    })
+                    resolved = parent
+
+        # PubChem has no parent for some salts (metoprolol tartrate among
+        # them), but usually does hold the free base under the desalted name.
+        # Far better than dissecting the mixture ourselves.
+        if '.' in (resolved['smiles'] or '') and substance_name:
+            stripped = _strip_salt(substance_name)
+            if stripped:
+                base = _pubchem_properties('name', stripped)
+                if base and '.' not in (base['smiles'] or ''):
+                    base.update({
+                        'smiles_source': resolved['smiles_source'] + '+desalted-name',
+                        'parent_resolved': True,
+                        'fragment_taken': False,
+                        'salt_cid': resolved.get('pubchem_cid'),
+                    })
+                    resolved = base
+
+        if '.' in (resolved['smiles'] or ''):
+            fragment, taken = _largest_fragment(resolved['smiles'])
+            if taken:
+                resolved['smiles'] = fragment
+                resolved['fragment_taken'] = True
+                # The salt record's XLogP describes the mixture, not this
+                # fragment, so it must not be used as a logP fallback.
+                resolved['pubchem_xlogp3'] = None
 
     with _structure_lock:
         _structure_cache[key] = resolved
@@ -458,6 +639,12 @@ def structure_stage(set_id):
         'smiles': structure['smiles'] if structure else None,
         'smiles_source': structure.get('smiles_source') if structure else None,
         'pubchem_cid': structure.get('pubchem_cid') if structure else None,
+        # SPL names the salt; logP must be computed on the free base, as the
+        # reference rows were. Reported so the user can see which structure
+        # was actually scored.
+        'parent_resolved': bool(structure.get('parent_resolved')) if structure else False,
+        'salt_cid': structure.get('salt_cid') if structure else None,
+        'fragment_taken': bool(structure.get('fragment_taken')) if structure else False,
         'alogp': alogp,
         'alogp_method': alogp_method,
         'reasons': reasons,

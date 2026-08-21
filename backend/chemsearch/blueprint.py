@@ -135,6 +135,18 @@ def _detect_format(s: str) -> str:
     return 'smiles'
 
 
+#: PubChem renamed its SMILES properties: `IsomericSMILES` is now `SMILES`, and
+#: `CanonicalSMILES` is now `ConnectivitySMILES`. Requesting an old name still
+#: returns 200 -- the value simply arrives under the *new* key -- so indexing
+#: the old key raised KeyError and every InChIKey lookup reported failure.
+#: Accept whichever spelling comes back.
+#:
+#: The same drift bit dashboard/services/ro2_service.py; if PubChem renames
+#: these again, both places need updating. chemsearch is otherwise standalone,
+#: so the list is duplicated rather than importing across that boundary.
+_SMILES_KEYS = ('SMILES', 'ConnectivitySMILES', 'IsomericSMILES', 'CanonicalSMILES')
+
+
 def _inchikey_to_smiles(inchikey: str) -> tuple:
     """
     Resolve an InChIKey to canonical SMILES via PubChem PUG REST API.
@@ -143,13 +155,23 @@ def _inchikey_to_smiles(inchikey: str) -> tuple:
     """
     url = (
         'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/inchikey/'
-        f'{inchikey}/property/IsomericSMILES/JSON'
+        f'{inchikey}/property/SMILES,ConnectivitySMILES/JSON'
     )
     try:
         req = urllib.request.Request(url, headers={'User-Agent': 'FDALabel-ChemSearch/1.0'})
         with urllib.request.urlopen(req, timeout=8) as resp:
             data = json.loads(resp.read().decode())
-        smiles = data['PropertyTable']['Properties'][0]['IsomericSMILES']
+        row = data['PropertyTable']['Properties'][0]
+        smiles = next((row[k] for k in _SMILES_KEYS if row.get(k)), None)
+        if not smiles:
+            logger.warning(
+                'PubChem returned no SMILES for InChIKey %s; keys were %s',
+                inchikey, sorted(row.keys()),
+            )
+            return None, (
+                'PubChem returned no structure for this InChIKey. '
+                'Please provide the structure as a SMILES or InChI string instead.'
+            )
         return smiles, None
     except urllib.error.HTTPError as e:
         if e.code == 404:
