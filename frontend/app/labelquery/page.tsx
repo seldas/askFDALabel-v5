@@ -860,7 +860,7 @@ function ResultsPage() {
               // refetch lands; dimming them says so, instead of letting a stale
               // table read as "the filter did nothing".
               <div className={busy ? 'fdl-results-stale' : undefined} aria-busy={busy}>
-                <ResultsTable rows={rows} view={view} sortState={sortState} onSort={onSort} />
+                <ResultsTable rows={rows} view={view} sortState={sortState} onSort={onSort} targetDb={currentTargetDb} />
                 <div className="fdl-results__bar fdl-results__bar--bottom">
                   <span className="fdl-results__count">
                     Showing {offset + 1}–{to} of {browsable.toLocaleString()}

@@ -4,14 +4,17 @@
  * FDALabel's results table: a Links column, then Basic or Expanded columns.
  *
  * "View Label" is the one internal link — it opens the label in this app's own
- * workspace. Everything else in the Links cell leaves for the authoritative
- * source (DailyMed, Drugs@FDA, the Orange Book), keyed off the identifiers the
- * label already carries.
+ * workspace, and it leads the cell because it is what most rows are clicked
+ * for. Everything else leaves for the authoritative source (FDALabel's own SPL
+ * document, DailyMed, Drugs@FDA, the Orange Book), keyed off the identifiers
+ * the label already carries.
  */
 
 import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { labelRoute } from '../platform/context';
+import { fdaLabelSplDocUrl } from '../platform/fdalabel';
+import type { TargetDb } from './types';
 
 export interface LabelRow {
   set_id: string;
@@ -123,13 +126,29 @@ function applications(apprNum: string | null | undefined) {
   return out;
 }
 
-function LinksCell({ row }: { row: LabelRow }) {
+function LinksCell({ row, targetDb }: { row: LabelRow; targetDb?: TargetDb }) {
   const apps = applications(row.appr_num);
   return (
     <div className="fdl-links">
-      <Link className="fdl-link" href={labelRoute(row.set_id)} target="_blank" rel="noopener noreferrer">
+      <Link
+        className="fdl-link fdl-links__primary"
+        href={labelRoute(row.set_id)}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
         View Label
       </Link>
+      <span className="fdl-links__row">
+        <a
+          className="fdl-link"
+          href={fdaLabelSplDocUrl(row.set_id, targetDb)}
+          target="_blank"
+          rel="noreferrer"
+          title="Open this SPL in the hosted FDALabel application (FDA network only)"
+        >
+          FDALabel (SPL)
+        </a>
+      </span>
       <span className="fdl-links__row">
         DailyMed (
         <a className="fdl-link" href={DAILYMED_SPL(row.set_id)} target="_blank" rel="noreferrer">
@@ -276,12 +295,20 @@ function StickyXScrollbar({
   );
 }
 
+/**
+ * What a cell can know beyond its own row. Currently just the queried
+ * database, which decides where the row's outbound FDALabel link points.
+ */
+export interface RowContext {
+  targetDb?: TargetDb;
+}
+
 export interface ColumnDef {
   key: string;
   header: string;
   /** Sort token accepted by /api/labelquery/execute; omit to disable sorting. */
   sort?: string;
-  render: (row: LabelRow) => React.ReactNode;
+  render: (row: LabelRow, ctx: RowContext) => React.ReactNode;
   strong?: boolean;
   accent?: boolean;
   /** Keep an optional database field out of the table until the user enables it. */
@@ -291,7 +318,7 @@ export interface ColumnDef {
 const LINKS_COLUMN: ColumnDef = {
   key: 'links',
   header: 'Links',
-  render: (row) => <LinksCell row={row} />,
+  render: (row, ctx) => <LinksCell row={row} targetDb={ctx.targetDb} />,
 };
 
 const TRADE_NAME: ColumnDef = {
@@ -464,6 +491,7 @@ export function ResultsTable({
   sortState,
   onSort,
   extraColumns,
+  targetDb,
 }: {
   rows: LabelRow[];
   view: ResultView;
@@ -471,6 +499,11 @@ export function ResultsTable({
   onSort: (sort: string) => void;
   /** Additional columns prepended before the standard column set. */
   extraColumns?: ColumnDef[];
+  /**
+   * The database these rows came from. Only decides which hosted FDALabel
+   * deployment the per-row SPL link opens; omitted, links go to CDER-CBER.
+   */
+  targetDb?: TargetDb;
 }) {
   const baseColumns = view === 'expanded' ? EXPANDED_COLUMNS : BASIC_COLUMNS;
   const allColumns = extraColumns && extraColumns.length > 0
@@ -607,7 +640,7 @@ export function ResultsTable({
                                 : undefined
                           }
                         >
-                          {column.render(row)}
+                          {column.render(row, { targetDb })}
                         </td>
                       ))}
                     </tr>

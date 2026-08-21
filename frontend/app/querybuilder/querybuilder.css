@@ -687,6 +687,31 @@
   white-space: nowrap;
 }
 
+/*
+ * View Label is the row's primary action and everything else in the cell is a
+ * reference link, so it is pulled out as a small button rather than left to
+ * compete with four other blue words.
+ */
+.fdl-links__primary {
+  align-self: flex-start;
+  margin-bottom: 0.2rem;
+  padding: 2px 10px;
+  border: 1px solid var(--afl-info-500);
+  border-radius: 12px;
+  background-color: var(--afl-info-500);
+  color: #ffffff;
+  font-weight: var(--afl-weight-bold);
+  line-height: 1.5;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.fdl-links__primary:hover:not(:disabled) {
+  background-color: var(--afl-info-700);
+  border-color: var(--afl-info-700);
+  color: #ffffff;
+  text-decoration: none;
+}
+
 .fdl-links__row {
   color: var(--afl-n-800);
 }

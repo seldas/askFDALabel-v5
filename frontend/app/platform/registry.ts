@@ -12,6 +12,7 @@
  * `iconId` in icons.tsx.
  */
 
+import { fdaLabelSearchUrl } from './fdalabel';
 import type { IconId } from './icons';
 import {
   dashboardRoute,
@@ -354,7 +355,7 @@ const EXTERNAL_TOOLS: ToolDef[] = [
     group: 'reference',
     contexts: ['global'],
     requires: ['fdaAccessible'],
-    href: () => 'https://fdalabel.fda.gov:8443/fdalabel/ui/search',
+    href: () => fdaLabelSearchUrl('fda'),
     target: '_blank',
   },
   {
@@ -366,7 +367,7 @@ const EXTERNAL_TOOLS: ToolDef[] = [
     group: 'reference',
     contexts: ['global'],
     requires: ['cderAccessible'],
-    href: () => 'https://fdalabel.fda.gov:8443/fdalabel-r/ui/search',
+    href: () => fdaLabelSearchUrl('cder'),
     target: '_blank',
   },
   {
@@ -377,7 +378,7 @@ const EXTERNAL_TOOLS: ToolDef[] = [
     kind: 'external',
     group: 'reference',
     contexts: ['global'],
-    href: () => 'https://nctr-crs.fda.gov/fdalabel/ui/search',
+    href: () => fdaLabelSearchUrl('public'),
     target: '_blank',
   },
 ];

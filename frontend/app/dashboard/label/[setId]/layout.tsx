@@ -17,6 +17,7 @@ import { use, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { usePathname, useSearchParams } from 'next/navigation';
 import Header from '../../../components/Header';
+import { fdaLabelSplDocUrl } from '../../../platform/fdalabel';
 import { Badge } from '../../../platform/primitives';
 import { LabelToolStrip } from '../../../platform/ToolLauncher';
 import { LabelContextProvider } from './LabelContext';
@@ -228,6 +229,17 @@ export default function LabelLayout({
                   <div className="meta-item">
                       <span style={{ display: 'block', fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.1em', marginBottom: '4px' }}>Set ID</span>
                       <span style={{ fontWeight: 700, color: '#334155', fontFamily: 'ui-monospace, monospace', fontSize: '0.78rem' }}>{data.set_id || 'N/A'}</span>
+                      {data.set_id ? (
+                        <a
+                          href={fdaLabelSplDocUrl(data.set_id)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Open this SPL in the hosted FDALabel application (FDA network only)"
+                          style={{ display: 'inline-block', marginTop: '4px', fontSize: '0.72rem', fontWeight: 700, color: '#2563eb', textDecoration: 'none' }}
+                        >
+                          Open in FDALabel {"↗"}
+                        </a>
+                      ) : null}
                   </div>
                   <div className="meta-item">
                       <span style={{ display: 'block', fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.1em', marginBottom: '4px' }}>Application No.</span>
