@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import os
 import random
 import threading
@@ -13,6 +14,8 @@ try:
 except ImportError:
     ORACLE_AVAILABLE = False
     print("Warning: oracledb not installed. Internal DB features disabled.")
+
+logger = logging.getLogger(__name__)
 
 class FDALabelDBService:
     _is_connected = None  # Tri-state: None (unknown), True (connected), False (failed)
@@ -848,81 +851,185 @@ class FDALabelDBService:
         """
         return []
 
+    # ------------------------------------------------------------------
+    # SPL XML resolution
+    #
+    # Deliberately independent of LABEL_DB. The old implementation branched on
+    # `_db_type`, so an Oracle deployment never looked at local files and a
+    # Postgres one never looked at Oracle. The cascade below always tries the
+    # local store first and treats Oracle as the fallback, because reading a
+    # file already on disk beats a round trip either way.
+    #
+    # There is no DailyMed fallback any more. Fetching by set_id returned the
+    # *current* label regardless of the requested spl_id, so a version-pinned
+    # request silently got today's labeling. A caller that finds nothing gets
+    # nothing, and the route turns that into links the user can follow.
+    # ------------------------------------------------------------------
+
+    #: Local storage is split by import path: db_07 stores a .zip basename,
+    #: import_archive_labels stores a bare .xml basename, and the extension is
+    #: what picks the directory.
     @classmethod
-    def get_full_xml(cls, set_id, spl_id=None, force_local=False):
-        if not cls.check_connectivity():
+    def _read_local_file(cls, local_path, set_id):
+        """Read one SPL from local storage, or None if it is not on disk."""
+        if not local_path:
             return None
-        conn = cls.get_connection(force_local=force_local)
+
+        if local_path.endswith('.zip'):
+            storage_dir = current_app.config.get('SPL_STORAGE_DIR')
+        else:
+            storage_dir = current_app.config.get('SPL_STORAGE_DIR_ARCHIVED')
+        if not storage_dir:
+            return None
+
+        full_path = os.path.abspath(os.path.join(storage_dir, local_path))
+        if not os.path.exists(full_path):
+            return None
+
+        try:
+            if local_path.endswith('.zip'):
+                import zipfile
+                with zipfile.ZipFile(full_path, 'r') as z:
+                    xml_files = [f for f in z.namelist() if f.lower().endswith('.xml')]
+                    if not xml_files:
+                        return None
+                    preferred = None
+                    for f in xml_files:
+                        if set_id and set_id.lower() in os.path.basename(f).lower():
+                            preferred = f
+                            break
+                    if not preferred:
+                        preferred = sorted(xml_files, key=lambda x: (x.count('/'), len(x)))[0]
+                    return z.read(preferred).decode('utf-8', errors='replace')
+
+            with open(full_path, 'r', encoding='utf-8', errors='replace') as f:
+                return f.read()
+        except Exception as e:
+            logger.error('Error reading local SPL %s: %s', full_path, e)
+            return None
+
+    @classmethod
+    def _local_rows(cls, set_id, spl_id=None):
+        """
+        Candidate rows for this labeling, best first.
+
+        The requested version leads; other versions of the same set_id follow,
+        so a missing file falls back to a sibling rather than off a cliff --
+        but the caller is told when that happened, because silently serving a
+        different version is the DailyMed bug this replaced.
+        """
+        conn = cls.get_postgres_connection()
+        if not conn:
+            return []
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT spl_id, set_id, local_path, revised_date
+                  FROM labeling.sum_spl
+                 WHERE set_id = %(set_id)s OR spl_id = %(spl_id)s
+                 ORDER BY (spl_id = %(spl_id)s) DESC, revised_date DESC
+                """,
+                {'set_id': set_id, 'spl_id': spl_id},
+            )
+            return [dict(r) for r in cursor.fetchall()]
+        except Exception as e:
+            logger.error('Local SPL lookup failed for %s/%s: %s', set_id, spl_id, e)
+            return []
+        finally:
+            conn.close()
+
+    @classmethod
+    def _oracle_xml(cls, set_id, spl_id=None):
+        """druglabel.spl.spl_xml for this labeling, or None."""
+        conn = cls.get_oracle_connection()
         if not conn:
             return None
         try:
             cursor = conn.cursor()
-            if cls._db_type == 'oracle':
-                if spl_id:
-                    sql = "SELECT s.spl_xml FROM druglabel.spl s JOIN druglabel.sum_spl l ON s.set_id = l.set_id WHERE l.spl_guid = :sid"
-                    cursor.execute(sql, {"sid": spl_id})
-                else:
-                    sql = "SELECT s.spl_xml FROM druglabel.spl s JOIN druglabel.sum_spl l ON s.set_id = l.set_id WHERE l.set_id = :sid ORDER BY l.eff_time DESC"
-                    cursor.execute(sql, {"sid": set_id})
-                r = cursor.fetchone()
-                if r:
-                    xml_data = r[0]
-                    if hasattr(xml_data, 'read'):
-                        xml_content = xml_data.read()
-                    else:
-                        xml_content = xml_data
-                    if isinstance(xml_content, bytes):
-                        return xml_content.decode('utf-8', errors='replace')
-                    return xml_content
-                return None
-            else:
-                schema = "labeling."
-                if spl_id:
-                    sql = f"SELECT local_path FROM {schema}sum_spl WHERE spl_id = %s"
-                    cursor.execute(sql, (spl_id,))
-                else:
-                    sql = f"SELECT local_path FROM {schema}sum_spl WHERE set_id = %s ORDER BY revised_date DESC LIMIT 1"
-                    cursor.execute(sql, (set_id,))
-                r = cursor.fetchone()
-                if r and r['local_path']:
-                    if r['local_path'].endswith('.zip'):
-                        storage_dir = current_app.config.get('SPL_STORAGE_DIR')
-                        zip_path = os.path.abspath(os.path.join(storage_dir, r['local_path']))
-                        if os.path.exists(zip_path):
-                            import zipfile
-                            with zipfile.ZipFile(zip_path, 'r') as z:
-                                xml_files = [f for f in z.namelist() if f.lower().endswith('.xml')]
-                                if not xml_files:
-                                    return None
-
-                                # Prefer a top-level XML or one matching set_id
-                                preferred = None
-
-                                for f in xml_files:
-                                    base = os.path.basename(f).lower()
-                                    if set_id.lower() in base:
-                                        preferred = f
-                                        break
-
-                                if not preferred:
-                                    # Prefer shortest path / likely main file
-                                    preferred = sorted(xml_files, key=lambda x: (x.count('/'), len(x)))[0]
-
-                                xml_bytes = z.read(preferred)
-                                return xml_bytes.decode('utf-8', errors='replace')
-                    else:
-                        storage_dir = current_app.config.get('SPL_STORAGE_DIR_ARCHIVED')
-                        xml_path = os.path.abspath(os.path.join(storage_dir, r['local_path']))
-                        if os.path.exists(xml_path):
-                            try:
-                                with open(xml_path, 'r', encoding='utf-8', errors='replace') as f:
-                                    return f.read()
-                            except Exception as e:
-                                print(f"Error reading XML file {xml_path}: {e}")
-                                return None
+            if spl_id:
+                cursor.execute(
+                    'SELECT s.spl_xml FROM druglabel.spl s '
+                    'JOIN druglabel.sum_spl l ON s.set_id = l.set_id '
+                    'WHERE l.spl_guid = :sid',
+                    {'sid': spl_id},
+                )
+                row = cursor.fetchone()
+                if row:
+                    return cls._decode_oracle_xml(row[0])
+            cursor.execute(
+                'SELECT s.spl_xml FROM druglabel.spl s '
+                'JOIN druglabel.sum_spl l ON s.set_id = l.set_id '
+                'WHERE l.set_id = :sid ORDER BY l.eff_time DESC',
+                {'sid': set_id},
+            )
+            row = cursor.fetchone()
+            return cls._decode_oracle_xml(row[0]) if row else None
+        except Exception as e:
+            logger.error('Oracle SPL lookup failed for %s: %s', set_id, e)
+            return None
         finally:
-            conn.close()
-        return None
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    @staticmethod
+    def _decode_oracle_xml(value):
+        if value is None:
+            return None
+        if hasattr(value, 'read'):
+            value = value.read()
+        if isinstance(value, bytes):
+            return value.decode('utf-8', errors='replace')
+        return value
+
+    @classmethod
+    def resolve_spl_xml(cls, set_id, spl_id=None, force_local=False):
+        """
+        Find the SPL XML, reporting where it came from.
+
+        Returns (xml, source). `source` is None when nothing was found;
+        otherwise a dict with `origin` ('local-file' | 'oracle'), the `spl_id`
+        actually served, and `version_substituted` when that is not the
+        version the caller asked for.
+
+        force_local=True stops before Oracle.
+        """
+        if not set_id and not spl_id:
+            return None, None
+
+        for row in cls._local_rows(set_id, spl_id):
+            xml = cls._read_local_file(row.get('local_path'), row.get('set_id') or set_id)
+            if xml:
+                return xml, {
+                    'origin': 'local-file',
+                    'spl_id': row.get('spl_id'),
+                    'set_id': row.get('set_id'),
+                    'local_path': row.get('local_path'),
+                    'version_substituted': bool(spl_id and row.get('spl_id') != spl_id),
+                }
+
+        if force_local:
+            return None, None
+
+        xml = cls._oracle_xml(set_id, spl_id=spl_id)
+        if xml:
+            return xml, {
+                'origin': 'oracle',
+                'spl_id': spl_id,
+                'set_id': set_id,
+                'local_path': None,
+                'version_substituted': False,
+            }
+
+        return None, None
+
+    @classmethod
+    def get_full_xml(cls, set_id, spl_id=None, force_local=False):
+        """The XML alone. Use resolve_spl_xml when provenance matters."""
+        xml, _ = cls.resolve_spl_xml(set_id, spl_id=spl_id, force_local=force_local)
+        return xml
 
     @classmethod
     def local_search(cls, query_term, skip=0, limit=50, human_rx_only=False, rld_only=False, rs_only=False, force_local=False):

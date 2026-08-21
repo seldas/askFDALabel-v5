@@ -19,6 +19,7 @@ from dashboard.services.xml_handler import (
 from dashboard.services.fda_client import (
     get_label_metadata,
     get_label_xml,
+    label_not_found_payload,
     find_labels,
     find_labels_by_set_ids,
     check_openfda_status
@@ -317,7 +318,11 @@ def view_label(set_id):
     
     label_xml_raw = get_label_xml(set_id, spl_id=spl_id)
     if not label_xml_raw:
-        return jsonify({'error': "Could not fetch the label data."}), 500
+        # 404 with somewhere to go, not a 500. The labeling being absent from
+        # this deployment is an expected outcome -- the local store holds a
+        # subset -- not a server failure, and the user can still read it on a
+        # public server.
+        return jsonify(label_not_found_payload(set_id, spl_id)), 404
 
     doc_title, sections, fallback_html, highlights, table_of_contents, product_data = parse_spl_xml(label_xml_raw, set_id)
     

@@ -74,39 +74,90 @@ def get_label_metadata(set_id, import_id=None, spl_id=None, use_local_db=False):
 
     return None
 
+#: Where a user can go when this deployment cannot serve a labeling. Public
+#: sites only -- these are shown to anyone who hits a missing SPL.
+def external_label_links(set_id):
+    """Public lookups for a set_id, for the not-found response."""
+    return [
+        {
+            'name': 'DailyMed',
+            'url': f'https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid={set_id}',
+        },
+        {
+            'name': 'FDALabel (public)',
+            'url': f'https://nctr-crs.fda.gov/fdalabel/ui/search/spl/{set_id}',
+        },
+    ]
+
+
+def label_not_found_payload(set_id, spl_id=None):
+    """
+    The body for a labeling this deployment cannot serve.
+
+    A 404 with somewhere to go, rather than the 500 this used to raise. The
+    identifiers are echoed back so the user can paste them into the links.
+    """
+    identity = f'set-id "{set_id}"'
+    if spl_id:
+        identity += f', spl-id "{spl_id}"'
+    return {
+        'error': (
+            f'This labeling ({identity}) cannot be found in the local label '
+            'database or the internal FDALabel database. You may look it up on '
+            'the following public servers:'
+        ),
+        'set_id': set_id,
+        'spl_id': spl_id,
+        'external_links': external_label_links(set_id),
+    }
+
+
 def get_label_xml(set_id, spl_id=None, force_local=False, local_only=False):
     """
     Retrieve SPL XML for set_id.
 
-    force_local=True  → always use local Postgres DB, never Oracle.
-    local_only=True   → suppress the DailyMed HTTP fallback entirely;
-                        return None if local DB has no XML.
+    Resolution order is fixed and does not depend on LABEL_DB -- see
+    FDALabelDBService.resolve_spl_xml: local file first (by the requested
+    version, then by any sibling version of the same set_id), then Oracle.
+
+    force_local=True  -> stop before Oracle, local files only.
+    local_only=True   -> retained for callers that passed it while a DailyMed
+                         fallback existed. It is now the same as force_local,
+                         because there is no network fetch left to suppress.
+
+    Returns None when nothing is found. Callers that render a page should use
+    label_not_found_payload() rather than reporting a server error.
     """
-    if not set_id:
+    if not set_id and not spl_id:
         return None
 
     try:
-        db_xml = FDALabelDBService.get_full_xml(set_id, spl_id=spl_id, force_local=force_local)
-        if db_xml:
-            logger.info(f"Loaded XML from local DB/ZIP for set_id={set_id}, spl_id={spl_id}, length={len(db_xml)}")
-            return db_xml
+        xml, source = FDALabelDBService.resolve_spl_xml(
+            set_id, spl_id=spl_id, force_local=force_local or local_only
+        )
     except Exception as e:
-        logger.error(f"Error reading local XML for {set_id}: {e}")
-
-    if local_only:
-        logger.warning(f"local_only=True and no local XML found for set_id={set_id}; skipping DailyMed.")
+        logger.error(f"Error resolving XML for {set_id}: {e}")
         return None
 
-    dailymed_url = f"https://dailymed.nlm.nih.gov/dailymed/services/v2/spls/{set_id}.xml"
-    try:
-        response = requests.get(dailymed_url, timeout=10)
-        response.raise_for_status()
-        logger.info(f"Loaded XML from DailyMed for set_id={set_id}, length={len(response.text)}")
-        return response.text
-    except Exception as e:
-        logger.error(f"Error fetching from DailyMed for {set_id}: {e}")
+    if not xml:
+        logger.warning(f"No SPL XML found for set_id={set_id}, spl_id={spl_id}")
+        return None
 
-    return None
+    if source and source.get('version_substituted'):
+        # The pinned version had no file on disk, so a sibling was served. Not
+        # silent: the DailyMed fallback that used to do this without saying so
+        # is exactly why it was removed.
+        logger.warning(
+            "Requested spl_id=%s for set_id=%s had no local file; served spl_id=%s instead",
+            spl_id, set_id, source.get('spl_id'),
+        )
+
+    logger.info(
+        "Loaded XML for set_id=%s from %s, length=%d",
+        set_id, (source or {}).get('origin', 'unknown'), len(xml),
+    )
+    return xml
+
 
 def get_faers_data(drug_name, limit=20):
     if not drug_name or drug_name in ['N/A', 'Unknown Generic']: return None

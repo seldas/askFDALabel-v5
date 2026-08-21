@@ -49,6 +49,17 @@ export default function LabelLayout({
   const [data, setData] = useState<LabelData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /*
+   * Set when the backend says this labeling is not in the local store. It is
+   * not a failure -- the local database holds a subset -- so the shell offers
+   * the public servers instead of just reporting a status code.
+   */
+  const [notFound, setNotFound] = useState<{
+    error: string;
+    set_id: string;
+    spl_id: string | null;
+    external_links: { name: string; url: string }[];
+  } | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
 
   const refresh = useCallback(() => setReloadToken((n) => n + 1), []);
@@ -57,13 +68,18 @@ export default function LabelLayout({
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setNotFound(null);
 
     (async () => {
       try {
         const url = `/api/dashboard/label/${setId}?json=1${splId ? `&spl_id=${splId}` : ''}`;
         const res = await fetch(url, { headers: { Accept: 'application/json' } });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
+        const json = await res.json().catch(() => null);
+        if (res.status === 404 && json?.external_links) {
+          if (!cancelled) setNotFound(json);
+          return;
+        }
+        if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
         if (!cancelled) setData(json);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err));
@@ -114,7 +130,28 @@ export default function LabelLayout({
             </nav>
           )}
 
-          {error ? (
+          {notFound ? (
+            <div className="afl-label-alert" role="alert">
+              <p style={{ margin: '0 0 10px 0' }}>{notFound.error}</p>
+              <p style={{ margin: '0 0 10px 0', display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
+                {notFound.external_links.map((link) => (
+                  <a
+                    key={link.url}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontWeight: 700, textDecoration: 'underline' }}
+                  >
+                    {link.name} ↗
+                  </a>
+                ))}
+              </p>
+              <p style={{ margin: 0, fontSize: '0.84rem', opacity: 0.85 }}>
+                set-id <code>{notFound.set_id}</code>
+                {notFound.spl_id ? <> · spl-id <code>{notFound.spl_id}</code></> : null}
+              </p>
+            </div>
+          ) : error ? (
             <div className="afl-label-alert" role="alert">
               Could not load this label: {error}
             </div>
