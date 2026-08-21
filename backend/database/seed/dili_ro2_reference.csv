@@ -1,67 +1,165 @@
-drug_name,dilirank_compound,dili_concern,dili_severity_class,max_daily_dose_mg,dose_basis,dose_note,dose_review_status,route,pubchem_cid,inchikey,smiles,mol_weight,pubchem_xlogp3
-amlodipine,Amlodipine besylate,vLess-DILI-concern,5,10,label-max,10 mg once daily,needs-sme-review,oral,2162,HTIQEAQVCYTUBX-UHFFFAOYSA-N,CCOC(=O)C1=C(NC(=C(C1C2=CC=CC=C2Cl)C(=O)OC)C)COCCN,408.9,3
-amoxicillin,Amoxicillin,vLess-DILI-concern,5,1750,label-max,875 mg twice daily,needs-sme-review,oral,33613,LSQZJLSUYDQPKJ-NJBDSQKTSA-N,CC1([C@@H](N2[C@H](S1)[C@@H](C2=O)NC(=O)[C@@H](C3=CC=C(C=C3)O)N)C(=O)O)C,365.4,-2
-azithromycin,Azithromycin,vLess-DILI-concern,7,500,label-max,500 mg once daily,needs-sme-review,oral,447043,MQTOSJVFKKJCRP-BICOPXKESA-N,CC[C@@H]1[C@@]([C@@H]([C@H](N(C[C@@H](C[C@@]([C@@H]([C@H]([C@@H]([C@H](C(=O)O1)C)O[C@H]2C[C@@]([C@H]([C@@H](O2)C)O)(C)OC)C)O[C@H]3[C@@H]([C@H](C[C@H](O3)C)N(C)C)O)(C)O)C)C)C)O)(C)O,749.0,4
-celecoxib,Celecoxib,vLess-DILI-concern,3,400,label-max,200 mg twice daily,needs-sme-review,oral,2662,RZEKVGVHFLEQIL-UHFFFAOYSA-N,CC1=CC=C(C=C1)C2=CC(=NN2C3=CC=C(C=C3)S(=O)(=O)N)C(F)(F)F,381.4,3.4
-cetirizine,Cetirizine hydrochloride,vLess-DILI-concern,3,10,label-max,10 mg once daily (adult),needs-sme-review,oral,2678,ZKLPARSLTMPFCP-UHFFFAOYSA-N,C1CN(CCN1CCOCC(=O)O)C(C2=CC=CC=C2)C3=CC=C(C=C3)Cl,388.9,1.7
-chlorpromazine,Chlorpromazine hydrochloride,vLess-DILI-concern,2,800,label-max,800 mg/day common ceiling; higher in refractory psychosis,needs-sme-review,oral,2726,ZPEIMTDSQAKGNT-UHFFFAOYSA-N,CN(C)CCCN1C2=CC=CC=C2SC3=C1C=C(C=C3)Cl,318.9,5.2
-doxycycline,Doxycycline,vLess-DILI-concern,3,200,label-max,100 mg twice daily,needs-sme-review,oral,54671203,SGKRLCUYIXIAHR-AKNGSSGZSA-N,C[C@@H]1[C@H]2[C@@H]([C@H]3[C@@H](C(=O)C(=C([C@]3(C(=O)C2=C(C4=C1C=CC=C4O)O)O)O)C(=O)N)N(C)C)O,444.4,-0.7
-famotidine,Famotidine,vLess-DILI-concern,3,80,label-max,40 mg twice daily,needs-sme-review,oral,5702160,XUFQPHANEAPEMJ-UHFFFAOYSA-N,C1=C(N=C(S1)N=C(N)N)CSCC/C(=N/S(=O)(=O)N)/N,337.5,-0.6
-fluoxetine,Fluoxetine hydrochloride,vLess-DILI-concern,3,80,label-max,80 mg/day max,needs-sme-review,oral,3386,RTHCYVBBDHJXIQ-UHFFFAOYSA-N,CNCCC(C1=CC=CC=C1)OC2=CC=C(C=C2)C(F)(F)F,309.33,4
-gabapentin,Gabapentin,vLess-DILI-concern,3,3600,label-max,3600 mg/day divided,needs-sme-review,oral,3446,UGJMXCAKCUNAIE-UHFFFAOYSA-N,C1CCC(CC1)(CC(=O)O)CN,171.24,-1.1
-hydroxychloroquine,Hydroxychloroquine sulfate,vLess-DILI-concern,7,400,label-max,400 mg/day maintenance,needs-sme-review,oral,3652,XXSMGPRMXLTPCZ-UHFFFAOYSA-N,CCN(CCCC(C)NC1=C2C=CC(=CC2=NC=C1)Cl)CCO,335.9,3.6
-ibuprofen,Ibuprofen,vLess-DILI-concern,3,3200,label-max,3200 mg/day prescription max,needs-sme-review,oral,3672,HEFNNWSXXWATRW-UHFFFAOYSA-N,CC(C)CC1=CC=C(C=C1)C(C)C(=O)O,206.28,3.5
-lisinopril,Lisinopril,vLess-DILI-concern,3,80,label-max,80 mg once daily,needs-sme-review,oral,5362119,RLAWWYSOJDYHDC-BZSNNMDCSA-N,C1C[C@H](N(C1)C(=O)[C@H](CCCCN)N[C@@H](CCC2=CC=CC=C2)C(=O)O)C(=O)O,405.5,-2.9
-lovastatin,Lovastatin,vLess-DILI-concern,3,80,label-max,80 mg/day,needs-sme-review,oral,53232,PCZOHLXUXFIOCF-BXMDZJJMSA-N,CC[C@H](C)C(=O)O[C@H]1C[C@H](C=C2[C@H]1[C@H]([C@H](C=C2)C)CC[C@@H]3C[C@H](CC(=O)O3)O)C,404.5,4.3
-metformin,Metformin hydrochloride,vLess-DILI-concern,0,2550,label-max,2550 mg/day immediate-release max,needs-sme-review,oral,4091,XZWYZXLIPXDOLR-UHFFFAOYSA-N,CN(C)C(=N)N=C(N)N,129.16,-1.3
-metoprolol,Metoprolol tartrate,vLess-DILI-concern,5,400,label-max,400 mg/day max,needs-sme-review,oral,4171,IUBSYMUCCVWXPE-UHFFFAOYSA-N,CC(C)NCC(COC1=CC=C(C=C1)CCOC)O,267.36,1.9
-montelukast,Montelukast sodium,vLess-DILI-concern,3,10,label-max,10 mg once daily (adult),needs-sme-review,oral,5281040,UCHDWCPVSPXUMX-TZIWLTJVSA-N,CC(C)(C1=CC=CC=C1CC[C@H](C2=CC=CC(=C2)/C=C/C3=NC4=C(C=CC(=C4)Cl)C=C3)SCC5(CC5)CC(=O)O)O,586.2,7.7
-naproxen,Naproxen,vLess-DILI-concern,3,1500,label-max,1500 mg/day max,needs-sme-review,oral,156391,CMWTZPSULFXXJA-VIFPVBQESA-N,C[C@@H](C1=CC2=C(C=C1)C=C(C=C2)OC)C(=O)O,230.26,3.3
-olanzapine,Olanzapine,vLess-DILI-concern,3,20,label-max,20 mg/day max,needs-sme-review,oral,135398745,KVWDHTXUZHCGIO-UHFFFAOYSA-N,CC1=CC2=C(S1)NC3=CC=CC=C3N=C2N4CCN(CC4)C,312.4,2.9
-omeprazole,Omeprazole,vLess-DILI-concern,4,40,label-max,20-40 mg/day,needs-sme-review,oral,4594,SUBDBMMJDZJVOS-UHFFFAOYSA-N,CC1=CN=C(C(=C1OC)C)CS(=O)C2=NC3=C(N2)C=C(C=C3)OC,345.4,2.2
-phenobarbital,Phenobarbital sodium,vLess-DILI-concern,3,200,label-max,100-200 mg/day (adult sedative/anticonvulsant),needs-sme-review,oral,4763,DDBREPKUVSBGFI-UHFFFAOYSA-N,CCC1(C(=O)NC(=O)NC1=O)C2=CC=CC=C2,232.23,1.5
-prednisone,Prednisone,vLess-DILI-concern,3,60,typical-max,Highly indication-dependent; 60 mg/day common ceiling,needs-sme-review,oral,5865,XOFYZVNMUHMLCC-ZPOLXVRWSA-N,C[C@]12CC(=O)[C@H]3[C@H]([C@@H]1CC[C@@]2(C(=O)CO)O)CCC4=CC(=O)C=C[C@]34C,358.4,1.5
-quetiapine,Quetiapine fumarate,vLess-DILI-concern,3,800,label-max,800 mg/day max,needs-sme-review,oral,5002,URKOMYMAXPYINW-UHFFFAOYSA-N,C1CN(CCN1CCOCCO)C2=NC3=CC=CC=C3SC4=CC=CC=C42,383.5,2.1
-ranitidine,Ranitidine hydrochloride,vLess-DILI-concern,5,300,label-max,150 mg twice daily; withdrawn 2020 (NDMA),needs-sme-review,oral,3001055,VMXUWOKSQNHOCA-UKTHLTGXSA-N,CN/C(=C\[N+](=O)[O-])/NCCSCC1=CC=C(O1)CN(C)C,314.41,0.3
-risperidone,Risperidone,vLess-DILI-concern,3,16,label-max,16 mg/day max,needs-sme-review,oral,5073,RAPZEAPATHNIPO-UHFFFAOYSA-N,CC1=C(C(=O)N2CCCCC2=N1)CCN3CCC(CC3)C4=NOC5=C4C=CC(=C5)F,410.5,2.7
-sertraline,Sertraline hydrochloride,vLess-DILI-concern,3,200,label-max,200 mg/day max,needs-sme-review,oral,68617,VGKDLMBJGBXTGI-SJCJKPOMSA-N,CN[C@H]1CC[C@H](C2=CC=CC=C12)C3=CC(=C(C=C3)Cl)Cl,306.2,4.8
-simvastatin,Simvastatin,vLess-DILI-concern,3,40,label-max,40 mg/day; 80 mg restricted since 2011,needs-sme-review,oral,54454,RYMZZMVNJRMUDD-HGQWONQESA-N,CCC(C)(C)C(=O)O[C@H]1C[C@H](C=C2[C@H]1[C@H]([C@H](C=C2)C)CC[C@@H]3C[C@H](CC(=O)O3)O)C,418.6,4.7
-warfarin,Warfarin sodium,vLess-DILI-concern,5,10,typical-max,Dose individualized to INR; ~10 mg/day upper typical,needs-sme-review,oral,54678486,PJVWKTKQMONHTI-UHFFFAOYSA-N,CC(=O)CC(C1=CC=CC=C1)C2=C(C3=CC=CC=C3OC2=O)O,308.3,2.7
-acetaminophen,Acetaminophen,vMost-DILI-concern,5,4000,label-max,4 g/day OTC ceiling,needs-sme-review,oral,1983,RZVAJINKPMORJF-UHFFFAOYSA-N,CC(=O)NC1=CC=C(C=C1)O,151.16,0.5
-allopurinol,Allopurinol,vMost-DILI-concern,8,800,label-max,800 mg/day max,needs-sme-review,oral,135401907,OFCNXPDARWKPPY-UHFFFAOYSA-N,C1=NNC2=C1C(=O)NC=N2,136.11,-0.7
-amiodarone,Amiodarone hydrochloride,vMost-DILI-concern,8,400,maintenance,Oral maintenance 200-400 mg/day; loading up to 1600 mg/day,needs-sme-review,oral,2157,IYIKLHRQXLHMJQ-UHFFFAOYSA-N,CCCCC1=C(C2=CC=CC=C2O1)C(=O)C3=CC(=C(C(=C3)I)OCCN(CC)CC)I,645.3,7.6
-atorvastatin,Atorvastatin calcium,vMost-DILI-concern,5,80,label-max,80 mg once daily,needs-sme-review,oral,60823,XUKUURHRXDUEBC-KAYWLYCHSA-N,CC(C)C1=C(C(=C(N1CC[C@H](C[C@H](CC(=O)O)O)O)C2=CC=C(C=C2)F)C3=CC=CC=C3)C(=O)NC4=CC=CC=C4,558.6,5
-azathioprine,Azathioprine,vMost-DILI-concern,5,150,weight-based,2.5 mg/kg/day x 60 kg,needs-sme-review,oral,2265,LMEKQMALGUDUQG-UHFFFAOYSA-N,CN1C=NC(=C1SC2=NC=NC3=C2NC=N3)[N+](=O)[O-],277.27,0.1
-benzbromarone,Benzbromarone,vMost-DILI-concern,8,100,label-max,"100 mg/day; not US-approved, withdrawn in EU",needs-sme-review,oral,2333,WHQCHUCQKNIQEC-UHFFFAOYSA-N,CCC1=C(C2=CC=CC=C2O1)C(=O)C3=CC(=C(C(=C3)Br)O)Br,424.1,5.7
-bosentan,Bosentan,vMost-DILI-concern,7,250,label-max,125 mg twice daily,needs-sme-review,oral,104865,GJPICJJJRGTNOD-UHFFFAOYSA-N,CC(C)(C)C1=CC=C(C=C1)S(=O)(=O)NC2=C(C(=NC(=N2)C3=NC=CC=N3)OCCO)OC4=CC=CC=C4OC,551.6,3.8
-carbamazepine,Carbamazepine,vMost-DILI-concern,7,1200,label-max,1200 mg/day adult max,needs-sme-review,oral,2554,FFGPTBGBLSHEPO-UHFFFAOYSA-N,C1=CC=C2C(=C1)C=CC3=CC=CC=C3N2C(=O)N,236.27,2.5
-ciprofloxacin,Ciprofloxacin hydrochloride,vMost-DILI-concern,7,1500,label-max,750 mg twice daily,needs-sme-review,oral,2764,MYSWGUAQZAJSOK-UHFFFAOYSA-N,C1CC1N2C=C(C(=O)C3=CC(=C(C=C32)N4CCNCC4)F)C(=O)O,331.34,-1.1
-clozapine,Clozapine,vMost-DILI-concern,5,900,label-max,900 mg/day max,needs-sme-review,oral,135398737,QZUDBNBUXVUHMW-UHFFFAOYSA-N,CN1CCN(CC1)C2=NC3=C(C=CC(=C3)Cl)NC4=CC=CC=C42,326.8,3.1
-dantrolene,Dantrolene sodium,vMost-DILI-concern,8,400,label-max,"100 mg four times daily (oral, chronic spasticity)",needs-sme-review,oral,6914273,OZOMQRBLCMDCEG-VIZOYTHASA-N,C1C(=O)NC(=O)N1/N=C/C2=CC=C(O2)C3=CC=C(C=C3)[N+](=O)[O-],314.25,1.7
-diclofenac,Diclofenac sodium,vMost-DILI-concern,8,200,label-max,150-200 mg/day divided,needs-sme-review,oral,3033,DCOPUUMXTXDBNB-UHFFFAOYSA-N,C1=CC=C(C(=C1)CC(=O)O)NC2=C(C=CC=C2Cl)Cl,296.1,4.4
-efavirenz,Efavirenz,vMost-DILI-concern,7,600,label-max,600 mg once daily,needs-sme-review,oral,64139,XPOQHMRABVBWPR-ZDUSSCGKSA-N,C1CC1C#C[C@]2(C3=C(C=CC(=C3)Cl)NC(=O)O2)C(F)(F)F,315.67,4
-felbamate,Felbamate,vMost-DILI-concern,7,3600,label-max,3600 mg/day divided,needs-sme-review,oral,3331,WKGXYQFOCVYPAC-UHFFFAOYSA-N,C1=CC=C(C=C1)C(COC(=O)N)COC(=O)N,238.24,0.6
-fluconazole,Fluconazole,vMost-DILI-concern,8,400,label-max,400 mg/day typical max; 800 mg/day in some indications,needs-sme-review,oral,3365,RFHAOTPXVQNOHP-UHFFFAOYSA-N,C1=CC(=C(C=C1F)F)C(CN2C=NC=N2)(CN3C=NC=N3)O,306.27,0.4
-flutamide,Flutamide,vMost-DILI-concern,8,750,label-max,250 mg three times daily,needs-sme-review,oral,3397,MKXKFYHWDHIYRV-UHFFFAOYSA-N,CC(C)C(=O)NC1=CC(=C(C=C1)[N+](=O)[O-])C(F)(F)F,276.21,3.3
-isoniazid,Isoniazid,vMost-DILI-concern,8,300,label-max,300 mg once daily (adult),needs-sme-review,oral,3767,QRXWMOHMRWLFEY-UHFFFAOYSA-N,C1=CN=CC=C1C(=O)NN,137.14,-0.7
-itraconazole,Itraconazole,vMost-DILI-concern,8,400,label-max,200 mg twice daily,needs-sme-review,oral,55283,VHVPQPYKVGDNFY-ZPGVKDDISA-N,CCC(C)N1C(=O)N(C=N1)C2=CC=C(C=C2)N3CCN(CC3)C4=CC=C(C=C4)OC[C@H]5CO[C@](O5)(CN6C=NC=N6)C7=C(C=C(C=C7)Cl)Cl,705.6,5.7
-ketoconazole,Ketoconazole,vMost-DILI-concern,8,400,label-max,Oral tablets 200-400 mg once daily,needs-sme-review,oral,47576,XMAYWYJOQHXEEK-ZEQKJWHPSA-N,CC(=O)N1CCN(CC1)C2=CC=C(C=C2)OC[C@@H]3CO[C@@](O3)(CN4C=CN=C4)C5=C(C=C(C=C5)Cl)Cl,531.4,4.3
-leflunomide,Leflunomide,vMost-DILI-concern,8,20,maintenance,20 mg/day maintenance; 100 mg/day loading x3,needs-sme-review,oral,3899,VHOGYURTWQBHIL-UHFFFAOYSA-N,CC1=C(C=NO1)C(=O)NC2=CC=C(C=C2)C(F)(F)F,270.21,2.5
-levofloxacin,Levofloxacin,vMost-DILI-concern,8,750,label-max,750 mg once daily,needs-sme-review,oral,149096,GSDSWSVVBLHKDQ-JTQLQIEISA-N,C[C@H]1COC2=C3N1C=C(C(=O)C3=CC(=C2N4CCN(CC4)C)F)C(=O)O,361.4,-0.4
-mercaptopurine,Mercaptopurine,vMost-DILI-concern,8,150,weight-based,2.5 mg/kg/day x 60 kg,needs-sme-review,oral,667490,GLVAUDGFNGKCSF-UHFFFAOYSA-N,C1=NC2=C(N1)C(=S)N=CN2,152.18,0
-nefazodone,Nefazodone hydrochloride,vMost-DILI-concern,8,600,label-max,300-600 mg/day in two divided doses,needs-sme-review,oral,4449,VRBKIVRKKCLPHA-UHFFFAOYSA-N,CCC1=NN(C(=O)N1CCOC2=CC=CC=C2)CCCN3CCN(CC3)C4=CC(=CC=C4)Cl,470.0,4.3
-nevirapine,Nevirapine,vMost-DILI-concern,8,400,label-max,200 mg twice daily,needs-sme-review,oral,4463,NQDJXKOVJZTUJA-UHFFFAOYSA-N,CC1=C2C(=NC=C1)N(C3=C(C=CC=N3)C(=O)N2)C4CC4,266.30,2
-nimesulide,Nimesulide,vMost-DILI-concern,8,200,label-max,100 mg twice daily; not US-approved,needs-sme-review,oral,4495,HYWYRSMBCFDLJT-UHFFFAOYSA-N,CS(=O)(=O)NC1=C(C=C(C=C1)[N+](=O)[O-])OC2=CC=CC=C2,308.31,2.6
-pemoline,Pemoline,vMost-DILI-concern,8,112.5,label-max,37.5-112.5 mg/day; withdrawn 2005,needs-sme-review,oral,4723,NRNCYVBFPDDJNE-UHFFFAOYSA-N,C1=CC=C(C=C1)C2C(=O)N=C(O2)N,176.17,0.9
-phenytoin,Phenytoin,vMost-DILI-concern,8,600,label-max,300-600 mg/day,needs-sme-review,oral,1775,CXOFVDLJLONNDW-UHFFFAOYSA-N,C1=CC=C(C=C1)C2(C(=O)NC(=O)N2)C3=CC=CC=C3,252.27,2.5
-ritonavir,Ritonavir,vMost-DILI-concern,8,1200,label-max,600 mg twice daily (full antiretroviral dose),needs-sme-review,oral,392622,NCDNCNXCDXHOMX-XGKFQTDJSA-N,CC(C)C1=NC(=CS1)CN(C)C(=O)N[C@@H](C(C)C)C(=O)N[C@@H](CC2=CC=CC=C2)C[C@@H]([C@H](CC3=CC=CC=C3)NC(=O)OCC4=CN=CS4)O,720.9,6
-sulfasalazine,Sulfasalazine,vMost-DILI-concern,5,4000,label-max,2-4 g/day divided,needs-sme-review,oral,5339,NCEXYHBECQHGNR-UHFFFAOYSA-N,C1=CC=NC(=C1)NS(=O)(=O)C2=CC=C(C=C2)N=NC3=CC(=C(C=C3)O)C(=O)O,398.4,-0.7
-tamoxifen,Tamoxifen citrate,vMost-DILI-concern,8,40,label-max,20-40 mg/day,needs-sme-review,oral,2733526,NKANXQFJJICGDU-QPLCGJKRSA-N,CC/C(=C(\C1=CC=CC=C1)/C2=CC=C(C=C2)OCCN(C)C)/C3=CC=CC=C3,371.5,7.1
-telithromycin,Telithromycin,vMost-DILI-concern,8,800,label-max,800 mg once daily; withdrawn,needs-sme-review,oral,3002190,LJVAJPDWBABPEJ-PNUFFHFMSA-N,CC[C@@H]1[C@@]2([C@@H]([C@H](C(=O)[C@@H](C[C@@]([C@@H]([C@H](C(=O)[C@H](C(=O)O1)C)C)O[C@H]3[C@@H]([C@H](C[C@H](O3)C)N(C)C)O)(C)OC)C)C)N(C(=O)O2)CCCCN4C=C(N=C4)C5=CN=CC=C5)C,812.0,4.2
-terbinafine,Terbinafine hydrochloride,vMost-DILI-concern,8,250,label-max,250 mg once daily,needs-sme-review,oral,1549008,DOMXUEMWDBAQBQ-WEVVVXLNSA-N,CC(C)(C)C#C/C=C/CN(C)CC1=CC=CC2=CC=CC=C21,291.4,5.6
-tolcapone,Tolcapone,vMost-DILI-concern,8,600,label-max,200 mg three times daily,needs-sme-review,oral,4659569,MIQPIUSUKVNLNT-UHFFFAOYSA-N,CC1=CC=C(C=C1)C(=O)C2=CC(=C(C(=C2)O)O)[N+](=O)[O-],273.24,3.3
-troglitazone,Troglitazone,vMost-DILI-concern,8,600,label-max,Rezulin 200-600 mg once daily; withdrawn 2000,needs-sme-review,oral,5591,GXPHKUHSUJUWKP-UHFFFAOYSA-N,CC1=C(C2=C(CCC(O2)(C)COC3=CC=C(C=C3)CC4C(=O)NC(=O)S4)C(=C1O)C)C,441.5,5.1
-trovafloxacin,Trovafloxacin mesylate,vMost-DILI-concern,8,200,label-max,200 mg once daily; withdrawn 1999,needs-sme-review,oral,62959,WVPSKSLAZQPAKQ-SOSAQKQKSA-N,C1[C@@H]2[C@@H](C2N)CN1C3=C(C=C4C(=O)C(=CN(C4=N3)C5=C(C=C(C=C5)F)F)C(=O)O)F,416.4,0.3
-valproic acid,Valproic acid,vMost-DILI-concern,8,3600,weight-based,60 mg/kg/day max x 60 kg,needs-sme-review,oral,3121,NIJJYAXOARWZEE-UHFFFAOYSA-N,CCCC(CCC)C(=O)O,144.21,2.8
-digoxin,Digoxin,vNo-DILI-concern,0,0.5,typical-max,0.125-0.5 mg/day; narrow therapeutic index,needs-sme-review,oral,2724385,LTMHDMANZUZIPE-PUGKRICDSA-N,C[C@@H]1[C@H]([C@H](C[C@@H](O1)O[C@@H]2[C@H](O[C@H](C[C@@H]2O)O[C@@H]3[C@H](O[C@H](C[C@@H]3O)O[C@H]4CC[C@]5([C@@H](C4)CC[C@@H]6[C@@H]5C[C@H]([C@]7([C@@]6(CC[C@@H]7C8=CC(=O)OC8)O)C)O)C)C)C)O)O,780.9,1.3
-loratadine,Loratadine,vNo-DILI-concern,0,10,label-max,10 mg once daily,needs-sme-review,oral,3957,JCCNYMKQOSZNPW-UHFFFAOYSA-N,CCOC(=O)N1CCC(=C2C3=C(CCC4=C2N=CC=C4)C=C(C=C3)Cl)CC1,382.9,5.2
+drug_name,dilirank_compound,dili_concern,dili_severity_class,max_daily_dose_mg,dose_basis,dose_note,dose_review_status,route,pubchem_cid,inchikey,smiles,mol_weight,pubchem_xlogp3,paper_logp,paper_ro2_test
+orlistat,orlistat,Most-DILI-Concern,,360,chen-2013,,published,oral,3034010,AHLBNYSZXLDEJQ-FWEHEUNISA-N,CCCCCCCCCCC[C@@H](C[C@H]1[C@@H](C(=O)O1)CCCCCC)OC(=O)[C@H](CC(C)C)NC=O,495.7,10,8.3,Positive
+tipranavir,tipranavir,Most-DILI-Concern,,1000,chen-2013,,published,oral,54682461,SUJUHGSWHZTSEU-FYBSXPHGSA-N,CCC[C@]1(CC(=C(C(=O)O1)[C@H](CC)C2=CC(=CC=C2)NS(=O)(=O)C3=NC=C(C=C3)C(F)(F)F)O)CCC4=CC=CC=C4,602.7,7,7.4,Positive
+amiodarone,amiodarone,Most-DILI-Concern,,200,chen-2013,,published,oral,2157,IYIKLHRQXLHMJQ-UHFFFAOYSA-N,CCCCC1=C(C2=CC=CC=C2O1)C(=O)C3=CC(=C(C(=C3)I)OCCN(CC)CC)I,645.3,7.6,7.2,Positive
+perhexiline,perhexiline,Most-DILI-Concern,,400,chen-2013,,published,oral,4746,CYXKNKQEMFBLER-UHFFFAOYSA-N,C1CCC(CC1)C(CC2CCCCN2)C3CCCCC3,277.5,6.8,5.7,Positive
+troglitazone,troglitazone,Most-DILI-Concern,,400,chen-2013,,published,oral,5591,GXPHKUHSUJUWKP-UHFFFAOYSA-N,CC1=C(C2=C(CCC(O2)(C)COC3=CC=C(C=C3)CC4C(=O)NC(=O)S4)C(=C1O)C)C,441.5,5.1,5.7,Positive
+suloctidil,suloctidil,Most-DILI-Concern,,500,chen-2013,,published,oral,6604413,BFCDFTHTSVTWOG-PXNSSMCTSA-N,CCCCCCCCN[C@@H](C)[C@@H](C1=CC=C(C=C1)SC(C)C)O,337.6,5.8,5.7,Positive
+benzbromarone,benzbromarone,Most-DILI-Concern,,100,chen-2013,,published,oral,2333,WHQCHUCQKNIQEC-UHFFFAOYSA-N,CCC1=C(C2=CC=CC=C2O1)C(=O)C3=CC(=C(C(=C3)Br)O)Br,424.1,5.7,5.6,Positive
+disulfiram,disulfiram,Most-DILI-Concern,,200,chen-2013,,published,oral,3117,AUZONCFQVSMFAP-UHFFFAOYSA-N,CCN(CC)C(=S)SSC(=S)N(CC)CC,296.5,3.9,5.6,Positive
+verapamil,verapamil,Most-DILI-Concern,,240,chen-2013,,published,oral,2520,SGTNSNPWRIOYBX-UHFFFAOYSA-N,CC(C)C(CCCN(C)CCC1=CC(=C(C=C1)OC)OC)(C#N)C2=CC(=C(C=C2)OC)OC,454.6,3.8,5.5,Positive
+alpidem,alpidem,Most-DILI-Concern,,150,chen-2013,,published,oral,54897,JRTIDHTUMYMPRU-UHFFFAOYSA-N,CCCN(CCC)C(=O)CC1=C(N=C2N1C=C(C=C2)Cl)C3=CC=C(C=C3)Cl,404.3,4.8,5.5,Positive
+lapatinib,lapatinib,Most-DILI-Concern,,1800,chen-2013,,published,oral,208908,BCFGMOOMADDAQU-UHFFFAOYSA-N,CS(=O)(=O)CCNCC1=CC=C(O1)C2=CC3=C(C=C2)N=CN=C3NC4=CC(=C(C=C4)OCC5=CC(=CC=C5)F)Cl,581.1,5.1,5.4,Positive
+terbinafine,terbinafine,Most-DILI-Concern,,250,chen-2013,,published,oral,1549008,DOMXUEMWDBAQBQ-WEVVVXLNSA-N,CC(C)(C)C#C/C=C/CN(C)CC1=CC=CC2=CC=CC=C21,291.4,5.6,5.3,Positive
+benziodarone,benziodarone,Most-DILI-Concern,,250,chen-2013,,published,oral,6237,CZCHIEJNWPNBDE-UHFFFAOYSA-N,CCC1=C(C2=CC=CC=C2O1)C(=O)C3=CC(=C(C(=C3)I)O)I,518.08,5.6,5.3,Positive
+cyclofenil,cyclofenil,Most-DILI-Concern,,140,chen-2013,,published,oral,2898,GVOUFPWUYJWQSK-UHFFFAOYSA-N,CC(=O)OC1=CC=C(C=C1)C(=C2CCCCC2)C3=CC=C(C=C3)OC(=O)C,364.4,5.5,5.2,Positive
+ritonavir,ritonavir,Most-DILI-Concern,,1200,chen-2013,,published,oral,392622,NCDNCNXCDXHOMX-XGKFQTDJSA-N,CC(C)C1=NC(=CS1)CN(C)C(=O)N[C@@H](C(C)C)C(=O)N[C@@H](CC2=CC=CC=C2)C[C@@H]([C@H](CC3=CC=CC=C3)NC(=O)OCC4=CN=CS4)O,720.9,6,5.0,Positive
+danazol,danazol,Most-DILI-Concern,,600,chen-2013,,published,oral,28417,POZRVZJJTULAOH-LHZXLZLDSA-N,C[C@]12CC[C@H]3[C@H]([C@@H]1CC[C@]2(C#C)O)CCC4=CC5=C(C[C@]34C)C=NO5,337.5,3.8,4.9,Positive
+mepazine,mepazine,Most-DILI-Concern,,100,chen-2013,,published,oral,6075,CBHCDHNUZWWAPP-UHFFFAOYSA-N,CN1CCCC(C1)CN2C3=CC=CC=C3SC4=CC=CC=C42,310.5,5.6,4.6,Positive
+nefazodone,nefazodone,Most-DILI-Concern,,400,chen-2013,,published,oral,4449,VRBKIVRKKCLPHA-UHFFFAOYSA-N,CCC1=NN(C(=O)N1CCOC2=CC=CC=C2)CCCN3CCN(CC3)C4=CC(=CC=C4)Cl,470.0,4.3,4.4,Positive
+lumiracoxib,lumiracoxib,Most-DILI-Concern,,100,chen-2013,,published,oral,151166,KHPKQFYUPIUARC-UHFFFAOYSA-N,CC1=CC(=C(C=C1)NC2=C(C=CC=C2Cl)F)CC(=O)O,293.72,4.2,4.4,Positive
+diclofenac,diclofenac,Most-DILI-Concern,,100,chen-2013,,published,oral,3033,DCOPUUMXTXDBNB-UHFFFAOYSA-N,C1=CC=C(C(=C1)CC(=O)O)NC2=C(C=CC=C2Cl)Cl,296.1,4.4,4.4,Positive
+benzarone,benzarone,Most-DILI-Concern,,100,chen-2013,,published,oral,255968,RFRXIWQYSOIBDI-UHFFFAOYSA-N,CCC1=C(C2=CC=CC=C2O1)C(=O)C3=CC=C(C=C3)O,266.29,4.3,4.1,Positive
+benoxaprofen,benoxaprofen,Most-DILI-Concern,,600,chen-2013,,published,oral,39941,MITFXPHMIHQXPI-UHFFFAOYSA-N,CC(C1=CC2=C(C=C1)OC(=N2)C3=CC=C(C=C3)Cl)C(=O)O,301.72,4.1,4.1,Positive
+clometacin,clometacin,Most-DILI-Concern,,450,chen-2013,,published,oral,33176,DGMZLCLHHVYDIS-UHFFFAOYSA-N,CC1=C(C2=C(N1CC(=O)O)C=C(C=C2)OC)C(=O)C3=CC=C(C=C3)Cl,357.8,4,4.0,Positive
+tolrestat,tolrestat,Most-DILI-Concern,,200,chen-2013,,published,oral,53359,LUBHDINQXIHVLS-UHFFFAOYSA-N,CN(CC(=O)O)C(=S)C1=CC=CC2=C1C=CC(=C2C(F)(F)F)OC,357.3,3.7,4.0,Positive
+ticrynafen,ticrynafen,Most-DILI-Concern,,500,chen-2013,,published,oral,38409,AGHANLSBXUWXTB-UHFFFAOYSA-N,C1=CSC(=C1)C(=O)C2=C(C(=C(C=C2)OCC(=O)O)Cl)Cl,331.2,4.1,4.0,Positive
+bosentan,bosentan,Most-DILI-Concern,,250,chen-2013,,published,oral,104865,GJPICJJJRGTNOD-UHFFFAOYSA-N,CC(C)(C)C1=CC=C(C=C1)S(=O)(=O)NC2=C(C(=NC(=N2)C3=NC=CC=N3)OCCO)OC4=CC=CC=C4OC,551.6,3.8,3.9,Positive
+maraviroc,maraviroc,Most-DILI-Concern,,600,chen-2013,,published,oral,3002977,GSNHKUDZZFZSJB-HLMSNRGBSA-N,CC1=NN=C(N1C2C[C@H]3CC[C@@H](C2)N3CC[C@@H](C4=CC=CC=C4)NC(=O)C5CCC(CC5)(F)F)C(C)C,513.7,5.1,3.9,Positive
+ticlopidine,ticlopidine,Most-DILI-Concern,,500,chen-2013,,published,oral,5472,PHWBOXQYWZNQIN-UHFFFAOYSA-N,C1CN(CC2=C1SC=C2)CC3=CC=CC=C3Cl,263.8,3.6,3.9,Positive
+etodolac,etodolac,Most-DILI-Concern,,400,chen-2013,,published,oral,3308,NNYBQONXHNTVIJ-UHFFFAOYSA-N,CCC1=C2C(=CC=C1)C3=C(N2)C(OCC3)(CC)CC(=O)O,287.35,2.8,3.7,Positive
+sulindac,sulindac,Most-DILI-Concern,,400,chen-2013,,published,oral,1548887,MLKXDPUZXIRXEP-MFOYZWKCSA-N,CC\1=C(C2=C(/C1=C\C3=CC=C(C=C3)S(=O)C)C=CC(=C2)F)CC(=O)O,356.4,3.4,3.6,Positive
+ketoconazole,ketoconazole,Most-DILI-Concern,,200,chen-2013,,published,oral,47576,XMAYWYJOQHXEEK-ZEQKJWHPSA-N,CC(=O)N1CCN(CC1)C2=CC=C(C=C2)OC[C@@H]3CO[C@@](O3)(CN4C=CN=C4)C5=C(C=C(C=C5)Cl)Cl,531.4,4.3,3.6,Positive
+cinchophen,cinchophen,Most-DILI-Concern,,1000,chen-2013,,published,oral,8593,YTRMTPPVNRALON-UHFFFAOYSA-N,C1=CC=C(C=C1)C2=NC3=CC=CC=C3C(=C2)C(=O)O,249.26,3.4,3.6,Positive
+fenoprofen,fenoprofen,Most-DILI-Concern,,1200,chen-2013,,published,oral,3342,RDJGLLICXDHJDY-UHFFFAOYSA-N,CC(C1=CC(=CC=C1)OC2=CC=CC=C2)C(=O)O,242.27,3.3,3.5,Positive
+zimeldine,zimeldine,Most-DILI-Concern,,200,chen-2013,,published,oral,5365247,OYPPVKRFBIWMSX-SXGWCWSVSA-N,CN(C)C/C=C(/C1=CC=C(C=C1)Br)\C2=CN=CC=C2,317.22,3.9,3.4,Positive
+bendazac,bendazac,Most-DILI-Concern,,500,chen-2013,,published,oral,2313,BYFMCKSPFYVMOU-UHFFFAOYSA-N,C1=CC=C(C=C1)CN2C3=CC=CC=C3C(=N2)OCC(=O)O,282.29,3.1,3.3,Positive
+ibufenac,ibufenac,Most-DILI-Concern,,2400,chen-2013,,published,oral,15250,CYWFCPPBTWOZSF-UHFFFAOYSA-N,CC(C)CC1=CC=C(C=C1)CC(=O)O,192.25,3.1,3.1,Positive
+oxymetholone,oxymetholone,Most-DILI-Concern,,250,chen-2013,,published,oral,5281034,ICMWWNHDUZJFDW-DHODBPELSA-N,C[C@]12CC[C@H]3[C@H]([C@@H]1CC[C@]2(C)O)CC[C@@H]4[C@@]3(C/C(=C/O)/C(=O)C4)C,332.5,4.4,3.1,Positive
+tolcapone,tolcapone,Most-DILI-Concern,,450,chen-2013,,published,oral,4659569,MIQPIUSUKVNLNT-UHFFFAOYSA-N,CC1=CC=C(C=C1)C(=O)C2=CC(=C(C(=C2)O)O)[N+](=O)[O-],273.24,3.3,3.1,Positive
+indinavir,indinavir,Most-DILI-Concern,,2400,chen-2013,,published,oral,5362440,CBVCZFGXHXORBI-PXQQMZJSSA-N,CC(C)(C)NC(=O)[C@@H]1CN(CCN1C[C@H](C[C@@H](CC2=CC=CC=C2)C(=O)N[C@@H]3[C@@H](CC4=CC=CC=C34)O)O)CC5=CN=CC=C5,613.8,2.8,3.1,Positive
+pirprofen,pirprofen,Most-DILI-Concern,,800,chen-2013,,published,oral,35935,PIDSZXPFGCURGN-UHFFFAOYSA-N,CC(C1=CC(=C(C=C1)N2CC=CC2)Cl)C(=O)O,251.71,2.9,3.1,Positive
+fipexide,fipexide,Most-DILI-Concern,,600,chen-2013,,published,oral,3351,BFUJHVVEMMWLHC-UHFFFAOYSA-N,C1CN(CCN1CC2=CC3=C(C=C2)OCO3)C(=O)COC4=CC=C(C=C4)Cl,388.8,3.2,3.1,Positive
+tasosartan,tasosartan,Most-DILI-Concern,,100,chen-2013,,published,oral,60919,ADXGNEYLLLSOAR-UHFFFAOYSA-N,CC1=C2CCC(=O)N(C2=NC(=N1)C)CC3=CC=C(C=C3)C4=CC=CC=C4C5=NNN=N5,411.5,3,3.1,Positive
+glafenine,glafenine,Most-DILI-Concern,,800,chen-2013,,published,oral,3474,GWOFUCIGLDBNKM-UHFFFAOYSA-N,C1=CC=C(C(=C1)C(=O)OCC(CO)O)NC2=C3C=CC(=CC3=NC=C2)Cl,372.8,3.5,3.0,Positive
+tilbroquinol,tilbroquinol,Most-DILI-Concern,,3500,chen-2013,,published,oral,65592,JMOVFFLYGIQXMM-UHFFFAOYSA-N,CC1=CC(=C(C2=C1C=CC=N2)O)Br,238.08,3.1,3.0,Positive
+flavoxate,flavoxate,No-DILI-Concern,,800,chen-2013,,published,oral,3354,SPIUTQOUKAMGCX-UHFFFAOYSA-N,CC1=C(OC2=C(C1=O)C=CC=C2C(=O)OCCN3CCCCC3)C4=CC=CC=C4,391.5,4.3,4.5,Positive
+diphenhydramine,diphenhydramine,No-DILI-Concern,,200,chen-2013,,published,oral,3100,ZZVUWRFHKOJYTH-UHFFFAOYSA-N,CN(C)CCOC(C1=CC=CC=C1)C2=CC=CC=C2,255.35,3.3,3.4,Positive
+fenclozic acid,fenclozic acid,Most-DILI-Concern,,200,chen-2013,,published,oral,28858,APBSKHYXXKHJFK-UHFFFAOYSA-N,C1=CC(=CC=C1C2=NC(=CS2)CC(=O)O)Cl,253.71,2.7,3.0,Negative
+flutamide,flutamide,Most-DILI-Concern,,750,chen-2013,,published,oral,3397,MKXKFYHWDHIYRV-UHFFFAOYSA-N,CC(C)C(=O)NC1=CC(=C(C=C1)[N+](=O)[O-])C(F)(F)F,276.21,3.3,2.9,Negative
+tacrine,tacrine,Most-DILI-Concern,,120,chen-2013,,published,oral,1935,YLJREFDVOIBQDA-UHFFFAOYSA-N,C1CCC2=NC3=CC=CC=C3C(=C2C1)N,198.26,2.7,2.8,Negative
+alclofenac,alclofenac,Most-DILI-Concern,,1250,chen-2013,,published,oral,30951,ARHWPKZXBHOEEE-UHFFFAOYSA-N,C=CCOC1=C(C=C(C=C1)CC(=O)O)Cl,226.65,2.5,2.8,Negative
+valproic acid,valproic acid,Most-DILI-Concern,,1500,chen-2013,,published,oral,3121,NIJJYAXOARWZEE-UHFFFAOYSA-N,CCCC(CCC)C(=O)O,144.21,2.8,2.7,Negative
+deferasirox,deferasirox,Most-DILI-Concern,,1500,chen-2013,,published,oral,214348,BOFQWVMAQOTZIW-UHFFFAOYSA-N,C1=CC=C(C(=C1)C2=NN(C(=N2)C3=CC=CC=C3O)C4=CC=C(C=C4)C(=O)O)O,373.4,3.8,2.7,Negative
+carbamazepine,carbamazepine,Most-DILI-Concern,,1000,chen-2013,,published,oral,2554,FFGPTBGBLSHEPO-UHFFFAOYSA-N,C1=CC=C2C(=C1)C=CC3=CC=CC=C3N2C(=O)N,236.27,2.5,2.7,Negative
+nomifensine,nomifensine,Most-DILI-Concern,,150,chen-2013,,published,oral,4528,XXPANQJNYNUNES-UHFFFAOYSA-N,CN1CC(C2=C(C1)C(=CC=C2)N)C3=CC=CC=C3,238.33,2.6,2.6,Negative
+pazopanib,pazopanib,Most-DILI-Concern,,2000,chen-2013,,published,oral,10113978,CUIHSIWYWATEQL-UHFFFAOYSA-N,CC1=C(C=C(C=C1)NC2=NC=CC(=N2)N(C)C3=CC4=NN(C(=C4C=C3)C)C)S(=O)(=O)N,437.5,3.1,2.5,Negative
+niperotidine,niperotidine,Most-DILI-Concern,,460,chen-2013,,published,oral,66753191,HXRSXEDVVARPHP-UHFFFAOYSA-N,CN(C)CC1=CC=C(O1)CSCCNC(=C[N+](=O)[O-])NCC2=CC3=C(C=C2)OCO3,434.5,2.9,2.4,Negative
+labetalol,labetalol,Most-DILI-Concern,,600,chen-2013,,published,oral,3869,SGUAFYQXFOLMHL-UHFFFAOYSA-N,CC(CCC1=CC=CC=C1)NCC(C2=CC(=C(C=C2)O)C(=O)N)O,328.4,3.1,2.4,Negative
+nimesulide,nimesulide,Most-DILI-Concern,,200,chen-2013,,published,oral,4495,HYWYRSMBCFDLJT-UHFFFAOYSA-N,CS(=O)(=O)NC1=C(C=C(C=C1)[N+](=O)[O-])OC2=CC=CC=C2,308.31,2.6,2.2,Negative
+bicalutamide,bicalutamide,Most-DILI-Concern,,50,chen-2013,,published,oral,2375,LKJPYSCBVHEWIU-UHFFFAOYSA-N,CC(CS(=O)(=O)C1=CC=C(C=C1)F)(C(=O)NC2=CC(=C(C=C2)C#N)C(F)(F)F)O,430.4,2.3,2.9,Negative
+bromfenac,bromfenac,Most-DILI-Concern,,50,chen-2013,,published,oral,60726,ZBPLOVFIXSTCRZ-UHFFFAOYSA-N,C1=CC(=C(C(=C1)C(=O)C2=CC=C(C=C2)Br)N)CC(=O)O,334.16,3.3,2.9,Negative
+busulfan,busulfan,Most-DILI-Concern,,2,chen-2013,,published,oral,2478,COVZYZSDYWQREU-UHFFFAOYSA-N,CS(=O)(=O)OCCCCOS(=O)(=O)C,246.3,-0.5,-0.3,Negative
+carbidopa,carbidopa,Most-DILI-Concern,,70,chen-2013,,published,oral,34359,TZFNLOMSOLWIDK-JTQLQIEISA-N,C[C@](CC1=CC(=C(C=C1)O)O)(C(=O)O)NN,226.23,-2.2,0.4,Negative
+zileuton,zileuton,Most-DILI-Concern,,1200,chen-2013,,published,oral,60490,MWLSOWXNZPKENC-UHFFFAOYSA-N,CC(C1=CC2=CC=CC=C2S1)N(C(=O)N)O,236.29,1.6,2.2,Negative
+nitrefazole,nitrefazole,Most-DILI-Concern,,1600,chen-2013,,published,oral,71900,NMTBSNPBIGRZBL-UHFFFAOYSA-N,CC1=NC(=CN1C2=CC=C(C=C2)[N+](=O)[O-])[N+](=O)[O-],248.19,2.1,2.1,Negative
+chlorzoxazone,chlorzoxazone,Most-DILI-Concern,,1500,chen-2013,,published,oral,2733,TZFWDZFKRBELIQ-UHFFFAOYSA-N,C1=CC2=C(C=C1Cl)NC(=O)O2,169.56,1.8,2.0,Negative
+erythromycin,erythromycin,Most-DILI-Concern,,1000,chen-2013,,published,oral,12560,ULGZDMOVFRHVEP-RWJQBGPGSA-N,CC[C@@H]1[C@@]([C@@H]([C@H](C(=O)[C@@H](C[C@@]([C@@H]([C@H]([C@@H]([C@H](C(=O)O1)C)O[C@H]2C[C@@]([C@H]([C@@H](O2)C)O)(C)OC)C)O[C@H]3[C@@H]([C@H](C[C@H](O3)C)N(C)C)O)(C)O)C)C)O)(C)O,733.9,2.7,1.8,Negative
+dantrolene,dantrolene,Most-DILI-Concern,,100,chen-2013,,published,oral,6914273,OZOMQRBLCMDCEG-VIZOYTHASA-N,C1C(=O)NC(=O)N1/N=C/C2=CC=C(O2)C3=CC=C(C=C3)[N+](=O)[O-],314.25,1.7,1.8,Negative
+droxicam,droxicam,Most-DILI-Concern,,40,chen-2013,,published,oral,65679,OEHFRZLKGRKFAS-UHFFFAOYSA-N,CN1C2=C(C3=CC=CC=C3S1(=O)=O)OC(=O)N(C2=O)C4=CC=CC=N4,357.3,1.2,1.1,Negative
+exifone,exifone,Most-DILI-Concern,,1200,chen-2013,,published,oral,40399,XEDWWPGWIXPVRQ-UHFFFAOYSA-N,C1=CC(=C(C(=C1C(=O)C2=CC(=C(C(=C2)O)O)O)O)O)O,278.21,1.7,1.8,Negative
+eltrombopag,eltrombopag,Most-DILI-Concern,,50,chen-2013,,published,oral,135449332,SVOQIEJWJCQGDQ-UHFFFAOYSA-N,CC1=C(C=C(C=C1)N2C(=O)C(=C(N2)C)N=NC3=CC=CC(=C3O)C4=CC(=CC=C4)C(=O)O)C,442.5,5.4,-1.9,Negative
+nevirapine,nevirapine,Most-DILI-Concern,,400,chen-2013,,published,oral,4463,NQDJXKOVJZTUJA-UHFFFAOYSA-N,CC1=C2C(=NC=C1)N(C3=C(C=CC=N3)C(=O)N2)C4CC4,266.30,2,1.7,Negative
+propylthiouracil,propylthiouracil,Most-DILI-Concern,,100,chen-2013,,published,oral,657298,KNAHARQHSZJURB-UHFFFAOYSA-N,CCCC1=CC(=O)NC(=S)N1,170.23,0.8,1.6,Negative
+chlormezanone,chlormezanone,Most-DILI-Concern,,600,chen-2013,,published,oral,2717,WEQAYVWKMWHEJO-UHFFFAOYSA-N,CN1C(S(=O)(=O)CCC1=O)C2=CC=C(C=C2)Cl,273.74,1.1,1.6,Negative
+rifampin,rifampin,Most-DILI-Concern,,600,chen-2013,,published,oral,135398735,JQXXHWHPUNPDRT-WLSIYKJHSA-N,C[C@H]1/C=C/C=C(\C(=O)NC2=C(C(=C3C(=C2O)C(=C(C4=C3C(=O)[C@](O4)(O/C=C/[C@@H]([C@H]([C@H]([C@@H]([C@@H]([C@@H]([C@H]1O)C)O)C)OC(=O)C)C)OC)C)C)O)O)/C=N/N5CCN(CC5)C)/C,822.9,4.9,1.4,Negative
+ebrotidine,ebrotidine,Most-DILI-Concern,,800,chen-2013,,published,oral,65869,ZQHFZHPUZXNPMF-UHFFFAOYSA-N,C1=CC(=CC=C1S(=O)(=O)NC=NCCSCC2=CSC(=N2)N=C(N)N)Br,477.4,1.5,1.2,Negative
+amineptine,amineptine,Most-DILI-Concern,,200,chen-2013,,published,oral,34870,ONNOFKFOZAJDHT-UHFFFAOYSA-N,C1CC2=CC=CC=C2C(C3=CC=CC=C31)NCCCCCCC(=O)O,337.5,2.1,1.1,Negative
+iproniazid,iproniazid,Most-DILI-Concern,,10,chen-2013,,published,oral,3748,NYMGNSNKLVNMIA-UHFFFAOYSA-N,CC(C)NNC(=O)C1=CC=NC=C1,179.22,0.4,0.1,Negative
+isocarboxazid,isocarboxazid,Most-DILI-Concern,,15,chen-2013,,published,oral,3759,XKFPYPQQHFEXRZ-UHFFFAOYSA-N,CC1=CC(=NO1)C(=O)NNCC2=CC=CC=C2,231.25,1.5,1.2,Negative
+leflunomide,leflunomide,Most-DILI-Concern,,20,chen-2013,,published,oral,3899,VHOGYURTWQBHIL-UHFFFAOYSA-N,CC1=C(C=NO1)C(=O)NC2=CC=C(C=C2)C(F)(F)F,270.21,2.5,2.2,Negative
+mebanazine,mebanazine,Most-DILI-Concern,,15,chen-2013,,published,oral,6179,HHRZAEJMHSGZNP-UHFFFAOYSA-N,CC(C1=CC=CC=C1)NN,136.19,0.9,1.0,Negative
+methimazole,methimazole,Most-DILI-Concern,,10,chen-2013,,published,oral,1349907,PMRYVIKBURPHAH-UHFFFAOYSA-N,CN1C=CNC1=S,114.17,-0.3,0.4,Negative
+methotrexate,methotrexate,Most-DILI-Concern,,2.5,chen-2013,,published,oral,126941,FBOZXECLQNJBKD-ZDUSSCGKSA-N,CN(CC1=CN=C2C(=N1)C(=NC(=N2)N)N)C3=CC=C(C=C3)C(=O)N[C@@H](CCC(=O)O)C(=O)O,454.4,-1.8,0.1,Negative
+felbamate,felbamate,Most-DILI-Concern,,2400,chen-2013,,published,oral,3331,WKGXYQFOCVYPAC-UHFFFAOYSA-N,C1=CC=C(C=C1)C(COC(=O)N)COC(=O)N,238.24,0.6,1.0,Negative
+abacavir,abacavir,Most-DILI-Concern,,600,chen-2013,,published,oral,441300,MCGSCOLBFJQGHM-SCZZXKLOSA-N,C1CC1NC2=C3C(=NC(=N2)N)N(C=N3)[C@@H]4C[C@@H](C=C4)CO,286.33,0.9,0.8,Negative
+naltrexone,naltrexone,Most-DILI-Concern,,50,chen-2013,,published,oral,5360515,DQCKKXVULJGBQN-XFWGSAIBSA-N,C1CC1CN2CC[C@]34[C@@H]5C(=O)CC[C@]3([C@H]2CC6=C4C(=C(C=C6)O)O5)O,341.4,1.9,1.7,Negative
+fluconazole,fluconazole,Most-DILI-Concern,,200,chen-2013,,published,oral,3365,RFHAOTPXVQNOHP-UHFFFAOYSA-N,C1=CC(=C(C=C1F)F)C(CN2C=NC=N2)(CN3C=NC=N3)O,306.27,0.4,0.8,Negative
+sulfamethoxazole,sulfamethoxazole,Most-DILI-Concern,,2000,chen-2013,,published,oral,5329,JLKIGFTWXXRPMT-UHFFFAOYSA-N,CC1=CC(=NO1)NS(=O)(=O)C2=CC=C(C=C2)N,253.28,0.9,0.7,Negative
+isaxonine,isaxonine,Most-DILI-Concern,,2450,chen-2013,,published,oral,71169,FTCYIGBVOHNHCD-UHFFFAOYSA-N,CC(C)NC1=NC=CC=N1,137.18,1.3,0.6,Negative
+aminosalicylic acid,aminosalicylic acid,Most-DILI-Concern,,12000,chen-2013,,published,oral,4649,WUBBRNOQWQTFEX-UHFFFAOYSA-N,C1=CC(=C(C=C1N)O)C(=O)O,153.14,1.3,0.5,Negative
+mercaptopurine,mercaptopurine,Most-DILI-Concern,,200,chen-2013,,published,oral,667490,GLVAUDGFNGKCSF-UHFFFAOYSA-N,C1=NC2=C(N1)C(=S)N=CN2,152.18,0,0.4,Negative
+niacin,niacin,Most-DILI-Concern,,2000,chen-2013,,published,oral,938,PVNIIMVLHYAWGP-UHFFFAOYSA-N,C1=CC(=CN=C1)C(=O)O,123.11,0.4,0.3,Negative
+nialamide,nialamide,Most-DILI-Concern,,100,chen-2013,,published,oral,4472,NOIIUHRQUVNIDD-UHFFFAOYSA-N,C1=CC=C(C=C1)CNC(=O)CCNNC(=O)C2=CC=NC=C2,298.34,0.9,0.3,Negative
+acitretin,acitretin,Most-DILI-Concern,,35,chen-2013,,published,oral,5284513,IHUNBGSDBOWDMA-AQFIFDHZSA-N,CC1=CC(=C(C(=C1/C=C/C(=C/C=C/C(=C/C(=O)O)/C)/C)C)C)OC,326.4,6.1,5.7,Negative
+ambrisentan,ambrisentan,Most-DILI-Concern,,7.5,chen-2013,,published,oral,6918493,OUJTZYPIHDYQMC-LJQANCHMSA-N,CC1=CC(=NC(=N1)O[C@H](C(=O)O)C(C2=CC=CC=C2)(C3=CC=CC=C3)OC)C,378.4,3.8,3.7,Negative
+ethambutol,ethambutol,Most-DILI-Concern,,1200,chen-2013,,published,oral,14052,AEUTYOVWOVBAKS-UWVGGRQHSA-N,CC[C@@H](CO)NCCN[C@@H](CC)CO,204.31,-0.1,0.1,Negative
+clomacran,clomacran,Most-DILI-Concern,,25,chen-2013,,published,oral,21382,JFRLWWDJCFYFSU-UHFFFAOYSA-N,CN(C)CCCC1C2=CC=CC=C2NC3=C1C=C(C=C3)Cl,300.8,4.6,4.8,Negative
+nitrofurantoin,nitrofurantoin,Most-DILI-Concern,,200,chen-2013,,published,oral,6604200,NXFQHRVNIOXGAQ-YCRREMRBSA-N,C1C(=O)NC(=O)N1/N=C/C2=CC=C(O2)[N+](=O)[O-],238.16,-0.5,0.1,Negative
+zidovudine,zidovudine,Most-DILI-Concern,,600,chen-2013,,published,oral,35370,HBOMLICNUCNMMY-XLPZGREQSA-N,CC1=CN(C(=O)NC1=O)[C@H]2C[C@@H]([C@H](O2)CO)N=[N+]=[N-],267.24,0,0.1,Negative
+pemoline,pemoline,Most-DILI-Concern,,40,chen-2013,,published,oral,4723,NRNCYVBFPDDJNE-UHFFFAOYSA-N,C1=CC=C(C=C1)C2C(=O)N=C(O2)N,176.17,0.9,1.3,Negative
+nortriptyline,nortriptyline,Most-DILI-Concern,,75,chen-2013,,published,oral,4543,PHVGLTMQBUFIQQ-UHFFFAOYSA-N,CNCCC=C1C2=CC=CC=C2CCC3=CC=CC=C31,263.4,4.5,4.2,Negative
+oxandrolone,oxandrolone,Most-DILI-Concern,,20,chen-2013,,published,oral,5878,QSLJIVKCVHQPLV-PEMPUTJUSA-N,C[C@]12CC[C@H]3[C@H]([C@@H]1CC[C@]2(C)O)CC[C@@H]4[C@@]3(COC(=O)C4)C,306.4,3.7,3.1,Negative
+lamivudine,lamivudine,Most-DILI-Concern,,300,chen-2013,,published,oral,60825,JTEGQNOMFQHVDC-NKWVEPMBSA-N,C1[C@H](O[C@H](S1)CO)N2C=CC(=NC2=O)N,229.26,-0.9,-0.6,Negative
+oxyphenisatine,oxyphenisatine,Most-DILI-Concern,,10,chen-2013,,published,oral,31315,SJDACOMXKWHBOW-UHFFFAOYSA-N,C1=CC=C2C(=C1)C(C(=O)N2)(C3=CC=C(C=C3)O)C4=CC=C(C=C4)O,317.3,3.2,3.3,Negative
+tenofovir,tenofovir,Most-DILI-Concern,,300,chen-2013,,published,oral,464205,SGOIRFVFHAKUTI-ZCFIWIBFSA-N,C[C@H](CN1C=NC2=C(N=CN=C21)N)OCP(=O)(O)O,287.21,-1.6,-0.8,Negative
+stavudine,stavudine,Most-DILI-Concern,,80,chen-2013,,published,oral,18283,XNKLLVCARDGLGL-JGVFFNPUSA-N,CC1=CN(C(=O)NC1=O)[C@H]2C=C[C@H](O2)CO,224.21,-0.8,-0.5,Negative
+isoniazid,isoniazid,Most-DILI-Concern,,300,chen-2013,,published,oral,3767,QRXWMOHMRWLFEY-UHFFFAOYSA-N,C1=CN=CC=C1C(=O)NN,137.14,-0.7,-0.8,Negative
+didanosine,didanosine,Most-DILI-Concern,,400,chen-2013,,published,oral,135398739,BXZVVICBKDXVGW-NKWVEPMBSA-N,C1C[C@@H](O[C@@H]1CO)N2C=NC3=C2N=CNC3=O,236.23,-1.2,-0.8,Negative
+sunitinib,sunitinib,Most-DILI-Concern,,50,chen-2013,,published,oral,5329102,WINHZLLDWRZWRT-ATVHPVEESA-N,CCN(CC)CCNC(=O)C1=C(NC(=C1C)/C=C\2/C3=C(C=CC(=C3)F)NC2=O)C,398.5,2.6,3.0,Negative
+tamoxifen,tamoxifen,Most-DILI-Concern,,20,chen-2013,,published,oral,2733526,NKANXQFJJICGDU-QPLCGJKRSA-N,CC/C(=C(\C1=CC=CC=C1)/C2=CC=C(C=C2)OCCN(C)C)/C3=CC=CC=C3,371.5,7.1,6.3,Negative
+trovafloxacin,trovafloxacin,Most-DILI-Concern,,200,chen-2013,,published,oral,62959,WVPSKSLAZQPAKQ-SOSAQKQKSA-N,C1[C@@H]2[C@@H](C2N)CN1C3=C(C=C4C(=O)C(=CN(C4=N3)C5=C(C=C(C=C5)F)F)C(=O)O)F,416.4,0.3,-0.9,Negative
+hydroxyurea,hydroxyurea,Most-DILI-Concern,,1500,chen-2013,,published,oral,3657,VSNHCAURESNICA-UHFFFAOYSA-N,C(=O)(N)NO,76.055,-1.8,-1.0,Negative
+fialuridine,fialuridine,Most-DILI-Concern,,150,chen-2013,,published,oral,50313,IPVFGAYTKQKGBM-BYPJNBLXSA-N,C1=C(C(=O)NC(=O)N1[C@H]2[C@H]([C@@H]([C@H](O2)CO)O)F)I,372.09,-0.9,-1.2,Negative
+ciprofloxacin,ciprofloxacin,Most-DILI-Concern,,1000,chen-2013,,published,oral,2764,MYSWGUAQZAJSOK-UHFFFAOYSA-N,C1CC1N2C=C(C(=O)C3=CC(=C(C=C32)N4CCNCC4)F)C(=O)O,331.34,-1.1,-1.3,Negative
+ximelagatran,ximelagatran,Most-DILI-Concern,,48,chen-2013,,published,oral,9574101,ZXIBCJHYVWYIKI-PZJWPPBQSA-N,CCOC(=O)CN[C@H](C1CCCCC1)C(=O)N2CC[C@H]2C(=O)NCC3=CC=C(C=C3)/C(=N/O)/N,473.6,2.2,1.2,Negative
+zafirlukast,zafirlukast,Most-DILI-Concern,,40,chen-2013,,published,oral,5717,YEEZWCHGZNKEEK-UHFFFAOYSA-N,CC1=CC=CC=C1S(=O)(=O)NC(=O)C2=CC(=C(C=C2)CC3=CN(C4=C3C=C(C=C4)NC(=O)OC5CCCC5)C)OC,575.7,5.5,6.3,Negative
+zalcitabine,zalcitabine,Most-DILI-Concern,,2.25,chen-2013,,published,oral,24066,WREGKURFCTUGRC-POYBYMJQSA-N,C1C[C@@H](O[C@@H]1CO)N2C=CC(=NC2=O)N,211.22,-1.3,-1.0,Negative
+methyldopa,methyldopa,Most-DILI-Concern,,1000,chen-2013,,published,oral,38853,CJCSPKMFHVPWAR-JTQLQIEISA-N,C[C@](CC1=CC(=C(C=C1)O)O)(C(=O)O)N,211.21,-1.9,-1.8,Negative
+acarbose,acarbose,Most-DILI-Concern,,300,chen-2013,,published,oral,9811704,CEMXHAPUFJOOSV-XGWNLRGSSA-N,C[C@@H]1[C@H]([C@@H]([C@H]([C@H](O1)O[C@@H]2[C@H](O[C@@H]([C@@H]([C@H]2O)O)O[C@H]([C@@H](CO)O)[C@@H]([C@H](C=O)O)O)CO)O)O)N[C@H]3C=C([C@H]([C@@H]([C@H]3O)O)O)CO,645.6,-8.8,-6.8,Negative
+lactulose,lactulose,No-DILI-Concern,,6700,chen-2013,,published,oral,11333,JCQLYHFGKNRPGE-FCVZTGTOSA-N,C([C@@H]1[C@@H]([C@@H]([C@H]([C@@H](O1)O[C@@H]2[C@H](O[C@@]([C@H]2O)(CO)O)CO)O)O)O)O,342.30,-4.3,-4.3,Negative
+betaine,betaine,No-DILI-Concern,,6000,chen-2013,,published,oral,247,KWIUHFFTVRNATP-UHFFFAOYSA-N,C[N+](C)(C)CC(=O)[O-],117.15,0.5,-3.0,Negative
+neomycin,neomycin,No-DILI-Concern,,5000,chen-2013,,published,oral,8378,PGBHMTALBVVCIT-VCIWKGPPSA-N,C1[C@H]([C@@H]([C@H]([C@@H]([C@H]1N)O[C@@H]2[C@@H]([C@H]([C@@H]([C@H](O2)CN)O)O)N)O[C@H]3[C@@H]([C@@H]([C@H](O3)CO)O[C@@H]4[C@@H]([C@H]([C@@H]([C@@H](O4)CN)O)O)N)O)O)N,614.6,-9,-9.0,Negative
+metyrapone,metyrapone,No-DILI-Concern,,3000,chen-2013,,published,oral,4174,FJLBFSROUSIWMA-UHFFFAOYSA-N,CC(C)(C1=CN=CC=C1)C(=O)C2=CN=CC=C2,226.27,2,1.8,Negative
+paromomycin,paromomycin,No-DILI-Concern,,3000,chen-2013,,published,oral,165580,UOZODPSAJZTQNH-LSWIJEOBSA-N,C1[C@H]([C@@H]([C@H]([C@@H]([C@H]1N)O[C@@H]2[C@@H]([C@H]([C@@H]([C@H](O2)CO)O)O)N)O[C@H]3[C@@H]([C@@H]([C@H](O3)CO)O[C@@H]4[C@@H]([C@H]([C@@H]([C@@H](O4)CN)O)O)N)O)O)N,615.6,-8.7,-8.7,Negative
+metronidazole,metronidazole,No-DILI-Concern,,2000,chen-2013,,published,oral,4173,VAOCPAMSLUNLGC-UHFFFAOYSA-N,CC1=NC=C(N1CCO)[N+](=O)[O-],171.15,0,-0.3,Negative
+tranexamic acid,tranexamic acid,No-DILI-Concern,,2000,chen-2013,,published,oral,5526,GYDJEQRTZSCIOI-UHFFFAOYSA-N,C1CC(CCC1CN)C(=O)O,157.21,-2,-1.8,Negative
+vancomycin,vancomycin,No-DILI-Concern,,2000,chen-2013,,published,oral,14969,MYPYJXKWCTUITO-LYRMYLQWSA-N,C[C@H]1[C@H]([C@@](C[C@@H](O1)O[C@@H]2[C@H]([C@@H]([C@H](O[C@H]2OC3=C4C=C5C=C3OC6=C(C=C(C=C6)[C@H]([C@H](C(=O)N[C@H](C(=O)N[C@H]5C(=O)N[C@@H]7C8=CC(=C(C=C8)O)C9=C(C=C(C=C9O)O)[C@H](NC(=O)[C@H]([C@@H](C1=CC(=C(O4)C=C1)Cl)O)NC7=O)C(=O)O)CC(=O)N)NC(=O)[C@@H](CC(C)C)NC)O)Cl)CO)O)O)(C)N)O,1449.2,-2.6,-2.9,Negative
+levocarnitine,levocarnitine,No-DILI-Concern,,2000,chen-2013,,published,oral,10917,PHIQHXFUZVPYII-ZCFIWIBFSA-N,C[N+](C)(C)C[C@@H](CC(=O)[O-])O,161.20,-0.2,-3.3,Negative
+primidone,primidone,No-DILI-Concern,,1250,chen-2013,,published,oral,4909,DQMZLTXERSFNPB-UHFFFAOYSA-N,CCC1(C(=O)NCNC1=O)C2=CC=CC=C2,218.25,0.9,0.9,Negative
+metyrosine,metyrosine,No-DILI-Concern,,1000,chen-2013,,published,oral,441350,NHTGHBARYWONDQ-JTQLQIEISA-N,C[C@](CC1=CC=C(C=C1)O)(C(=O)O)N,195.21,-1.6,-1.5,Negative
+benzonatate,benzonatate,No-DILI-Concern,,600,chen-2013,,published,oral,7699,MAFMQEKGGFWBAB-UHFFFAOYSA-N,CCCCNC1=CC=C(C=C1)C(=O)OCCOCCOCCOCCOCCOCCOCCOCCOCCOC,603.7,2.4,1.6,Negative
+etidronic acid,etidronic acid,No-DILI-Concern,,400,chen-2013,,published,oral,3305,DBVJJBKOTRCVKF-UHFFFAOYSA-N,CC(O)(P(=O)(O)O)P(=O)(O)O,206.03,-3.7,-0.7,Negative
+nystatin,nystatin,No-DILI-Concern,,100,chen-2013,,published,oral,6433272,VQOXZBDYSJBXMA-RKEBNKJGSA-N,C[C@H]1/C=C/C=C/CC/C=C/C=C/C=C/C=C/C(CC2C(C(C[C@](O2)(CC(C(CCC(CC(CC(CC(=O)O[C@H]([C@@H]([C@@H]1O)C)C)O)O)O)O)O)O)O)C(=O)O)O[C@@H]3[C@H]([C@H]([C@@H]([C@H](O3)C)O)N)O,926.1,-0.2,-2.6,Negative
+isoproterenol,isoproterenol,No-DILI-Concern,,90,chen-2013,,published,oral,3779,JWZZKOKVBUJMES-UHFFFAOYSA-N,CC(C)NCC(C1=CC(=C(C=C1)O)O)O,211.26,-0.6,1.1,Negative
+metaproterenol,metaproterenol,No-DILI-Concern,,90,chen-2013,,published,oral,4086,LMOINURANNBYCM-UHFFFAOYSA-N,CC(C)NCC(C1=CC(=CC(=C1)O)O)O,211.26,0.7,1.1,Negative
+hydroxyzine,hydroxyzine,No-DILI-Concern,,75,chen-2013,,published,oral,3658,ZQDWXGKKHFNSQK-UHFFFAOYSA-N,C1CN(CCN1CCOCCO)C(C2=CC=CC=C2)C3=CC=C(C=C3)Cl,374.9,3.7,3.5,Negative
+benzphetamine,benzphetamine,No-DILI-Concern,,50,chen-2013,,published,oral,5311017,YXKTVDFXDRQTKV-HNNXBMFYSA-N,C[C@@H](CC1=CC=CC=C1)N(C)CC2=CC=CC=C2,239.35,4.1,4.2,Negative
+meclizine,meclizine,No-DILI-Concern,,50,chen-2013,,published,oral,4034,OCJYIGYOJCODJL-UHFFFAOYSA-N,CC1=CC(=CC=C1)CN2CCN(CC2)C(C3=CC=CC=C3)C4=CC=C(C=C4)Cl,390.9,5.8,6.2,Negative
+bethanechol,bethanechol,No-DILI-Concern,,45,chen-2013,,published,oral,2370,NZUPCNDJBJXXRF-UHFFFAOYSA-O,CC(C[N+](C)(C)C)OC(=O)N,161.22,0,-1.0,Negative
+penbutolol,penbutolol,No-DILI-Concern,,40,chen-2013,,published,oral,37464,KQXKVJAGOJTNJS-HNNXBMFYSA-N,CC(C)(C)NC[C@@H](COC1=CC=CC=C1C2CCCC2)O,291.4,4.2,3.6,Negative
+phendimetrazine,phendimetrazine,No-DILI-Concern,,35,chen-2013,,published,oral,30487,MFOCDFTXLCYLKU-CMPLNLGQSA-N,C[C@H]1[C@@H](OCCN1C)C2=CC=CC=C2,191.27,1.9,2.0,Negative
+chlorhexidine,chlorhexidine,No-DILI-Concern,,30,chen-2013,,published,oral,9552079,GHXZTYHSJHQHIJ-UHFFFAOYSA-N,C1=CC(=CC=C1N/C(=N/C(=NCCCCCCN=C(/N=C(/NC2=CC=C(C=C2)Cl)\N)N)N)/N)Cl,505.4,0.1,3.1,Negative
+guanethidine,guanethidine,No-DILI-Concern,,30,chen-2013,,published,oral,3518,ACGDKVXYNVEAGU-UHFFFAOYSA-N,C1CCCN(CCC1)CCN=C(N)N,198.31,0.5,1.2,Negative
+phenoxybenzamine,phenoxybenzamine,No-DILI-Concern,,30,chen-2013,,published,oral,4768,QZVCTJOXCFMACW-UHFFFAOYSA-N,CC(COC1=CC=CC=C1)N(CCCl)CC2=CC=CC=C2,303.8,4.4,4.6,Negative
+procyclidine,procyclidine,No-DILI-Concern,,25,chen-2013,,published,oral,4919,WYDUSKDSKCASEF-UHFFFAOYSA-N,C1CCC(CC1)C(CCN2CCCC2)(C3=CC=CC=C3)O,287.4,4.1,4.0,Negative
+minoxidil,minoxidil,No-DILI-Concern,,20,chen-2013,,published,oral,4201,ZIMGGGWCDYVHOY-UHFFFAOYSA-N,C1CCN(CC1)C2=NC(=N)N(C(=C2)N)O,209.25,1.2,0.2,Negative
+carbinoxamine,carbinoxamine,No-DILI-Concern,,16,chen-2013,,published,oral,2564,OJFSXZCBGQGRNV-UHFFFAOYSA-N,CN(C)CCOC(C1=CC=C(C=C1)Cl)C2=CC=CC=N2,290.79,2.9,3.2,Negative
+oxybutynin,oxybutynin,No-DILI-Concern,,15,chen-2013,,published,oral,4634,XIQVNETUBQGFHX-UHFFFAOYSA-N,CCN(CC)CC#CCOC(=O)C(C1CCCCC1)(C2=CC=CC=C2)O,357.5,4.2,4.6,Negative
+phentermine,phentermine,No-DILI-Concern,,15,chen-2013,,published,oral,4771,DHHVAGZRUROJKS-UHFFFAOYSA-N,CC(C)(CC1=CC=CC=C1)N,149.23,1.9,1.8,Negative
+primaquine,primaquine,No-DILI-Concern,,15,chen-2013,,published,oral,4908,INDBQLZJXZLFIT-UHFFFAOYSA-N,CC(CCCN)NC1=C2C(=CC(=C1)OC)C=CC=N2,259.35,2.2,2.0,Negative
+albuterol,albuterol,No-DILI-Concern,,12,chen-2013,,published,oral,2083,NDAUXUAQIAJITI-UHFFFAOYSA-N,CC(C)(C)NCC(C1=CC(=C(C=C1)O)CO)O,239.31,0.3,0.9,Negative
+alendronate,alendronate,No-DILI-Concern,,10,chen-2013,,published,oral,2088,OGSPWJRAVKPPFI-UHFFFAOYSA-N,C(CC(O)(P(=O)(O)O)P(=O)(O)O)CN,249.10,-6.5,-1.2,Negative
+biperiden,biperiden,No-DILI-Concern,,10,chen-2013,,published,oral,2381,YSXKPIUOCJLQIE-UHFFFAOYSA-N,C1CCN(CC1)CCC(C2CC3CC2C=C3)(C4=CC=CC=C4)O,311.5,4.3,3.6,Negative
+phentolamine,phentolamine,No-DILI-Concern,,10,chen-2013,,published,oral,5775,MRBDMNSDAVCSSF-UHFFFAOYSA-N,CC1=CC=C(C=C1)N(CC2=NCCN2)C3=CC(=CC=C3)O,281.35,2.6,3.0,Negative
+dihydroergotamine,dihydroergotamine,No-DILI-Concern,,4,chen-2013,,published,oral,10531,LUZRJRNZXALNLM-JGRZULCMSA-N,C[C@@]1(C(=O)N2[C@H](C(=O)N3CCC[C@H]3[C@@]2(O1)O)CC4=CC=CC=C4)NC(=O)[C@@H]5C[C@H]6[C@@H](CC7=CNC8=CC=CC6=C78)N(C5)C,583.7,2.4,3.2,Negative
+methysergide,methysergide,No-DILI-Concern,,4,chen-2013,,published,oral,9681,KPJZHOPZRAFDTN-ZRGWGRIASA-N,CC[C@@H](CO)NC(=O)[C@H]1CN([C@@H]2CC3=CN(C4=CC=CC(=C34)C2=C1)C)C,353.5,2.3,2.3,Negative
+benztropine,benztropine,No-DILI-Concern,,2,chen-2013,,published,oral,1201549,GIJXKZJWITVLHI-YOFSQIOKSA-N,CN1[C@@H]2CC[C@H]1CC(C2)OC(C3=CC=CC=C3)C4=CC=CC=C4,307.4,4.5,3.9,Negative
+clemastine,clemastine,No-DILI-Concern,,2,chen-2013,,published,oral,26987,YNNUSGIPVFPVBX-NHCUHLMSSA-N,C[C@@](C1=CC=CC=C1)(C2=CC=C(C=C2)Cl)OCC[C@H]3CCCN3C,343.9,5,4.8,Negative
+ergocalciferol,ergocalciferol,No-DILI-Concern,,1.25,chen-2013,,published,oral,5280793,MECHNRXZTMCUDQ-RKHKHRCZSA-N,C[C@H](/C=C/[C@H](C)C(C)C)[C@H]1CC[C@@H]\2[C@@]1(CCC/C2=C\C=C/3\C[C@H](CCC3=C)O)C,396.6,7.4,7.6,Negative
+atropine,atropine,No-DILI-Concern,,1.2,chen-2013,,published,oral,174174,RKUNBYITZUJHSG-PJPHBNEVSA-N,CN1[C@@H]2CC[C@H]1CC(C2)OC(=O)C(CO)C3=CC=CC=C3,289.4,1.8,1.7,Negative
+folic acid,folic acid,No-DILI-Concern,,0.4,chen-2013,,published,oral,135398658,OVBPIULPVIDEAO-LBPRGKRZSA-N,C1=CC(=CC=C1C(=O)N[C@@H](CCC(=O)O)C(=O)O)NCC2=CN=C3C(=N2)C(=O)NC(=N3)N,441.4,-1.1,-0.2,Negative
+tamsulosin,tamsulosin,No-DILI-Concern,,0.4,chen-2013,,published,oral,129211,DRHKJLXJIQTDTD-OAHLLOKOSA-N,CCOC1=CC=CC=C1OCCN[C@H](C)CC2=CC(=C(C=C2)OC)S(=O)(=O)N,408.5,2.7,2.7,Negative
+digoxin,digoxin,No-DILI-Concern,,0.25,chen-2013,,published,oral,2724385,LTMHDMANZUZIPE-PUGKRICDSA-N,C[C@@H]1[C@H]([C@H](C[C@@H](O1)O[C@@H]2[C@H](O[C@H](C[C@@H]2O)O[C@@H]3[C@H](O[C@H](C[C@@H]3O)O[C@H]4CC[C@]5([C@@H](C4)CC[C@@H]6[C@@H]5C[C@H]([C@]7([C@@]6(CC[C@@H]7C8=CC(=O)OC8)O)C)O)C)C)C)O)O,780.9,1.3,2.0,Negative
+liothyronine,liothyronine,No-DILI-Concern,,0.06,chen-2013,,published,oral,5920,AUYYCJSJGJYCDS-LBPRGKRZSA-N,C1=CC(=C(C=C1OC2=C(C=C(C=C2I)C[C@@H](C(=O)O)N)I)I)O,650.97,1.7,1.4,Negative
+cyanocobalamin,cyanocobalamin,No-DILI-Concern,,0.001,chen-2013,,published,oral,166596686,RMRCNWBMXRMIRW-WZHZPDAFSA-L,CC1=CC2=C(C=C1C)[N+](=CN2)[C@@H]3[C@@H]([C@@H]([C@H](O3)CO)OP(=O)(O)O[C@H](C)CNC(=O)CC[C@@]4([C@H]([C@@H]5[C@]6([C@@]([C@@H](C(=N6)/C(=C\7/[C@@]([C@@H](/C(=C/C8=N/C(=C(\C4=N5)/C)/[C@H](C8(C)C)CCC(=N)[O-])/N7)CCC(=N)[O-])(C)CC(=O)N)/C)CCC(=N)[O-])(C)CC(=O)N)C)CC(=O)N)C)O,1355.4,,0.0,Negative

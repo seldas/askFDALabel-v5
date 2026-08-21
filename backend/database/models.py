@@ -257,12 +257,22 @@ class DrugToxicity(db.Model):
 
 
 class DiliRo2Reference(db.Model):
-    """Fixed reference drugs for the Rule-of-Two (DILI) quadrant plot.
+    """The Chen 2013 reference drugs for the Rule-of-Two (DILI) quadrant plot.
 
-    Seeded from backend/database/seed/dili_ro2_reference.csv — see the README
-    there for per-column provenance. alogp is computed at import by RDKit from
-    smiles, so reference points and the drug under assessment always share one
-    logP implementation.
+    The published dataset the rule was derived on: Supporting Table 1 of
+    Chen M, Borlak J, Tong W, Hepatology 2013;58(1):388-396 — 164 oral drugs,
+    116 Most-DILI-concern and 48 No-DILI-concern. The paper deliberately omits
+    Less-DILI-concern drugs, which is why only two classes appear.
+
+    Seeded from backend/database/seed/dili_ro2_reference.csv; see the README
+    there for per-column provenance. Both plotted axes are published values,
+    so no column here is hand-curated any more.
+
+    `paper_logp` is what the paper printed. `alogp` is recomputed at import by
+    RDKit from smiles and is what gets plotted, so the reference points and the
+    drug under assessment always share one logP implementation — mixing them
+    would move points across the ALogP >= 3 boundary. The two are kept side by
+    side so the difference is auditable rather than assumed away.
     """
     __tablename__ = 'dili_ro2_reference'
     id = db.Column(db.Integer, primary_key=True)
@@ -273,15 +283,22 @@ class DiliRo2Reference(db.Model):
     max_daily_dose_mg = db.Column(db.Float, nullable=False)
     dose_basis = db.Column(db.String(40))
     dose_note = db.Column(db.Text)
-    dose_review_status = db.Column(db.String(40), default='needs-sme-review')
+    #: 'published' for the Chen 2013 doses. Retained because a future
+    #: addition from another source may need reviewing.
+    dose_review_status = db.Column(db.String(40), default='published')
     route = db.Column(db.String(40), default='oral')
     pubchem_cid = db.Column(db.String(30))
     inchikey = db.Column(db.String(30), index=True)
     smiles = db.Column(db.Text)
     mol_weight = db.Column(db.Float)
     pubchem_xlogp3 = db.Column(db.Float)
+    #: logP exactly as published in the paper, and the paper's own rule-of-two
+    #: verdict. Kept for validation: recomputing ALogP must not silently move a
+    #: reference drug into a different quadrant than the paper put it in.
+    paper_logp = db.Column(db.Float)
+    paper_ro2_test = db.Column(db.String(20))
     # Computed at import from smiles via rdkit Crippen.MolLogP. Null when RDKit
-    # is unavailable — the tool must then fall back to pubchem_xlogp3 and say so.
+    # is unavailable — the tool must then fall back to paper_logp and say so.
     alogp = db.Column(db.Float, index=True)
     alogp_method = db.Column(db.String(60))
 

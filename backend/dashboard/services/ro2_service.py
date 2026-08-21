@@ -465,18 +465,26 @@ def reference_points():
     """
     The plotted background cloud, and an honest account of it.
 
-    `alogp` may be null for every row when the importer ran without RDKit; the
-    caller falls back to pubchem_xlogp3 and must say which it plotted.
+    The Chen 2013 set: 164 oral drugs, 116 Most-DILI-concern and 48
+    No-DILI-concern. The paper omitted Less-DILI-concern drugs deliberately, so
+    the cloud is a clean two-class contrast rather than a severity gradient.
+
+    `alogp` is null for every row when the importer ran without RDKit; the
+    fallback is then the paper's own published logP, and the caller must say
+    which it plotted.
     """
     rows = DiliRo2Reference.query.order_by(DiliRo2Reference.drug_name).all()
 
     points = []
+    recomputed = 0
     for row in rows:
         alogp, method = row.alogp, row.alogp_method
-        if alogp is None and row.pubchem_xlogp3 is not None:
-            alogp, method = row.pubchem_xlogp3, 'pubchem-xlogp3'
+        if alogp is None and row.paper_logp is not None:
+            alogp, method = row.paper_logp, 'chen-2013-published'
         if alogp is None or row.max_daily_dose_mg is None:
             continue
+        if row.alogp is not None:
+            recomputed += 1
         points.append({
             'drug_name': row.drug_name,
             'dili_concern': row.dili_concern,
@@ -484,23 +492,32 @@ def reference_points():
             'max_daily_dose_mg': row.max_daily_dose_mg,
             'alogp': alogp,
             'alogp_method': method,
+            'paper_logp': row.paper_logp,
+            'paper_ro2_test': row.paper_ro2_test,
             'dose_basis': row.dose_basis,
             'dose_note': row.dose_note,
             'dose_review_status': row.dose_review_status,
         })
 
-    needs_review = sum(1 for r in rows if r.dose_review_status == 'needs-sme-review')
+    concerns = {}
+    for row in rows:
+        concerns[row.dili_concern] = concerns.get(row.dili_concern, 0) + 1
+
     return points, {
         'total_rows': len(rows),
         'plotted': len(points),
-        'doses_needing_sme_review': needs_review,
-        # Surfaced so the UI can say the x-axis is provisional. See the seed
-        # README: doses are the only hand-curated column in the file.
-        'dose_provenance': 'Hand-curated from FDA labeling; pending SME review.',
+        'class_counts': concerns,
+        #: How many points carry a recomputed ALogP rather than the published
+        #: value. Anything short of `plotted` means the axes are mixed.
+        'alogp_recomputed': recomputed,
+        'source': (
+            'Chen 2013 Supporting Table 1 — the 164 oral drugs the rule was '
+            'derived on. Daily dose and logP are the published values.'
+        ),
         'citation': (
             'Chen M, Borlak J, Tong W. High lipophilicity and high daily dose of oral '
             'medications are associated with significant risk for drug-induced liver '
-            'injury. Hepatology. 2013;58(1):388-396.'
+            'injury. Hepatology. 2013;58(1):388-396. PMID 23258593.'
         ),
     }
 
@@ -616,9 +633,10 @@ def structure_stage(set_id):
             alogp = float(structure['pubchem_xlogp3'])
             alogp_method = 'pubchem-xlogp3'
             warnings.append(
-                'ALogP fell back to PubChem XLogP3 because RDKit is unavailable. The '
-                'reference points use RDKit Crippen values, so the two axes are not '
-                'strictly comparable.'
+                'ALogP fell back to PubChem XLogP3 because RDKit is unavailable. '
+                'Without RDKit the reference points fall back to the logP published '
+                'in Chen 2013, so this drug and the background cloud sit on two '
+                'different logP scales and near-boundary points are not reliable.'
             )
     elif primary:
         reasons.append(

@@ -6,61 +6,85 @@ is gitignored and machine-local — everything here travels with the repo.
 
 ## `dili_ro2_reference.csv`
 
-Fixed reference drugs for the **Rule-of-Two (DILI)** tool's quadrant plot. These
-are plotted as static background points so a user can see where the drug under
-assessment falls relative to well-characterised compounds. They are *never*
-recomputed per request.
+The background cloud for the **Rule-of-Two (DILI)** quadrant plot: the published
+dataset the rule was derived on, so a user can see where the drug under
+assessment falls relative to the drugs that defined the boundary. These points
+are static and are *never* recomputed per request.
 
-66 oral drugs, spanning all four dose/lipophilicity quadrants.
+**Source: Supporting Table 1 of** Chen M, Borlak J, Tong W. High lipophilicity
+and high daily dose of oral medications are associated with significant risk for
+drug-induced liver injury. *Hepatology*. 2013;58(1):388-396.
+doi:10.1002/hep.26208 (PMID 23258593).
+
+164 oral drugs: **116 Most-DILI-concern, 48 No-DILI-concern**.
+
+### Only two classes, on purpose
+
+The paper excluded Less-DILI-concern drugs. The rule is a contrast between clear
+positives and clear negatives, not a severity gradient, so there is no middle
+category to plot. An earlier version of this file was a hand-assembled 66-drug
+set that was 55% Most-DILI-concern and held only two No-DILI-concern drugs; it
+looked like a hepatotoxicant showcase rather than a reference population and
+has been replaced entirely.
 
 ### Provenance, per column
 
 | Column | Source | Trust |
 |---|---|---|
-| `dili_concern`, `dili_severity_class`, `dilirank_compound` | FDA **DILIrank 2.0** via the PubChem LTKB annotation API | Authoritative, public domain |
+| `drug_name`, `dili_concern`, `max_daily_dose_mg`, `paper_logp`, `paper_ro2_test` | Chen 2013 Supporting Table 1, as published | Authoritative |
 | `pubchem_cid`, `inchikey`, `smiles`, `mol_weight`, `pubchem_xlogp3` | PubChem PUG REST, **parent** (free-base) record | Authoritative |
-| `max_daily_dose_mg`, `dose_basis`, `dose_note` | Hand-curated from FDA labeling / standard references | **Needs SME review** |
+| `alogp`, `alogp_method` | Computed at import by RDKit from `smiles` | Derived |
 
-`dose_review_status` is `needs-sme-review` on every row. Doses are the only
-hand-curated field and the only plausible source of error; `dose_basis` records
-how each number was derived (`label-max`, `maintenance`, `weight-based` at a
-60 kg reference weight, `typical-max`) so a reviewer can re-check it quickly.
+**No column here is hand-curated.** Both plotted axes are published values.
+`dose_review_status` is `published` on every row (the field is kept because a
+future addition from another source may need reviewing).
 
-### ALogP is deliberately NOT stored
+### The extraction is verified against the paper's own statistic
 
-`pubchem_xlogp3` is carried for cross-checking only. The plotted ALogP is
-computed at import time by RDKit (`Crippen.MolLogP`) from the `smiles` column —
-the **same** implementation used for the drug under assessment. Storing a
-literature ALogP would put reference points and the query drug on different
-scales and silently distort the quadrant boundaries.
+The table was parsed directly out of the supplementary `.doc` (see
+`deploy/data_transfer/hep_26208_sm_supptab1-5.doc`). Word marks every cell with
+`\x07` plus one more per row, so rows are exact fixed-width token groups —
+`antiword` silently drops this table and truncates the columns of the others, so
+it is not used.
+
+The parse reproduces the paper's headline result exactly, which is the check
+that the columns are aligned correctly:
+
+| | Rule-of-two + | Rule-of-two − |
+|---|---|---|
+| **Most-DILI-concern** | 44 | 72 |
+| **No-DILI-concern** | 2 | 46 |
+
+Odds ratio (44×46)/(72×2) = **14.06**; the paper reports **14.05**. PPV 95.7%,
+sensitivity 37.9%, specificity 95.8%.
+
+One row disagrees with a literal reading of the rule: `fenclozic acid`
+(200 mg/day, logP 3.0) is marked Negative where ≥3 would make it Positive. That
+is rounding in the paper's printed logP, not a parse error.
+
+### ALogP is recomputed, not read from the CSV
+
+`paper_logp` is what the paper printed; `alogp` is recomputed at import by RDKit
+(`Crippen.MolLogP`) from `smiles` — the **same** implementation used for the drug
+under assessment. Reference points and the query drug must share one logP scale,
+or the ALogP ≥ 3 boundary means different things on either side of the plot.
+
+The importer cross-checks recomputed ALogP against `paper_ro2_test` and reports
+any drug that changes quadrant. A handful is expected for drugs sitting on the
+line; a large count means the two scales have diverged and the plot is wrong.
+
+Without RDKit the rows still import with `alogp` NULL, and the tool falls back to
+`paper_logp` — and must say which it used.
 
 ### Structures are parent forms, not salts
 
-DILIrank keys many entries to a salt (e.g. `Diclofenac sodium`, `Atorvastatin
-calcium`) and to that salt's CID. `smiles` is resolved to the **parent** so
-logP is computed on the free base. `dilirank_compound` preserves the original
-DILIrank string for traceability.
+Names are resolved through PubChem to the **parent** (free base), so logP is
+computed on the active moiety rather than on a salt that includes a counter-ion
+and may repeat the molecule. All 164 resolved with no multi-component SMILES.
 
-### This is NOT a validation set
+### This is the derivation set, not a validation set
 
-The set is deliberately enriched with famous hepatotoxicants (36 of 66 are
-vMost-DILI-concern), so prevalence is far above the real-world base rate. Under
-a binary hepatotoxicity endpoint it reproduces the published high PPV (100% here
-vs ~96% reported) but its NPV is meaningless (5%). **Do not quote performance
-statistics from this file.** For actual validation, use the full DILIrank 2.0
-dataset.
-
-### Known exclusion
-
-**Methotrexate** is omitted despite being a well-known hepatotoxicant: oral
-low-dose methotrexate is dosed *weekly*, so "maximum daily dose" is not a
-meaningful quantity for it. It is exactly the kind of drug the tool's
-qualification gate should refuse to score rather than score wrongly.
-
-### Citation
-
-Chen M, Borlak J, Tong W. High lipophilicity and high daily dose of oral
-medications are associated with significant risk for drug-induced liver injury.
-*Hepatology*. 2013;58(1):388-396. doi:10.1002/hep.26208 (PMID 23258593)
-
-Thakkar S, et al. DILIrank 2.0. *Drug Discov Today*. 2025. (PMID 41005561)
+The rule was fitted on these drugs, so its performance here is optimistic by
+construction. **Do not quote these statistics as validation.** The paper's own
+independent check is its Supporting Table 2 (179 oral drugs from Greene et al.,
+115 HH / 64 NE), which is present in the same `.doc` but is not imported.

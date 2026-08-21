@@ -11,6 +11,7 @@
  * two thirds of the set onto the origin.
  */
 
+import { useMemo, useState } from 'react';
 import {
   CartesianGrid,
   Cell,
@@ -49,17 +50,45 @@ export interface Thresholds {
   alogp: number;
 }
 
-/* DILIrank concern classes. Red reads as hazard, which is the intent. */
+/*
+ * DILI concern classes.
+ *
+ * Chen 2013 used only Most and No: the rule is a contrast between clear
+ * positives and clear negatives, not a severity gradient, so the paper's set
+ * carries no Less-DILI-concern drugs at all. Less is still defined here because
+ * DILIrank has that class and a database seeded from another source may hold
+ * it -- the legend is built from whatever classes the data actually contains,
+ * so the Less chip appears only when there are Less drugs to show.
+ */
 export const CONCERN_COLORS: Record<string, string> = {
-  'vMost-DILI-concern': '#dc2626',
-  'vLess-DILI-concern': '#f59e0b',
-  'vNo-DILI-concern': '#16a34a',
+  'Most-DILI-Concern': '#dc2626',
+  'Less-DILI-Concern': '#f59e0b',
+  'No-DILI-Concern': '#16a34a',
 };
 export const CONCERN_LABELS: Record<string, string> = {
-  'vMost-DILI-concern': 'Most DILI concern',
-  'vLess-DILI-concern': 'Less DILI concern',
-  'vNo-DILI-concern': 'No DILI concern',
+  'Most-DILI-Concern': 'Most DILI concern',
+  'Less-DILI-Concern': 'Less DILI concern',
+  'No-DILI-Concern': 'No DILI concern',
 };
+
+/*
+ * The old hand-curated seed used 'v'-prefixed lowercase keys. Folded onto the
+ * canonical names so a database still holding it renders in colour and shares
+ * one legend chip instead of producing a duplicate.
+ */
+const CLASS_ALIASES: Record<string, string> = {
+  'vMost-DILI-concern': 'Most-DILI-Concern',
+  'vLess-DILI-concern': 'Less-DILI-Concern',
+  'vNo-DILI-concern': 'No-DILI-Concern',
+};
+
+export function canonicalClass(concern: string | null | undefined): string {
+  if (!concern) return 'Unknown';
+  return CLASS_ALIASES[concern] ?? concern;
+}
+
+/* Severity order, worst first; anything unrecognised sorts to the end. */
+const CLASS_ORDER = ['Most-DILI-Concern', 'Less-DILI-Concern', 'No-DILI-Concern'];
 const UNKNOWN_CONCERN = '#94a3b8';
 const QUERY_COLOR = '#1d4ed8';
 
@@ -88,11 +117,41 @@ export default function Ro2Chart({
   alogpGuide?: number | null;
   height?: number;
 }) {
-  const grouped: Record<string, ReferencePoint[]> = {};
-  for (const point of reference) {
-    const key = point.dili_concern || 'unknown';
-    (grouped[key] ||= []).push(point);
-  }
+  /*
+   * Which classes are hidden. Kept here rather than in the route because it is
+   * a way of reading the chart, not a property of the assessment -- toggling a
+   * class must not re-fetch anything.
+   */
+  const [hiddenClasses, setHiddenClasses] = useState<Set<string>>(new Set());
+
+  const grouped = useMemo(() => {
+    const out: Record<string, ReferencePoint[]> = {};
+    for (const point of reference) {
+      (out[canonicalClass(point.dili_concern)] ||= []).push(point);
+    }
+    return out;
+  }, [reference]);
+
+  /* Legend entries come from the data, so a class with no drugs never appears. */
+  const classes = useMemo(() => {
+    const keys = Object.keys(grouped);
+    keys.sort((a, b) => {
+      const ia = CLASS_ORDER.indexOf(a);
+      const ib = CLASS_ORDER.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+    return keys;
+  }, [grouped]);
+
+  const toggleClass = (key: string) =>
+    setHiddenClasses((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
+  const visible = classes.filter((k) => !hiddenClasses.has(k));
 
   return (
     <>
@@ -171,9 +230,14 @@ export default function Ro2Chart({
               }}
             />
 
-            {Object.entries(grouped).map(([concern, points]) => (
-              <Scatter key={concern} name={CONCERN_LABELS[concern] ?? concern} data={points} fillOpacity={0.72}>
-                {points.map((point) => (
+            {visible.map((concern) => (
+              <Scatter
+                key={concern}
+                name={CONCERN_LABELS[concern] ?? concern}
+                data={grouped[concern]}
+                fillOpacity={0.72}
+              >
+                {grouped[concern].map((point) => (
                   <Cell key={point.drug_name} fill={CONCERN_COLORS[concern] ?? UNKNOWN_CONCERN} />
                 ))}
               </Scatter>
@@ -209,12 +273,36 @@ export default function Ro2Chart({
         display: 'flex', gap: '18px', flexWrap: 'wrap', marginTop: '10px',
         fontSize: '0.82rem', color: '#475569',
       }}>
-        {Object.entries(CONCERN_LABELS).map(([key, label]) => (
-          <span key={key} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: CONCERN_COLORS[key] }} />
-            {label}
-          </span>
-        ))}
+        {classes.map((key) => {
+          const on = !hiddenClasses.has(key);
+          const colour = CONCERN_COLORS[key] ?? UNKNOWN_CONCERN;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => toggleClass(key)}
+              aria-pressed={on}
+              title={on ? `Hide ${CONCERN_LABELS[key] ?? key}` : `Show ${CONCERN_LABELS[key] ?? key}`}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                background: on ? '#ffffff' : '#f1f5f9',
+                border: `1px solid ${on ? colour : '#cbd5e1'}`,
+                borderRadius: '999px', padding: '4px 11px', cursor: 'pointer',
+                fontSize: '0.82rem', fontWeight: on ? 700 : 500,
+                color: on ? '#0f172a' : '#94a3b8',
+                textDecoration: on ? 'none' : 'line-through',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <span style={{
+                width: '10px', height: '10px', borderRadius: '50%',
+                background: on ? colour : '#cbd5e1', flexShrink: 0,
+              }} />
+              {CONCERN_LABELS[key] ?? key}
+              <span style={{ color: '#94a3b8', fontWeight: 500 }}>{grouped[key].length}</span>
+            </button>
+          );
+        })}
         {query && (
           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ color: QUERY_COLOR, fontSize: '1rem' }}>★</span>

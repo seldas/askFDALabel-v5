@@ -34,8 +34,9 @@ interface ReferenceStage {
   reference_provenance: {
     total_rows: number;
     plotted: number;
-    doses_needing_sme_review: number;
-    dose_provenance: string;
+    class_counts: Record<string, number>;
+    alogp_recomputed: number;
+    source: string;
     citation: string;
   };
   thresholds: Thresholds;
@@ -501,15 +502,24 @@ export default function Ro2ToolPage() {
             About this data
           </div>
           <p style={{ margin: '0 0 8px 0', color: '#475569', fontSize: '0.84rem', lineHeight: 1.6 }}>
-            DILI classes come from FDA DILIrank 2.0 and structures from PubChem, both
-            authoritative. The reference doses are the exception:{' '}
-            <strong>{refStage.reference_provenance.doses_needing_sme_review} of{' '}
-            {refStage.reference_provenance.total_rows}</strong> are hand-curated from labeling and
-            pending SME review, so the horizontal axis is provisional on both sides of the plot.
+            The background cloud is the published dataset the rule was derived on:{' '}
+            <strong>{refStage.reference_provenance.total_rows} oral drugs</strong>
+            {Object.keys(refStage.reference_provenance.class_counts || {}).length > 0 && (
+              <> ({Object.entries(refStage.reference_provenance.class_counts)
+                .map(([k, n]) => `${n} ${k}`)
+                .join(', ')})</>
+            )}. Daily dose and logP are the paper's own values, not curated here. The paper
+            excluded Less-DILI-concern drugs, which is why only two classes appear.
           </p>
           <p style={{ margin: '0 0 8px 0', color: '#475569', fontSize: '0.84rem', lineHeight: 1.6 }}>
-            The reference set is enriched with known hepatotoxicants and is{' '}
-            <strong>not a validation set</strong> — do not quote performance statistics from it.
+            This is the set the rule was <strong>derived</strong> on, so its performance here
+            (odds ratio 14.05) is optimistic by construction — it is a reference backdrop, not
+            an independent validation.
+            {refStage.reference_provenance.alogp_recomputed < refStage.reference_provenance.plotted && (
+              <> <strong>Note:</strong> {refStage.reference_provenance.plotted - refStage.reference_provenance.alogp_recomputed}{' '}
+              point(s) are plotted with the paper's published logP rather than a recomputed
+              ALogP, so those sit on a slightly different scale from this drug.</>
+            )}
           </p>
           <p style={{ margin: 0, color: '#64748b', fontSize: '0.8rem', lineHeight: 1.6 }}>
             {refStage.reference_provenance.citation}
