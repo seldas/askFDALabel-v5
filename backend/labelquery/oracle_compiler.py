@@ -146,8 +146,19 @@ def _format_contains_query(text, mode='simple'):
 # ---------------------------------------------------------------------------
 
 def _compile_labeling_type(value, bag, base_table=BASE_TABLE_HUMAN, warnings=None, alias='s'):
+    """The whole labelingType criterion: DOCUMENT_TYPE values AND format group."""
+    clauses = [c for c in (
+        _compile_labeling_type_values(value, bag, alias=alias),
+        _compile_labeling_format(value, base_table=base_table, warnings=warnings, alias=alias),
+    ) if c]
+    if not clauses:
+        return None
+    return '(' + ' AND '.join(clauses) + ')'
+
+
+def _compile_labeling_type_values(value, bag, alias='s'):
+    """The DOCUMENT_TYPE half of labelingType -- the `labelingTypes` facet."""
     values = _as_list(value.get('values'))
-    plr = str(value.get('plr') or value.get('formatGroup') or 'all').lower()
 
     clauses = []
     if values:
@@ -168,25 +179,34 @@ def _compile_labeling_type(value, bag, base_table=BASE_TABLE_HUMAN, warnings=Non
         if type_clauses:
             clauses.append('(' + ' OR '.join(type_clauses) + ')')
 
-    # FORMAT_GROUP is a DGV_SUM_RX_SPL column; SUM_SPL does not classify PLR.
-    if plr in ('plr', '1', 'non_plr', 'non-plr', '2', 'unclassified', 'other', '3'):
-        if base_table != BASE_TABLE_HUMAN:
-            if warnings is not None:
-                warnings.append(
-                    'PLR / non-PLR format is only classified for CDER-CBER labels; '
-                    'the format filter was ignored for the All FDA scope.'
-                )
-        elif plr in ('plr', '1'):
-            clauses.append(f'{alias}.FORMAT_GROUP = 1')
-        elif plr in ('non_plr', 'non-plr', '2'):
-            clauses.append(f'{alias}.FORMAT_GROUP = 2')
-        elif plr in ('unclassified', 'other', '3'):
-            clauses.append(f'({alias}.FORMAT_GROUP IS NULL OR {alias}.FORMAT_GROUP NOT IN (1, 2))')
-
     if not clauses:
         return None
 
     return '(' + ' AND '.join(clauses) + ')'
+
+
+def _compile_labeling_format(value, base_table=BASE_TABLE_HUMAN, warnings=None, alias='s'):
+    """
+    The PLR / non-PLR half of labelingType -- the `labelingFormat` facet.
+
+    FORMAT_GROUP is a DGV_SUM_RX_SPL column; SUM_SPL does not classify PLR.
+    """
+    plr = str(value.get('plr') or value.get('formatGroup') or 'all').lower()
+    if plr not in ('plr', '1', 'non_plr', 'non-plr', '2', 'unclassified', 'other', '3'):
+        return None
+
+    if base_table != BASE_TABLE_HUMAN:
+        if warnings is not None:
+            warnings.append(
+                'PLR / non-PLR format is only classified for CDER-CBER labels; '
+                'the format filter was ignored for the All FDA scope.'
+            )
+        return None
+    if plr in ('plr', '1'):
+        return f'{alias}.FORMAT_GROUP = 1'
+    if plr in ('non_plr', 'non-plr', '2'):
+        return f'{alias}.FORMAT_GROUP = 2'
+    return f'({alias}.FORMAT_GROUP IS NULL OR {alias}.FORMAT_GROUP NOT IN (1, 2))'
 
 
 def _compile_application_type(value, bag, alias='s', base_table=BASE_TABLE_HUMAN):
@@ -828,8 +848,10 @@ def compile_oracle_predicates(query, expand_meddra=None, capabilities=None,
 # so the predicate reads off the matched CTE (see facets.oracle_facet_sql_combined)
 # instead of the base table.
 _CATEGORY_COMPILERS = {
-    'labelingTypes': lambda cval, bag, base_table: _compile_labeling_type(
-        cval, bag, base_table=base_table, alias='m'),
+    'labelingTypes': lambda cval, bag, base_table: _compile_labeling_type_values(
+        cval, bag, alias='m'),
+    'labelingFormat': lambda cval, bag, base_table: _compile_labeling_format(
+        cval, base_table=base_table, alias='m'),
     'applicationTypes': lambda cval, bag, base_table: _compile_application_type(cval, bag, alias='m', base_table=base_table),
     'marketStatus': lambda cval, bag, base_table: _compile_market_status(cval, bag, alias='m'),
     'routes': lambda cval, bag, base_table: _compile_route(cval, bag, alias='m'),

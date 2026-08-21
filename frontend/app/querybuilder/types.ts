@@ -497,6 +497,55 @@ export function isCriterionEmpty(c: Criterion): boolean {
   }
 }
 
+/**
+ * The criterion fields the sidebar filter panel drives, per criterion type.
+ *
+ * Mirrors CATEGORY_CRITERION in backend/labelquery/facets.py, which is what
+ * the /facets endpoint strips before counting. Keep the two in sync: the
+ * backend decides what the numbers mean, this decides when they are refetched.
+ */
+const FACET_FILTER_FIELDS: Partial<Record<CriterionType, string[]>> = {
+  labelingType: ['values', 'plr', 'formatGroup'],
+  applicationType: ['values', 'isRld'],
+  marketStatus: ['values', 'startDateMin', 'startDateMax'],
+  route: ['values'],
+  dosageForm: ['values'],
+  pharmClass: ['terms'],
+  deaSchedule: ['values'],
+};
+
+/**
+ * A copy of `query` with every sidebar-driven filter cleared, leaving only the
+ * real search criteria (free text, MedDRA, product name, identifiers, ...).
+ *
+ * This is exactly the set the facet counts are computed over, so it is also
+ * the right cache key for them: toggling a filter changes the query but not
+ * its backbone, and the counts the panel is showing are still correct.
+ */
+export function stripFacetFilters<T extends { groups: Array<{ criteria: Array<{ type: CriterionType; value: CriterionValue }> }> }>(
+  query: T,
+): T {
+  return {
+    ...query,
+    groups: (query.groups || []).map((g) => ({
+      ...g,
+      criteria: (g.criteria || []).map((c) => {
+        const fields = FACET_FILTER_FIELDS[c.type];
+        if (!fields) return c;
+        const value: CriterionValue = { ...(c.value || {}) };
+        for (const field of fields) {
+          if (!(field in value)) continue;
+          const current = value[field];
+          if (Array.isArray(current)) value[field] = [];
+          else if (typeof current === 'boolean') value[field] = false;
+          else value[field] = null;
+        }
+        return { ...c, value };
+      }),
+    })),
+  } as T;
+}
+
 export function countFilled(query: LabelQuery): number {
   return query.groups.reduce(
     (n, g) => n + g.criteria.filter((c) => !isCriterionEmpty(c)).length,

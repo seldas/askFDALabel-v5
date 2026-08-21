@@ -36,8 +36,8 @@ every time, only which facet's own filter is temporarily removed changes.
 oracle_facet_sql_combined runs the search criteria exactly once, as a
 MATERIALIZED CTE built from strip_all_categories(query) -- the "backbone":
 the maximum set of cases the real search criteria can match, with every
-facet-driven filter (labelingType, applicationType, route, dosageForm,
-pharmClass, marketStatus) cleared. Every facet's own predicate is then layered
+sidebar-driven filter cleared -- every key of CATEGORY_CRITERION, which is
+the list the panel actually renders, not just the ones with a facet bucket. Every facet's own predicate is then layered
 back on as a cheap, alias-swapped branch against that already-materialized set
 (compile_active_category_predicates in oracle_compiler.py), so ticking or
 unticking a sidebar filter never re-touches the base table or full-text index
@@ -85,12 +85,42 @@ _GROUPED_LIMIT = 30
 # counting that category "as if it were not filtered". See strip_category.
 CATEGORY_CRITERION = {
     'labelingTypes': ('labelingType', ('values',)),
+    # The PLR / non-PLR radio lives on the same criterion as labelingTypes but
+    # is its own sidebar category, driven by FORMAT_GROUP rather than
+    # DOCUMENT_TYPE. It has to be listed separately, or strip_all_categories
+    # leaves it in the backbone and every count in the panel -- including the
+    # "All Formats" total -- collapses to the PLR-filtered subset.
+    'labelingFormat': ('labelingType', ('plr', 'formatGroup')),
     'applicationTypes': ('applicationType', ('values', 'isRld')),
-    'marketStatus': ('marketStatus', ('values',)),
+    'marketStatus': ('marketStatus', ('values', 'startDateMin', 'startDateMax')),
     'routes': ('route', ('values',)),
     'dosageForms': ('dosageForm', ('values',)),
     'pharmClasses': ('pharmClass', ('terms',)),
+    # No facet bucket of its own (the sidebar renders its picks at zero), but
+    # it is still a sidebar filter, so it has to come out of the backbone --
+    # otherwise ticking a schedule moves every other count in the panel.
+    'deaSchedule': ('deaSchedule', ('values',)),
 }
+
+# Every key of CATEGORY_CRITERION has to be listed in the frontend's
+# FACET_FILTER_FIELDS (frontend/app/querybuilder/types.ts). That is what
+# decides when the facet request is refetched at all; a filter stripped here
+# but not there costs a pointless round trip, and one stripped there but not
+# here returns different numbers than the panel is already showing.
+
+
+# A field holding one of these means "not filtered". The format radio is
+# always present on the criterion and reads 'all' when nothing is chosen, so a
+# plain truthiness test would report the category as filtered the moment the
+# criterion exists at all.
+_UNSET_FIELD_VALUES = {'', 'all'}
+
+
+def _field_is_set(value, field):
+    v = value.get(field)
+    if isinstance(v, str):
+        return v.strip().lower() not in _UNSET_FIELD_VALUES
+    return bool(v)
 
 
 def active_categories(query):
@@ -108,7 +138,7 @@ def active_categories(query):
                 if criterion.get('type') != ctype:
                     continue
                 value = criterion.get('value') or {}
-                if any(value.get(f) for f in fields):
+                if any(_field_is_set(value, f) for f in fields):
                     out.append(category)
                     break
             if category in out:
@@ -118,7 +148,14 @@ def active_categories(query):
 
 def strip_categories(query, categories):
     """A copy of `query` with every listed category's own filter cleared."""
-    wanted = {CATEGORY_CRITERION[c][0]: CATEGORY_CRITERION[c][1] for c in categories}
+    # Two categories can share a criterion type (labelingTypes and
+    # labelingFormat both live on labelingType), so the fields are unioned per
+    # type rather than assigned -- otherwise one category silently overwrites
+    # the other's entry and its filter survives the strip.
+    wanted = {}
+    for c in categories:
+        ctype, fields = CATEGORY_CRITERION[c]
+        wanted.setdefault(ctype, set()).update(fields)
     stripped = copy.deepcopy(query)
     for group in (stripped.get('groups') or []):
         for criterion in (group.get('criteria') or []):

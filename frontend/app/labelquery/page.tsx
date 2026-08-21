@@ -27,7 +27,7 @@ import {
 } from '../querybuilder/ResultsTable';
 import type { OptionLists } from '../querybuilder/CriterionCard';
 import { QUERY_PARAM, decodeQuery, encodeQuery, resultsPath } from '../querybuilder/queryUrl';
-import { fromWire, toWire, type LabelQuery, type TargetDb, type WireQuery } from '../querybuilder/types';
+import { fromWire, stripFacetFilters, toWire, type LabelQuery, type TargetDb, type WireQuery } from '../querybuilder/types';
 import { withAppBase } from '../utils/appPaths';
 import '../querybuilder/querybuilder.css';
 
@@ -252,12 +252,30 @@ function ResultsPage() {
     };
   }, [activeWireQuery, currentTargetDb, offset, sortState]);
 
+  // The counts describe the search, not the filter panel: they are computed
+  // over the query with every sidebar filter stripped, so ticking one narrows
+  // the results while the numbers beside each option stay put -- which is the
+  // only way they can tell you what ticking the *next* one would do.
+  //
+  // That backbone is therefore the cache key, not the query. Sidebar edits
+  // leave it byte-identical, so the effect does not refire and the panel is
+  // never asked to recompute an answer it already has. Only a real change to
+  // the search criteria costs a second pass.
+  const facetWireQuery = useMemo(
+    () => (activeWireQuery ? stripFacetFilters(activeWireQuery) : null),
+    [activeWireQuery],
+  );
+  const facetQueryKey = useMemo(
+    () => (facetWireQuery ? JSON.stringify(facetWireQuery) : null),
+    [facetWireQuery],
+  );
+
   // Facets ride a separate request. Exact counts mean an aggregate pass over
   // the whole matched set, which on Oracle costs about what the search does --
   // the table should not wait on it, and a facet failure should not take the
   // results down with it.
   useEffect(() => {
-    if (!activeWireQuery) {
+    if (!facetQueryKey) {
       setFacets(undefined);
       return;
     }
@@ -270,7 +288,7 @@ function ResultsPage() {
         const res = await fetch('/api/labelquery/facets', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: activeWireQuery, target_db: currentTargetDb }),
+          body: JSON.stringify({ query: JSON.parse(facetQueryKey), target_db: currentTargetDb }),
         });
         const json = await res.json();
         if (cancelled) return;
@@ -285,7 +303,7 @@ function ResultsPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeWireQuery, currentTargetDb]);
+  }, [facetQueryKey, currentTargetDb]);
 
   /**
    * Where "Back to search" goes: home, carrying the criteria tree the user is
