@@ -182,17 +182,18 @@ def _c_value_list(criterion, key, bag, warnings):
     if not values:
         return None
 
-    # The EXISTS below is authoritative but unindexable — Postgres cannot use an
-    # index for a predicate over unnest(). The redundant ILIKE on the raw column
-    # is what lets the pg_trgm index (db_02_init_labeling_schema) narrow the
-    # candidate rows first; it over-matches on purpose ('%NDA%' still hits ANDA)
-    # and the EXISTS then discards those. Dropping it costs a sequential scan,
-    # not correctness.
+    # The GIN trigram index on the raw column narrows candidate rows first.
     broad = [v if '%' in v else f'%{v}%' for v in values]
+    has_wildcard = any('%' in v for v in values)
+    if has_wildcard:
+        elem_check = f"btrim(item) ILIKE ANY ({bag.add(values)})"
+    else:
+        elem_check = f"btrim(item) = ANY ({bag.add(values)})"
+
     return (
         f'({column} ILIKE ANY ({bag.add(broad)}) AND '
         f"EXISTS (SELECT 1 FROM unnest(string_to_array({column}, ';')) AS item "
-        f'WHERE btrim(item) ILIKE ANY ({bag.add(values)})))'
+        f'WHERE {elem_check}))'
     )
 
 
@@ -372,7 +373,7 @@ def _c_identifier(criterion, bag, warnings, unii_available=True):
 
     if unii_code:
         alts.append(
-            f"EXISTS (SELECT 1 FROM labeling.active_ingredients_map aim WHERE aim.spl_id = s.spl_id AND UPPER(aim.unii) = {bag.add(unii_code)})"
+            f"s.spl_id IN (SELECT aim.spl_id FROM labeling.active_ingredients_map aim WHERE UPPER(aim.unii) = {bag.add(unii_code)})"
         )
 
     tokens = _merge_application_prefixes(
@@ -396,7 +397,7 @@ def _c_identifier(criterion, bag, warnings, unii_available=True):
             alts.append(_like_any(['s.appr_num'], [f'%{padded}%', f'%{token}%'], bag))
         elif _UNII_RE.match(token):
             alts.append(
-                f"EXISTS (SELECT 1 FROM labeling.active_ingredients_map aim WHERE aim.spl_id = s.spl_id AND UPPER(aim.unii) = {bag.add(token.upper())})"
+                f"s.spl_id IN (SELECT aim.spl_id FROM labeling.active_ingredients_map aim WHERE UPPER(aim.unii) = {bag.add(token.upper())})"
             )
         else:
             unrecognized.append(token)

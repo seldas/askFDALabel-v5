@@ -246,14 +246,26 @@ def _compile_route(value, bag, alias='s'):
     values = _as_list(value.get('values'))
     if not values:
         return None
-    clauses = []
+    exact_vals = []
+    wildcard_clauses = []
     col = f'{alias}.ROUTES' if alias == 'm' else f'{alias}.ROUTES_OF_ADMINISTRATION'
+
     for v in values:
-        v_clean = v.strip('%').strip().upper()
+        v_clean = v.strip()
         if not v_clean:
             continue
-        p = bag.add(f'%{v_clean}%')
-        clauses.append(f'UPPER({col}) LIKE {p}')
+        if '%' in v_clean:
+            p = bag.add(f'%{v_clean.strip("%").upper()}%')
+            wildcard_clauses.append(f'UPPER({col}) LIKE {p}')
+        else:
+            exact_vals.append(v_clean.upper())
+
+    clauses = list(wildcard_clauses)
+    if exact_vals:
+        p_list = ', '.join([bag.add(ev) for ev in exact_vals])
+        clauses.append(
+            f'{alias}.SPL_ID IN (SELECT r.SPL_ID FROM druglabel.SUM_SPL_ROUTE r WHERE UPPER(r.ROUTE_SPL_ACCEPTABLE_TERM) IN ({p_list}))'
+        )
     return '(' + ' OR '.join(clauses) + ')' if clauses else None
 
 
@@ -261,14 +273,26 @@ def _compile_dosage_form(value, bag, alias='s'):
     values = _as_list(value.get('values'))
     if not values:
         return None
-    clauses = []
+    exact_vals = []
+    wildcard_clauses = []
     col = f'{alias}.DOSAGE_FORMS'
+
     for v in values:
-        v_clean = v.strip('%').strip().upper()
+        v_clean = v.strip()
         if not v_clean:
             continue
-        p = bag.add(f'%{v_clean}%')
-        clauses.append(f'UPPER({col}) LIKE {p}')
+        if '%' in v_clean:
+            p = bag.add(f'%{v_clean.strip("%").upper()}%')
+            wildcard_clauses.append(f'UPPER({col}) LIKE {p}')
+        else:
+            exact_vals.append(v_clean.upper())
+
+    clauses = list(wildcard_clauses)
+    if exact_vals:
+        p_list = ', '.join([bag.add(ev) for ev in exact_vals])
+        clauses.append(
+            f'{alias}.SPL_ID IN (SELECT d.SPL_ID FROM druglabel.SUM_SPL_DOSAGEFORM d WHERE UPPER(d.PRODUCT_DOSAGE_FORM_TERM) IN ({p_list}))'
+        )
     return '(' + ' OR '.join(clauses) + ')' if clauses else None
 
 
@@ -717,13 +741,13 @@ def _compile_identifier(value, bag):
         p_unii = bag.add(unii_code)
         if unii_target == 'moiety':
             alts.append(
-                'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_ACT_MOIETY_UNII mu '
-                f'WHERE mu.SPL_ID = s.SPL_ID AND UPPER(mu.ACTIVE_MOIETY_UNII) = {p_unii})'
+                f's.SPL_ID IN (SELECT mu.SPL_ID FROM druglabel.SUM_SPL_ACT_MOIETY_UNII mu '
+                f'WHERE UPPER(mu.ACTIVE_MOIETY_UNII) = {p_unii})'
             )
         else:
             alts.append(
-                'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_GEN_PROD_ACT_INGR_UNII ing '
-                f'WHERE ing.SPL_ID = s.SPL_ID AND UPPER(ing.UNII) = {p_unii})'
+                f's.SPL_ID IN (SELECT ing.SPL_ID FROM druglabel.SUM_SPL_GEN_PROD_ACT_INGR_UNII ing '
+                f'WHERE UPPER(ing.UNII) = {p_unii})'
             )
 
     tokens = _as_list(value.get('text')) or _split_terms(value.get('text'))
@@ -738,13 +762,13 @@ def _compile_identifier(value, bag):
             p = bag.add(token_str.upper())
             if unii_target == 'moiety':
                 alts.append(
-                    'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_ACT_MOIETY_UNII mu '
-                    f'WHERE mu.SPL_ID = s.SPL_ID AND UPPER(mu.ACTIVE_MOIETY_UNII) = {p})'
+                    f's.SPL_ID IN (SELECT mu.SPL_ID FROM druglabel.SUM_SPL_ACT_MOIETY_UNII mu '
+                    f'WHERE UPPER(mu.ACTIVE_MOIETY_UNII) = {p})'
                 )
             else:
                 alts.append(
-                    'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_GEN_PROD_ACT_INGR_UNII ing '
-                    f'WHERE ing.SPL_ID = s.SPL_ID AND UPPER(ing.UNII) = {p})'
+                    f's.SPL_ID IN (SELECT ing.SPL_ID FROM druglabel.SUM_SPL_GEN_PROD_ACT_INGR_UNII ing '
+                    f'WHERE UPPER(ing.UNII) = {p})'
                 )
         elif _PREFIXED_APPL_RE.match(token_str):
             kind, number = _PREFIXED_APPL_RE.match(token_str).groups()
