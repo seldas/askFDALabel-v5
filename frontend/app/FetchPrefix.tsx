@@ -7,6 +7,7 @@ import { API_BASE, DASHBOARD_BASE, withAppBase } from "./utils/appPaths";
 const DASHBOARD_PREFIXES = [
   "/dashboard",
   "/labelcomp",
+  "/labelquery",
   "/drugtox",
   "/localquery",
   "/search",
@@ -14,6 +15,9 @@ const DASHBOARD_PREFIXES = [
   "/device",
   "/disclaimer",
   "/chemsearch",
+  "/management",
+  "/tools",
+  "/wiki",
 ];
 
 const normalizeRoute = (value: string) => value.replace(/\/{2,}/g, "/");
