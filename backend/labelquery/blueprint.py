@@ -366,30 +366,88 @@ def suggest_product_name():
     """Autocomplete for product names (trade or generic). Requires >= 2 characters."""
     q = (request.args.get('q') or '').strip()
     field = (request.args.get('field') or 'any').lower()
+    target_db = (request.args.get('target_db') or 'local').lower()
     if len(q) < 2:
         return jsonify({'suggestions': []})
 
     try:
-        pattern = f"%{q}%"
-        if field == 'trade':
-            col_sql = "s.product_names"
-        elif field == 'generic':
-            col_sql = "s.generic_names"
-        else:
-            col_sql = "COALESCE(s.product_names, '') || '; ' || COALESCE(s.generic_names, '')"
+        if _use_oracle(target_db):
+            from dashboard.services.fdalabel_db import FDALabelDBService
+            pattern = f"%{q.upper()}%"
+            prefix_pattern = f"{q.upper()}%"
+            exact_q = q.upper()
 
-        sql = f"""
-            SELECT DISTINCT value FROM (
-                SELECT TRIM(unnest(string_to_array({col_sql}, ';'))) AS value
-                FROM labeling.sum_spl s
-                WHERE s.is_latest = TRUE AND ({col_sql} ILIKE %(pattern)s)
-            ) t
-            WHERE value ILIKE %(pattern)s AND value <> ''
-            ORDER BY value ASC
-            LIMIT 30;
-        """
-        rows = _rows(sql, {'pattern': pattern})
-        return jsonify({'suggestions': [r['value'] for r in rows]})
+            if field == 'trade':
+                sql = """
+                    SELECT DISTINCT NAME AS VALUE FROM druglabel.SPL_PROD
+                    WHERE UPPER(NAME) LIKE :p AND NAME IS NOT NULL
+                    ORDER BY 
+                        CASE WHEN UPPER(NAME) = :exact_q THEN 1 
+                             WHEN UPPER(NAME) LIKE :prefix_p THEN 2 
+                             ELSE 3 END, 
+                        LENGTH(NAME), NAME
+                    FETCH NEXT 40 ROWS ONLY
+                """
+            elif field == 'generic':
+                sql = """
+                    SELECT DISTINCT NORMD_GENERIC_NAME AS VALUE FROM druglabel.SPL_PROD
+                    WHERE UPPER(NORMD_GENERIC_NAME) LIKE :p AND NORMD_GENERIC_NAME IS NOT NULL
+                    ORDER BY 
+                        CASE WHEN UPPER(NORMD_GENERIC_NAME) = :exact_q THEN 1 
+                             WHEN UPPER(NORMD_GENERIC_NAME) LIKE :prefix_p THEN 2 
+                             ELSE 3 END, 
+                        LENGTH(NORMD_GENERIC_NAME), NORMD_GENERIC_NAME
+                    FETCH NEXT 40 ROWS ONLY
+                """
+            else:
+                sql = """
+                    WITH candidates AS (
+                        SELECT DISTINCT NORMD_GENERIC_NAME AS val FROM druglabel.SPL_PROD 
+                        WHERE UPPER(NORMD_GENERIC_NAME) LIKE :p AND NORMD_GENERIC_NAME IS NOT NULL
+                        UNION
+                        SELECT DISTINCT NAME AS val FROM druglabel.SPL_PROD 
+                        WHERE UPPER(NAME) LIKE :p AND NAME IS NOT NULL
+                    )
+                    SELECT val AS VALUE FROM candidates
+                    ORDER BY 
+                        CASE WHEN UPPER(val) = :exact_q THEN 1 
+                             WHEN UPPER(val) LIKE :prefix_p THEN 2 
+                             ELSE 3 END, 
+                        LENGTH(val), val
+                    FETCH NEXT 40 ROWS ONLY
+                """
+            rows = FDALabelDBService.execute_oracle_query(sql, {
+                'p': pattern,
+                'prefix_p': prefix_pattern,
+                'exact_q': exact_q,
+            })
+            suggestions = [r.get('VALUE') for r in rows if r.get('VALUE')]
+            return jsonify({'suggestions': suggestions})
+        else:
+            pattern = f"%{q}%"
+            if field == 'trade':
+                col_sql = "s.product_names"
+            elif field == 'generic':
+                col_sql = "s.generic_names"
+            else:
+                col_sql = "COALESCE(s.product_names, '') || '; ' || COALESCE(s.generic_names, '')"
+
+            sql = f"""
+                SELECT DISTINCT value FROM (
+                    SELECT TRIM(unnest(string_to_array({col_sql}, ';'))) AS value
+                    FROM labeling.sum_spl s
+                    WHERE s.is_latest = TRUE AND ({col_sql} ILIKE %(pattern)s)
+                ) t
+                WHERE value ILIKE %(pattern)s AND value <> ''
+                ORDER BY 
+                    CASE WHEN lower(value) = lower(%(q)s) THEN 1 
+                         WHEN lower(value) ILIKE (lower(%(q)s) || '%%') THEN 2 
+                         ELSE 3 END, 
+                    LENGTH(value) ASC, value ASC
+                LIMIT 40;
+            """
+            rows = _rows(sql, {'pattern': pattern, 'q': q})
+            return jsonify({'suggestions': [r['value'] for r in rows]})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1662,20 +1720,28 @@ def _auto_verify_product_name(text, target_db='local'):
         if _use_oracle(target_db):
             from dashboard.services.fdalabel_db import FDALabelDBService
             sql = """
-                SELECT DISTINCT NAME FROM druglabel.SPL_PROD 
-                WHERE UPPER(NAME) = :t OR UPPER(NORMD_GENERIC_NAME) = :t 
-                FETCH NEXT 1 ROWS ONLY
+                SELECT DISTINCT NORMD_GENERIC_NAME, NAME FROM druglabel.SPL_PROD 
+                WHERE UPPER(NORMD_GENERIC_NAME) = :t OR UPPER(NAME) = :t 
+                FETCH NEXT 10 ROWS ONLY
             """
             rows = FDALabelDBService.execute_oracle_query(sql, {'t': t.upper()})
             if rows:
-                canonical = rows[0].get('NAME') or t
-                return canonical, True
+                for r in rows:
+                    gen = r.get('NORMD_GENERIC_NAME')
+                    if gen and gen.strip().upper() == t.upper():
+                        return gen.strip(), True
+                for r in rows:
+                    name = r.get('NAME')
+                    if name and name.strip().upper() == t.upper():
+                        return name.strip(), True
+                return t, True
         else:
             sql = """
                 SELECT DISTINCT trim(item) AS canonical
                 FROM labeling.sum_spl s,
                      unnest(string_to_array(COALESCE(s.product_names, '') || '; ' || COALESCE(s.generic_names, ''), ';')) item
                 WHERE lower(trim(item)) = lower(%(t)s) AND trim(item) <> ''
+                ORDER BY CASE WHEN lower(trim(item)) = lower(%(t)s) THEN 1 ELSE 2 END, LENGTH(trim(item))
                 LIMIT 1;
             """
             rows = _rows(sql, {'t': t})

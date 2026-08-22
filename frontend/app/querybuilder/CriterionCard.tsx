@@ -233,13 +233,13 @@ export function CriterionCard({
     async (q: string) => {
       if (q.length < 2) return [];
       const res = await fetch(
-        `/api/labelquery/suggest/product_name?q=${encodeURIComponent(q)}&field=${v.field || 'any'}`,
+        `/api/labelquery/suggest/product_name?q=${encodeURIComponent(q)}&field=${v.field || 'any'}&target_db=${targetDb}`,
       );
       if (!res.ok) return [];
       const json = await res.json();
       return json.suggestions || [];
     },
-    [v.field],
+    [v.field, targetDb],
   );
 
   const body = useMemo(() => {
@@ -389,6 +389,7 @@ export function CriterionCard({
                 <UnverifiedProductPicker
                   queryText={v.text}
                   field={v.field || 'any'}
+                  targetDb={targetDb}
                   onConfirm={(confirmedName) => set({ text: confirmedName, verified: true, op: 'equals' })}
                 />
               </div>
@@ -1110,10 +1111,12 @@ export function CriterionCard({
 function UnverifiedProductPicker({
   queryText,
   field,
+  targetDb = 'oracle',
   onConfirm,
 }: {
   queryText: string;
   field: string;
+  targetDb?: TargetDb;
   onConfirm: (name: string) => void;
 }) {
   const [items, setItems] = useState<string[]>([]);
@@ -1125,7 +1128,7 @@ function UnverifiedProductPicker({
       setLoading(true);
       try {
         const res = await fetch(
-          `/api/labelquery/suggest/product_name?q=${encodeURIComponent(queryText.trim())}&field=${field}`,
+          `/api/labelquery/suggest/product_name?q=${encodeURIComponent(queryText.trim())}&field=${field}&target_db=${targetDb}`,
         );
         if (res.ok && !cancelled) {
           const json = await res.json();
@@ -1145,7 +1148,7 @@ function UnverifiedProductPicker({
     return () => {
       cancelled = true;
     };
-  }, [queryText, field]);
+  }, [queryText, field, targetDb]);
 
   if (loading) {
     return <span style={{ fontSize: '0.8rem', color: '#b45309' }}>Searching matching standard names…</span>;
