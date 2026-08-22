@@ -51,6 +51,22 @@ MAX_LIMIT = 3000
 # The reported total stays exact, so the header reads "3,000 / 32,422".
 BROWSE_CAP = 3000
 
+#: target_db values that mean Oracle. 'oracle_all' additionally widens the base
+#: table from the human-only rollup to the raw one; see _oracle_base_table.
+_ORACLE_TARGETS = ('oracle', 'fdalabel', 'oracle_all')
+
+#: Every target the compiler knows how to run.
+_KNOWN_TARGETS = ('local',) + _ORACLE_TARGETS
+
+#: The scope a normal user is pinned to -- FDALabel's curated CDER-CBER rollup.
+_DEFAULT_TARGET = 'oracle'
+
+
+def _use_oracle(target_db):
+    return (target_db in _ORACLE_TARGETS) or (
+        target_db != 'local' and FDALabelDBService.is_internal()
+    )
+
 
 def _pg():
     conn = FDALabelDBService.get_postgres_connection()
@@ -770,18 +786,6 @@ def _capabilities():
     return dict(_capability_cache)
 
 
-#: target_db values that mean Oracle. 'oracle_all' additionally widens the base
-#: table from the human-only rollup to the raw one; see _oracle_base_table.
-_ORACLE_TARGETS = ('oracle', 'fdalabel', 'oracle_all')
-
-#: Every target the compiler knows how to run. Anything else is a typo or a
-#: crafted request, and is treated as unset rather than passed through.
-_KNOWN_TARGETS = ('local',) + _ORACLE_TARGETS
-
-#: The scope a normal user is pinned to -- FDALabel's curated CDER-CBER rollup.
-_DEFAULT_TARGET = 'oracle'
-
-
 def _oracle_reachable():
     """
     Whether this deployment can reach Oracle at all.
@@ -883,9 +887,7 @@ def _expand_meddra(level, terms):
 
 
 def _use_oracle_facets(target_db):
-    return (target_db in _ORACLE_TARGETS) or (
-        target_db != 'local' and FDALabelDBService.is_internal()
-    )
+    return _use_oracle(target_db)
 
 
 def _facets_once(query, target_db):
