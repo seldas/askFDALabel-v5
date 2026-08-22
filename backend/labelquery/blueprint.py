@@ -1449,7 +1449,7 @@ with OR. Prefer ONE group unless the request clearly asks for alternatives
 Allowed "type" values and the exact shape of their "value":
 
 - "productName"       {"field": "any"|"trade"|"generic", "op": "contains"|"startsWith"|"equals"|"notContains", "text": "metformin"}
-- "identifier"        {"text": "NDA 021436", "ingredientType": "active"|"inactive"|"both"}
+- "identifier"        {"setSplGuids": ["ca73b519-015a-436d-aa3c-af53492825a1", ...], "applNum": "021436", "applKind": "NDA", "uniiCode": "J220T4J9Q2"}
 - "fullText"          {"mode": "simple"|"advanced", "text": "hepatic failure"}
 - "labelingSection"   {"sections": ["BOXED WARNING", "WARNINGS AND PRECAUTIONS"], "text": "lactic acidosis"}
 - "meddra"            {"level": "pt"|"llt", "terms": ["Hepatic failure"], "sections": ["ADVERSE REACTIONS"]}
@@ -1477,7 +1477,7 @@ Rules:
 3. Adverse events and medical concepts: prefer "meddra" over free text. Give the ONE Preferred Term that names the concept.
 4. Free text is the fallback for wording MedDRA does not cover.
 5. Target Sections: When specific sections are named (e.g. "Boxed Warning", "Warnings and Precautions", "Adverse Reactions"), use "labelingSection" or attach "sections" to "meddra".
-6. A drug name goes in "productName", never "identifier". "identifier" is for codes: application number, Set ID, SPL ID, UNII, NDC.
+6. A drug name goes in "productName", never "identifier". "identifier" is for codes: application number, Set ID, SPL ID, UNII, NDC. If the request provides one or more Set IDs / SPL GUIDs (UUID format), emit them in "identifier" under "setSplGuids" as an array.
 7. Never return an empty "groups" array when medical concepts, drug names, or labeling sections are requested.
 """
 
@@ -1901,6 +1901,23 @@ def _sanitize_translation(parsed, target_db):
                     'terms': verified_pts + verified_llts + unverified,
                     'verified': is_fully_verified,
                 }
+            elif ctype == 'identifier':
+                if isinstance(value, str):
+                    raw_tokens = re.split(r'[\r\n,;\s]+', value.strip())
+                    uuids = [t for t in raw_tokens if _UUID_RE.match(t)]
+                    if uuids:
+                        value = {'setSplGuids': uuids, 'setSplGuid': ''}
+                    else:
+                        value = {'setSplGuids': [], 'setSplGuid': value}
+                elif isinstance(value, list):
+                    uuids = [str(t).strip() for t in value if _UUID_RE.match(str(t).strip())]
+                    value = {'setSplGuids': uuids, 'setSplGuid': ''}
+                elif isinstance(value, dict):
+                    raw_guids = value.get('setSplGuids') or []
+                    if isinstance(raw_guids, str):
+                        raw_guids = re.split(r'[\r\n,;\s]+', raw_guids.strip())
+                    cleaned_guids = [str(g).strip() for g in raw_guids if str(g).strip()]
+                    value['setSplGuids'] = cleaned_guids
             elif isinstance(value, str):
                 if ctype in ('fullText', 'labelingSection'):
                     value = {'mode': 'advanced' if ' OR ' in value or ' AND ' in value else 'simple', 'text': value}

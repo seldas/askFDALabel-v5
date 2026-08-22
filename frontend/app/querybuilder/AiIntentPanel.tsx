@@ -15,9 +15,21 @@ import { fromWire, fromWirePrefilters } from './types';
 import { PreFilterChips } from './PreFilterChips';
 
 const EXAMPLES = [
-  'Metformin or glipizide mentioning lactic acidosis in the boxed warning',
-  'Kinase inhibitors mentioning QTc prolongation or cardiac toxicity',
-  'Acetaminophen or aspirin labels with adverse reactions mentioning hepatic failure',
+  {
+    category: 'Multiple SET-IDs',
+    prompt: 'ca73b519-015a-436d-aa3c-af53492825a1, c7247391-7fb8-4bd8-90db-2d1d072fec01, 88e0b675-ea22-4809-b4be-5ce26857945d',
+    display: 'Multiple SET-IDs paste (ca73b519-…, c7247391-…, 88e0b675-…)',
+  },
+  {
+    category: 'Drug Name + Typo',
+    prompt: 'Lipitor or Metfomin with oral route',
+    display: 'Drug combination with typo ("Lipitor or Metfomin with oral route")',
+  },
+  {
+    category: 'MedDRA Safety',
+    prompt: 'Metformin labels with Boxed Warning mentioning lactic acidosis',
+    display: 'MedDRA safety ("Metformin with Boxed Warning lactic acidosis")',
+  },
 ];
 
 export function AiIntentPanel({
@@ -166,7 +178,7 @@ export function AiIntentPanel({
               rows={2}
               value={intent}
               disabled={disabled || busy}
-              placeholder="e.g. Metformin or glipizide mentioning lactic acidosis in Boxed Warning or Adverse Reactions"
+              placeholder="e.g. Lipitor or Metfomin oral, or paste multiple SET-IDs, or Metformin with Boxed Warning lactic acidosis..."
               onChange={(e) => setIntent(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -189,16 +201,17 @@ export function AiIntentPanel({
             <span className="fdl-ai__exlabel">Try:</span>
             {EXAMPLES.map((ex) => (
               <button
-                key={ex}
+                key={ex.prompt}
                 type="button"
                 className="fdl-link"
                 disabled={busy || refining}
                 onClick={() => {
-                  setIntent(ex);
-                  translate(ex);
+                  setIntent(ex.prompt);
+                  translate(ex.prompt);
                 }}
+                title={ex.prompt}
               >
-                {ex}
+                {ex.display}
               </button>
             ))}
           </div>
