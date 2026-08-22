@@ -757,7 +757,7 @@ export default function WikiPage() {
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <Link
-              href="/labelquery"
+              href="/"
               style={{
                 padding: '10px 18px',
                 borderRadius: '8px',
@@ -769,7 +769,7 @@ export default function WikiPage() {
                 boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
               }}
             >
-              🚀 Launch Query Builder
+              🏠 Return to Home Page to Search
             </Link>
             <a
               href="mailto:NCTRBioinformaticsSupport@fda.hhs.gov"
