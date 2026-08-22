@@ -656,15 +656,25 @@ export function countFilled(query: LabelQuery): number {
 }
 
 /**
- * Returns true if any active productName criterion has text but is pending
- * user verification/confirmation from the standardized list.
+ * Returns true if any active productName or meddra criterion has unconfirmed terms
+ * pending user verification from the standardized vocabulary.
  */
-export function hasUnverifiedProductNames(query: LabelQuery): boolean {
+export function hasUnverifiedCriteria(query: LabelQuery): boolean {
   return query.groups.some((g) =>
     g.criteria.some((c) => {
-      if (c.type !== 'productName') return false;
-      const v = c.value as Record<string, any>;
-      return Boolean(v?.text && String(v.text).trim()) && v.verified === false;
+      if (c.type === 'productName') {
+        const v = c.value as Record<string, any>;
+        return Boolean(v?.text && String(v.text).trim()) && v.verified === false;
+      }
+      if (c.type === 'meddra') {
+        const v = c.value as Record<string, any>;
+        const unverified = Array.isArray(v?.unverifiedTerms) && v.unverifiedTerms.length > 0;
+        const hasAnyTerms = (v?.ptTerms?.length || 0) > 0 || (v?.lltTerms?.length || 0) > 0 || (v?.terms?.length || 0) > 0;
+        return (unverified || hasAnyTerms) && v.verified === false;
+      }
+      return false;
     }),
   );
 }
+
+export const hasUnverifiedProductNames = hasUnverifiedCriteria;

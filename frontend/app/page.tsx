@@ -295,7 +295,7 @@ function HomePage() {
               gap: '4px',
             }}
           >
-            ⚠️ Please confirm product name(s)
+            ⚠️ Please confirm name(s) / MedDRA term(s)
           </span>
         )}
       </div>
@@ -353,7 +353,7 @@ function HomePage() {
         onClick={runSearch}
         disabled={hasUnverified}
         style={hasUnverified ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
-        title={hasUnverified ? 'Please confirm all product names by selecting from standard suggestions' : undefined}
+        title={hasUnverified ? 'Please confirm all product names and MedDRA terms by selecting from standard suggestions' : undefined}
       >
         Search Labels »
       </button>

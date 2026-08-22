@@ -742,8 +742,56 @@ export function CriterionCard({
           );
         };
 
+        const unverifiedTerms: string[] = Array.isArray(v.unverifiedTerms) ? v.unverifiedTerms : [];
+
         return (
           <>
+            {unverifiedTerms.length > 0 && (
+              <div
+                style={{
+                  backgroundColor: '#fffbeb',
+                  border: '1px solid #fde68a',
+                  borderRadius: '8px',
+                  padding: '10px 14px',
+                  marginBottom: '10px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    ⚠️ Verification Required for MedDRA Term(s)
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 600 }}>
+                    Select standardized PT below to enable search
+                  </span>
+                </div>
+                <p style={{ margin: '0 0 8px 0', fontSize: '0.82rem', color: '#78350f' }}>
+                  Please confirm the standardized MedDRA Preferred Term (PT) for each item below:
+                </p>
+                {unverifiedTerms.map((term) => (
+                  <div key={term} style={{ marginBottom: '8px' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#78350f', marginBottom: '4px' }}>
+                      Term: <em>&ldquo;{term}&rdquo;</em>
+                    </div>
+                    <UnverifiedMeddraPicker
+                      term={term}
+                      targetDb={targetDb}
+                      onConfirm={(canonical, lvl) => {
+                        const nextUnverified = unverifiedTerms.filter((u) => u !== term);
+                        const nextPts = lvl === 'pt' && !meddraPts.includes(canonical) ? [...meddraPts, canonical] : meddraPts;
+                        const nextLlts = lvl === 'llt' && !meddraLlts.includes(canonical) ? [...meddraLlts, canonical] : meddraLlts;
+                        set({
+                          unverifiedTerms: nextUnverified,
+                          ptTerms: nextPts,
+                          lltTerms: nextLlts,
+                          verified: nextUnverified.length === 0,
+                        });
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="fdl-row">
               <Select
                 ariaLabel="MedDRA level"
@@ -761,8 +809,12 @@ export function CriterionCard({
                       ? 'Begin entering a Preferred Term, then select from suggestions that appear'
                       : 'Begin entering a Lowest Level Term, then select from suggestions that appear'
                   }
-                  onCommit={addTerm}
+                  onCommit={(term) => {
+                    addTerm(term);
+                    set({ verified: true, unverifiedTerms: unverifiedTerms.filter((u) => u !== term) });
+                  }}
                   fetchSuggestions={fetchMeddra}
+                  requireSuggestion={true}
                 />
               </div>
             </div>
@@ -1149,6 +1201,103 @@ function UnverifiedProductPicker({
           title={`Confirm standard name: ${item}`}
         >
           <span>✓ {item}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function UnverifiedMeddraPicker({
+  term,
+  targetDb = 'oracle',
+  onConfirm,
+}: {
+  term: string;
+  targetDb?: TargetDb;
+  onConfirm: (canonicalTerm: string, level: 'pt' | 'llt') => void;
+}) {
+  const [items, setItems] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `/api/labelquery/suggest/meddra?q=${encodeURIComponent(term.trim())}&level=pt&target_db=${targetDb}`,
+        );
+        if (res.ok && !cancelled) {
+          const json = await res.json();
+          setItems(json.suggestions || []);
+        }
+      } catch {
+        if (!cancelled) setItems([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    if (term.trim().length >= 2) load();
+    else setItems([]);
+    return () => {
+      cancelled = true;
+    };
+  }, [term, targetDb]);
+
+  if (loading) {
+    return <span style={{ fontSize: '0.8rem', color: '#b45309' }}>Searching matching MedDRA terms…</span>;
+  }
+
+  if (!items.length) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.8rem', color: '#b45309' }}>
+          No exact MedDRA PT match found for &ldquo;{term}&rdquo;.
+        </span>
+        <button
+          type="button"
+          onClick={() => onConfirm(term.trim(), 'pt')}
+          style={{
+            background: '#d97706',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '6px',
+            padding: '3px 10px',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          Confirm &ldquo;{term.trim()}&rdquo; as-is
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+      {items.slice(0, 10).map((item) => (
+        <button
+          key={item}
+          type="button"
+          onClick={() => onConfirm(item, 'pt')}
+          style={{
+            background: '#ffffff',
+            color: '#92400e',
+            border: '1px solid #d97706',
+            borderRadius: '6px',
+            padding: '4px 10px',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+          }}
+          title={`Confirm MedDRA Preferred Term: ${item}`}
+        >
+          <span>✓ {item} (PT)</span>
         </button>
       ))}
     </div>

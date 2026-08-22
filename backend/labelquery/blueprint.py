@@ -1648,6 +1648,105 @@ def _sanitize_translation(parsed, target_db='local'):
     where it emits one anyway, and says so in the notes rather than letting the
     search quietly run wider than asked.
     """
+
+
+def _auto_verify_product_name(text, target_db='local'):
+    """
+    Checks if a product name text exactly matches a standard trade, generic, or ingredient name.
+    Returns (canonical_name, True) if an exact match exists, or (text, False) if unconfirmed.
+    """
+    t = (text or '').strip()
+    if not t:
+        return text, False
+    try:
+        if _use_oracle(target_db):
+            from dashboard.services.fdalabel_db import FDALabelDBService
+            sql = """
+                SELECT DISTINCT NAME FROM druglabel.SPL_PROD 
+                WHERE UPPER(NAME) = :t OR UPPER(NORMD_GENERIC_NAME) = :t 
+                FETCH NEXT 1 ROWS ONLY
+            """
+            rows = FDALabelDBService.execute_oracle_query(sql, {'t': t.upper()})
+            if rows:
+                canonical = rows[0].get('NAME') or t
+                return canonical, True
+        else:
+            sql = """
+                SELECT DISTINCT trim(item) AS canonical
+                FROM labeling.sum_spl s,
+                     unnest(string_to_array(COALESCE(s.product_names, '') || '; ' || COALESCE(s.generic_names, ''), ';')) item
+                WHERE lower(trim(item)) = lower(%(t)s) AND trim(item) <> ''
+                LIMIT 1;
+            """
+            rows = _rows(sql, {'t': t})
+            if rows and rows[0].get('canonical'):
+                return rows[0]['canonical'], True
+    except Exception as e:
+        print(f"[WARN] Product name auto-verify error: {e}")
+    return t, False
+
+
+def _auto_verify_meddra(terms, target_db='oracle'):
+    """
+    Checks if MedDRA terms exactly match standard PT or LLT names in the MedDRA vocabulary.
+    Returns:
+      verified_pts: list of canonical PT names
+      verified_llts: list of canonical LLT names
+      unverified_terms: list of terms needing user confirmation
+    """
+    verified_pts = []
+    verified_llts = []
+    unverified = []
+
+    for raw in terms:
+        t = (raw or '').strip()
+        if not t:
+            continue
+        found = False
+        try:
+            if _use_oracle(target_db):
+                from dashboard.services.fdalabel_db import FDALabelDBService
+                # Check PT first
+                sql_pt = "SELECT DISTINCT PT_NAME FROM meddra.meddra_hierarchy WHERE UPPER(PT_NAME) = :t FETCH NEXT 1 ROWS ONLY"
+                rows_pt = FDALabelDBService.execute_oracle_query(sql_pt, {'t': t.upper()})
+                if rows_pt:
+                    canonical = rows_pt[0].get('PT_NAME') or t
+                    verified_pts.append(canonical)
+                    found = True
+                else:
+                    sql_llt = "SELECT DISTINCT LLT_NAME FROM meddra.low_level_term WHERE UPPER(LLT_NAME) = :t FETCH NEXT 1 ROWS ONLY"
+                    rows_llt = FDALabelDBService.execute_oracle_query(sql_llt, {'t': t.upper()})
+                    if rows_llt:
+                        canonical = rows_llt[0].get('LLT_NAME') or t
+                        verified_llts.append(canonical)
+                        found = True
+            else:
+                # Check local Postgres public.meddra_hierarchy / low_level_term
+                sql_pt = "SELECT DISTINCT pt_name FROM public.meddra_hierarchy WHERE lower(pt_name) = lower(%(t)s) LIMIT 1"
+                rows_pt = _rows(sql_pt, {'t': t})
+                if rows_pt and rows_pt[0].get('pt_name'):
+                    verified_pts.append(rows_pt[0]['pt_name'])
+                    found = True
+                else:
+                    sql_llt = "SELECT DISTINCT llt_name FROM public.meddra_low_level_term WHERE lower(llt_name) = lower(%(t)s) LIMIT 1"
+                    rows_llt = _rows(sql_llt, {'t': t})
+                    if rows_llt and rows_llt[0].get('llt_name'):
+                        verified_llts.append(rows_llt[0]['llt_name'])
+                        found = True
+        except Exception as e:
+            print(f"[WARN] MedDRA auto-verify error for '{t}': {e}")
+
+        if not found:
+            unverified.append(t)
+
+    return verified_pts, verified_llts, unverified
+
+
+def _sanitize_translation(parsed, target_db):
+    """
+    Validates LLM translation payload, dropping unsupported criteria and harvesting prefilters.
+    Auto-verifies exact matching Product Names and MedDRA terms against database terminology.
+    """
     unsupported = _TARGET_UNSUPPORTED.get(target_db, _TARGET_UNSUPPORTED['local'])
     groups = []
     dropped = []
@@ -1685,24 +1784,46 @@ def _sanitize_translation(parsed, target_db='local'):
                 unavailable.append(str(ctype))
                 continue
 
-            # Auto-repair loose values from LLM
-            if isinstance(value, str):
+            # Auto-repair and auto-verify values from LLM
+            if ctype == 'productName':
+                p_text = value.get('text') if isinstance(value, dict) else (value if isinstance(value, str) else '')
+                if p_text:
+                    canonical, is_verified = _auto_verify_product_name(p_text, target_db)
+                    value = {
+                        'field': value.get('field', 'any') if isinstance(value, dict) else 'any',
+                        'op': 'equals' if is_verified else (value.get('op', 'contains') if isinstance(value, dict) else 'contains'),
+                        'text': canonical,
+                        'verified': is_verified,
+                    }
+                else:
+                    value = {'field': 'any', 'op': 'contains', 'text': '', 'verified': False}
+            elif ctype == 'meddra':
+                terms = []
+                if isinstance(value, str):
+                    terms = [value]
+                elif isinstance(value, list):
+                    terms = value
+                elif isinstance(value, dict):
+                    terms = value.get('terms') or value.get('ptTerms') or value.get('lltTerms') or ([value.get('text')] if value.get('text') else [])
+                
+                verified_pts, verified_llts, unverified = _auto_verify_meddra(terms, target_db)
+                is_fully_verified = len(unverified) == 0 and (len(verified_pts) > 0 or len(verified_llts) > 0)
+                value = {
+                    'level': 'pt' if verified_pts or not verified_llts else 'llt',
+                    'ptTerms': verified_pts,
+                    'lltTerms': verified_llts,
+                    'unverifiedTerms': unverified,
+                    'terms': verified_pts + verified_llts + unverified,
+                    'verified': is_fully_verified,
+                }
+            elif isinstance(value, str):
                 if ctype in ('fullText', 'labelingSection'):
                     value = {'mode': 'advanced' if ' OR ' in value or ' AND ' in value else 'simple', 'text': value}
-                elif ctype == 'productName':
-                    value = {'field': 'any', 'op': 'contains', 'text': value, 'verified': False}
-                elif ctype == 'meddra':
-                    value = {'level': 'pt', 'terms': [value]}
                 elif ctype in ('labelingType', 'applicationType', 'route', 'marketStatus'):
                     value = {'values': [value]}
             elif isinstance(value, list):
                 if ctype in ('labelingType', 'applicationType', 'route', 'marketStatus'):
                     value = {'values': value}
-                elif ctype == 'meddra':
-                    value = {'level': 'pt', 'terms': value}
-            elif isinstance(value, dict) and ctype == 'productName':
-                if 'verified' not in value:
-                    value['verified'] = False
 
             if not isinstance(value, dict):
                 dropped.append(str(ctype))
