@@ -189,18 +189,26 @@ export function ListAdder({
  * Suggestions are advisory: Enter commits whatever is typed, because the EPC
  * and MedDRA vocabularies are large enough that an unlisted term is often still
  * worth searching for.
+ *
+ * `values`/`onChange` own the chips shown above the box. A caller that files
+ * committed terms somewhere else -- MedDRA sorts them into a PT row and an LLT
+ * row, which are not one list -- passes `onCommit` instead and renders the
+ * picks itself.
  */
 export function TokenInput({
   placeholder,
   values,
   onChange,
+  onCommit,
   fetchSuggestions,
 }: {
   placeholder: string;
-  values: string[];
-  onChange: (values: string[]) => void;
+  values?: string[];
+  onChange?: (values: string[]) => void;
+  onCommit?: (value: string) => void;
   fetchSuggestions?: (q: string) => Promise<string[]>;
 }) {
+  const chips = values ?? [];
   const [text, setText] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
@@ -239,7 +247,10 @@ export function TokenInput({
 
   const commit = (value: string) => {
     const v = value.trim();
-    if (v && !values.includes(v)) onChange([...values, v]);
+    if (v) {
+      if (onCommit) onCommit(v);
+      else if (onChange && !chips.includes(v)) onChange([...chips, v]);
+    }
     setText('');
     setSuggestions([]);
     setOpen(false);
@@ -247,7 +258,9 @@ export function TokenInput({
 
   return (
     <div className="fdl-tokeninput" ref={boxRef}>
-      <Chips values={values} onRemove={(v) => onChange(values.filter((x) => x !== v))} />
+      {onChange && (
+        <Chips values={chips} onRemove={(v) => onChange(chips.filter((x) => x !== v))} />
+      )}
       <input
         className="fdl-input"
         type="text"
@@ -259,8 +272,8 @@ export function TokenInput({
           if (e.key === 'Enter') {
             e.preventDefault();
             commit(text);
-          } else if (e.key === 'Backspace' && !text && values.length) {
-            onChange(values.slice(0, -1));
+          } else if (e.key === 'Backspace' && !text && onChange && chips.length) {
+            onChange(chips.slice(0, -1));
           }
         }}
       />

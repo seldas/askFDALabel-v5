@@ -589,7 +589,9 @@ def get_meddra_llts():
 
     This is what a PT selection actually searches for: label text writes the
     LLT, not the PT, so a PT is only a handle for its descendants. The panel
-    shows them so the breadth of a PT pick is visible before the search runs.
+    lists them as badges on its LLT row, which is both how the breadth of a PT
+    pick is visible before the search runs and how individual descendants are
+    dropped from it -- see excludedLlts in _compile_meddra.
 
     Names only, on both targets. Oracle matches LLT_CODE rather than text when
     it compiles the query -- see _compile_meddra -- but a code is not something
@@ -631,6 +633,58 @@ def get_meddra_llts():
         return jsonify({'term': term, 'llts': llts, 'count': len(llts)})
     except Exception as e:
         return jsonify({'term': term, 'llts': [], 'count': 0, 'error': str(e)})
+
+
+@labelquery_bp.route('/meddra/parent_pt', methods=['GET'])
+def get_meddra_parent_pt():
+    """
+    The Preferred Term one Lowest Level Term sits under.
+
+    This is what the panel's "broaden to PT" control needs: swapping an LLT for
+    its PT pulls in every sibling LLT, which is the difference between finding
+    the labels that happen to use the wording the user typed and finding the
+    ones that mean the same thing.
+
+    An LLT belongs to exactly one PT in MedDRA, so there is no ambiguity to
+    resolve here -- unlike the hierarchy above the PT, which forks by SOC.
+    Returns pt: null when the term is unknown, which the panel reads as "leave
+    the pick alone" rather than as an error worth showing.
+    """
+    term = (request.args.get('term') or '').strip()
+    target_db = _resolve_target_db(request.args.get('target_db') or request.args.get('targetDb'))
+    if not term:
+        return jsonify({'term': term, 'pt': None})
+
+    try:
+        if target_db == 'oracle':
+            from dashboard.services.fdalabel_db import FDALabelDBService
+            rows = FDALabelDBService.execute_oracle_query(
+                """
+                SELECT pt.PT_NAME AS name
+                FROM meddra.low_level_term llt
+                JOIN meddra.preferred_term pt ON pt.PT_CODE = llt.PT_CODE
+                WHERE UPPER(llt.LLT_NAME) = :t
+                FETCH NEXT 1 ROWS ONLY
+                """,
+                {'t': term.upper()},
+            )
+            pt = (rows[0].get('NAME') or rows[0].get('name')) if rows else None
+        else:
+            rows = _rows(
+                """
+                SELECT p.pt_name AS name
+                FROM public.meddra_llt l
+                JOIN public.meddra_pt p ON p.pt_code = l.pt_code
+                WHERE LOWER(l.llt_name) = LOWER(%(t)s)
+                LIMIT 1
+                """,
+                {'t': term},
+            )
+            pt = rows[0]['name'] if rows else None
+
+        return jsonify({'term': term, 'pt': pt})
+    except Exception as e:
+        return jsonify({'term': term, 'pt': None, 'error': str(e)})
 
 
 _capability_cache = {}

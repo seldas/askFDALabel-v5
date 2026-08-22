@@ -66,15 +66,55 @@ export function CriterionCard({
   const unavailable = unsupportedReason(criterion.type, targetDb);
 
   const [hierarchies, setHierarchies] = useState<Record<string, string>>({});
-  /* LLT names under each selected PT, keyed `${level}:${term}`. A PT searches
-   * its descendants, so showing them is the only way to see how wide a pick
-   * really is before running it. */
+  /* LLT names under each selected PT, keyed `${targetDb}:pt:${term}`. A PT
+   * searches its descendants, so showing them is the only way to see how wide
+   * a pick really is before running it -- and, now, to drop the ones that do
+   * not belong. */
   const [llts, setLlts] = useState<Record<string, string[]>>({});
+  /* The PT above each directly-picked LLT, keyed `${targetDb}:${llt}`, for the
+   * "broaden to PT" control. Fetched up front rather than on click so the
+   * button can name the term it would swap in. */
+  const [parentPts, setParentPts] = useState<Record<string, string | null>>({});
+
+  /* MedDRA holds two lists at once now: a PT row and an LLT row. `terms` is
+   * the old single-level shape, still what /translate writes and what a saved
+   * URL carries, so it is folded into whichever row `level` named. HLT / HLGT
+   * / SOC have no row of their own and stay on `terms`, compiled the way they
+   * always were. */
+  const meddraPts: string[] = useMemo(
+    () => (Array.isArray(v.ptTerms) ? v.ptTerms : []),
+    [v.ptTerms],
+  );
+  const meddraLlts: string[] = useMemo(
+    () => (Array.isArray(v.lltTerms) ? v.lltTerms : []),
+    [v.lltTerms],
+  );
+  const meddraExcluded: string[] = useMemo(
+    () => (Array.isArray(v.excludedLlts) ? v.excludedLlts : []),
+    [v.excludedLlts],
+  );
 
   useEffect(() => {
-    if (criterion.type !== 'meddra' || !v.terms || v.terms.length === 0) return;
-    const level = (v.level || 'pt').toLowerCase();
-    v.terms.forEach(async (t: string) => {
+    if (criterion.type !== 'meddra') return;
+    const legacy: string[] = Array.isArray(v.terms) ? v.terms : [];
+    if (!legacy.length) return;
+    const level = (v.level || 'llt').toLowerCase();
+    if (level !== 'pt' && level !== 'llt') return;
+    const field = level === 'pt' ? 'ptTerms' : 'lltTerms';
+    const existing: string[] = Array.isArray(v[field]) ? v[field] : [];
+    const merged = [...existing, ...legacy.filter((t) => !existing.includes(t))];
+    onChange({ ...v, [field]: merged, terms: [] });
+  }, [criterion.type, v, onChange]);
+
+  useEffect(() => {
+    if (criterion.type !== 'meddra') return;
+    // Each row asks about its own level: a PT's path stops at the PT, an LLT's
+    // runs one step further down.
+    const wanted: Array<[string, string]> = [
+      ...meddraPts.map((t) => ['pt', t] as [string, string]),
+      ...meddraLlts.map((t) => ['llt', t] as [string, string]),
+    ];
+    wanted.forEach(async ([level, t]) => {
       // targetDb is part of the key: the two databases answer this from
       // different MedDRA dictionaries, so a cached answer from one is not an
       // answer for the other.
@@ -94,13 +134,12 @@ export function CriterionCard({
         // ignore fetch error
       }
     });
-  }, [criterion.type, v.terms, v.level, targetDb, hierarchies]);
+  }, [criterion.type, meddraPts, meddraLlts, targetDb, hierarchies]);
 
   useEffect(() => {
     // Only a PT has LLTs below it; at LLT level the term is already the leaf.
-    if (criterion.type !== 'meddra' || (v.level || 'pt').toLowerCase() !== 'pt') return;
-    if (!v.terms || v.terms.length === 0) return;
-    v.terms.forEach(async (t: string) => {
+    if (criterion.type !== 'meddra' || meddraPts.length === 0) return;
+    meddraPts.forEach(async (t: string) => {
       const key = `${targetDb}:pt:${t}`;
       // `in`, not truthiness: an empty array is truthy, so `if (llts[key])`
       // would treat "no LLTs found" as "not fetched yet" and refetch forever.
@@ -118,7 +157,25 @@ export function CriterionCard({
         // ignore fetch error
       }
     });
-  }, [criterion.type, v.terms, v.level, targetDb, llts]);
+  }, [criterion.type, meddraPts, targetDb, llts]);
+
+  useEffect(() => {
+    if (criterion.type !== 'meddra' || meddraLlts.length === 0) return;
+    meddraLlts.forEach(async (t: string) => {
+      const key = `${targetDb}:${t}`;
+      if (key in parentPts) return;
+      try {
+        const res = await fetch(
+          `/api/labelquery/meddra/parent_pt?term=${encodeURIComponent(t)}&target_db=${targetDb}`,
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        setParentPts((prev) => ({ ...prev, [key]: data.pt || null }));
+      } catch {
+        // ignore fetch error
+      }
+    });
+  }, [criterion.type, meddraLlts, targetDb, parentPts]);
 
   const set = useCallback(
     (patch: Record<string, unknown>) => onChange({ ...v, ...patch }),
@@ -163,7 +220,7 @@ export function CriterionCard({
   const fetchMeddra = useCallback(
     async (q: string) => {
       const res = await fetch(
-        `/api/labelquery/suggest/meddra?q=${encodeURIComponent(q)}&level=${v.level || 'pt'}&target_db=${targetDb}`,
+        `/api/labelquery/suggest/meddra?q=${encodeURIComponent(q)}&level=${v.level || 'llt'}&target_db=${targetDb}`,
       );
       if (!res.ok) return [];
       const json = await res.json();
@@ -530,59 +587,200 @@ export function CriterionCard({
       }
 
       case 'meddra': {
-        const currentLevel = (v.level || 'pt').toLowerCase();
-        const terms = v.terms || [];
+        const level = (v.level || 'llt').toLowerCase();
+
+        /* Every LLT the query will actually search for, and where it came
+         * from. A PT contributes its whole expansion; the LLT row contributes
+         * its own picks. An LLT can be both, and an outright pick outranks an
+         * exclusion -- the exclusion only says "not via this PT". */
+        const derived = new Map<string, string[]>();
+        meddraPts.forEach((pt) => {
+          (llts[`${targetDb}:pt:${pt}`] || []).forEach((llt) => {
+            derived.set(llt, [...(derived.get(llt) || []), pt]);
+          });
+        });
+        const isExcluded = (llt: string) =>
+          meddraExcluded.includes(llt) && !meddraLlts.includes(llt);
+        const searchedCount =
+          meddraLlts.length +
+          [...derived.keys()].filter((llt) => !meddraLlts.includes(llt) && !isExcluded(llt)).length;
+
+        const addTerm = (term: string) => {
+          const field = level === 'pt' ? 'ptTerms' : 'lltTerms';
+          const current: string[] = field === 'ptTerms' ? meddraPts : meddraLlts;
+          if (current.includes(term)) return;
+          // Adding a term back clears any standing exclusion of it, or the
+          // pick would land already crossed out.
+          set({
+            [field]: [...current, term],
+            excludedLlts: meddraExcluded.filter((x) => x !== term),
+          });
+        };
+
+        const removePt = (pt: string) => set({ ptTerms: meddraPts.filter((x) => x !== pt) });
+
+        const toggleExcluded = (llt: string) =>
+          set({
+            excludedLlts: meddraExcluded.includes(llt)
+              ? meddraExcluded.filter((x) => x !== llt)
+              : [...meddraExcluded, llt],
+          });
+
+        /* Swaps a directly-picked LLT for the PT above it, which pulls in
+         * every sibling LLT -- the difference between the labels that use the
+         * user's wording and the labels that mean the same thing. */
+        const broadenToPt = (llt: string) => {
+          const pt = parentPts[`${targetDb}:${llt}`];
+          if (!pt) return;
+          set({
+            lltTerms: meddraLlts.filter((x) => x !== llt),
+            ptTerms: meddraPts.includes(pt) ? meddraPts : [...meddraPts, pt],
+          });
+        };
+
+        const lltBadge = (llt: string, fromPts: string[]) => {
+          const excluded = isExcluded(llt);
+          const direct = meddraLlts.includes(llt);
+          const parentPt = direct ? parentPts[`${targetDb}:${llt}`] : null;
+          return (
+            <span
+              key={llt}
+              className={`fdl-term-badge${excluded ? ' fdl-term-badge--off' : ''}${direct ? ' fdl-term-badge--direct' : ''}`}
+              title={
+                fromPts.length
+                  ? `${llt} — under ${fromPts.join(', ')}`
+                  : `${llt} — picked directly`
+              }
+            >
+              <span className="fdl-term-badge__name">{llt}</span>
+              {parentPt ? (
+                <button
+                  type="button"
+                  className="fdl-term-badge__act"
+                  onClick={() => broadenToPt(llt)}
+                  title={`Broaden to its Preferred Term "${parentPt}" — searches every LLT under it`}
+                  aria-label={`Broaden ${llt} to Preferred Term ${parentPt}`}
+                >
+                  ↑PT
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="fdl-term-badge__x"
+                onClick={() => (direct ? set({ lltTerms: meddraLlts.filter((x) => x !== llt) }) : toggleExcluded(llt))}
+                title={
+                  direct
+                    ? `Remove ${llt}`
+                    : excluded
+                      ? `Search ${llt} again`
+                      : `Leave ${llt} out of the search`
+                }
+                aria-label={direct ? `Remove ${llt}` : excluded ? `Restore ${llt}` : `Exclude ${llt}`}
+              >
+                {excluded ? '+' : '×'}
+              </button>
+            </span>
+          );
+        };
+
         return (
           <>
             <div className="fdl-row">
               <Select
                 ariaLabel="MedDRA level"
-                value={v.level || 'pt'}
-                onChange={(level) => set({ level })}
+                value={level}
+                onChange={(next) => set({ level: next })}
                 options={[
-                  { value: 'pt', label: 'Preferred Term (PT)' },
                   { value: 'llt', label: 'Lowest Level Term (LLT)' },
+                  { value: 'pt', label: 'Preferred Term (PT)' },
                 ]}
               />
               <div className="fdl-row__grow">
                 <TokenInput
-                  placeholder="Begin entering a MedDRA term, then select from suggestions that appear"
-                  values={terms}
-                  onChange={(newTerms) => set({ terms: newTerms })}
+                  placeholder={
+                    level === 'pt'
+                      ? 'Begin entering a Preferred Term, then select from suggestions that appear'
+                      : 'Begin entering a Lowest Level Term, then select from suggestions that appear'
+                  }
+                  onCommit={addTerm}
                   fetchSuggestions={fetchMeddra}
                 />
               </div>
             </div>
-            {terms.length > 0 && (
-              <div className="fdl-meddra-hierarchies">
-                {terms.map((t: string) => {
-                  const path = hierarchies[`${targetDb}:${currentLevel}:${t}`];
-                  const childLlts = currentLevel === 'pt' ? llts[`${targetDb}:pt:${t}`] : undefined;
-                  return (
-                    <div key={t} className="fdl-meddra-hier-item">
-                      <span className="fdl-meddra-hier-term">• <strong>{t}</strong> ({currentLevel.toUpperCase()}):</span>
-                      <span className="fdl-meddra-hier-path">
-                        {path || 'Loading hierarchy…'}
-                      </span>
-                      {/* Runs on after the PT rather than onto its own lines:
-                        * this is a footnote about what the PT covers, not a
-                        * second list to read down. */}
-                      {childLlts && childLlts.length > 0 ? (
-                        <span className="fdl-meddra-llts">
-                          {' '}
-                          <span className="fdl-meddra-llts__label">
-                            searches {childLlts.length} LLT{childLlts.length === 1 ? '' : 's'}:
-                          </span>{' '}
-                          {childLlts.join(', ')}
+
+            {/* The two rows are the selection: a PT is a handle for the LLTs
+              * below it, so it cannot share a line with the terms it expands
+              * into without reading as one flat list of equals. */}
+            {meddraPts.length > 0 && (
+              <div className="fdl-term-row">
+                <span className="fdl-term-row__label">PT</span>
+                <div className="fdl-term-row__items">
+                  {meddraPts.map((pt) => {
+                    const expansion = llts[`${targetDb}:pt:${pt}`];
+                    return (
+                      <span key={pt} className="fdl-term-badge fdl-term-badge--pt" title={hierarchies[`${targetDb}:pt:${pt}`] || pt}>
+                        <span className="fdl-term-badge__name">{pt}</span>
+                        <span className="fdl-term-badge__meta">
+                          {expansion === undefined
+                            ? '…'
+                            : `${expansion.length} LLT${expansion.length === 1 ? '' : 's'}`}
                         </span>
-                      ) : null}
-                    </div>
-                  );
-                })}
+                        <button
+                          type="button"
+                          className="fdl-term-badge__x"
+                          onClick={() => removePt(pt)}
+                          aria-label={`Remove ${pt}`}
+                          title={`Remove ${pt} and the LLTs it contributes`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
             )}
+
+            {(meddraLlts.length > 0 || derived.size > 0) && (
+              <div className="fdl-term-row">
+                <span className="fdl-term-row__label">LLT</span>
+                <div className="fdl-term-row__items">
+                  {meddraLlts.map((llt) => lltBadge(llt, derived.get(llt) || []))}
+                  {[...derived.entries()]
+                    .filter(([llt]) => !meddraLlts.includes(llt))
+                    .map(([llt, fromPts]) => lltBadge(llt, fromPts))}
+                </div>
+              </div>
+            )}
+
+            {(meddraPts.length > 0 || meddraLlts.length > 0) && (
+              <div className="fdl-meddra-hierarchies">
+                {[...meddraPts.map((t) => ['pt', t]), ...meddraLlts.map((t) => ['llt', t])].map(
+                  ([lvl, t]) => (
+                    <div key={`${lvl}:${t}`} className="fdl-meddra-hier-item">
+                      <span className="fdl-meddra-hier-term">
+                        • <strong>{t}</strong> ({lvl.toUpperCase()}):
+                      </span>
+                      <span className="fdl-meddra-hier-path">
+                        {hierarchies[`${targetDb}:${lvl}:${t}`] || 'Loading hierarchy…'}
+                      </span>
+                    </div>
+                  ),
+                )}
+              </div>
+            )}
+
             <p className="fdl-note">
-              Search by Preferred Term (PT) or Lowest Level Term (LLT). Selecting a PT automatically maps down to all its descendant Lowest Level Terms (LLTs) in labeling.
+              Labeling text is written at the Lowest Level Term, so that is what is searched:{' '}
+              {searchedCount > 0 ? (
+                <strong>
+                  {searchedCount} LLT{searchedCount === 1 ? '' : 's'}
+                </strong>
+              ) : (
+                'nothing yet'
+              )}
+              . Adding a Preferred Term brings in every LLT beneath it — remove any that do not
+              belong with ×, or press ↑PT on an LLT to widen it to its Preferred Term.
             </p>
           </>
         );

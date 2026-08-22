@@ -1282,6 +1282,135 @@
   }
 }
 
+/* ---- MedDRA PT / LLT rows ------------------------------------------------
+ *
+ * One row per level, label on the left, badges wrapping on the right. A PT is
+ * a handle for the LLTs under it rather than a peer of them, so the two never
+ * share a line: a flat list would read as one set of equals and hide which
+ * terms are actually being searched.
+ *
+ * The LLT row can carry a PT's whole expansion -- dozens of badges -- so it
+ * scrolls at a fixed height instead of pushing the rest of the card off the
+ * screen. */
+.fdl-term-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--afl-space-2);
+  margin-top: var(--afl-space-2);
+}
+
+.fdl-term-row__label {
+  flex: 0 0 auto;
+  min-width: 28px;
+  padding-top: 3px;
+  font-size: var(--afl-text-xs);
+  font-weight: var(--afl-weight-bold);
+  color: var(--afl-brand-800, #1e40af);
+  letter-spacing: 0.04em;
+}
+
+.fdl-term-row__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-height: 132px;
+  overflow-y: auto;
+}
+
+.fdl-term-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 2px 4px 2px 8px;
+  font-size: 0.75rem;
+  color: #1e293b;
+  font-weight: 600;
+  max-width: 100%;
+}
+
+.fdl-term-badge__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A PT badge is the parent of a whole row of LLT badges below it, so it is
+ * weighted to read as the heading of that set rather than another member. */
+.fdl-term-badge--pt {
+  background: var(--afl-brand-50, #eff6ff);
+  border-color: var(--afl-brand-300, #93c5fd);
+  color: var(--afl-brand-800, #1e40af);
+}
+
+/* Picked outright on the LLT row, as opposed to pulled in by a PT. Marked
+ * because it behaves differently: removing it removes the pick, and no PT
+ * exclusion can suppress it. */
+.fdl-term-badge--direct {
+  border-style: solid;
+  border-color: #94a3b8;
+  background: #ffffff;
+}
+
+/* Excluded: still shown, because the whole point is that the user can put it
+ * back, and a badge that vanished would leave nothing to press. */
+.fdl-term-badge--off {
+  opacity: 0.55;
+  background: #ffffff;
+  border-style: dashed;
+}
+
+.fdl-term-badge--off .fdl-term-badge__name {
+  text-decoration: line-through;
+}
+
+.fdl-term-badge__meta {
+  font-weight: var(--afl-weight-normal, 400);
+  font-size: 0.7rem;
+  color: var(--afl-text-secondary);
+  white-space: nowrap;
+}
+
+.fdl-term-badge__act {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--afl-brand-800, #1e40af);
+  font-size: 0.65rem;
+  font-weight: var(--afl-weight-bold);
+  line-height: 1;
+  padding: 2px 4px;
+  white-space: nowrap;
+}
+
+.fdl-term-badge__act:hover {
+  border-color: var(--afl-brand-300, #93c5fd);
+  background: var(--afl-brand-50, #eff6ff);
+}
+
+.fdl-term-badge__x {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: var(--afl-n-500);
+  font-size: var(--afl-text-md);
+  line-height: 1;
+  padding: 0 var(--afl-space-1);
+}
+
+.fdl-term-badge__x:hover {
+  color: var(--afl-danger-700);
+}
+
+.fdl-term-badge--off .fdl-term-badge__x:hover {
+  color: var(--afl-brand-800, #1e40af);
+}
+
 .fdl-meddra-hierarchies {
   margin-top: var(--afl-space-2);
   display: flex;

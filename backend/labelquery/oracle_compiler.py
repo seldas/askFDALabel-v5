@@ -442,12 +442,138 @@ def _compile_market_status(value, bag, alias='s'):
     return '(' + ' AND '.join(res) + ')' if res else None
 
 
-def _compile_meddra(value, bag, expand_meddra=None):
-    terms = _as_list(value.get('terms')) or _split_terms(value.get('text'))
-    if not terms:
+def _meddra_selection(value):
+    """
+    The PTs, the LLTs and the LLTs to leave out, from either shape of the
+    criterion.
+
+    The panel used to hold one list at one level; it now holds a PT row and an
+    LLT row at once, because a PT is only a handle for its LLTs and the user
+    needs to be able to drop the ones that do not belong. Queries written
+    against the old shape -- saved URLs, and everything /translate emits --
+    still arrive as {level, terms}, so those terms are folded into whichever
+    row `level` names. A level with no row of its own (HLT / HLGT / SOC) keeps
+    them as they are and is compiled by the same generic path as before.
+    """
+    level = (value.get('level') or 'llt').lower()
+    legacy = _as_list(value.get('terms')) or _split_terms(value.get('text'))
+    pts = list(_as_list(value.get('ptTerms')))
+    llts = list(_as_list(value.get('lltTerms')))
+    excluded = [str(x).strip() for x in _as_list(value.get('excludedLlts')) if str(x).strip()]
+
+    other = []
+    if legacy:
+        if level == 'pt':
+            pts.extend(legacy)
+        elif level == 'llt':
+            llts.extend(legacy)
+        else:
+            other = list(legacy)
+    return level, pts, llts, excluded, other
+
+
+def _meddra_exclusion_clause(excluded, bag):
+    """
+    `AND UPPER(llt.LLT_NAME) NOT IN (...)`, for the widening branches only.
+
+    Every branch that widens a term into its LLTs selects from
+    meddra.low_level_term under the alias `llt`, so the filter attaches to the
+    same row the branch is about to return. It excludes by name rather than by
+    code because the name is what the panel showed and what the user unticked;
+    resolving it back to a code here would only add a join the outer IN already
+    performs.
+    """
+    if not excluded:
+        return ''
+    params = [bag.add(x.upper()) for x in excluded]
+    return f" AND UPPER(llt.LLT_NAME) NOT IN ({', '.join(params)})"
+
+
+def _meddra_llt_codes_sql(level, term, bag, exclude_sql=''):
+    """
+    The LLT codes one term stands for, as a subquery.
+
+    Label prose writes the LLT, never the grouping above it, so every level
+    resolves downward to LLT codes and the caller matches those against
+    SPL_SEC_MEDDRA_LLT_OCC. A bare number is read as a MedDRA code at that
+    level; anything else is matched as text.
+
+    `exclude_sql` is appended only where it can bind -- the branches that widen
+    a term into LLTs beneath it. An LLT picked outright is already the leaf, so
+    there is nothing under it to exclude.
+    """
+    t_clean = str(term).strip()
+    if not t_clean:
         return None
 
-    level = (value.get('level') or 'pt').lower()
+    if t_clean.isdigit():
+        # Numeric MedDRA Code
+        p_code = bag.add(int(t_clean))
+        if level == 'llt':
+            return f"SELECT {p_code} FROM DUAL"
+        if level == 'pt':
+            return (
+                f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+                f"WHERE llt.PT_CODE = {p_code}{exclude_sql}"
+            )
+        if level in ('hlt', 'hlgt', 'soc'):
+            column = {'hlt': 'HLT_CODE', 'hlgt': 'HLGT_CODE', 'soc': 'SOC_CODE'}[level]
+            return (
+                f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+                f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
+                f"WHERE mh.{column} = {p_code}{exclude_sql}"
+            )
+        return (
+            f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+            f"LEFT JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
+            f"WHERE (llt.LLT_CODE = {p_code} OR llt.PT_CODE = {p_code} "
+            f"OR mh.HLT_CODE = {p_code} OR mh.HLGT_CODE = {p_code} "
+            f"OR mh.SOC_CODE = {p_code}){exclude_sql}"
+        )
+
+    # Text MedDRA term
+    p_pattern = bag.add(f"%{t_clean.upper()}%")
+    if level == 'llt':
+        return (
+            f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+            f"WHERE UPPER(llt.LLT_NAME) LIKE {p_pattern}"
+        )
+    if level == 'pt':
+        return (
+            f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+            f"JOIN meddra.preferred_term pt ON pt.PT_CODE = llt.PT_CODE "
+            f"WHERE UPPER(pt.PT_NAME) LIKE {p_pattern}{exclude_sql}"
+        )
+    if level in ('hlt', 'hlgt'):
+        column = {'hlt': 'HLT_NAME', 'hlgt': 'HLGT_NAME'}[level]
+        return (
+            f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+            f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
+            f"WHERE UPPER(mh.{column}) LIKE {p_pattern}{exclude_sql}"
+        )
+    if level == 'soc':
+        return (
+            f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+            f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
+            f"WHERE (UPPER(mh.SOC_NAME) LIKE {p_pattern} "
+            f"OR UPPER(mh.SOC_ABBREV) LIKE {p_pattern}){exclude_sql}"
+        )
+    return (
+        f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+        f"LEFT JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
+        f"WHERE (UPPER(llt.LLT_NAME) LIKE {p_pattern} "
+        f"OR UPPER(mh.PT_NAME) LIKE {p_pattern} "
+        f"OR UPPER(mh.HLT_NAME) LIKE {p_pattern} "
+        f"OR UPPER(mh.HLGT_NAME) LIKE {p_pattern} "
+        f"OR UPPER(mh.SOC_NAME) LIKE {p_pattern}){exclude_sql}"
+    )
+
+
+def _compile_meddra(value, bag, expand_meddra=None):
+    level, pts, llts, excluded, other = _meddra_selection(value)
+    if not (pts or llts or other):
+        return None
+
     sections = _as_list(value.get('sections'))
 
     # Section filter inside SPL_SEC_MEDDRA_LLT_OCC.
@@ -468,7 +594,7 @@ def _compile_meddra(value, bag, expand_meddra=None):
                 loinc_set.add(s)
             else:
                 # Strip a leading "N " or "N.N " section-number prefix
-                # (e.g. "6 ADVERSE REACTIONS" → "ADVERSE REACTIONS").
+                # (e.g. "6 ADVERSE REACTIONS" -> "ADVERSE REACTIONS").
                 clean = re.sub(r'^[0-9]+(\.[0-9]+)*\s*', '', s).strip().upper()
                 if clean in TITLE_TO_LOINCS:
                     for loinc in TITLE_TO_LOINCS[clean]:
@@ -483,85 +609,23 @@ def _compile_meddra(value, bag, expand_meddra=None):
             sec_params = [bag.add(loinc) for loinc in loinc_set]
             sec_clause = f" AND occ.SEC_TYPE_CODE IN ({', '.join(sec_params)})"
 
+    exclude_sql = _meddra_exclusion_clause(excluded, bag)
+
+    # A PT widens, so it carries the exclusions; an LLT is already the leaf and
+    # cannot. The branches are OR'd, which is also what decides how the two
+    # rows interact: an LLT dropped from a PT but also picked outright on the
+    # LLT row is still searched, because that pick is its own branch.
+    plans = (
+        [(pt, 'pt', exclude_sql) for pt in pts]
+        + [(llt, 'llt', '') for llt in llts]
+        + [(term, level, exclude_sql) for term in other]
+    )
+
     term_clauses = []
-    for term in terms:
-        t_clean = str(term).strip()
-        if not t_clean:
+    for term, term_level, term_exclude in plans:
+        llt_subquery = _meddra_llt_codes_sql(term_level, term, bag, term_exclude)
+        if not llt_subquery:
             continue
-
-        if t_clean.isdigit():
-            # Numeric MedDRA Code
-            code_num = int(t_clean)
-            p_code = bag.add(code_num)
-            if level == 'llt':
-                llt_subquery = f"SELECT {p_code} FROM DUAL"
-            elif level == 'pt':
-                llt_subquery = f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt WHERE llt.PT_CODE = {p_code}"
-            elif level == 'hlt':
-                llt_subquery = (
-                    f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
-                    f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
-                    f"WHERE mh.HLT_CODE = {p_code}"
-                )
-            elif level == 'hlgt':
-                llt_subquery = (
-                    f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
-                    f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
-                    f"WHERE mh.HLGT_CODE = {p_code}"
-                )
-            elif level == 'soc':
-                llt_subquery = (
-                    f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
-                    f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
-                    f"WHERE mh.SOC_CODE = {p_code}"
-                )
-            else:
-                llt_subquery = (
-                    f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
-                    f"LEFT JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
-                    f"WHERE llt.LLT_CODE = {p_code} OR llt.PT_CODE = {p_code} "
-                    f"OR mh.HLT_CODE = {p_code} OR mh.HLGT_CODE = {p_code} OR mh.SOC_CODE = {p_code}"
-                )
-        else:
-            # Text MedDRA term
-            p_pattern = bag.add(f"%{t_clean.upper()}%")
-            if level == 'llt':
-                llt_subquery = f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt WHERE UPPER(llt.LLT_NAME) LIKE {p_pattern}"
-            elif level == 'pt':
-                llt_subquery = (
-                    f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
-                    f"JOIN meddra.preferred_term pt ON pt.PT_CODE = llt.PT_CODE "
-                    f"WHERE UPPER(pt.PT_NAME) LIKE {p_pattern}"
-                )
-            elif level == 'hlt':
-                llt_subquery = (
-                    f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
-                    f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
-                    f"WHERE UPPER(mh.HLT_NAME) LIKE {p_pattern}"
-                )
-            elif level == 'hlgt':
-                llt_subquery = (
-                    f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
-                    f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
-                    f"WHERE UPPER(mh.HLGT_NAME) LIKE {p_pattern}"
-                )
-            elif level == 'soc':
-                llt_subquery = (
-                    f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
-                    f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
-                    f"WHERE UPPER(mh.SOC_NAME) LIKE {p_pattern} OR UPPER(mh.SOC_ABBREV) LIKE {p_pattern}"
-                )
-            else:
-                llt_subquery = (
-                    f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
-                    f"LEFT JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
-                    f"WHERE UPPER(llt.LLT_NAME) LIKE {p_pattern} "
-                    f"OR UPPER(mh.PT_NAME) LIKE {p_pattern} "
-                    f"OR UPPER(mh.HLT_NAME) LIKE {p_pattern} "
-                    f"OR UPPER(mh.HLGT_NAME) LIKE {p_pattern} "
-                    f"OR UPPER(mh.SOC_NAME) LIKE {p_pattern}"
-                )
-
         term_clauses.append(
             f"EXISTS (SELECT 1 FROM druglabel.SPL_SEC_MEDDRA_LLT_OCC occ "
             f"WHERE occ.SET_ID = s.SET_ID{sec_clause} AND occ.LLT_CODE IN ({llt_subquery}))"

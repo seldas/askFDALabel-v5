@@ -158,7 +158,19 @@ export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
     type: 'meddra',
     title: 'MedDRA Terms',
     shortTitle: 'MedDRA Terms',
-    defaultValue: () => ({ level: 'pt', terms: [] }),
+    /*
+     * PTs and LLTs are two lists, not one list at a level, because a PT is
+     * only a handle for the LLTs beneath it and the panel lets those be
+     * dropped one at a time (`excludedLlts`). `level` now says only which of
+     * the two rows the search box files its next pick into, and it starts at
+     * LLT -- the level label text is actually written at.
+     *
+     * `terms` stays for what arrives in the old shape: saved URLs and
+     * everything /translate emits. The card folds it into the matching row on
+     * sight, and the compiler reads it the same way for anything that never
+     * passes through the card.
+     */
+    defaultValue: () => ({ level: 'llt', terms: [], ptTerms: [], lltTerms: [], excludedLlts: [] }),
   },
   route: {
     type: 'route',
@@ -480,6 +492,11 @@ export function isCriterionEmpty(c: Criterion): boolean {
         !v.isRld
       );
     case 'meddra':
+      return !(
+        v.terms?.length > 0 ||
+        v.ptTerms?.length > 0 ||
+        v.lltTerms?.length > 0
+      );
     case 'pharmClass':
     case 'activeMoiety':
       return !(v.terms?.length > 0);

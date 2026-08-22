@@ -51,9 +51,19 @@ function summarizeQuery(query: WireQuery | null): string {
         parts.push(`Pharm Class: ${termsStr}`);
       } else if (c.type === 'identifier' && c.text) {
         parts.push(`Identifier: ${c.text}`);
-      } else if (c.type === 'meddra' && (c.terms || c.text)) {
-        const termsStr = Array.isArray(c.terms) ? c.terms.join(', ') : c.text;
-        parts.push(`MedDRA (${c.level || 'PT'}): ${termsStr}`);
+      } else if (c.type === 'meddra' && (c.ptTerms?.length || c.lltTerms?.length || c.terms || c.text)) {
+        // PTs and LLTs are named separately, and the excluded LLTs with them:
+        // "minus Hepatic coma" is the part of the search a reader cannot infer
+        // from the PT, and the summary is the only place it shows.
+        const meddraParts: string[] = [];
+        if (c.ptTerms?.length) meddraParts.push(`PT: ${c.ptTerms.join(', ')}`);
+        if (c.lltTerms?.length) meddraParts.push(`LLT: ${c.lltTerms.join(', ')}`);
+        if (!meddraParts.length) {
+          const termsStr = Array.isArray(c.terms) ? c.terms.join(', ') : c.text;
+          meddraParts.push(`${String(c.level || 'pt').toUpperCase()}: ${termsStr}`);
+        }
+        if (c.excludedLlts?.length) meddraParts.push(`excluding ${c.excludedLlts.join(', ')}`);
+        parts.push(`MedDRA (${meddraParts.join('; ')})`);
       } else if (c.type === 'labelingType') {
         const ltParts = [];
         if (c.values?.length) ltParts.push(c.values.join(', '));
