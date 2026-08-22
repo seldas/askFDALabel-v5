@@ -149,7 +149,7 @@ export default function ManagementPage() {
   const [oracleTestResult, setOracleTestResult] = useState<{ success: boolean; message: string; elapsed_ms?: number | null } | null>(null);
 
   useEffect(() => {
-    if (activeTab === 'functions' && session?.is_admin && features.length === 0 && !loadingFeatures) {
+    if ((activeTab === 'functions' || activeTab === 'tools') && session?.is_admin && features.length === 0 && !loadingFeatures) {
       fetchFeatureGates();
     }
     if (activeTab !== 'database' || !session?.is_admin || oracleLoaded) return;
@@ -911,6 +911,15 @@ export default function ManagementPage() {
             </button>
             {session?.is_admin && (
               <button
+                className={`sidebar-tab ${activeTab === 'tools' ? 'active' : ''}`}
+                onClick={() => setActiveTab('tools')}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                Product Toolbox
+              </button>
+            )}
+            {session?.is_admin && (
+              <button
                 className={`sidebar-tab ${activeTab === 'functions' ? 'active' : ''}`}
                 onClick={() => setActiveTab('functions')}
               >
@@ -1664,6 +1673,126 @@ export default function ManagementPage() {
               </section>
             )}
 
+            {activeTab === 'tools' && session?.is_admin && (
+              <div className="mgmt-section">
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                  <h2 className="section-title" style={{ margin: 0 }}>Product Toolbox Access Control</h2>
+                  <button className="btn-ghost" onClick={fetchFeatureGates} disabled={loadingFeatures}>
+                    {loadingFeatures ? 'Refreshing...' : 'Refresh'}
+                  </button>
+                </div>
+                <p style={{ color: 'var(--afl-n-500)', fontSize: '0.85rem', lineHeight: 1.6, marginTop: '4px' }}>
+                  Control which analytical and clinical tools in the label <strong>Product Toolbox</strong> are open to standard users.
+                  Changes take effect immediately across all active user sessions.
+                </p>
+
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '12px 16px', margin: '14px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '1.25rem' }}>🧰</span>
+                  <div style={{ fontSize: '0.82rem', color: '#166534', lineHeight: 1.5 }}>
+                    <strong>Default User Open Tools:</strong> DILI Agent, DICT Agent, Compare, Rule of Two.
+                    <br />
+                    All other clinical tools (DIRI, PGx, FAERS, Examine, Deep Dive, Archived Versions, Application Profile) are restricted to <em>Developer & Admin</em> by default.
+                  </div>
+                </div>
+
+                {featureError && (
+                  <div style={{ background: 'var(--afl-danger-100)', color: '#991b1b', padding: '10px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, marginBottom: '12px' }}>
+                    ⚠️ {featureError}
+                  </div>
+                )}
+
+                {loadingFeatures && features.length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: 'var(--afl-n-400)' }}>Loading toolbox tools...</div>
+                ) : (
+                  <div className="user-table-wrapper">
+                    <table className="user-table">
+                      <thead>
+                        <tr>
+                          <th>Tool Name & Description</th>
+                          <th style={{ width: '180px' }}>Minimum Role</th>
+                          <th style={{ width: '120px' }}>Guest Access</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {features
+                          .filter((f: any) => f.category === 'Product Toolbox')
+                          .map((f: any) => {
+                            const changed =
+                              f.min_role !== f.default_min_role ||
+                              Boolean(f.allow_guest) !== Boolean(f.default_allow_guest);
+                            const isOpenToUser = f.min_role === 'user';
+                            return (
+                              <tr key={f.key} style={{ opacity: savingFeature === f.key ? 0.6 : 1 }}>
+                                <td>
+                                  <div style={{ fontWeight: 700, color: 'var(--afl-n-800)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span>{f.name}</span>
+                                    <span
+                                      style={{
+                                        fontSize: '0.65rem',
+                                        fontWeight: 800,
+                                        letterSpacing: '0.04em',
+                                        textTransform: 'uppercase',
+                                        background: isOpenToUser ? '#dcfce7' : '#f1f5f9',
+                                        color: isOpenToUser ? '#15803d' : '#64748b',
+                                        padding: '2px 8px',
+                                        borderRadius: '4px',
+                                        border: isOpenToUser ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
+                                      }}
+                                    >
+                                      {isOpenToUser ? '✓ Open to User' : 'Restricted (Dev/Admin)'}
+                                    </span>
+                                    {changed && (
+                                      <span title="Differs from built-in default" style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', background: 'var(--afl-info-100, #dbeafe)', color: 'var(--afl-info-700, #1d4ed8)', padding: '2px 6px', borderRadius: '4px' }}>
+                                        Customized
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div style={{ fontSize: '0.78rem', color: 'var(--afl-n-500)', marginTop: '2px' }}>{f.blurb}</div>
+                                  <div style={{ fontSize: '0.7rem', color: 'var(--afl-n-400)', marginTop: '2px' }}>
+                                    Enforced at {f.enforced_at}
+                                  </div>
+                                </td>
+                                <td>
+                                  <select
+                                    className="mgmt-select"
+                                    value={f.min_role}
+                                    disabled={savingFeature === f.key}
+                                    onChange={e => updateFeatureGate(f.key, { min_role: e.target.value })}
+                                  >
+                                    {featureRoles.map(r => (
+                                      <option key={r} value={r}>
+                                        {r.charAt(0).toUpperCase() + r.slice(1)} and above
+                                      </option>
+                                    ))}
+                                  </select>
+                                </td>
+                                <td>
+                                  {f.guest_relevant ? (
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
+                                      <input
+                                        type="checkbox"
+                                        checked={Boolean(f.allow_guest)}
+                                        disabled={savingFeature === f.key}
+                                        onChange={e => updateFeatureGate(f.key, { allow_guest: e.target.checked })}
+                                      />
+                                      Allow
+                                    </label>
+                                  ) : (
+                                    <span title="The role requirement already excludes the shared guest account" style={{ fontSize: '0.75rem', color: 'var(--afl-n-400)' }}>
+                                      n/a
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
             {activeTab === 'functions' && session?.is_admin && (
               <div className="mgmt-section">
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
@@ -1698,7 +1827,9 @@ export default function ManagementPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {features.map((f: any) => {
+                        {features
+                          .filter((f: any) => f.category !== 'Product Toolbox')
+                          .map((f: any) => {
                           const changed =
                             f.min_role !== f.default_min_role ||
                             Boolean(f.allow_guest) !== Boolean(f.default_allow_guest);
