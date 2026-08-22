@@ -870,6 +870,29 @@ function ResultsPage() {
               // refetch lands; dimming them says so, instead of letting a stale
               // table read as "the filter did nothing".
               <div className={busy ? 'fdl-results-stale' : undefined} aria-busy={busy}>
+                <div className="fdl-results__bar fdl-results__bar--top" style={{ borderRadius: 'var(--afl-radius-md) var(--afl-radius-md) 0 0', borderBottom: '1px solid var(--afl-border)' }}>
+                  <span className="fdl-results__count">
+                    Showing {offset + 1}–{to} of {browsable.toLocaleString()}
+                  </span>
+                  <div className="fdl-pager">
+                    <button
+                      type="button"
+                      className="fdl-btn fdl-btn--ghost"
+                      disabled={offset === 0}
+                      onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+                    >
+                      ‹ Previous
+                    </button>
+                    <button
+                      type="button"
+                      className="fdl-btn fdl-btn--ghost"
+                      disabled={to >= browsable}
+                      onClick={() => setOffset(offset + PAGE_SIZE)}
+                    >
+                      Next ›
+                    </button>
+                  </div>
+                </div>
                 <ResultsTable rows={rows} view={view} sortState={sortState} onSort={onSort} targetDb={currentTargetDb} />
                 <div className="fdl-results__bar fdl-results__bar--bottom">
                   <span className="fdl-results__count">
