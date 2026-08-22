@@ -27,6 +27,7 @@ interface FaqItem {
 const CATEGORIES = [
   { id: 'all', label: 'All Topics', icon: '📚' },
   { id: 'getting-started', label: 'Getting Started', icon: '🚀' },
+  { id: 'ai-builder', label: 'AI Query Intent Engine', icon: '🤖' },
   { id: 'search-builder', label: 'Search & Query Builder', icon: '🔍' },
   { id: 'product-operators', label: 'Product Name Matching', icon: '⚡' },
   { id: 'multi-setids', label: 'Multi SET-IDs & Identifiers', icon: '📋' },
@@ -36,6 +37,69 @@ const CATEGORIES = [
 ];
 
 const GUIDES: WikiItem[] = [
+  {
+    id: 'guide-ai-mechanism',
+    category: 'ai-builder',
+    categoryLabel: 'AI Query Builder',
+    title: 'AI Natural Language Intent Engine: Mechanism & Prompt Architecture',
+    summary: 'How plain-English queries are compiled into structured backbone search groups, toggleable prefilter chips, and standardized MedDRA terms.',
+    tags: ['ai', 'prompt', 'intent', 'query builder', 'prefilters', 'backbone', 'meddra', 'translation', 'schema', 'groups'],
+    content: (
+      <div>
+        <p>
+          The <strong>AI Intent Builder</strong> in AskFDALabel v3.0 acts as a deterministic compiler rather than a black-box conversational agent. It converts plain-English clinical and regulatory questions into transparent, editable structured criteria and toggleable prefilter chips.
+        </p>
+
+        <h4 style={{ color: '#1e40af', marginTop: '14px', marginBottom: '6px' }}>1. Dual-Tier Architecture: Backbone Groups vs. Prefilters</h4>
+        <p style={{ fontSize: '0.9rem', lineHeight: 1.55 }}>
+          The prompt enforces a strict separation between <em>Backbone Search Criteria</em> and <em>Categorical Facet Prefilters</em>:
+        </p>
+        <ul>
+          <li>
+            <strong>Backbone Search (<code>groups</code>):</strong> Contains the core entities that define what labeling to find — such as Trade/Generic Product Names, Identifiers (SET-IDs, SPL GUIDs, Application Numbers, UNIIs), and Section/MedDRA Clinical Safety terms.
+          </li>
+          <li>
+            <strong>Categorical Prefilters (<code>prefilters</code>):</strong> Categorical attributes mentioned in the prompt (e.g. <em>&ldquo;oral NDA products&rdquo;</em>, <em>&ldquo;human prescription tablets&rdquo;</em>, <em>&ldquo;Schedule II&rdquo;</em>) are extracted into modular prefilter chips rather than hardcoded criteria.
+          </li>
+          <li>
+            <em>Why this design?</em> It enables the database to execute fast backbone queries while giving the user instant facet control in the results sidebar. The header dynamically displays both the filtered and unfiltered backbone totals (e.g. <code>120 / 1,500</code>).
+          </li>
+        </ul>
+
+        <h4 style={{ color: '#1e40af', marginTop: '14px', marginBottom: '6px' }}>2. Standardized Controlled Vocabulary & Priority Rules</h4>
+        <p style={{ fontSize: '0.9rem', lineHeight: 1.55 }}>
+          The system prompt implements several clinical knowledge rules:
+        </p>
+        <ol>
+          <li>
+            <strong>MedDRA Preference for Safety Concepts:</strong> Whenever clinical adverse events or toxicities (e.g. <em>&ldquo;lactic acidosis&rdquo;</em>, <em>&ldquo;hepatic failure&rdquo;</em>, <em>&ldquo;QT prolongation&rdquo;</em>) are requested, the prompt maps them directly to canonical <strong>MedDRA Preferred Terms (PT)</strong> instead of unstructured free text. This guarantees recall across all Low-Level Term (LLT) synonyms.
+          </li>
+          <li>
+            <strong>Target Section Scoping:</strong> When labeling sections are specified (e.g. <em>&ldquo;with Boxed Warning&rdquo;</em>, <em>&ldquo;in Adverse Reactions&rdquo;</em>), the prompt automatically links the safety terms to the corresponding LOINC-coded section boundaries.
+          </li>
+          <li>
+            <strong>Product Name vs. Identifier Separation:</strong> Drug names are assigned to <code>productName</code>, while UUIDs, Application Numbers, NDCs, and UNIIs are mapped to <code>identifier</code>. Pasted UUID lists are parsed into batch <code>setSplGuids</code> arrays for ultra-fast <code>IN (...)</code> queries.
+          </li>
+          <li>
+            <strong>Pharmacologic Class (EPC) Guidance:</strong> If a pharmacologic class is requested (e.g. <em>&ldquo;Kinase Inhibitor&rdquo;</em>, <em>&ldquo;SGLT2 Inhibitor&rdquo;</em>), the prompt emits an explanatory note directing the user to the interactive EPC filter in the results sidebar.
+          </li>
+        </ol>
+
+        <h4 style={{ color: '#1e40af', marginTop: '14px', marginBottom: '6px' }}>3. Dynamic Database Scope Adaptation (Oracle vs. Local)</h4>
+        <p style={{ fontSize: '0.9rem', lineHeight: 1.55 }}>
+          The translation prompt dynamically detects the target database environment:
+        </p>
+        <ul>
+          <li>
+            <strong>Oracle (CDER-CBER / FDA Scope):</strong> Generates full relational MedDRA occurrence queries and full-text section scans against enterprise Oracle tables.
+          </li>
+          <li>
+            <strong>Local Database (PostgreSQL):</strong> Adapts queries to supported metadata columns (Product Names, Identifiers, Routes, Dosage Forms) and transparently warns the user if section text or MedDRA terms were omitted due to Local DB constraints.
+          </li>
+        </ul>
+      </div>
+    ),
+  },
   {
     id: 'guide-getting-started',
     category: 'getting-started',
@@ -183,6 +247,28 @@ const GUIDES: WikiItem[] = [
 ];
 
 const FAQS: FaqItem[] = [
+  {
+    id: 'faq-ai-1',
+    category: 'ai-builder',
+    question: 'How does the AI Intent Engine interpret and compile clinical queries?',
+    tags: ['ai', 'prompt', 'mechanism', 'intent', 'natural language', 'translation'],
+    answer: (
+      <p>
+        The AI Intent Engine uses a specialized regulatory prompt that extracts your core drug entities and clinical safety concepts into <strong>Backbone Groups</strong>, while mapping descriptive constraints (e.g. <em>oral route</em>, <em>NDA</em>, <em>human Rx</em>) into modular <strong>Prefilter Chips</strong>. It also automatically identifies adverse events and converts them into standardized <strong>MedDRA Preferred Terms</strong>.
+      </p>
+    ),
+  },
+  {
+    id: 'faq-ai-2',
+    category: 'ai-builder',
+    question: 'Why are categories like Dosage Form, Route, and Application Type emitted as pre-filter chips?',
+    tags: ['prefilters', 'chips', 'facet', 'backbone', 'counts', 'results header'],
+    answer: (
+      <p>
+        Extracting categorical constraints as prefilters keeps your core database query fast and uncluttered. It allows you to toggle filters on and off in the results sidebar without re-running the entire search, while the results counter displays both your filtered subset and the total backbone matches (e.g. <code>120 / 1,500 Results</code>).
+      </p>
+    ),
+  },
   {
     id: 'faq-1',
     category: 'search-builder',
