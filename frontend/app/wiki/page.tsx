@@ -27,124 +27,104 @@ interface FaqItem {
 const CATEGORIES = [
   { id: 'all', label: 'All Topics', icon: '📚' },
   { id: 'getting-started', label: 'Getting Started', icon: '🚀' },
-  { id: 'ai-builder', label: 'AI Query Intent Engine', icon: '🤖' },
+  { id: 'ai-builder', label: 'AI Natural Language Search', icon: '🤖' },
   { id: 'search-builder', label: 'Search & Query Builder', icon: '🔍' },
   { id: 'product-operators', label: 'Product Name Matching', icon: '⚡' },
-  { id: 'multi-setids', label: 'Multi SET-IDs & Identifiers', icon: '📋' },
+  { id: 'multi-setids', label: 'Multi SET-IDs & Batch Search', icon: '📋' },
   { id: 'meddra-safety', label: 'MedDRA & Safety Terms', icon: '🛡️' },
-  { id: 'clinical-tools', label: 'Clinical Modules', icon: '📊' },
+  { id: 'clinical-tools', label: 'Product Toolbox & Analysis', icon: '📊' },
   { id: 'faq', label: 'Frequently Asked Questions', icon: '❓' },
 ];
 
 const GUIDES: WikiItem[] = [
   {
-    id: 'guide-ai-mechanism',
-    category: 'ai-builder',
-    categoryLabel: 'AI Query Builder',
-    title: 'AI Natural Language Intent Engine: Mechanism & Prompt Architecture',
-    summary: 'How plain-English queries are compiled into structured backbone search groups, toggleable prefilter chips, and standardized MedDRA terms.',
-    tags: ['ai', 'prompt', 'intent', 'query builder', 'prefilters', 'backbone', 'meddra', 'translation', 'schema', 'groups'],
-    content: (
-      <div>
-        <p>
-          The <strong>AI Intent Builder</strong> in AskFDALabel v3.0 acts as a deterministic compiler rather than a black-box conversational agent. It converts plain-English clinical and regulatory questions into transparent, editable structured criteria and toggleable prefilter chips.
-        </p>
-
-        <h4 style={{ color: '#1e40af', marginTop: '14px', marginBottom: '6px' }}>1. Dual-Tier Architecture: Backbone Groups vs. Prefilters</h4>
-        <p style={{ fontSize: '0.9rem', lineHeight: 1.55 }}>
-          The prompt enforces a strict separation between <em>Backbone Search Criteria</em> and <em>Categorical Facet Prefilters</em>:
-        </p>
-        <ul>
-          <li>
-            <strong>Backbone Search (<code>groups</code>):</strong> Contains the core entities that define what labeling to find — such as Trade/Generic Product Names, Identifiers (SET-IDs, SPL GUIDs, Application Numbers, UNIIs), and Section/MedDRA Clinical Safety terms.
-          </li>
-          <li>
-            <strong>Categorical Prefilters (<code>prefilters</code>):</strong> Categorical attributes mentioned in the prompt (e.g. <em>&ldquo;oral NDA products&rdquo;</em>, <em>&ldquo;human prescription tablets&rdquo;</em>, <em>&ldquo;Schedule II&rdquo;</em>) are extracted into modular prefilter chips rather than hardcoded criteria.
-          </li>
-          <li>
-            <em>Why this design?</em> It enables the database to execute fast backbone queries while giving the user instant facet control in the results sidebar. The header dynamically displays both the filtered and unfiltered backbone totals (e.g. <code>120 / 1,500</code>).
-          </li>
-        </ul>
-
-        <h4 style={{ color: '#1e40af', marginTop: '14px', marginBottom: '6px' }}>2. Standardized Controlled Vocabulary & Priority Rules</h4>
-        <p style={{ fontSize: '0.9rem', lineHeight: 1.55 }}>
-          The system prompt implements several clinical knowledge rules:
-        </p>
-        <ol>
-          <li>
-            <strong>MedDRA Preference for Safety Concepts:</strong> Whenever clinical adverse events or toxicities (e.g. <em>&ldquo;lactic acidosis&rdquo;</em>, <em>&ldquo;hepatic failure&rdquo;</em>, <em>&ldquo;QT prolongation&rdquo;</em>) are requested, the prompt maps them directly to canonical <strong>MedDRA Preferred Terms (PT)</strong> instead of unstructured free text. This guarantees recall across all Low-Level Term (LLT) synonyms.
-          </li>
-          <li>
-            <strong>Target Section Scoping:</strong> When labeling sections are specified (e.g. <em>&ldquo;with Boxed Warning&rdquo;</em>, <em>&ldquo;in Adverse Reactions&rdquo;</em>), the prompt automatically links the safety terms to the corresponding LOINC-coded section boundaries.
-          </li>
-          <li>
-            <strong>Product Name vs. Identifier Separation:</strong> Drug names are assigned to <code>productName</code>, while UUIDs, Application Numbers, NDCs, and UNIIs are mapped to <code>identifier</code>. Pasted UUID lists are parsed into batch <code>setSplGuids</code> arrays for ultra-fast <code>IN (...)</code> queries.
-          </li>
-          <li>
-            <strong>Pharmacologic Class (EPC) Guidance:</strong> If a pharmacologic class is requested (e.g. <em>&ldquo;Kinase Inhibitor&rdquo;</em>, <em>&ldquo;SGLT2 Inhibitor&rdquo;</em>), the prompt emits an explanatory note directing the user to the interactive EPC filter in the results sidebar.
-          </li>
-        </ol>
-
-        <h4 style={{ color: '#1e40af', marginTop: '14px', marginBottom: '6px' }}>3. Dynamic Database Scope Adaptation (Oracle vs. Local)</h4>
-        <p style={{ fontSize: '0.9rem', lineHeight: 1.55 }}>
-          The translation prompt dynamically detects the target database environment:
-        </p>
-        <ul>
-          <li>
-            <strong>Oracle (CDER-CBER / FDA Scope):</strong> Generates full relational MedDRA occurrence queries and full-text section scans against enterprise Oracle tables.
-          </li>
-          <li>
-            <strong>Local Database (PostgreSQL):</strong> Adapts queries to supported metadata columns (Product Names, Identifiers, Routes, Dosage Forms) and transparently warns the user if section text or MedDRA terms were omitted due to Local DB constraints.
-          </li>
-        </ul>
-      </div>
-    ),
-  },
-  {
     id: 'guide-getting-started',
     category: 'getting-started',
     categoryLabel: 'Getting Started',
-    title: 'Introduction to FDALabel v3.0 & AskFDALabel',
-    summary: 'Overview of the next-generation FDA labeling query and analytics platform.',
-    tags: ['overview', 'introduction', 'basics', 'v3', 'cder', 'cber', 'oracle', 'postgres'],
+    title: 'Introduction to AskFDALabel v3.0',
+    summary: 'Overview of the FDA labeling search and analytics platform.',
+    tags: ['overview', 'introduction', 'basics', 'v3', 'fda', 'spl', 'prescribing information'],
     content: (
       <div>
         <p>
-          <strong>AskFDALabel v3.0</strong> is a high-performance analytics and search platform designed for regulatory reviewers, toxicologists, pharmacovigilance scientists, and clinicians to query, cross-compare, and analyze human and animal drug labeling metadata.
+          <strong>AskFDALabel v3.0</strong> is a high-performance web platform developed by the FDA National Center for Toxicological Research (NCTR). It enables regulatory reviewers, healthcare professionals, toxicologists, and researchers to rapidly search, filter, and cross-compare official FDA Structured Product Labeling (SPL) documents.
         </p>
-        <h4>Key Platform Architecture:</h4>
+        <h4>Core Capabilities:</h4>
         <ul>
-          <li><strong>Relational & Index-Driven Search:</strong> Sub-second query execution powered by discrete database indexes across Oracle CDER-CBER rollups and PostgreSQL local stores.</li>
-          <li><strong>AI Natural Language Intent Builder:</strong> Translates plain-English clinical queries into structured criteria cards while extracting prefilters.</li>
-          <li><strong>Standardized Controlled Vocabularies:</strong> Direct integration with FDA Product Names, MedDRA (Preferred Terms and Low-Level Terms), and FDA Established Pharmacologic Classes (EPC).</li>
+          <li><strong>Intelligent AI Search:</strong> Type plain-English questions to automatically construct structured criteria and pre-filters.</li>
+          <li><strong>Standardized Medical Vocabulary:</strong> Search adverse reactions and safety warnings using official MedDRA Preferred Terms (PT) and Low-Level Terms (LLT).</li>
+          <li><strong>Precise Product Name Matching:</strong> Match brand or generic names using exact, prefix (starts-with), or substring (contains) operators.</li>
+          <li><strong>Product Analysis Toolbox:</strong> Access specialized safety agents including DILI (Liver Injury), DICT (Cardiotoxicity), Side-by-Side Label Comparison, and the DILI Rule-of-Two quadrant analysis.</li>
         </ul>
       </div>
     ),
   },
   {
-    id: 'guide-database-targets',
+    id: 'guide-labeling-coverage',
     category: 'getting-started',
     categoryLabel: 'Getting Started',
-    title: 'Understanding Database Targets: Oracle vs. Local',
-    summary: 'Differences between FDALabel (CDER-CBER Oracle) and the Local Postgres labeling database.',
-    tags: ['database', 'oracle', 'local', 'cder', 'cber', 'scope', 'fda'],
+    title: 'Labeling Dataset & Regulatory Coverage',
+    summary: 'Types of FDA drug and biological product labeling included in AskFDALabel.',
+    tags: ['coverage', 'dataset', 'rx', 'otc', 'bla', 'nda', 'anda', 'vaccines', 'dailymed'],
     content: (
       <div>
-        <p>FDALabel supports multiple database targets depending on the deployment environment:</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', margin: '14px 0' }}>
-          <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <h5 style={{ margin: '0 0 6px 0', color: '#1e40af', fontSize: '0.95rem' }}>🏛️ FDALabel (CDER-CBER Oracle)</h5>
-            <p style={{ fontSize: '0.85rem', color: '#475569', margin: 0, lineHeight: 1.5 }}>
-              The authoritative FDA enterprise database. Supports full MedDRA occurrence hierarchy indexing, SPL section text scans, and comprehensive CDER/CBER drug rollups.
-            </p>
-          </div>
-          <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <h5 style={{ margin: '0 0 6px 0', color: '#047857', fontSize: '0.95rem' }}>💻 Local Database (PostgreSQL)</h5>
-            <p style={{ fontSize: '0.85rem', color: '#475569', margin: 0, lineHeight: 1.5 }}>
-              A lightweight local repository designed for rapid metadata filtering, active ingredient UNII mapping, application numbers, dosage forms, and routes.
-            </p>
-          </div>
+        <p>AskFDALabel provides comprehensive coverage of approved and marketed human drug products in the United States:</p>
+        <ul>
+          <li><strong>Human Prescription Drugs (Rx):</strong> Full prescribing information for NDAs, ANDAs, and BLAs across all therapeutic classes.</li>
+          <li><strong>Over-The-Counter (OTC) Products:</strong> Standardized Drug Facts labeling for OTC monographs and approved OTC NDAs/ANDAs.</li>
+          <li><strong>Biological Products & Vaccines:</strong> Package inserts and labeling for approved therapeutic biological products and vaccines.</li>
+          <li><strong>Historical & Archived Records:</strong> Version-tracked labeling sets allowing longitudinal review of safety labeling updates over time.</li>
+        </ul>
+        <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
+          📅 <strong>Update Cycle:</strong> The dataset is refreshed monthly with official FDA structured product labeling distributions, Orange Book revisions, and FDA Pharmacologic Class indexing data.
         </div>
+      </div>
+    ),
+  },
+  {
+    id: 'guide-ai-mechanism',
+    category: 'ai-builder',
+    categoryLabel: 'AI Natural Language Search',
+    title: 'How the AI Search Assistant Works',
+    summary: 'How natural language clinical questions are translated into structured criteria and modular prefilter chips.',
+    tags: ['ai', 'natural language', 'prompt', 'intent', 'prefilters', 'backbone', 'meddra', 'assistant'],
+    content: (
+      <div>
+        <p>
+          The <strong>AI Intent Search</strong> bar converts everyday clinical descriptions into transparent, editable search cards and toggleable pre-filters before running the query.
+        </p>
+
+        <h4 style={{ color: '#1e40af', marginTop: '14px', marginBottom: '6px' }}>1. Backbone Search vs. Modular Prefilter Chips</h4>
+        <p style={{ fontSize: '0.9rem', lineHeight: 1.55 }}>
+          When you enter a request like <em>&ldquo;Oral Metformin tablets with Boxed Warning for lactic acidosis&rdquo;</em>, the AI separates your query into two synchronized tiers:
+        </p>
+        <ul>
+          <li>
+            <strong>Backbone Search:</strong> Identifies the core entities — Product Name (<em>Metformin</em>) and the Section Safety Term (<em>Lactic acidosis in Boxed Warning</em>).
+          </li>
+          <li>
+            <strong>Prefilter Chips:</strong> Extracts descriptive constraints (e.g. <em>Route: ORAL</em>, <em>Dosage Form: TABLET</em>, <em>Prescription status</em>) as clickable chips at the top of your search.
+          </li>
+          <li>
+            <strong>Why this helps you:</strong> You can quickly uncheck or toggle individual filter chips without retyping your prompt, and the results page clearly displays both your filtered subset and the total backbone matches (e.g. <code>120 / 1,500 Results</code>).
+          </li>
+        </ul>
+
+        <h4 style={{ color: '#1e40af', marginTop: '14px', marginBottom: '6px' }}>2. Automatic Clinical Term Standardization</h4>
+        <p style={{ fontSize: '0.9rem', lineHeight: 1.55 }}>
+          The AI engine incorporates clinical knowledge rules:
+        </p>
+        <ol>
+          <li>
+            <strong>MedDRA Term Standardization:</strong> Clinical adverse reactions (e.g. <em>&ldquo;liver damage&rdquo;</em>, <em>&ldquo;heart failure&rdquo;</em>) automatically map to canonical <strong>MedDRA Preferred Terms</strong> (e.g. <em>Hepatic failure</em>, <em>Cardiac failure</em>), ensuring your search matches all medical synonyms across labels.
+          </li>
+          <li>
+            <strong>Section Boundary Scoping:</strong> Mentions like <em>&ldquo;in Boxed Warning&rdquo;</em> or <em>&ldquo;under Warnings and Precautions&rdquo;</em> automatically target the search to those specific prescribing sections.
+          </li>
+          <li>
+            <strong>Batch ID Extraction:</strong> If you paste multiple SET-IDs or SPL GUIDs, the AI immediately extracts them into a clean multi-ID list for instant batch querying.
+          </li>
+        </ol>
       </div>
     ),
   },
@@ -152,34 +132,34 @@ const GUIDES: WikiItem[] = [
     id: 'guide-product-operators',
     category: 'product-operators',
     categoryLabel: 'Product Name Matching',
-    title: 'Product Name Matching: Exact, Starts-With, and Contains',
-    summary: 'How to use match operators and understand auto-verification and confirmation.',
+    title: 'Product Name Match Operators: Exact, Starts-With, and Contains',
+    summary: 'How to use match operators and understand autocomplete suggestions and term verification.',
     tags: ['product', 'drug name', 'exact', 'starts with', 'contains', 'operator', 'brand', 'generic'],
     content: (
       <div>
-        <p>Product Name searches support four distinct match behaviors:</p>
+        <p>Product Name searches offer four flexible match operators to fit your search goal:</p>
         <ol>
           <li>
             <strong><code>is exactly</code> (Standardized, Default):</strong>
             <p style={{ margin: '4px 0 8px 0', fontSize: '0.88rem' }}>
-              Enforces indexed exact equality against canonical Trade or Generic names. If an unrecognized term or typo is entered, a confirmation panel displays standard database candidates to ensure high-performance index scans.
+              Enforces exact matching against official Trade or Generic drug names. If you enter an unrecognized spelling or typo, a confirmation panel presents standard database suggestions to ensure an accurate search.
             </p>
           </li>
           <li>
             <strong><code>starts with</code> (Prefix Matching):</strong>
             <p style={{ margin: '4px 0 8px 0', fontSize: '0.88rem' }}>
-              Searches products starting with the specified term (e.g. <em>&ldquo;Tylenol&rdquo;</em> finds <em>Tylenol PM</em>, <em>Tylenol Extra Strength</em>). Autocomplete suggestions are available, but confirmation is optional.
+              Searches for all products starting with your entered prefix (e.g. searching <em>&ldquo;Tylenol&rdquo;</em> retrieves <em>Tylenol PM</em>, <em>Tylenol Extra Strength</em>, and <em>Tylenol Cold</em>). Autocomplete suggestions are available, but confirmation is optional.
             </p>
           </li>
           <li>
             <strong><code>contains</code> & <code>does not contain</code> (Flexible Substring):</strong>
             <p style={{ margin: '4px 0 8px 0', fontSize: '0.88rem' }}>
-              Freeform flexible matching for substrings anywhere in the name without autocomplete or confirmation requirements.
+              Matches any occurrence of the text anywhere in the product or generic name without requiring list selection or confirmation.
             </p>
           </li>
         </ol>
         <div style={{ background: '#eff6ff', padding: '12px 16px', borderRadius: '8px', borderLeft: '4px solid #2563eb', margin: '12px 0' }}>
-          💡 <strong>Tip:</strong> If you want to search brand families without being restricted to the single root term, switch the operator from <em>&ldquo;is exactly&rdquo;</em> to <em>&ldquo;starts with&rdquo;</em>.
+          💡 <strong>Tip:</strong> If you want to search an entire brand family rather than just a single root product, switch the operator from <em>&ldquo;is exactly&rdquo;</em> to <em>&ldquo;starts with&rdquo;</em>.
         </div>
       </div>
     ),
@@ -187,20 +167,20 @@ const GUIDES: WikiItem[] = [
   {
     id: 'guide-multi-setids',
     category: 'multi-setids',
-    categoryLabel: 'Multi SET-IDs & Identifiers',
-    title: 'Pasting and Querying Multiple SET-IDs (Batch Querying)',
-    summary: 'Using the Multi SET-IDs popup modal to query multiple SPL GUIDs simultaneously.',
-    tags: ['set-id', 'spl-guid', 'multi', 'batch', 'uuid', 'in clause', 'identifiers'],
+    categoryLabel: 'Multi SET-IDs & Batch Search',
+    title: 'Searching Multiple SET-IDs Simultaneously (Batch Query)',
+    summary: 'Using the Multi SET-IDs popup to paste and query multiple drug labels in one operation.',
+    tags: ['set-id', 'spl-guid', 'multi', 'batch', 'uuid', 'identifiers'],
     content: (
       <div>
         <p>
-          You can search multiple specific drug labels by pasting a list of <strong>SET IDs</strong> (or SPL GUIDs) in batch:
+          To look up a specific cohort of drug labels in batch using their unique <strong>SET IDs</strong> (or SPL GUIDs):
         </p>
         <ol>
           <li>In the <strong>Labeling, Product and Ingredient Identifiers</strong> card, click the <strong>📋 Multi SET-IDs</strong> button.</li>
-          <li>In the popup modal, paste your list of SET-IDs separated by <strong>newlines</strong>, <strong>commas (,)</strong>, or <strong>semicolons (;)</strong>.</li>
-          <li>The modal will automatically trim whitespace, filter duplicates, and report the count of detected IDs.</li>
-          <li>Click <strong>Save SET-IDs</strong>. The query will execute an ultra-fast, exact indexed <code>IN (...)</code> clause with zero slow wildcard scans.</li>
+          <li>Paste your list of SET-IDs. The input accepts IDs separated by <strong>newlines</strong> (copied from Excel or text documents), <strong>commas (,)</strong>, or <strong>semicolons (;)</strong>.</li>
+          <li>The modal automatically removes spaces, strips duplicates, and displays the total number of valid IDs recognized.</li>
+          <li>Click <strong>Save SET-IDs</strong> and execute your search to retrieve all matching labels together.</li>
         </ol>
       </div>
     ),
@@ -209,18 +189,17 @@ const GUIDES: WikiItem[] = [
     id: 'guide-meddra-safety',
     category: 'meddra-safety',
     categoryLabel: 'MedDRA & Safety Terms',
-    title: 'MedDRA Safety Search & Section Scoping',
-    summary: 'Searching Adverse Reactions, Warnings, and Boxed Warnings using standardized MedDRA terms.',
+    title: 'MedDRA Adverse Event Searching & Section Scoping',
+    summary: 'Searching Adverse Reactions, Warnings, and Boxed Warnings with standardized MedDRA medical terminology.',
     tags: ['meddra', 'pt', 'llt', 'adverse reactions', 'boxed warning', 'safety', 'preferred term'],
     content: (
       <div>
         <p>
-          MedDRA searches allow toxicologists and analysts to query adverse reaction occurrences mapped at the Preferred Term (PT) or Low-Level Term (LLT) level:
+          The MedDRA search feature allows clinical researchers to query adverse reactions and safety warnings using the standardized Medical Dictionary for Regulatory Activities:
         </p>
         <ul>
-          <li><strong>Preferred Term (PT):</strong> The standard clinical concept (e.g., <em>&ldquo;Lactic acidosis&rdquo;</em>, <em>&ldquo;Hepatic failure&rdquo;</em>). Highly recommended for comprehensive recall across all synonyms.</li>
-          <li><strong>Section Filtering:</strong> Restrict safety terms to specific labeling sections such as <em>Boxed Warning</em>, <em>Warnings and Precautions</em>, or <em>Adverse Reactions</em>.</li>
-          <li><strong>Relational Semi-Joins:</strong> On Oracle CDER-CBER, MedDRA criteria compile to indexed composite lookups on <code>druglabel.SPL_SEC_MEDDRA_LLT_OCC</code> for instant retrieval.</li>
+          <li><strong>Preferred Term (PT):</strong> The standard clinical concept (e.g. <em>Lactic acidosis</em>, <em>Hepatic failure</em>, <em>Anaphylactic reaction</em>). Searching by PT automatically captures all underlying synonymous expressions (Low-Level Terms).</li>
+          <li><strong>Section Filtering:</strong> Focus safety terms on specific labeling sections such as <em>Boxed Warning</em>, <em>Warnings and Precautions</em>, or <em>Adverse Reactions</em>.</li>
         </ul>
       </div>
     ),
@@ -228,19 +207,22 @@ const GUIDES: WikiItem[] = [
   {
     id: 'guide-clinical-tools',
     category: 'clinical-tools',
-    categoryLabel: 'Clinical Modules',
-    title: 'Clinical Modules: DrugTox, Label Comparison, and DeepDive',
-    summary: 'Specialized analysis tools for drug-induced liver injury, multi-label diffs, and deep dive reports.',
-    tags: ['drugtox', 'labelcomp', 'deepdive', 'comparison', 'dili', 'ro2', 'faers'],
+    categoryLabel: 'Product Toolbox & Analysis',
+    title: 'Product Toolbox: Clinical Intelligence & Analytical Agents',
+    summary: 'Overview of specialized analytical tools available in the label workspace toolbox.',
+    tags: ['toolbox', 'dili', 'dict', 'compare', 'ro2', 'rule of two', 'cardiotoxicity', 'hepatotoxicity'],
     content: (
       <div>
-        <p>Beyond searching, FDALabel offers built-in deep clinical intelligence tools:</p>
+        <p>When viewing any drug label, the <strong>Toolbox</strong> tab gives you access to dedicated analytical tools:</p>
         <ul>
-          <li><strong>Label Comparison (LabelComp):</strong> Compare 2 or more labels side-by-side with section alignment and visual diff highlighting.</li>
-          <li><strong>DrugTox & DILI Rule-of-Two:</strong> Evaluate hepatotoxicity risks and drug-induced liver injury benchmark scores.</li>
-          <li><strong>Adverse Event Profile & FAERS:</strong> Correlate label indications and warnings with real-world post-marketing FAERS adverse event reports.</li>
-          <li><strong>Chemical Structure Search:</strong> Search drug substances by SMILES or InChI string with exact, substructure, or similarity algorithms.</li>
+          <li><strong>DILI Agent:</strong> Drug-Induced Liver Injury risk assessment, clinical signal detection, and benchmark classifications.</li>
+          <li><strong>DICT Agent:</strong> Drug-Induced Cardiotoxicity evaluation, adverse event summaries, and QT prolongation signal detection.</li>
+          <li><strong>Label Comparison (Compare):</strong> Side-by-side diff comparison of up to 4 drug labels with section alignment and visual text highlighting.</li>
+          <li><strong>Rule of Two (RO2):</strong> Evaluates hepatotoxicity risk by plotting recommended maximum daily dose against lipophilicity (\(\log P\)).</li>
         </ul>
+        <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
+          ⭐ <strong>Personalized Toolbox:</strong> You can click the star icon on any tool card in your toolbox to pin your most frequently used tools at the top.
+        </div>
       </div>
     ),
   },
@@ -250,55 +232,55 @@ const FAQS: FaqItem[] = [
   {
     id: 'faq-ai-1',
     category: 'ai-builder',
-    question: 'How does the AI Intent Engine interpret and compile clinical queries?',
+    question: 'How does the AI Search Assistant interpret clinical requests?',
     tags: ['ai', 'prompt', 'mechanism', 'intent', 'natural language', 'translation'],
     answer: (
       <p>
-        The AI Intent Engine uses a specialized regulatory prompt that extracts your core drug entities and clinical safety concepts into <strong>Backbone Groups</strong>, while mapping descriptive constraints (e.g. <em>oral route</em>, <em>NDA</em>, <em>human Rx</em>) into modular <strong>Prefilter Chips</strong>. It also automatically identifies adverse events and converts them into standardized <strong>MedDRA Preferred Terms</strong>.
+        The AI Search Assistant analyzes your natural language question, extracts the core drug names and safety concepts into structured criteria cards, and converts descriptive constraints (like oral route or NDA approval) into clickable prefilter chips. It also converts colloquial medical terms into official MedDRA Preferred Terms.
       </p>
     ),
   },
   {
     id: 'faq-ai-2',
     category: 'ai-builder',
-    question: 'Why are categories like Dosage Form, Route, and Application Type emitted as pre-filter chips?',
+    question: 'Why are filters like Dosage Form and Route displayed as pre-filter chips?',
     tags: ['prefilters', 'chips', 'facet', 'backbone', 'counts', 'results header'],
     answer: (
       <p>
-        Extracting categorical constraints as prefilters keeps your core database query fast and uncluttered. It allows you to toggle filters on and off in the results sidebar without re-running the entire search, while the results counter displays both your filtered subset and the total backbone matches (e.g. <code>120 / 1,500 Results</code>).
+        Separating categories into pre-filter chips lets you quickly toggle filters on and off in the search results sidebar without retyping your query. The results header dynamically displays both your filtered count and the total matching backbone labels (e.g. <code>120 / 1,500 Results</code>).
       </p>
     ),
   },
   {
     id: 'faq-1',
     category: 'search-builder',
-    question: 'Why does the search button say "Verification Required"?',
+    question: 'Why does the search button sometimes require confirmation?',
     tags: ['verification', 'confirmation', 'search disabled', 'product name', 'meddra'],
     answer: (
       <p>
-        When using <strong>Exact Match (<code>is exactly</code>)</strong> for Product Names or MedDRA terms, the platform requires standard database confirmation to ensure your query uses an indexed standard term rather than a typo. Simply select one of the suggested candidate chips or change the operator to <strong>&ldquo;starts with&rdquo;</strong> or <strong>&ldquo;contains&rdquo;</strong>.
+        When using <strong>Exact Match (<code>is exactly</code>)</strong> for Product Names or MedDRA terms, the search verifies that your entered term matches canonical database vocabulary rather than a typo. Simply select one of the suggested candidate chips or switch the operator to <strong>&ldquo;starts with&rdquo;</strong> or <strong>&ldquo;contains&rdquo;</strong>.
       </p>
     ),
   },
   {
     id: 'faq-2',
     category: 'product-operators',
-    question: 'How do I search for an entire drug brand line (e.g. all Tylenol products)?',
+    question: 'How do I search for an entire drug brand family (e.g. all Tylenol products)?',
     tags: ['brand', 'family', 'starts with', 'tylenol', 'line extension'],
     answer: (
       <p>
-        In the Product Name card, set the match operator dropdown to <strong>&ldquo;starts with&rdquo;</strong> and type the brand name (e.g. <code>Tylenol</code>). This will match all formulation and strength variants such as <em>Tylenol PM</em>, <em>Tylenol Extra Strength</em>, and <em>Tylenol Infant</em>.
+        In the Product Name card, set the match operator dropdown to <strong>&ldquo;starts with&rdquo;</strong> and enter the brand name (e.g. <code>Tylenol</code>). This matches all formulation and strength variations such as <em>Tylenol PM</em>, <em>Tylenol Extra Strength</em>, and <em>Tylenol Infant</em>.
       </p>
     ),
   },
   {
     id: 'faq-3',
     category: 'multi-setids',
-    question: 'What formats can I use when pasting multiple SET-IDs?',
+    question: 'What format should I use when pasting multiple SET-IDs?',
     tags: ['set-id', 'paste', 'format', 'newline', 'comma', 'semicolon', 'csv'],
     answer: (
       <p>
-        The <strong>Multi SET-IDs</strong> modal accepts GUIDs separated by <strong>newlines</strong> (from Excel or text files), <strong>semicolons (;)</strong>, or <strong>commas (,)</strong>. All surrounding spaces and duplicate entries are automatically cleaned.
+        The <strong>Multi SET-IDs</strong> window accepts lists copied from spreadsheets or documents separated by <strong>newlines</strong>, <strong>semicolons (;)</strong>, or <strong>commas (,)</strong>. Surrounding whitespace and duplicate entries are automatically removed.
       </p>
     ),
   },
@@ -309,29 +291,29 @@ const FAQS: FaqItem[] = [
     tags: ['pt', 'llt', 'meddra', 'hierarchy', 'preferred term', 'low level term'],
     answer: (
       <p>
-        <strong>Preferred Terms (PT)</strong> represent distinct medical concepts and automatically aggregate all associated Low-Level Term synonyms. <strong>Low-Level Terms (LLT)</strong> represent specific colloquial or historical expressions mapped under a parent PT.
+        <strong>Preferred Terms (PT)</strong> represent distinct medical concepts and automatically include all synonymous Low-Level Terms (LLTs). <strong>Low-Level Terms (LLT)</strong> represent specific clinical or historical expressions grouped under a parent PT.
       </p>
     ),
   },
   {
     id: 'faq-5',
     category: 'getting-started',
-    question: 'How often is the labeling data updated in FDALabel?',
+    question: 'How frequently is the drug labeling dataset updated?',
     tags: ['updates', 'dailymed', 'orange book', 'frequency', 'refresh'],
     answer: (
       <p>
-        FDALabel synchronizes updates monthly with official FDA structured product labeling (SPL) distributions, Orange Book monthly revisions, and FDA Pharmacologic Class indexing data.
+        AskFDALabel is updated monthly with official FDA structured product labeling distributions, Orange Book monthly revisions, and FDA Pharmacologic Class indexing data.
       </p>
     ),
   },
   {
     id: 'faq-6',
     category: 'clinical-tools',
-    question: 'How do I export my search results or download SPL XML files?',
+    question: 'How do I export my search results or view SPL XML files?',
     tags: ['export', 'csv', 'excel', 'xml', 'download', 'results'],
     answer: (
       <p>
-        On the Search Results page, use the <strong>Export Table</strong> button to download Excel (XLSX) or CSV spreadsheets of your matched labels, or click individual label rows to view and download full SPL XML documents.
+        On the Search Results page, use the <strong>Export Table</strong> button to download Excel (XLSX) or CSV spreadsheets of your matched labels, or click individual label rows to read, navigate, and download full SPL XML documents.
       </p>
     ),
   },
@@ -434,14 +416,14 @@ export default function WikiPage() {
                 marginBottom: '1rem',
               }}
             >
-              <span>📖 Knowledge Base & Documentation</span>
+              <span>📖 Knowledge Base & User Guide</span>
             </div>
 
             <h1 style={{ fontSize: '2.2rem', fontWeight: 900, margin: '0 0 10px 0', letterSpacing: '-0.02em' }}>
-              FDALabel v3.0 Wiki & Guidance
+              AskFDALabel v3.0 User Guide & Wiki
             </h1>
             <p style={{ fontSize: '1rem', opacity: 0.9, margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
-              Comprehensive documentation, search tutorials, operator rules, and frequently asked questions.
+              Search tutorials, AI query instructions, match operator guidance, and frequently asked questions.
             </p>
 
             {/* Search Input Box */}
@@ -465,7 +447,7 @@ export default function WikiPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search tutorials, operators, SET-IDs, MedDRA, or FAQs... (Press Ctrl+K)"
+                placeholder="Search guides, AI queries, SET-IDs, MedDRA, or FAQs... (Press Ctrl+K)"
                 style={{
                   width: '100%',
                   padding: '14px 100px 14px 48px',
