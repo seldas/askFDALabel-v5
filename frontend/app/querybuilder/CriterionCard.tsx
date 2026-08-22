@@ -231,7 +231,7 @@ export function CriterionCard({
 
   const fetchProductName = useCallback(
     async (q: string) => {
-      if (q.length < 4) return [];
+      if (q.length < 2) return [];
       const res = await fetch(
         `/api/labelquery/suggest/product_name?q=${encodeURIComponent(q)}&field=${v.field || 'any'}`,
       );
@@ -361,40 +361,99 @@ export function CriterionCard({
           </>
         );
 
-      case 'productName':
+      case 'productName': {
+        const isUnverified = Boolean(v.text && String(v.text).trim()) && v.verified === false;
         return (
-          <div className="fdl-row" style={{ position: 'relative' }}>
-            <Select
-              ariaLabel="Field scope"
-              value={v.field || 'any'}
-              onChange={(field) => set({ field })}
-              options={[
-                { value: 'any', label: 'All Product Identifiers' },
-                { value: 'trade', label: 'Trade / Brand Name' },
-                { value: 'generic', label: 'Generic / Established Name' },
-                { value: 'unii', label: 'UNII / Ingredient Name' },
-              ]}
-            />
-            <Select
-              ariaLabel="Match type"
-              value={v.op || 'contains'}
-              onChange={(op) => set({ op })}
-              options={[
-                { value: 'contains', label: 'contains' },
-                { value: 'startsWith', label: 'starts with' },
-                { value: 'equals', label: 'is exactly' },
-                { value: 'notContains', label: 'does not contain' },
-              ]}
-            />
-            <AutoCompleteInput
-              value={v.text || ''}
-              onChange={(text) => set({ text })}
-              placeholder="Enter product or ingredient name (type 4+ chars for suggestions)"
-              fetchSuggestions={fetchProductName}
-              minChars={4}
-            />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {isUnverified && (
+              <div
+                style={{
+                  backgroundColor: '#fffbeb',
+                  border: '1px solid #fde68a',
+                  borderRadius: '8px',
+                  padding: '10px 14px',
+                  marginBottom: '4px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    ⚠️ Verification Required: <em>&ldquo;{v.text}&rdquo;</em>
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 600 }}>
+                    Selection required to enable search
+                  </span>
+                </div>
+                <p style={{ margin: '0 0 8px 0', fontSize: '0.82rem', color: '#78350f' }}>
+                  Please confirm the standardized matching product or generic name below to ensure indexed exact matching:
+                </p>
+                <UnverifiedProductPicker
+                  queryText={v.text}
+                  field={v.field || 'any'}
+                  onConfirm={(confirmedName) => set({ text: confirmedName, verified: true, op: 'equals' })}
+                />
+              </div>
+            )}
+
+            <div className="fdl-row" style={{ position: 'relative' }}>
+              <Select
+                ariaLabel="Field scope"
+                value={v.field || 'any'}
+                onChange={(field) => set({ field })}
+                options={[
+                  { value: 'any', label: 'All Product Identifiers' },
+                  { value: 'trade', label: 'Trade / Brand Name' },
+                  { value: 'generic', label: 'Generic / Established Name' },
+                  { value: 'unii', label: 'UNII / Ingredient Name' },
+                ]}
+              />
+              <Select
+                ariaLabel="Match type"
+                value={v.op || 'equals'}
+                onChange={(op) => set({ op })}
+                options={[
+                  { value: 'equals', label: 'is exactly' },
+                  { value: 'startsWith', label: 'starts with' },
+                  { value: 'contains', label: 'contains' },
+                  { value: 'notContains', label: 'does not contain' },
+                ]}
+              />
+              <AutoCompleteInput
+                value={v.text || ''}
+                onChange={(text) => set({ text, verified: false })}
+                onSelect={(text) => set({ text, verified: true, op: 'equals' })}
+                placeholder="Enter product or ingredient name (type 2+ chars for suggestions)"
+                fetchSuggestions={fetchProductName}
+                minChars={2}
+              />
+              {v.text && v.verified !== false && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    backgroundColor: '#ecfdf5',
+                    color: '#065f46',
+                    border: '1px solid #a7f3d0',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title="Standardized product name confirmed"
+                >
+                  ✓ Confirmed
+                </span>
+              )}
+            </div>
+            <p className="fdl-note">
+              {v.verified !== false
+                ? 'Standardized product name is confirmed. Exact match index scan will be used.'
+                : 'Select from auto-complete suggestions to confirm the standardized product name.'}
+            </p>
           </div>
         );
+      }
 
       case 'fullText': {
         const isAdv = (v.mode || 'simple') === 'advanced';
@@ -835,10 +894,11 @@ export function CriterionCard({
             <div className="fdl-row">
               <div className="fdl-row__grow">
                 <TokenInput
-                  placeholder="Begin entering part(s) of a class name, then select from suggestions that appear"
+                  placeholder="Begin typing a class name, then select from suggestions that appear"
                   values={v.terms || []}
                   onChange={(terms) => set({ terms })}
                   fetchSuggestions={fetchPharmClass}
+                  requireSuggestion={true}
                 />
               </div>
               <span className="fdl-row__word">of type</span>
@@ -856,9 +916,8 @@ export function CriterionCard({
               />
             </div>
             <p className="fdl-note">
-              For a reference list of established pharmacologic classes (EPCs) and attributes that
-              define a pharmacologic class (i.e., mechanism of action, physiologic effect, chemical
-              structure), start typing above.
+              Select one or more standardized pharmacologic classes from the suggestions.
+              Exact-match indexing will be applied.
             </p>
           </>
         );
@@ -992,6 +1051,106 @@ export function CriterionCard({
         </p>
       ) : null}
       <div className="fdl-card__body">{body}</div>
+    </div>
+  );
+}
+
+function UnverifiedProductPicker({
+  queryText,
+  field,
+  onConfirm,
+}: {
+  queryText: string;
+  field: string;
+  onConfirm: (name: string) => void;
+}) {
+  const [items, setItems] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `/api/labelquery/suggest/product_name?q=${encodeURIComponent(queryText.trim())}&field=${field}`,
+        );
+        if (res.ok && !cancelled) {
+          const json = await res.json();
+          setItems(json.suggestions || []);
+        }
+      } catch {
+        if (!cancelled) setItems([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    if (queryText.trim().length >= 2) {
+      load();
+    } else {
+      setItems([]);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [queryText, field]);
+
+  if (loading) {
+    return <span style={{ fontSize: '0.8rem', color: '#b45309' }}>Searching matching standard names…</span>;
+  }
+
+  if (!items.length) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.8rem', color: '#b45309' }}>
+          No direct exact matches found for &ldquo;{queryText}&rdquo;. Use the input box below to search suggestions, or confirm:
+        </span>
+        <button
+          type="button"
+          onClick={() => onConfirm(queryText.trim())}
+          style={{
+            background: '#d97706',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '6px',
+            padding: '3px 10px',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          Confirm &ldquo;{queryText.trim()}&rdquo; as-is
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+      {items.slice(0, 10).map((item) => (
+        <button
+          key={item}
+          type="button"
+          onClick={() => onConfirm(item)}
+          style={{
+            background: '#ffffff',
+            color: '#92400e',
+            border: '1px solid #d97706',
+            borderRadius: '6px',
+            padding: '4px 10px',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+          }}
+          title={`Confirm standard name: ${item}`}
+        >
+          <span>✓ {item}</span>
+        </button>
+      ))}
     </div>
   );
 }

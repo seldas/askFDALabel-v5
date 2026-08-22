@@ -363,10 +363,10 @@ def options():
 
 @labelquery_bp.route('/suggest/product_name', methods=['GET'])
 def suggest_product_name():
-    """Autocomplete for product names (trade or generic). Requires >= 4 characters to minimize DB load."""
+    """Autocomplete for product names (trade or generic). Requires >= 2 characters."""
     q = (request.args.get('q') or '').strip()
     field = (request.args.get('field') or 'any').lower()
-    if len(q) < 4:
+    if len(q) < 2:
         return jsonify({'suggestions': []})
 
     try:
@@ -1393,7 +1393,6 @@ Allowed "type" values and the exact shape of their "value":
 - "fullText"          {"mode": "simple"|"advanced", "text": "hepatic failure"}
 - "labelingSection"   {"sections": ["BOXED WARNING", "WARNINGS AND PRECAUTIONS"], "text": "lactic acidosis"}
 - "meddra"            {"level": "pt"|"llt", "terms": ["Hepatic failure"], "sections": ["ADVERSE REACTIONS"]}
-- "pharmClass"        {"classType": "any"|"epc"|"moa"|"pe"|"cs", "terms": ["Kinase Inhibitor"]}
 
 Allowed "prefilters" -- one entry per single value, never a list:
 
@@ -1409,11 +1408,17 @@ Rules:
 1. Put drug names/identifiers and text/clinical section matches in "groups", and
    every categorical constraint in "prefilters". Emit a prefilter only when the
    request actually calls for it -- never pad the list with defaults.
-2. Adverse events and medical concepts: prefer "meddra" over free text. Give the ONE Preferred Term that names the concept.
-3. Free text is the fallback for wording MedDRA does not cover.
-4. Target Sections: When specific sections are named (e.g. "Boxed Warning", "Warnings and Precautions", "Adverse Reactions"), use "labelingSection" or attach "sections" to "meddra".
-5. A drug name goes in "productName", never "identifier". "identifier" is for codes: application number, Set ID, SPL ID, UNII, NDC.
-6. Never return an empty "groups" array when medical concepts, drug names, or labeling sections are requested.
+2. Pharmacologic Class (EPC/Pharm Class): Do NOT emit "pharmClass" in "groups".
+   If the user query specifies or mentions a pharmacologic class (e.g. "Kinase Inhibitor",
+   "ACE inhibitor", "Beta blocker", "SGLT2 inhibitor", etc.), omit it from "groups" and add
+   this exact note to "notes":
+   "Note: Pharmacologic class filter ('[Class Name]') was omitted from the initial query. You can apply this class filter directly from the Results sidebar."
+   (replace [Class Name] with the pharmacologic class name mentioned in the query).
+3. Adverse events and medical concepts: prefer "meddra" over free text. Give the ONE Preferred Term that names the concept.
+4. Free text is the fallback for wording MedDRA does not cover.
+5. Target Sections: When specific sections are named (e.g. "Boxed Warning", "Warnings and Precautions", "Adverse Reactions"), use "labelingSection" or attach "sections" to "meddra".
+6. A drug name goes in "productName", never "identifier". "identifier" is for codes: application number, Set ID, SPL ID, UNII, NDC.
+7. Never return an empty "groups" array when medical concepts, drug names, or labeling sections are requested.
 """
 
 
@@ -1648,6 +1653,7 @@ def _sanitize_translation(parsed, target_db='local'):
     dropped = []
     unavailable = []
     harvested = []
+    notes_from_pharm = []
     for group in (parsed.get('groups') or [])[:5]:
         criteria = []
         for criterion in (group.get('criteria') or [])[:12]:
@@ -1657,6 +1663,20 @@ def _sanitize_translation(parsed, target_db='local'):
             value = criterion.get('value')
             if ctype not in _ALLOWED_TYPES:
                 dropped.append(str(ctype))
+                continue
+            if ctype == 'pharmClass':
+                # Convert any LLM-emitted pharmClass into sidebar guidance note
+                terms = []
+                if isinstance(value, str):
+                    terms = [value]
+                elif isinstance(value, list):
+                    terms = value
+                elif isinstance(value, dict):
+                    terms = value.get('terms') or ([value.get('text')] if value.get('text') else [])
+                class_name = ', '.join([str(t) for t in terms if t]) or 'selected'
+                notice = f"Note: Pharmacologic class filter ('{class_name}') was omitted from the initial query. You can apply this class filter directly from the Results sidebar."
+                if not any('Pharmacologic class filter' in n for n in (parsed.get('notes') or [])):
+                    notes_from_pharm.append(notice)
                 continue
             if ctype in PREFILTER_FIELDS:
                 harvested.extend(_criterion_to_prefilters(ctype, value))
@@ -1670,18 +1690,19 @@ def _sanitize_translation(parsed, target_db='local'):
                 if ctype in ('fullText', 'labelingSection'):
                     value = {'mode': 'advanced' if ' OR ' in value or ' AND ' in value else 'simple', 'text': value}
                 elif ctype == 'productName':
-                    value = {'field': 'any', 'op': 'contains', 'text': value}
+                    value = {'field': 'any', 'op': 'contains', 'text': value, 'verified': False}
                 elif ctype == 'meddra':
                     value = {'level': 'pt', 'terms': [value]}
-                elif ctype == 'pharmClass':
-                    value = {'classType': 'any', 'terms': [value]}
                 elif ctype in ('labelingType', 'applicationType', 'route', 'marketStatus'):
                     value = {'values': [value]}
             elif isinstance(value, list):
                 if ctype in ('labelingType', 'applicationType', 'route', 'marketStatus'):
                     value = {'values': value}
-                elif ctype in ('meddra', 'pharmClass'):
-                    value = {'level': 'pt' if ctype == 'meddra' else 'any', 'terms': value}
+                elif ctype == 'meddra':
+                    value = {'level': 'pt', 'terms': value}
+            elif isinstance(value, dict) and ctype == 'productName':
+                if 'verified' not in value:
+                    value['verified'] = False
 
             if not isinstance(value, dict):
                 dropped.append(str(ctype))
@@ -1691,6 +1712,7 @@ def _sanitize_translation(parsed, target_db='local'):
             groups.append({'criteria': criteria})
 
     notes = [str(n) for n in (parsed.get('notes') or []) if n][:5]
+    notes.extend(notes_from_pharm)
     if dropped:
         notes.append('Dropped unsupported criteria: ' + ', '.join(sorted(set(dropped))))
     if unavailable:

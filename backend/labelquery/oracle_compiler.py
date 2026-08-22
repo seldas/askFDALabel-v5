@@ -361,28 +361,31 @@ def _compile_product_name(value, bag, base_table=BASE_TABLE_HUMAN):
         term_up = term.upper()
         if op == 'equals':
             pat = term_up
+            eq_op = '='
         elif op == 'startsWith':
             pat = f'{term_up}%'
+            eq_op = 'LIKE'
         else:
             pat = f'%{term_up}%'
+            eq_op = 'LIKE'
         p = bag.add(pat)
 
         if has_moiety_column:
-            moiety_pred = f'UPPER(s.ACT_MOIETY_NAMES) LIKE {p}'
+            moiety_pred = f'UPPER(s.ACT_MOIETY_NAMES) {eq_op} {p}'
         else:
             moiety_pred = (
                 'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_ACT_MOIETY_NAME mn '
-                f'WHERE mn.SPL_ID = s.SPL_ID AND UPPER(mn.ACTIVE_MOIETY_NAME) LIKE {p})'
+                f'WHERE mn.SPL_ID = s.SPL_ID AND UPPER(mn.ACTIVE_MOIETY_NAME) {eq_op} {p})'
             )
 
         if field == 'trade':
-            sub = f'UPPER(p.NAME) LIKE {p}'
+            sub = f'UPPER(p.NAME) {eq_op} {p}'
         elif field == 'generic':
-            sub = f'UPPER(p.NORMD_GENERIC_NAME) LIKE {p}'
+            sub = f'UPPER(p.NORMD_GENERIC_NAME) {eq_op} {p}'
         elif field == 'unii':
-            sub = f'(UPPER(s.ACT_INGR_NAMES) LIKE {p} OR {moiety_pred})'
+            sub = f'(UPPER(s.ACT_INGR_NAMES) {eq_op} {p} OR {moiety_pred})'
         else:
-            sub = f'(UPPER(p.NAME) LIKE {p} OR UPPER(p.NORMD_GENERIC_NAME) LIKE {p} OR UPPER(s.ACT_INGR_NAMES) LIKE {p} OR {moiety_pred})'
+            sub = f'(UPPER(p.NAME) {eq_op} {p} OR UPPER(p.NORMD_GENERIC_NAME) {eq_op} {p} OR UPPER(s.ACT_INGR_NAMES) {eq_op} {p} OR {moiety_pred})'
 
         if op == 'notContains':
             clauses.append(
@@ -660,13 +663,11 @@ def _compile_pharm_class(value, bag, alias='s'):
 
     class_type = (value.get('classType') or 'any').lower()
 
-    # 'any' keeps the historical behaviour: EPC only, no NDF-RT join.
+    # Exact discrete match on auto-completed standard terms against SUM_SPL_EPC
     if class_type in ('any', 'epc'):
-        clauses = []
-        for t in terms:
-            p = bag.add(f'%{t.upper()}%')
-            clauses.append(f'UPPER({alias}.EPC) LIKE {p}')
-        return '(' + ' OR '.join(clauses) + ')'
+        placeholders = [bag.add(t) for t in terms]
+        p_list = ', '.join(placeholders)
+        return f'{alias}.SPL_ID IN (SELECT e.SPL_ID FROM druglabel.SUM_SPL_EPC e WHERE e.EPC IN ({p_list}))'
 
     cat_token = {'moa': 'MOA', 'pe': 'PE', 'cs': 'CHEMICAL'}.get(class_type)
     if not cat_token:

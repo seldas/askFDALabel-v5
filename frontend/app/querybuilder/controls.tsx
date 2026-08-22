@@ -201,12 +201,14 @@ export function TokenInput({
   onChange,
   onCommit,
   fetchSuggestions,
+  requireSuggestion = false,
 }: {
   placeholder: string;
   values?: string[];
   onChange?: (values: string[]) => void;
   onCommit?: (value: string) => void;
   fetchSuggestions?: (q: string) => Promise<string[]>;
+  requireSuggestion?: boolean;
 }) {
   const chips = values ?? [];
   const [text, setText] = useState('');
@@ -245,11 +247,22 @@ export function TokenInput({
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
-  const commit = (value: string) => {
+  const commit = (value: string, fromSuggestion = false) => {
     const v = value.trim();
     if (v) {
-      if (onCommit) onCommit(v);
-      else if (onChange && !chips.includes(v)) onChange([...chips, v]);
+      if (requireSuggestion && !fromSuggestion) {
+        const exact = suggestions.find((s) => s.toLowerCase() === v.toLowerCase());
+        if (exact) {
+          if (onCommit) onCommit(exact);
+          else if (onChange && !chips.includes(exact)) onChange([...chips, exact]);
+        } else if (suggestions.length > 0) {
+          if (onCommit) onCommit(suggestions[0]);
+          else if (onChange && !chips.includes(suggestions[0])) onChange([...chips, suggestions[0]]);
+        }
+      } else {
+        if (onCommit) onCommit(v);
+        else if (onChange && !chips.includes(v)) onChange([...chips, v]);
+      }
     }
     setText('');
     setSuggestions([]);
@@ -271,7 +284,7 @@ export function TokenInput({
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
-            commit(text);
+            commit(text, false);
           } else if (e.key === 'Backspace' && !text && onChange && chips.length) {
             onChange(chips.slice(0, -1));
           }
@@ -281,7 +294,7 @@ export function TokenInput({
         <ul className="fdl-suggestions">
           {suggestions.map((s) => (
             <li key={s}>
-              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => commit(s)}>
+              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => commit(s, true)}>
                 {s}
               </button>
             </li>
@@ -327,12 +340,14 @@ export function Select({
 export function AutoCompleteInput({
   value,
   onChange,
+  onSelect,
   placeholder,
   fetchSuggestions,
-  minChars = 4,
+  minChars = 2,
 }: {
   value: string;
   onChange: (value: string) => void;
+  onSelect?: (value: string) => void;
   placeholder: string;
   fetchSuggestions?: (q: string) => Promise<string[]>;
   minChars?: number;
@@ -374,7 +389,8 @@ export function AutoCompleteInput({
   }, []);
 
   const selectSuggestion = (s: string) => {
-    onChange(s);
+    if (onSelect) onSelect(s);
+    else onChange(s);
     setOpen(false);
   };
 

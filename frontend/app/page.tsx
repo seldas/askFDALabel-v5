@@ -34,6 +34,7 @@ import {
   applyPrefilters,
   countFilled,
   fromWire,
+  hasUnverifiedProductNames,
   type LabelQuery,
   makeEmptyQuery,
   type PreFilter,
@@ -260,6 +261,7 @@ function HomePage() {
 
   const filled = countFilled(query);
   const checkedPrefilters = prefilters.filter((p) => p.checked).length;
+  const hasUnverified = hasUnverifiedProductNames(query);
 
   const actionBar = (position: 'top' | 'bottom') => (
     <div className={position === 'top' ? 'fdl-actions' : 'fdl-actions fdl-actions--bottom'}>
@@ -278,6 +280,24 @@ function HomePage() {
             + {checkedPrefilters} pre-{checkedPrefilters === 1 ? 'filter' : 'filters'}
           </span>
         ) : null}
+        {hasUnverified && (
+          <span
+            style={{
+              backgroundColor: '#fef3c7',
+              color: '#92400e',
+              border: '1px solid #f59e0b',
+              padding: '4px 10px',
+              borderRadius: '8px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            ⚠️ Please confirm product name(s)
+          </span>
+        )}
       </div>
 
       <button type="button" className="fdl-link" onClick={restoreLast} disabled={!hasSaved}>
@@ -327,7 +347,14 @@ function HomePage() {
         </div>
       )}
 
-      <button type="button" className="fdl-btn fdl-btn--search" onClick={runSearch}>
+      <button
+        type="button"
+        className="fdl-btn fdl-btn--search"
+        onClick={runSearch}
+        disabled={hasUnverified}
+        style={hasUnverified ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+        title={hasUnverified ? 'Please confirm all product names by selecting from standard suggestions' : undefined}
+      >
         Search Labels »
       </button>
     </div>

@@ -306,31 +306,30 @@ def _c_pharm_class(criterion, bag, warnings):
     if not terms:
         return None
     class_type = (criterion.get('classType') or 'any').lower()
-    patterns = [f'%{t}%' for t in terms]
-
+    
+    # Exact discrete match on auto-completed standard terms (with wildcard fallback if % is passed)
     alts = []
     if class_type in ('any', 'epc'):
+        # Discrete mapping table exact match
+        p_terms = bag.add(terms)
         alts.append(
-            'EXISTS (SELECT 1 FROM labeling.epc_map em WHERE em.spl_id = s.spl_id '
-            f'AND em.epc_term ILIKE ANY({bag.add(patterns)}))'
+            f's.spl_id IN (SELECT em.spl_id FROM labeling.epc_map em WHERE em.epc_term = ANY({p_terms}))'
         )
-        alts.append(_like_any(['s.epc'], patterns, bag))
     if class_type != 'epc':
-        # MoA / PE / CS live in substance_indexing, reachable through the
-        # label's active ingredients.
         type_clause = ''
         if class_type in CLASS_TYPE_FILTERS:
             types, suffixes = CLASS_TYPE_FILTERS[class_type]
             type_clause = (
-                f' AND (si.indexing_type ILIKE ANY({bag.add(types)})'
+                f' AND (si.indexing_type = ANY({bag.add(types)})'
                 f' OR si.indexing_name ILIKE ANY({bag.add(suffixes)}))'
             )
+        p_terms = bag.add(terms)
         alts.append(
-            'EXISTS (SELECT 1 FROM labeling.active_ingredients_map aim '
+            's.spl_id IN ('
+            'SELECT aim.spl_id FROM labeling.active_ingredients_map aim '
             'JOIN labeling.substance_indexing si '
             'ON UPPER(si.substance_name) = UPPER(aim.substance_name) '
-            'WHERE aim.spl_id = s.spl_id '
-            f'AND si.indexing_name ILIKE ANY({bag.add(patterns)}){type_clause})'
+            f'WHERE si.indexing_name = ANY({p_terms}){type_clause})'
         )
     alts = [a for a in alts if a]
     return '(' + ' OR '.join(alts) + ')'

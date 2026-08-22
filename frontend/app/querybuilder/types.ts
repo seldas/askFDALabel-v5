@@ -654,3 +654,17 @@ export function countFilled(query: LabelQuery): number {
     0,
   );
 }
+
+/**
+ * Returns true if any active productName criterion has text but is pending
+ * user verification/confirmation from the standardized list.
+ */
+export function hasUnverifiedProductNames(query: LabelQuery): boolean {
+  return query.groups.some((g) =>
+    g.criteria.some((c) => {
+      if (c.type !== 'productName') return false;
+      const v = c.value as Record<string, any>;
+      return Boolean(v?.text && String(v.text).trim()) && v.verified === false;
+    }),
+  );
+}
