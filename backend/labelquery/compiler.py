@@ -355,12 +355,27 @@ def _merge_application_prefixes(tokens):
 def _c_identifier(criterion, bag, warnings, unii_available=True):
     alts = []
     set_spl_guid = str(criterion.get('setSplGuid') or '').strip()
+    raw_guids = criterion.get('setSplGuids')
+    set_spl_guids = raw_guids if isinstance(raw_guids, list) else []
     appl_kind = str(criterion.get('applKind') or '').strip().upper()
     appl_num = str(criterion.get('applNum') or '').strip()
     unii_code = str(criterion.get('uniiCode') or '').strip().upper()
 
+    all_guids = []
     if set_spl_guid:
-        alts.append(_like_any(['s.set_id', 's.spl_id'], [f'%{set_spl_guid}%'], bag))
+        all_guids.append(set_spl_guid)
+    for g in set_spl_guids:
+        g_clean = str(g).strip()
+        if g_clean and g_clean not in all_guids:
+            all_guids.append(g_clean)
+
+    if all_guids:
+        if len(all_guids) == 1:
+            p = bag.add(all_guids[0])
+            alts.append(f'(s.set_id = {p} OR s.spl_id = {p})')
+        else:
+            p_arr = bag.add(all_guids)
+            alts.append(f'(s.set_id = ANY({p_arr}) OR s.spl_id = ANY({p_arr}))')
 
     if appl_num:
         digits = re.sub(r'\D', '', appl_num)
@@ -375,32 +390,6 @@ def _c_identifier(criterion, bag, warnings, unii_available=True):
         alts.append(
             f"s.spl_id IN (SELECT aim.spl_id FROM labeling.active_ingredients_map aim WHERE UPPER(aim.unii) = {bag.add(unii_code)})"
         )
-
-    tokens = _merge_application_prefixes(
-        [t for t in re.split(r'[\s,;:]+', str(criterion.get('text') or '')) if t]
-    )
-    unrecognized = []
-    for token in tokens:
-        if _UUID_RE.match(token):
-            alts.append(f'(s.set_id = {bag.add(token)} OR s.spl_id = {bag.add(token)})')
-        elif _PREFIXED_APPL_RE.match(token):
-            kind, number = _PREFIXED_APPL_RE.match(token).groups()
-            alts.append(
-                _like_any(
-                    ['s.appr_num'],
-                    [f'%{kind.upper()} {number.zfill(6)}%', f'%{kind.upper()} {number}%'],
-                    bag,
-                )
-            )
-        elif _APPL_RE.match(token):
-            padded = token.zfill(6)
-            alts.append(_like_any(['s.appr_num'], [f'%{padded}%', f'%{token}%'], bag))
-        elif _UNII_RE.match(token):
-            alts.append(
-                f"s.spl_id IN (SELECT aim.spl_id FROM labeling.active_ingredients_map aim WHERE UPPER(aim.unii) = {bag.add(token.upper())})"
-            )
-        else:
-            unrecognized.append(token)
 
     alts = [a for a in alts if a]
     if not alts:

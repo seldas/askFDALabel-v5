@@ -243,6 +243,7 @@ export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
     defaultValue: () => ({
       text: '',
       setSplGuid: '',
+      setSplGuids: [],
       applKind: '',
       applNum: '',
       uniiCode: '',
@@ -506,6 +507,7 @@ export function isCriterionEmpty(c: Criterion): boolean {
       return (
         !String(v.text || '').trim() &&
         !String(v.setSplGuid || '').trim() &&
+        !(v.setSplGuids?.length > 0) &&
         !String(v.applNum || '').trim() &&
         !String(v.uniiCode || '').trim()
       );

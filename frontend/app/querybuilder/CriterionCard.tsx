@@ -177,6 +177,8 @@ export function CriterionCard({
     });
   }, [criterion.type, meddraLlts, targetDb, parentPts]);
 
+  const [showMultiSetIdModal, setShowMultiSetIdModal] = useState(false);
+
   const set = useCallback(
     (patch: Record<string, unknown>) => onChange({ ...v, ...patch }),
     [onChange, v],
@@ -1014,22 +1016,91 @@ export function CriterionCard({
           </>
         );
 
-      case 'identifier':
+      case 'identifier': {
+        const multiGuids: string[] = Array.isArray(v.setSplGuids) ? v.setSplGuids : [];
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {/* Sub-panel 1: SET ID / SPL GUID */}
             <div className="fdl-subpanel">
-              <div className="fdl-row fdl-row--tight" style={{ alignItems: 'center' }}>
+              <div className="fdl-row fdl-row--tight" style={{ alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                 <span className="fdl-subpanel-label" style={{ minWidth: '130px' }}>SET ID / SPL GUID:</span>
                 <input
                   className="fdl-input"
-                  style={{ maxWidth: '380px', flex: '1' }}
+                  style={{ maxWidth: '380px', flex: '1', minWidth: '220px' }}
                   type="text"
                   value={v.setSplGuid || ''}
-                  placeholder="e.g. ca73b519-015a-436d-aa3c-af53492825a1"
+                  placeholder="Single SET ID (e.g. ca73b519-015a-436d-aa3c-af53492825a1)"
                   onChange={(e) => set({ setSplGuid: e.target.value })}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowMultiSetIdModal(true)}
+                  style={{
+                    backgroundColor: multiGuids.length > 0 ? '#2563eb' : '#f1f5f9',
+                    color: multiGuids.length > 0 ? '#ffffff' : '#334155',
+                    border: multiGuids.length > 0 ? '1px solid #1d4ed8' : '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title="Paste and configure multiple SET-IDs"
+                >
+                  <span>📋 Multi SET-IDs {multiGuids.length > 0 ? `(${multiGuids.length})` : ''}</span>
+                </button>
               </div>
+
+              {multiGuids.length > 0 && (
+                <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#1e40af', fontWeight: 600 }}>
+                    Configured SET-IDs ({multiGuids.length}):
+                  </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '650px' }}>
+                    {multiGuids.slice(0, 5).map((id) => (
+                      <span
+                        key={id}
+                        style={{
+                          backgroundColor: '#eff6ff',
+                          color: '#1d4ed8',
+                          border: '1px solid #bfdbfe',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        {id}
+                      </span>
+                    ))}
+                    {multiGuids.length > 5 && (
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', alignSelf: 'center' }}>
+                        +{multiGuids.length - 5} more
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => set({ setSplGuids: [] })}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#ef4444',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      padding: '0 4px',
+                    }}
+                  >
+                    Clear All
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Sub-panel 2: Application Number (digits only + optional category dropdown) */}
@@ -1085,19 +1156,19 @@ export function CriterionCard({
               </div>
             </div>
 
-            {/* Quick Free-text paste fallback */}
-            <div style={{ paddingTop: '4px', borderTop: '1px dashed #e2e8f0' }}>
-              <input
-                className="fdl-input fdl-input--grow"
-                style={{ fontSize: '0.78rem' }}
-                type="text"
-                value={v.text || ''}
-                placeholder="Or paste multiple mixed identifiers (SET ID, UNII, Application No)..."
-                onChange={(e) => set({ text: e.target.value })}
+            {showMultiSetIdModal && (
+              <MultiSetIdModal
+                initialValues={multiGuids}
+                onSave={(newGuids) => {
+                  set({ setSplGuids: newGuids });
+                  setShowMultiSetIdModal(false);
+                }}
+                onClose={() => setShowMultiSetIdModal(false)}
               />
-            </div>
+            )}
           </div>
         );
+      }
 
       default:
         return null;
@@ -1342,6 +1413,160 @@ function UnverifiedMeddraPicker({
           <span>✓ {item} (PT)</span>
         </button>
       ))}
+    </div>
+  );
+}
+
+function MultiSetIdModal({
+  initialValues,
+  onSave,
+  onClose,
+}: {
+  initialValues: string[];
+  onSave: (setIds: string[]) => void;
+  onClose: () => void;
+}) {
+  const [rawText, setRawText] = useState(initialValues.join('\n'));
+
+  const parsedIds = useMemo(() => {
+    return rawText
+      .split(/[\r\n;,]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }, [rawText]);
+
+  // Remove duplicates while preserving order
+  const uniqueIds = useMemo(() => {
+    return Array.from(new Set(parsedIds));
+  }, [parsedIds]);
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: '16px',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '12px',
+          padding: '24px',
+          maxWidth: '560px',
+          width: '100%',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b', fontWeight: 700 }}>
+            📋 Multi SET-IDs Input
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '1.25rem',
+              cursor: 'pointer',
+              color: '#64748b',
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569', lineHeight: 1.4 }}>
+          Paste multiple <strong>SET IDs</strong> or <strong>SPL GUIDs</strong> below. Entries can be separated by
+          <strong> newlines</strong>, <strong>semicolons (;)</strong>, or <strong>commas (,)</strong>.
+        </p>
+
+        <textarea
+          rows={8}
+          value={rawText}
+          onChange={(e) => setRawText(e.target.value)}
+          placeholder={`ca73b519-015a-436d-aa3c-af53492825a1\nc7247391-7fb8-4bd8-90db-2d1d072fec01\n43683519-015a-436d-aa3c-af53492825a2`}
+          style={{
+            width: '100%',
+            padding: '12px',
+            borderRadius: '8px',
+            border: '1px solid #cbd5e1',
+            fontSize: '0.85rem',
+            fontFamily: 'monospace',
+            resize: 'vertical',
+            boxSizing: 'border-box',
+          }}
+        />
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '0.85rem', color: uniqueIds.length > 0 ? '#2563eb' : '#64748b', fontWeight: 600 }}>
+            {uniqueIds.length} {uniqueIds.length === 1 ? 'SET-ID' : 'SET-IDs'} detected
+            {parsedIds.length !== uniqueIds.length && ` (${parsedIds.length - uniqueIds.length} duplicates filtered)`}
+          </span>
+          {rawText.trim() && (
+            <button
+              type="button"
+              onClick={() => setRawText('')}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#ef4444',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
+            >
+              Clear Text
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: '1px solid #cbd5e1',
+              background: '#ffffff',
+              color: '#334155',
+              fontSize: '0.88rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onSave(uniqueIds)}
+            style={{
+              padding: '8px 18px',
+              borderRadius: '6px',
+              border: 'none',
+              background: '#2563eb',
+              color: '#ffffff',
+              fontSize: '0.88rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Save SET-IDs ({uniqueIds.length})
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

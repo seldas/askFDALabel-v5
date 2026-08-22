@@ -719,24 +719,37 @@ def _compile_pharm_class(value, bag, alias='s'):
 def _compile_identifier(value, bag):
     alts = []
     set_spl_guid = str(value.get('setSplGuid') or '').strip()
+    set_spl_guids = _as_list(value.get('setSplGuids'))
     appl_kind = str(value.get('applKind') or '').strip().upper()
     appl_num = str(value.get('applNum') or '').strip()
     unii_code = str(value.get('uniiCode') or '').strip().upper()
     unii_target = str(value.get('uniiTarget') or 'active').lower()
 
+    # Collect all SET IDs / SPL GUIDs without wildcards (pure exact matching)
+    all_guids = []
     if set_spl_guid:
-        p = bag.add(set_spl_guid)
-        p_like = bag.add(f'%{set_spl_guid.upper()}%')
-        alts.append(f'(s.SET_ID = {p} OR s.SPL_GUID = {p} OR UPPER(s.SET_ID) LIKE {p_like} OR UPPER(s.SPL_GUID) LIKE {p_like})')
+        all_guids.append(set_spl_guid)
+    for g in set_spl_guids:
+        g_clean = str(g).strip()
+        if g_clean and g_clean not in all_guids:
+            all_guids.append(g_clean)
+
+    if all_guids:
+        if len(all_guids) == 1:
+            p = bag.add(all_guids[0])
+            alts.append(f'(s.SET_ID = {p} OR s.SPL_GUID = {p})')
+        else:
+            p_list = ', '.join([bag.add(g) for g in all_guids])
+            alts.append(f'(s.SET_ID IN ({p_list}) OR s.SPL_GUID IN ({p_list}))')
 
     if appl_num:
         digits = re.sub(r'\D', '', appl_num)
         if digits:
             padded = digits.zfill(6)
             if appl_kind:
-                p1 = bag.add(f'%{appl_kind} {padded}%')
-                p2 = bag.add(f'%{appl_kind} {digits}%')
-                alts.append(f'(UPPER(s.APPR_NUM) LIKE {p1} OR UPPER(s.APPR_NUM) LIKE {p2})')
+                p1 = bag.add(f'{appl_kind} {padded}')
+                p2 = bag.add(f'{appl_kind} {digits}')
+                alts.append(f'(UPPER(s.APPR_NUM) = {p1} OR UPPER(s.APPR_NUM) = {p2})')
             else:
                 p1 = bag.add(f'%{padded}%')
                 p2 = bag.add(f'%{digits}%')
@@ -755,43 +768,7 @@ def _compile_identifier(value, bag):
                 f'WHERE UPPER(ing.UNII) = {p_unii})'
             )
 
-    tokens = _as_list(value.get('text')) or _split_terms(value.get('text'))
-    for token in tokens:
-        token_str = token.strip()
-        if not token_str:
-            continue
-        if _UUID_RE.match(token_str):
-            p = bag.add(token_str)
-            alts.append(f'(s.SET_ID = {p} OR s.SPL_GUID = {p})')
-        elif _UNII_RE.match(token_str):
-            p = bag.add(token_str.upper())
-            if unii_target == 'moiety':
-                alts.append(
-                    f's.SPL_ID IN (SELECT mu.SPL_ID FROM druglabel.SUM_SPL_ACT_MOIETY_UNII mu '
-                    f'WHERE UPPER(mu.ACTIVE_MOIETY_UNII) = {p})'
-                )
-            else:
-                alts.append(
-                    f's.SPL_ID IN (SELECT ing.SPL_ID FROM druglabel.SUM_SPL_GEN_PROD_ACT_INGR_UNII ing '
-                    f'WHERE UPPER(ing.UNII) = {p})'
-                )
-        elif _PREFIXED_APPL_RE.match(token_str):
-            kind, number = _PREFIXED_APPL_RE.match(token_str).groups()
-            p1 = bag.add(f'%{kind.upper()} {number.zfill(6)}%')
-            p2 = bag.add(f'%{kind.upper()} {number}%')
-            alts.append(f'(UPPER(s.APPR_NUM) LIKE {p1} OR UPPER(s.APPR_NUM) LIKE {p2})')
-        elif _APPL_RE.match(token_str):
-            padded = token_str.zfill(6)
-            p1 = bag.add(f'%{padded}%')
-            p2 = bag.add(f'%{token_str}%')
-            alts.append(f'(s.APPR_NUM LIKE {p1} OR s.APPR_NUM LIKE {p2})')
-        else:
-            p = bag.add(f'%{token_str.upper()}%')
-            alts.append(f'(UPPER(s.SET_ID) LIKE {p} OR UPPER(s.SPL_GUID) LIKE {p} OR UPPER(s.APPR_NUM) LIKE {p})')
-
-    if not alts:
-        return None
-    return '(' + ' AND '.join(alts) + ')'
+    return '(' + ' AND '.join(alts) + ')' if alts else None
 
 
 def compile_oracle_predicates(query, expand_meddra=None, capabilities=None,
