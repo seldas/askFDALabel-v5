@@ -563,6 +563,91 @@ export function stripFacetFilters<T extends { groups: Array<{ criteria: Array<{ 
   } as T;
 }
 
+/*
+ * AI-suggested categorical pre-filters.
+ *
+ * /translate keeps these out of the criteria tree and returns them here
+ * instead, because they are suggestions until the analyst ticks one. Every
+ * type used is a category the results sidebar drives, which is what makes the
+ * count read "300 / 1,500": the backend strips exactly these before computing
+ * `unfiltered_total`, so a ticked box narrows the results while the backbone
+ * total stays visible beside it.
+ */
+export interface PreFilter {
+  /** `type:value`, stable across renders — used as the React key and toggle id. */
+  id: string;
+  type: CriterionType;
+  /** The criterion field the value is appended to. Always `values` today. */
+  field: string;
+  value: string;
+  label: string;
+  checked: boolean;
+}
+
+/** Reads /translate's `prefilters`, which arrive without a checked flag. */
+export function fromWirePrefilters(raw: unknown): PreFilter[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((p): p is Record<string, any> => Boolean(p) && typeof p === 'object')
+    .filter((p) => CRITERION_DEFS[p.type as CriterionType] && typeof p.value === 'string' && p.value)
+    .map((p) => ({
+      id: String(p.id || `${p.type}:${p.value}`),
+      type: p.type as CriterionType,
+      field: typeof p.field === 'string' && p.field ? p.field : 'values',
+      value: String(p.value),
+      label: String(p.label || p.value),
+      // Ticked on arrival: the analyst asked for these in the description, so
+      // the default is the search they described. Unticking widens it back.
+      checked: true,
+    }));
+}
+
+/** Flips one box. */
+export function togglePrefilter(list: PreFilter[], id: string): PreFilter[] {
+  return list.map((p) => (p.id === id ? { ...p, checked: !p.checked } : p));
+}
+
+/** Ticks or clears every box at once. */
+export function setAllPrefilters(list: PreFilter[], checked: boolean): PreFilter[] {
+  return list.map((p) => ({ ...p, checked }));
+}
+
+/**
+ * `query` with every ticked pre-filter merged in as a normal criterion.
+ *
+ * Applied to every group rather than the first one: these are filters over the
+ * whole result set, and an OR branch without them would come back unfiltered
+ * while the header claimed otherwise.
+ *
+ * Nothing else in the pipeline needs to know about pre-filters after this —
+ * they land as ordinary categorical criteria, so the results sidebar shows
+ * them ticked and the facet code strips them from the backbone as usual.
+ */
+export function applyPrefilters(query: LabelQuery, prefilters: PreFilter[]): LabelQuery {
+  const active = prefilters.filter((p) => p.checked);
+  if (active.length === 0) return query;
+
+  return {
+    ...query,
+    groups: query.groups.map((group) => {
+      const criteria = group.criteria.slice();
+      for (const pre of active) {
+        const index = criteria.findIndex((c) => c.type === pre.type);
+        const base = index >= 0 ? criteria[index] : makeCriterion(pre.type);
+        const current = (base.value as Record<string, any>)[pre.field];
+        const values: string[] = Array.isArray(current) ? current.slice() : [];
+        if (!values.some((v) => v.toLowerCase() === pre.value.toLowerCase())) {
+          values.push(pre.value);
+        }
+        const merged = { ...base, value: { ...base.value, [pre.field]: values } };
+        if (index >= 0) criteria[index] = merged;
+        else criteria.push(merged);
+      }
+      return { ...group, criteria };
+    }),
+  };
+}
+
 export function countFilled(query: LabelQuery): number {
   return query.groups.reduce(
     (n, g) => n + g.criteria.filter((c) => !isCriterionEmpty(c)).length,

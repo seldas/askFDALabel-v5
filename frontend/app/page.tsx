@@ -27,15 +27,20 @@ import { Page } from './platform/primitives';
 import { withAppBase } from './utils/appPaths';
 import { AiIntentPanel } from './querybuilder/AiIntentPanel';
 import type { OptionLists } from './querybuilder/CriterionCard';
+import { PreFilterChips } from './querybuilder/PreFilterChips';
 import { QueryPanel } from './querybuilder/QueryPanel';
 import { QUERY_PARAM, decodeQuery, resultsPath } from './querybuilder/queryUrl';
 import {
+  applyPrefilters,
   countFilled,
   fromWire,
   type LabelQuery,
   makeEmptyQuery,
+  type PreFilter,
+  setAllPrefilters,
   TARGET_DB_LABELS,
   type TargetDb,
+  togglePrefilter,
   toWire,
   type WireQuery,
 } from './querybuilder/types';
@@ -71,6 +76,10 @@ function HomePage() {
   const [targetDb, setTargetDb] = useState<TargetDb>('oracle');
 
   const [query, setQuery] = useState<LabelQuery>(makeEmptyQuery);
+  /* The categorical picks /translate read out of the description. Held here,
+   * not in the criteria tree: they stay suggestions until Search, which is
+   * what lets the boxes below the cards undo one without editing the query. */
+  const [prefilters, setPrefilters] = useState<PreFilter[]>([]);
   const [options, setOptions] = useState<OptionLists>(EMPTY_OPTIONS);
   const [error, setError] = useState<string | null>(null);
   const [hasSaved, setHasSaved] = useState(false);
@@ -175,14 +184,17 @@ function HomePage() {
   const runSearch = useCallback(() => {
     setError(null);
     try {
-      const wire = toWire(query, targetDb);
+      /* Ticked pre-filters are folded in only here, on the way out. They land
+       * as ordinary categorical criteria, so the results sidebar shows them
+       * ticked and the header reads filtered / backbone total. */
+      const wire = toWire(applyPrefilters(query, prefilters), targetDb);
       window.localStorage.setItem(LAST_QUERY_KEY, JSON.stringify(wire));
       setHasSaved(true);
       window.location.href = withAppBase(resultsPath(wire, targetDb));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [query, targetDb]);
+  }, [query, prefilters, targetDb]);
 
   const restoreLast = useCallback(() => {
     const raw = window.localStorage.getItem(LAST_QUERY_KEY);
@@ -197,6 +209,7 @@ function HomePage() {
 
   const clearAll = useCallback(() => {
     setQuery(makeEmptyQuery());
+    setPrefilters([]);
     setError(null);
   }, []);
 
@@ -221,6 +234,7 @@ function HomePage() {
     if (!pendingDb) return;
     setTargetDb(pendingDb);
     setQuery(makeEmptyQuery());
+    setPrefilters([]);
     setError(null);
     setPendingDb(null);
   }, [pendingDb]);
@@ -245,6 +259,7 @@ function HomePage() {
   }
 
   const filled = countFilled(query);
+  const checkedPrefilters = prefilters.filter((p) => p.checked).length;
 
   const actionBar = (position: 'top' | 'bottom') => (
     <div className={position === 'top' ? 'fdl-actions' : 'fdl-actions fdl-actions--bottom'}>
@@ -258,6 +273,11 @@ function HomePage() {
             All Labels (No filters applied)
           </span>
         )}
+        {checkedPrefilters > 0 ? (
+          <span className="fdl-active-tag fdl-active-tag--prefilter">
+            + {checkedPrefilters} pre-{checkedPrefilters === 1 ? 'filter' : 'filters'}
+          </span>
+        ) : null}
       </div>
 
       <button type="button" className="fdl-link" onClick={restoreLast} disabled={!hasSaved}>
@@ -318,7 +338,14 @@ function HomePage() {
       <Header />
 
       <main className="fdl-shell">
-        <AiIntentPanel onQuery={setQuery} targetDb={targetDb} />
+        <AiIntentPanel
+          onQuery={setQuery}
+          prefilters={prefilters}
+          onPrefiltersChange={setPrefilters}
+          onTogglePrefilter={(id) => setPrefilters((prev) => togglePrefilter(prev, id))}
+          onSetAllPrefilters={(checked) => setPrefilters((prev) => setAllPrefilters(prev, checked))}
+          targetDb={targetDb}
+        />
 
         {actionBar('top')}
 
@@ -328,6 +355,13 @@ function HomePage() {
           options={options}
           targetDb={targetDb}
           visibleSections={['identifiers', 'textMatch']}
+        />
+
+        {/* Last thing read before Search, and the same list the AI panel shows. */}
+        <PreFilterChips
+          prefilters={prefilters}
+          onToggle={(id) => setPrefilters((prev) => togglePrefilter(prev, id))}
+          onSetAll={(checked) => setPrefilters((prev) => setAllPrefilters(prev, checked))}
         />
 
         {actionBar('bottom')}

@@ -1362,15 +1362,24 @@ You convert a drug-labeling analyst's plain-English request into structured
 initial search criteria for the AskFDALabel search panel.
 
 IMPORTANT FOCUS:
-You MUST focus EXCLUSIVELY on product names/identifiers and text/keywords/clinical sections.
-Categorical filters (such as labelingType, applicationType, route, dosageForm, marketStatus, deaSchedule) are applied post-search on the results page sidebar and should NOT be emitted in query translation.
+"groups" is the backbone search and holds ONLY product names/identifiers and
+text/keywords/clinical sections.
+
+Categorical constraints the request also mentions -- NDA, Human Rx, Oral,
+Tablet, OTC, Schedule II and the like -- do NOT go in "groups". They go in
+"prefilters", a flat list the analyst sees as tick boxes and applies on top of
+the backbone result set. Emit them there instead of dropping them: a request
+that says "oral NDA products" must come back with those two prefilters.
 
 Return ONLY a JSON object (no markdown, no code fences) with this schema:
 {
   "groups": [
     {"criteria": [{"type": "<type>", "value": {...}}]}
   ],
-  "notes": ["short note about anything omitted or handled by post-search sidebar filters"]
+  "prefilters": [
+    {"type": "<prefilter type>", "value": "<one value>", "label": "<short human label>"}
+  ],
+  "notes": ["short note about anything that could not be expressed"]
 }
 
 Criteria inside a group are combined with AND, per label. Groups are combined
@@ -1386,8 +1395,20 @@ Allowed "type" values and the exact shape of their "value":
 - "meddra"            {"level": "pt"|"llt", "terms": ["Hepatic failure"], "sections": ["ADVERSE REACTIONS"]}
 - "pharmClass"        {"classType": "any"|"epc"|"moa"|"pe"|"cs", "terms": ["Kinase Inhibitor"]}
 
+Allowed "prefilters" -- one entry per single value, never a list:
+
+- "labelingType"    value: "HUMAN PRESCRIPTION DRUG LABEL" | "HUMAN OTC DRUG LABEL"
+                           | "ANIMAL PRESCRIPTION DRUG LABEL" | "ANIMAL OTC DRUG LABEL" | "VACCINE"
+- "applicationType" value: "NDA" | "ANDA" | "BLA" | "NDA authorized generic" | "%OTC monograph%"
+- "marketStatus"    value: "Prescription" | "OTC" | "Discontinued"
+- "route"           value: an uppercase SPL route, e.g. "ORAL", "TOPICAL", "INTRAVENOUS"
+- "dosageForm"      value: an uppercase NCI dosage form, e.g. "TABLET", "CAPSULE", "INJECTION"
+- "deaSchedule"     value: "CI" | "CII" | "CIII" | "CIV" | "CV"
+
 Rules:
-1. Focus ONLY on drug names/identifiers and text/clinical section matches. Do NOT emit categorical market/application/route filters (e.g. labelingType, applicationType, route, dosageForm, marketStatus, deaSchedule). Note in "notes" that those will be filtered on the results page.
+1. Put drug names/identifiers and text/clinical section matches in "groups", and
+   every categorical constraint in "prefilters". Emit a prefilter only when the
+   request actually calls for it -- never pad the list with defaults.
 2. Adverse events and medical concepts: prefer "meddra" over free text. Give the ONE Preferred Term that names the concept.
 3. Free text is the fallback for wording MedDRA does not cover.
 4. Target Sections: When specific sections are named (e.g. "Boxed Warning", "Warnings and Precautions", "Adverse Reactions"), use "labelingSection" or attach "sections" to "meddra".
@@ -1442,6 +1463,144 @@ _ALLOWED_TYPES = {
 }
 
 
+#: Criteria offered as pre-filters rather than backbone criteria.
+#:
+#: These are exactly the categories the results sidebar drives, which is what
+#: makes the tick boxes work at all: the backend strips them from the query
+#: before counting (CATEGORY_CRITERION in facets.py), so a checked pre-filter
+#: narrows the result set while `unfiltered_total` still reports the backbone --
+#: the "300 / 1,500" in the results header.
+#:
+#: Each maps to the criterion field the value is appended to.
+PREFILTER_FIELDS = {
+    'labelingType': 'values',
+    'applicationType': 'values',
+    'marketStatus': 'values',
+    'route': 'values',
+    'dosageForm': 'values',
+    'deaSchedule': 'values',
+}
+
+#: Vocabulary repair for pre-filter values.
+#:
+#: The model is given the exact strings in the prompt, but it writes prose
+#: ("Human Rx", "Schedule II", "oral") often enough that normalizing here is
+#: cheaper than a filter that silently matches nothing. Keys are lowercased and
+#: whitespace-collapsed; anything unlisted falls through to the per-type
+#: default casing.
+_PREFILTER_ALIASES = {
+    'labelingType': {
+        'human rx': 'HUMAN PRESCRIPTION DRUG LABEL',
+        'human prescription': 'HUMAN PRESCRIPTION DRUG LABEL',
+        'human prescription drug': 'HUMAN PRESCRIPTION DRUG LABEL',
+        'prescription': 'HUMAN PRESCRIPTION DRUG LABEL',
+        'rx': 'HUMAN PRESCRIPTION DRUG LABEL',
+        'human otc': 'HUMAN OTC DRUG LABEL',
+        'otc': 'HUMAN OTC DRUG LABEL',
+        'animal rx': 'ANIMAL PRESCRIPTION DRUG LABEL',
+        'animal prescription': 'ANIMAL PRESCRIPTION DRUG LABEL',
+        'animal otc': 'ANIMAL OTC DRUG LABEL',
+        'vaccine': 'VACCINE',
+    },
+    'applicationType': {
+        'nda': 'NDA',
+        'anda': 'ANDA',
+        'bla': 'BLA',
+        'generic': 'ANDA',
+        'nda authorized generic': 'NDA authorized generic',
+        'authorized generic': 'NDA authorized generic',
+        'otc monograph': '%OTC monograph%',
+        'otc monograph drug': '%OTC monograph%',
+        'monograph': '%OTC monograph%',
+    },
+    'marketStatus': {
+        'prescription': 'Prescription',
+        'rx': 'Prescription',
+        'otc': 'OTC',
+        'over the counter': 'OTC',
+        'discontinued': 'Discontinued',
+    },
+    'deaSchedule': {
+        'schedule i': 'CI', 'schedule ii': 'CII', 'schedule iii': 'CIII',
+        'schedule iv': 'CIV', 'schedule v': 'CV',
+        'c-i': 'CI', 'c-ii': 'CII', 'c-iii': 'CIII', 'c-iv': 'CIV', 'c-v': 'CV',
+        'ci': 'CI', 'cii': 'CII', 'ciii': 'CIII', 'civ': 'CIV', 'cv': 'CV',
+    },
+}
+
+#: Human wording for a pre-filter the model labelled poorly or not at all.
+_PREFILTER_TYPE_LABELS = {
+    'labelingType': 'Labeling Type',
+    'applicationType': 'Application Type',
+    'marketStatus': 'Market Status',
+    'route': 'Route',
+    'dosageForm': 'Dosage Form',
+    'deaSchedule': 'DEA Schedule',
+}
+
+
+def _normalize_prefilter_value(ctype, raw):
+    text = ' '.join(str(raw or '').split())
+    if not text:
+        return ''
+    alias = _PREFILTER_ALIASES.get(ctype, {}).get(text.lower())
+    if alias:
+        return alias
+    if ctype in ('labelingType', 'route', 'dosageForm', 'deaSchedule'):
+        return text.upper()
+    return text
+
+
+def _sanitize_prefilters(raw_prefilters, target_db):
+    """
+    The categorical picks offered as tick boxes beside the generated query.
+
+    Returned separately from the criteria tree on purpose: they are suggestions
+    until the analyst ticks one, so they must not travel inside `groups` where
+    the panel would treat them as part of the search.
+
+    Values are deduplicated per type, so "oral tablets, oral solution" cannot
+    produce the same ORAL box twice.
+    """
+    prefilters = []
+    seen = set()
+    unavailable = []
+    unsupported = _TARGET_UNSUPPORTED.get(target_db, _TARGET_UNSUPPORTED['local'])
+
+    for item in (raw_prefilters or [])[:12]:
+        if not isinstance(item, dict):
+            continue
+        ctype = item.get('type')
+        if ctype not in PREFILTER_FIELDS:
+            continue
+        value = _normalize_prefilter_value(ctype, item.get('value'))
+        if not value:
+            continue
+        if ctype in unsupported:
+            unavailable.append(_PREFILTER_TYPE_LABELS[ctype])
+            continue
+        key = (ctype, value.lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        label = ' '.join(str(item.get('label') or '').split()) or value
+        prefilters.append({
+            'id': f'{ctype}:{value}',
+            'type': ctype,
+            'field': PREFILTER_FIELDS[ctype],
+            'value': value,
+            'label': label,
+        })
+
+    notes = []
+    if unavailable:
+        notes.append(
+            'Suggested filters the selected database cannot apply, so not offered: '
+            + ', '.join(sorted(set(unavailable)))
+        )
+    return prefilters, notes
+
+
 def _parse_json_object(text):
     text = re.sub(r'^```(?:json)?\s*', '', (text or '').strip(), flags=re.I)
     text = re.sub(r'\s*```$', '', text)
@@ -1457,9 +1616,27 @@ def _parse_json_object(text):
         return None
 
 
+def _criterion_to_prefilters(ctype, value):
+    """A categorical criterion, split into one raw pre-filter per value."""
+    if isinstance(value, str):
+        values = [value]
+    elif isinstance(value, list):
+        values = value
+    elif isinstance(value, dict):
+        raw = value.get('values')
+        values = raw if isinstance(raw, list) else ([raw] if raw else [])
+    else:
+        values = []
+    return [{'type': ctype, 'value': v} for v in values if isinstance(v, str) and v.strip()]
+
+
 def _sanitize_translation(parsed, target_db='local'):
     """
     Keeps only criteria the compiler understands and normalizes loose LLM outputs.
+
+    Returns the criteria tree, the notes, and any categorical criterion the
+    model put in `groups` anyway -- harvested rather than dropped, so it comes
+    back to the user as a tick box instead of silently narrowing the backbone.
 
     Criteria the chosen database cannot evaluate are dropped here as a backstop.
     The prompt already tells the model which those are; this catches the case
@@ -1470,6 +1647,7 @@ def _sanitize_translation(parsed, target_db='local'):
     groups = []
     dropped = []
     unavailable = []
+    harvested = []
     for group in (parsed.get('groups') or [])[:5]:
         criteria = []
         for criterion in (group.get('criteria') or [])[:12]:
@@ -1479,6 +1657,9 @@ def _sanitize_translation(parsed, target_db='local'):
             value = criterion.get('value')
             if ctype not in _ALLOWED_TYPES:
                 dropped.append(str(ctype))
+                continue
+            if ctype in PREFILTER_FIELDS:
+                harvested.extend(_criterion_to_prefilters(ctype, value))
                 continue
             if ctype in unsupported:
                 unavailable.append(str(ctype))
@@ -1523,7 +1704,7 @@ def _sanitize_translation(parsed, target_db='local'):
                 'Not available on the selected database, so left out: '
                 + ', '.join(unsupported_names)
             )
-    return {'groups': groups}, notes
+    return {'groups': groups}, notes, harvested
 
 
 @labelquery_bp.route('/translate', methods=['POST'])
@@ -1554,7 +1735,12 @@ def translate():
     if not isinstance(parsed, dict):
         return jsonify({'error': 'The model did not return a usable query.'}), 502
 
-    query, notes = _sanitize_translation(parsed, target_db)
+    query, notes, harvested = _sanitize_translation(parsed, target_db)
+
+    raw_prefilters = list(parsed.get('prefilters') or []) + harvested
+    prefilters, prefilter_notes = _sanitize_prefilters(raw_prefilters, target_db)
+    notes.extend(prefilter_notes)
+
     if not query['groups']:
         return jsonify({
             'error': 'Could not turn that into search criteria. Try naming a drug, '
@@ -1569,7 +1755,7 @@ def translate():
     except QueryCompileError as e:
         return jsonify({'error': f'The generated query was invalid: {e}'}), 502
 
-    return jsonify({'query': query, 'notes': notes})
+    return jsonify({'query': query, 'notes': notes, 'prefilters': prefilters})
 
 
 REFINE_SYSTEM_PROMPT = """

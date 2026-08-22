@@ -10,8 +10,9 @@
  */
 
 import { useState } from 'react';
-import type { LabelQuery, TargetDb } from './types';
-import { fromWire } from './types';
+import type { LabelQuery, PreFilter, TargetDb } from './types';
+import { fromWire, fromWirePrefilters } from './types';
+import { PreFilterChips } from './PreFilterChips';
 
 const EXAMPLES = [
   'Metformin or glipizide mentioning lactic acidosis in the boxed warning',
@@ -21,10 +22,21 @@ const EXAMPLES = [
 
 export function AiIntentPanel({
   onQuery,
+  prefilters,
+  onPrefiltersChange,
+  onTogglePrefilter,
+  onSetAllPrefilters,
   disabled,
   targetDb = 'local',
 }: {
   onQuery: (query: LabelQuery) => void;
+  /* Categorical picks the model read out of the description. They are held by
+   * the page rather than here, because the same list is rendered again under
+   * the criteria cards and merged into the query at search time. */
+  prefilters: PreFilter[];
+  onPrefiltersChange: (prefilters: PreFilter[]) => void;
+  onTogglePrefilter: (id: string) => void;
+  onSetAllPrefilters: (checked: boolean) => void;
   disabled?: boolean;
   /* The three databases do not answer the same questions, so the model is told
    * which one before it picks criteria. */
@@ -45,6 +57,7 @@ export function AiIntentPanel({
     setBusy(true);
     setError(null);
     setNotes([]);
+    onPrefiltersChange([]);
     try {
       const res = await fetch('/api/labelquery/translate', {
         method: 'POST',
@@ -57,6 +70,7 @@ export function AiIntentPanel({
         throw new Error(json.error || `Translation failed (${res.status})`);
       }
       onQuery(fromWire(json.query));
+      onPrefiltersChange(fromWirePrefilters(json.prefilters));
       setNotes(json.notes || []);
       setActivePrompt(trimmed);
       setIsFolded(true);
@@ -115,7 +129,7 @@ export function AiIntentPanel({
           </h2>
           {!isFolded && (
             <p className="fdl-ai__lede" style={{ color: '#64748b', fontSize: '0.88rem', marginTop: '4px' }}>
-              Plain English is converted into product names, identifiers, or section text criteria. Categorical filters (routes, forms, market status) are applied on the results page.
+              Plain English is converted into product names, identifiers, or section text criteria. Categorical filters (routes, forms, market status, application types) come back as tick boxes below — checked ones are applied to the results after the main query runs.
             </p>
           )}
         </div>
@@ -236,6 +250,13 @@ export function AiIntentPanel({
           </span>
         </div>
       )}
+
+      <PreFilterChips
+        prefilters={prefilters}
+        onToggle={onTogglePrefilter}
+        onSetAll={onSetAllPrefilters}
+        variant="ai"
+      />
 
       {/*
        * Outside the !isFolded block on purpose. A successful translate() sets
