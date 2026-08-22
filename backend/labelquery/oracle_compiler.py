@@ -211,8 +211,8 @@ def _compile_labeling_format(value, base_table=BASE_TABLE_HUMAN, warnings=None, 
 
 def _compile_application_type(value, bag, alias='s', base_table=BASE_TABLE_HUMAN):
     """
-    Compile an applicationType criterion into Oracle SQL strictly using case-insensitive
-    exact boundary matching against the MARKET_CATEGORIES column (no wildcards).
+    Compile an applicationType criterion into Oracle SQL using exact discrete IN matching
+    against druglabel.SUM_SPL_MKT_CAT when no wildcards are present.
     """
     values = _as_list(value.get('values'))
     is_rld = bool(value.get('isRld') or value.get('is_rld'))
@@ -222,21 +222,32 @@ def _compile_application_type(value, bag, alias='s', base_table=BASE_TABLE_HUMAN
 
     clauses = []
     if values:
-        app_clauses = []
+        exact_vals = []
+        wildcard_clauses = []
         for v in values:
-            v_clean = v.strip('%').strip()
+            v_clean = v.strip()
             if not v_clean:
                 continue
-            p_exact = bag.add(v_clean)
+            if '%' in v_clean:
+                p_like = bag.add(f'%{v_clean.strip("%").upper()}%')
+                wildcard_clauses.append(
+                    f"{alias}.SPL_ID IN (SELECT mc.SPL_ID FROM druglabel.SUM_SPL_MKT_CAT mc WHERE UPPER(mc.CATEGORY_SPL_ACCEPTABLE_TERM) LIKE {p_like})"
+                )
+            else:
+                exact_vals.append(v_clean.upper())
+
+        app_clauses = list(wildcard_clauses)
+        if exact_vals:
+            p_list = ', '.join([bag.add(ev) for ev in exact_vals])
             app_clauses.append(
-                f"REGEXP_LIKE({alias}.MARKET_CATEGORIES, '(^|;)[[:space:]]*' || {p_exact} || '([[:space:]]*;|$)', 'i')"
+                f"{alias}.SPL_ID IN (SELECT mc.SPL_ID FROM druglabel.SUM_SPL_MKT_CAT mc WHERE UPPER(mc.CATEGORY_SPL_ACCEPTABLE_TERM) IN ({p_list}))"
             )
         if app_clauses:
             clauses.append('(' + ' OR '.join(app_clauses) + ')')
 
     if is_rld:
         clauses.append(
-            f"EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = {alias}.SPL_ID)"
+            f"{alias}.SPL_ID IN (SELECT rld.SPL_ID FROM druglabel.SUM_SPL_RLD rld)"
         )
 
     return '(' + ' AND '.join(clauses) + ')' if clauses else None

@@ -66,7 +66,7 @@ FACET_SCALARS = [
 
     ('applicationTypes', 'rld', 'RLD', 'Reference Listed Drug (RLD)',
      "coalesce(is_rld, 0) <> 0",
-     "EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rr WHERE rr.SPL_ID = m.SPL_ID)"),
+     "m.SPL_ID IN (SELECT rr.SPL_ID FROM druglabel.SUM_SPL_RLD rr)"),
 
     ('marketStatus', 'status_rx', 'Prescription', 'Prescription',
      "doc_type ILIKE '%%prescription%%'",
@@ -277,13 +277,12 @@ def _oracle_grouped_branch(category, scope, extra_sql):
     if category == 'applicationTypes':
         return (
             f"SELECT '{scope}' AS SCOPE, 'applicationTypes' AS CAT, "
-            "UPPER(TRIM(REGEXP_SUBSTR(m.MARKET_CATEGORIES, '[^;]+', 1, lv.n))) AS TOKEN, "
+            "UPPER(TRIM(mc.CATEGORY_SPL_ACCEPTABLE_TERM)) AS TOKEN, "
             "COUNT(DISTINCT m.SPL_ID) AS N "
             "FROM matched m "
-            f'JOIN (SELECT LEVEL n FROM DUAL CONNECT BY LEVEL <= {_MAX_SPLIT_PARTS}) lv '
-            "ON lv.n <= REGEXP_COUNT(m.MARKET_CATEGORIES, ';') + 1 "
-            f"WHERE m.MARKET_CATEGORIES IS NOT NULL{extra_sql} "
-            "GROUP BY UPPER(TRIM(REGEXP_SUBSTR(m.MARKET_CATEGORIES, '[^;]+', 1, lv.n)))"
+            "JOIN druglabel.SUM_SPL_MKT_CAT mc ON mc.SPL_ID = m.SPL_ID "
+            f"WHERE mc.CATEGORY_SPL_ACCEPTABLE_TERM IS NOT NULL{extra_sql} "
+            "GROUP BY UPPER(TRIM(mc.CATEGORY_SPL_ACCEPTABLE_TERM))"
         )
     if category == 'labelingTypes':
         return (
