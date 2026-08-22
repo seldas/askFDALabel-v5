@@ -109,6 +109,13 @@ function ResultsPage() {
     setOverrideTargetDb(null);
   }, [encoded]);
 
+  const isDevOrAdmin = Boolean(
+    session?.role === 'developer' ||
+    session?.role === 'admin' ||
+    session?.is_admin ||
+    session?.has_developer_access
+  );
+
   const activeWireQuery = overrideWireQuery ?? initialWireQuery;
   const currentTargetDb = (overrideTargetDb || initialTargetDb) as TargetDb;
   const labelQuery = useMemo<LabelQuery>(() => fromWire(activeWireQuery || { groups: [] }), [activeWireQuery]);
@@ -822,40 +829,44 @@ function ResultsPage() {
               </div>
             ) : null}
 
-            {/* Active query summary tag pill */}
-            <div className="fdl-results-summary-bar">
-              <span className="fdl-results-summary-label">Query Criteria:</span>
-              <span className="fdl-results-summary-text">{summarizeQuery(activeWireQuery)}</span>
-              {data?.sql ? (
-                <button
-                  type="button"
-                  className="fdl-link fdl-link--sql"
-                  onClick={() => setSqlOpen((prev) => !prev)}
-                >
-                  {sqlOpen ? 'Hide SQL' : 'View SQL'}
-                </button>
-              ) : null}
-            </div>
-
-            {sqlOpen && data?.sql ? (
-              <div className="fdl-sql-panel">
-                <div className="fdl-sql-panel__head">
-                  <span className="fdl-sql-panel__title">Generated SQL Query</span>
-                  <button
-                    type="button"
-                    className={`fdl-sql-panel__copy${sqlCopied ? ' is-copied' : ''}`}
-                    onClick={() => {
-                      navigator.clipboard.writeText(data.sql!);
-                      setSqlCopied(true);
-                      setTimeout(() => setSqlCopied(false), 2000);
-                    }}
-                  >
-                    {sqlCopied ? '✓ Copied!' : 'Copy SQL'}
-                  </button>
+            {/* Active query summary tag pill & SQL panel (developer / admin only) */}
+            {isDevOrAdmin && (
+              <>
+                <div className="fdl-results-summary-bar">
+                  <span className="fdl-results-summary-label">Query Criteria:</span>
+                  <span className="fdl-results-summary-text">{summarizeQuery(activeWireQuery)}</span>
+                  {data?.sql ? (
+                    <button
+                      type="button"
+                      className="fdl-link fdl-link--sql"
+                      onClick={() => setSqlOpen((prev) => !prev)}
+                    >
+                      {sqlOpen ? 'Hide SQL' : 'View SQL'}
+                    </button>
+                  ) : null}
                 </div>
-                <pre className="fdl-sql-panel__code">{data.sql}</pre>
-              </div>
-            ) : null}
+
+                {sqlOpen && data?.sql ? (
+                  <div className="fdl-sql-panel">
+                    <div className="fdl-sql-panel__head">
+                      <span className="fdl-sql-panel__title">Generated SQL Query</span>
+                      <button
+                        type="button"
+                        className={`fdl-sql-panel__copy${sqlCopied ? ' is-copied' : ''}`}
+                        onClick={() => {
+                          navigator.clipboard.writeText(data.sql!);
+                          setSqlCopied(true);
+                          setTimeout(() => setSqlCopied(false), 2000);
+                        }}
+                      >
+                        {sqlCopied ? '✓ Copied!' : 'Copy SQL'}
+                      </button>
+                    </div>
+                    <pre className="fdl-sql-panel__code">{data.sql}</pre>
+                  </div>
+                ) : null}
+              </>
+            )}
 
             {data?.warnings?.length ? (
               <ul className="fdl-results__warnings">

@@ -360,13 +360,6 @@ function HomePage() {
     </div>
   );
 
-  const isDevOrAdmin = Boolean(
-    session?.role === 'developer' ||
-    session?.role === 'admin' ||
-    session?.is_admin ||
-    session?.has_developer_access
-  );
-
   return (
     <Page>
       <Header />
@@ -381,38 +374,24 @@ function HomePage() {
           targetDb={targetDb}
         />
 
-        {isDevOrAdmin ? (
-          <>
-            {actionBar('top')}
+        {actionBar('top')}
 
-            <QueryPanel
-              query={query}
-              onChange={setQuery}
-              options={options}
-              targetDb={targetDb}
-              visibleSections={['identifiers', 'textMatch']}
-            />
+        <QueryPanel
+          query={query}
+          onChange={setQuery}
+          options={options}
+          targetDb={targetDb}
+          visibleSections={['identifiers', 'textMatch']}
+        />
 
-            {/* Last thing read before Search, and the same list the AI panel shows. */}
-            <PreFilterChips
-              prefilters={prefilters}
-              onToggle={(id) => setPrefilters((prev) => togglePrefilter(prev, id))}
-              onSetAll={(checked) => setPrefilters((prev) => setAllPrefilters(prev, checked))}
-            />
+        {/* Last thing read before Search, and the same list the AI panel shows. */}
+        <PreFilterChips
+          prefilters={prefilters}
+          onToggle={(id) => setPrefilters((prev) => togglePrefilter(prev, id))}
+          onSetAll={(checked) => setPrefilters((prev) => setAllPrefilters(prev, checked))}
+        />
 
-            {actionBar('bottom')}
-          </>
-        ) : (
-          <>
-            <PreFilterChips
-              prefilters={prefilters}
-              onToggle={(id) => setPrefilters((prev) => togglePrefilter(prev, id))}
-              onSetAll={(checked) => setPrefilters((prev) => setAllPrefilters(prev, checked))}
-            />
-
-            {actionBar('bottom')}
-          </>
-        )}
+        {actionBar('bottom')}
 
         {error ? <p className="fdl-error">{error}</p> : null}
       </main>
