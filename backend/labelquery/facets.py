@@ -247,35 +247,32 @@ def _oracle_grouped_branch(category, scope, extra_sql):
     if category == 'routes':
         return (
             f"SELECT '{scope}' AS SCOPE, 'routes' AS CAT, "
-            "UPPER(TRIM(REGEXP_SUBSTR(m.ROUTES, '[^;]+', 1, lv.n))) AS TOKEN, "
+            "UPPER(TRIM(r.ROUTE_SPL_ACCEPTABLE_TERM)) AS TOKEN, "
             "COUNT(DISTINCT m.SPL_ID) AS N "
             "FROM matched m "
-            f"JOIN (SELECT LEVEL n FROM DUAL CONNECT BY LEVEL <= {_MAX_SPLIT_PARTS}) lv "
-            "ON lv.n <= REGEXP_COUNT(m.ROUTES, ';') + 1 "
-            f"WHERE m.ROUTES IS NOT NULL{extra_sql} "
-            "GROUP BY UPPER(TRIM(REGEXP_SUBSTR(m.ROUTES, '[^;]+', 1, lv.n)))"
+            "JOIN druglabel.SUM_SPL_ROUTE r ON r.SPL_ID = m.SPL_ID "
+            f"WHERE r.ROUTE_SPL_ACCEPTABLE_TERM IS NOT NULL{extra_sql} "
+            "GROUP BY UPPER(TRIM(r.ROUTE_SPL_ACCEPTABLE_TERM))"
         )
     if category == 'dosageForms':
         return (
             f"SELECT '{scope}' AS SCOPE, 'dosageForms' AS CAT, "
-            "UPPER(TRIM(REGEXP_SUBSTR(m.DOSAGE_FORMS, '[^;]+', 1, lv.n))) AS TOKEN, "
+            "UPPER(TRIM(d.PRODUCT_DOSAGE_FORM_TERM)) AS TOKEN, "
             "COUNT(DISTINCT m.SPL_ID) AS N "
             "FROM matched m "
-            f"JOIN (SELECT LEVEL n FROM DUAL CONNECT BY LEVEL <= {_MAX_SPLIT_PARTS}) lv "
-            "ON lv.n <= REGEXP_COUNT(m.DOSAGE_FORMS, ';') + 1 "
-            f"WHERE m.DOSAGE_FORMS IS NOT NULL{extra_sql} "
-            "GROUP BY UPPER(TRIM(REGEXP_SUBSTR(m.DOSAGE_FORMS, '[^;]+', 1, lv.n)))"
+            "JOIN druglabel.SUM_SPL_DOSAGEFORM d ON d.SPL_ID = m.SPL_ID "
+            f"WHERE d.PRODUCT_DOSAGE_FORM_TERM IS NOT NULL{extra_sql} "
+            "GROUP BY UPPER(TRIM(d.PRODUCT_DOSAGE_FORM_TERM))"
         )
     if category == 'pharmClasses':
         return (
             f"SELECT '{scope}' AS SCOPE, 'pharmClasses' AS CAT, "
-            "TRIM(REGEXP_SUBSTR(m.EPC, '[^;]+', 1, lv.n)) AS TOKEN, "
+            "TRIM(e.EPC) AS TOKEN, "
             "COUNT(DISTINCT m.SPL_ID) AS N "
             "FROM matched m "
-            f'JOIN (SELECT LEVEL n FROM DUAL CONNECT BY LEVEL <= {_MAX_SPLIT_PARTS}) lv '
-            "ON lv.n <= REGEXP_COUNT(m.EPC, ';') + 1 "
-            f"WHERE m.EPC IS NOT NULL{extra_sql} "
-            "GROUP BY TRIM(REGEXP_SUBSTR(m.EPC, '[^;]+', 1, lv.n))"
+            "JOIN druglabel.SUM_SPL_EPC e ON e.SPL_ID = m.SPL_ID "
+            f"WHERE e.EPC IS NOT NULL{extra_sql} "
+            "GROUP BY TRIM(e.EPC)"
         )
     if category == 'applicationTypes':
         return (
