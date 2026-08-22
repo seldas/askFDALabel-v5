@@ -1019,12 +1019,12 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
     oracle_sort_map = {
         'product': 'PRODUCT_NAMES',
         'generic': 'PRODUCT_NORMD_GENERIC_NAMES',
-        'manufacturer': 'MANUFACTURER',
+        'manufacturer': 'AUTHOR_ORG_NORMD_NAME',
         'appr_num': 'APPR_NUM',
         'market_category': 'MARKET_CATEGORIES',
         'doc_type': 'DOCUMENT_TYPE',
         'dosage_form': 'DOSAGE_FORMS',
-        'route': 'ROUTES',
+        'route': 'ROUTES_OF_ADMINISTRATION',
         'revised_date': 'EFF_TIME',
         'approval_year': 'EFF_TIME',
         'set_id': 'SET_ID',
@@ -1034,7 +1034,7 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
     }
     sort_column_name = oracle_sort_map.get(str(sort).lower(), 'EFF_TIME')
     sort_dir = 'ASC' if str(direction).lower() == 'asc' else 'DESC'
-    order_clause = f"ORDER BY {sort_column_name} {sort_dir} NULLS LAST"
+    order_clause = f"ORDER BY s.{sort_column_name} {sort_dir} NULLS LAST"
 
     # SPL_ID is carried through because it is the only key the detail tables
     # share with the summary rollup; SPL_GUID exists on DGV_SUM_RX_SPL and four
@@ -1046,35 +1046,35 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
     # building it via LISTAGG is both unreliable (ORA-01489 on long lists) and
     # unnecessary — we simply omit it for that target.
     if base_table == BASE_TABLE_ALL:
-        moiety_select = "s.ACT_MOIETY_NAMES, s.ACT_MOIETY_UNIIS,"
-        moiety_project = "p.ACT_MOIETY_NAMES as ACTIVE_MOIETY, p.ACT_MOIETY_UNIIS as ACTIVE_MOIETY_UNIIS,"
+        moiety_project = "s.ACT_MOIETY_NAMES as ACTIVE_MOIETY, s.ACT_MOIETY_UNIIS as ACTIVE_MOIETY_UNIIS,"
     else:
-        moiety_select = ""
         moiety_project = "NULL as ACTIVE_MOIETY, NULL as ACTIVE_MOIETY_UNIIS,"
 
+    # Late Materialization: Sort and page only the candidate SPL_IDs first in
+    # `matched_keys`, avoiding PGA/temp-tablespace sort memory spills for 18 wide
+    # text columns across tens of thousands of candidate rows. The wide columns
+    # are joined back only for the 50 paged rows.
     sql = f"""
-        WITH {text_cte_sql}matched AS (
-            SELECT s.SPL_ID, s.SPL_GUID, s.SET_ID, s.TITLE, s.PRODUCT_NAMES,
-                   s.PRODUCT_NORMD_GENERIC_NAMES, s.AUTHOR_ORG_NORMD_NAME as MANUFACTURER, s.APPR_NUM,
-                   s.NDC_CODES, s.NDC3_CODES, s.EFF_TIME, s.MARKET_CATEGORIES, s.DOCUMENT_TYPE, s.ACT_INGR_NAMES,
-                   s.ACT_INGR_UNIIS, {moiety_select}
-                   s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC,
+        WITH {text_cte_sql}matched_keys AS (
+            SELECT s.SPL_ID,
                    COUNT(*) OVER () AS TOTAL_COUNT
             FROM {base_table} s
             WHERE {where_sql}
+            {order_clause}
+            {fetch_clause}
         )
-        SELECT p.SET_ID, p.SPL_GUID as SPL_ID, p.PRODUCT_NAMES, p.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
-               p.MANUFACTURER, p.APPR_NUM, p.NDC_CODES, p.NDC3_CODES, p.EFF_TIME as REVISED_DATE,
-               p.MARKET_CATEGORIES, p.DOCUMENT_TYPE, p.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
-               p.DOSAGE_FORMS, p.ROUTES, p.EPC,
-               CASE WHEN EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = p.SPL_ID) THEN 1 ELSE 0 END as IS_RLD,
-               p.TOTAL_COUNT,
-               p.ACT_INGR_UNIIS as ACTIVE_UNIIS,
+        SELECT s.SET_ID, s.SPL_GUID as SPL_ID, s.PRODUCT_NAMES, s.PRODUCT_NORMD_GENERIC_NAMES as GENERIC_NAMES,
+               s.AUTHOR_ORG_NORMD_NAME as MANUFACTURER, s.APPR_NUM, s.NDC_CODES, s.NDC3_CODES, s.EFF_TIME as REVISED_DATE,
+               s.MARKET_CATEGORIES, s.DOCUMENT_TYPE, s.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
+               s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC,
+               CASE WHEN EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = s.SPL_ID) THEN 1 ELSE 0 END as IS_RLD,
+               k.TOTAL_COUNT,
+               s.ACT_INGR_UNIIS as ACTIVE_UNIIS,
                {moiety_project}
                NULL as PLACEHOLDER
-        FROM matched p
+        FROM matched_keys k
+        JOIN {base_table} s ON s.SPL_ID = k.SPL_ID
         {order_clause}
-        {fetch_clause}
         """
 
     return sql.strip(), bag.params, warnings
