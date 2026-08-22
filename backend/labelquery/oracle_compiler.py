@@ -559,44 +559,50 @@ def _meddra_llt_codes_sql(level, term, bag, exclude_sql=''):
         )
 
     # Text MedDRA term
-    p_pattern = bag.add(f"%{t_clean.upper()}%")
+    if '%' in t_clean:
+        p_pattern = bag.add(f"%{t_clean.strip('%').upper()}%")
+        match_op = 'LIKE'
+    else:
+        p_pattern = bag.add(t_clean.upper())
+        match_op = '='
+
     if level == 'llt':
         return (
             f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
-            f"WHERE UPPER(llt.LLT_NAME) LIKE {p_pattern}"
+            f"WHERE UPPER(llt.LLT_NAME) {match_op} {p_pattern}"
         )
     if level == 'pt':
         return (
             f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
             f"JOIN meddra.preferred_term pt ON pt.PT_CODE = llt.PT_CODE "
-            f"WHERE UPPER(pt.PT_NAME) LIKE {p_pattern}{exclude_sql}"
+            f"WHERE UPPER(pt.PT_NAME) {match_op} {p_pattern}{exclude_sql}"
         )
     if level in ('hlt', 'hlgt'):
         column = {'hlt': 'HLT_NAME', 'hlgt': 'HLGT_NAME'}[level]
         return (
             f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
             f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
-            f"WHERE UPPER(mh.{column}) LIKE {p_pattern}{exclude_sql}"
+            f"WHERE UPPER(mh.{column}) {match_op} {p_pattern}{exclude_sql}"
         )
     if level == 'soc':
         return (
             f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
             f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
-            f"WHERE (UPPER(mh.SOC_NAME) LIKE {p_pattern} "
-            f"OR UPPER(mh.SOC_ABBREV) LIKE {p_pattern}){exclude_sql}"
+            f"WHERE (UPPER(mh.SOC_NAME) {match_op} {p_pattern} "
+            f"OR UPPER(mh.SOC_ABBREV) {match_op} {p_pattern}){exclude_sql}"
         )
     return (
         f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
         f"LEFT JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
-        f"WHERE (UPPER(llt.LLT_NAME) LIKE {p_pattern} "
-        f"OR UPPER(mh.PT_NAME) LIKE {p_pattern} "
-        f"OR UPPER(mh.HLT_NAME) LIKE {p_pattern} "
-        f"OR UPPER(mh.HLGT_NAME) LIKE {p_pattern} "
-        f"OR UPPER(mh.SOC_NAME) LIKE {p_pattern}){exclude_sql}"
+        f"WHERE (UPPER(llt.LLT_NAME) {match_op} {p_pattern} "
+        f"OR UPPER(mh.PT_NAME) {match_op} {p_pattern} "
+        f"OR UPPER(mh.HLT_NAME) {match_op} {p_pattern} "
+        f"OR UPPER(mh.HLGT_NAME) {match_op} {p_pattern} "
+        f"OR UPPER(mh.SOC_NAME) {match_op} {p_pattern}){exclude_sql}"
     )
 
 
-def _compile_meddra(value, bag, expand_meddra=None):
+def _compile_meddra(value, bag, expand_meddra=None, alias='s'):
     level, pts, llts, excluded, other = _meddra_selection(value)
     if not (pts or llts or other):
         return None
@@ -648,17 +654,24 @@ def _compile_meddra(value, bag, expand_meddra=None):
         + [(term, level, exclude_sql) for term in other]
     )
 
-    term_clauses = []
+    llt_subqueries = []
     for term, term_level, term_exclude in plans:
         llt_subquery = _meddra_llt_codes_sql(term_level, term, bag, term_exclude)
-        if not llt_subquery:
-            continue
-        term_clauses.append(
-            f"EXISTS (SELECT 1 FROM druglabel.SPL_SEC_MEDDRA_LLT_OCC occ "
-            f"WHERE occ.SET_ID = s.SET_ID{sec_clause} AND occ.LLT_CODE IN ({llt_subquery}))"
-        )
+        if llt_subquery:
+            llt_subqueries.append(llt_subquery)
 
-    return '(' + ' OR '.join(term_clauses) + ')' if term_clauses else None
+    if not llt_subqueries:
+        return None
+
+    if len(llt_subqueries) == 1:
+        combined_llt_sql = llt_subqueries[0]
+    else:
+        combined_llt_sql = '\nUNION\n'.join(llt_subqueries)
+
+    return (
+        f"{alias}.SET_ID IN (SELECT occ.SET_ID FROM druglabel.SPL_SEC_MEDDRA_LLT_OCC occ "
+        f"WHERE 1=1{sec_clause} AND occ.LLT_CODE IN ({combined_llt_sql}))"
+    )
 
 
 def _compile_pharm_class(value, bag, alias='s'):
