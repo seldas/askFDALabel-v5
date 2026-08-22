@@ -1855,16 +1855,33 @@ def _sanitize_translation(parsed, target_db):
             # Auto-repair and auto-verify values from LLM
             if ctype == 'productName':
                 p_text = value.get('text') if isinstance(value, dict) else (value if isinstance(value, str) else '')
+                p_op = value.get('op', 'equals') if isinstance(value, dict) else 'equals'
                 if p_text:
                     canonical, is_verified = _auto_verify_product_name(p_text, target_db)
-                    value = {
-                        'field': value.get('field', 'any') if isinstance(value, dict) else 'any',
-                        'op': 'equals' if is_verified else (value.get('op', 'contains') if isinstance(value, dict) else 'contains'),
-                        'text': canonical,
-                        'verified': is_verified,
-                    }
+                    if is_verified:
+                        value = {
+                            'field': value.get('field', 'any') if isinstance(value, dict) else 'any',
+                            'op': p_op if p_op in ('startsWith', 'contains', 'notContains') else 'equals',
+                            'text': canonical,
+                            'verified': True,
+                        }
+                    else:
+                        if p_op in ('startsWith', 'contains', 'notContains'):
+                            value = {
+                                'field': value.get('field', 'any') if isinstance(value, dict) else 'any',
+                                'op': p_op,
+                                'text': p_text,
+                                'verified': True,
+                            }
+                        else:
+                            value = {
+                                'field': value.get('field', 'any') if isinstance(value, dict) else 'any',
+                                'op': 'equals',
+                                'text': p_text,
+                                'verified': False,
+                            }
                 else:
-                    value = {'field': 'any', 'op': 'contains', 'text': '', 'verified': False}
+                    value = {'field': 'any', 'op': 'equals', 'text': '', 'verified': False}
             elif ctype == 'meddra':
                 terms = []
                 if isinstance(value, str):

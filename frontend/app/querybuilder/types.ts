@@ -133,7 +133,7 @@ export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
     type: 'productName',
     title: 'Product Identifier(s)',
     shortTitle: 'Product Identifier(s)',
-    defaultValue: () => ({ field: 'any', op: 'contains', text: '' }),
+    defaultValue: () => ({ field: 'any', op: 'equals', text: '', verified: false }),
   },
   fullText: {
     type: 'fullText',
@@ -664,7 +664,11 @@ export function hasUnverifiedCriteria(query: LabelQuery): boolean {
     g.criteria.some((c) => {
       if (c.type === 'productName') {
         const v = c.value as Record<string, any>;
-        return Boolean(v?.text && String(v.text).trim()) && v.verified === false;
+        const op = v?.op || 'equals';
+        if (op === 'equals') {
+          return Boolean(v?.text && String(v.text).trim()) && v.verified === false;
+        }
+        return false;
       }
       if (c.type === 'meddra') {
         const v = c.value as Record<string, any>;

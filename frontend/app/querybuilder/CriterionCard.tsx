@@ -362,7 +362,12 @@ export function CriterionCard({
         );
 
       case 'productName': {
-        const isUnverified = Boolean(v.text && String(v.text).trim()) && v.verified === false;
+        const op = v.op || 'equals';
+        const isExact = op === 'equals';
+        const isStartsWith = op === 'startsWith';
+        const isFlexible = op === 'contains' || op === 'notContains';
+        const isUnverified = isExact && Boolean(v.text && String(v.text).trim()) && v.verified === false;
+
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {isUnverified && (
@@ -380,7 +385,7 @@ export function CriterionCard({
                     ⚠️ Verification Required: <em>&ldquo;{v.text}&rdquo;</em>
                   </span>
                   <span style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 600 }}>
-                    Selection required to enable search
+                    Selection required for exact match
                   </span>
                 </div>
                 <p style={{ margin: '0 0 8px 0', fontSize: '0.82rem', color: '#78350f' }}>
@@ -410,23 +415,44 @@ export function CriterionCard({
               <Select
                 ariaLabel="Match type"
                 value={v.op || 'equals'}
-                onChange={(op) => set({ op })}
+                onChange={(newOp) => {
+                  if (newOp === 'equals') {
+                    set({ op: newOp, verified: false });
+                  } else {
+                    set({ op: newOp, verified: true });
+                  }
+                }}
                 options={[
-                  { value: 'equals', label: 'is exactly' },
+                  { value: 'equals', label: 'is exactly (standardized)' },
                   { value: 'startsWith', label: 'starts with' },
                   { value: 'contains', label: 'contains' },
                   { value: 'notContains', label: 'does not contain' },
                 ]}
               />
-              <AutoCompleteInput
-                value={v.text || ''}
-                onChange={(text) => set({ text, verified: false })}
-                onSelect={(text) => set({ text, verified: true, op: 'equals' })}
-                placeholder="Enter product or ingredient name (type 2+ chars for suggestions)"
-                fetchSuggestions={fetchProductName}
-                minChars={2}
-              />
-              {v.text && v.verified !== false && (
+              {isFlexible ? (
+                <input
+                  type="text"
+                  className="fdl-input"
+                  value={v.text || ''}
+                  onChange={(e) => set({ text: e.target.value, verified: true })}
+                  placeholder="Enter partial product or ingredient name (freeform text)"
+                  style={{ flex: 1 }}
+                />
+              ) : (
+                <AutoCompleteInput
+                  value={v.text || ''}
+                  onChange={(text) => set({ text, verified: isStartsWith ? true : false })}
+                  onSelect={(text) => set({ text, verified: true })}
+                  placeholder={
+                    isStartsWith
+                      ? 'Enter prefix or select suggestion (e.g. Tylenol)'
+                      : 'Enter product name (select suggestion to verify)'
+                  }
+                  fetchSuggestions={fetchProductName}
+                  minChars={2}
+                />
+              )}
+              {v.text && isExact && v.verified !== false && (
                 <span
                   style={{
                     display: 'inline-flex',
@@ -448,9 +474,22 @@ export function CriterionCard({
               )}
             </div>
             <p className="fdl-note">
-              {v.verified !== false
-                ? 'Standardized product name is confirmed. Exact match index scan will be used.'
-                : 'Select from auto-complete suggestions to confirm the standardized product name.'}
+              {isExact ? (
+                v.verified !== false ? (
+                  'Standardized product name is confirmed. Exact match index scan will be used.'
+                ) : (
+                  <span>
+                    Select from auto-complete suggestions to confirm the standardized product name.
+                    <span style={{ display: 'block', marginTop: '2px', color: '#0369a1', fontWeight: 600 }}>
+                      💡 Tip: Change match type to &ldquo;contains&rdquo; or &ldquo;starts with&rdquo; to allow flexible matching without confirmation.
+                    </span>
+                  </span>
+                )
+              ) : isStartsWith ? (
+                'Prefix match will search products starting with this term. Auto-complete suggestions are optional.'
+              ) : (
+                'Flexible match will search products containing this term.'
+              )}
             </p>
           </div>
         );
