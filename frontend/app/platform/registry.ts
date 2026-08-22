@@ -329,6 +329,17 @@ const PLATFORM_TOOLS: ToolDef[] = [
     href: () => '/webtest',
   },
   {
+    id: 'wiki',
+    name: 'User Guide & Wiki',
+    blurb: 'Documentation, usage guidance, and FAQs for AskFDALabel v3.0.',
+    iconId: 'document',
+    kind: 'embedded',
+    group: 'reference',
+    contexts: ['global'],
+    target: '_blank',
+    href: () => '/wiki',
+  },
+  {
     id: 'device',
     name: 'Device Intelligence',
     blurb: '510(k), PMA, MAUDE and recall lookups for medical devices.',

@@ -659,6 +659,35 @@ export default function Header({
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.82rem', marginBottom: '16px', textAlign: 'left', padding: '10px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                <Link
+                  href="/wiki"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setActiveDropdown(null)}
+                  style={{
+                    backgroundColor: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    color: '#1d4ed8',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '8px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '1.1rem' }}>📖</span>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e3a8a' }}>User Guide & Wiki</span>
+                      <span style={{ fontSize: '0.72rem', color: '#3b82f6', fontWeight: 500 }}>Search FAQs & Guidance</span>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '0.85rem', color: '#2563eb' }}>↗</span>
+                </Link>
+
                 <a
                   href="https://www.fda.gov/ScienceResearch/BioinformaticsTools/ucm289739.htm"
                   target="_blank"
