@@ -287,13 +287,11 @@ def _oracle_grouped_branch(category, scope, extra_sql):
     if category == 'labelingTypes':
         return (
             f"SELECT '{scope}' AS SCOPE, 'labelingTypes' AS CAT, "
-            "UPPER(TRIM(REGEXP_SUBSTR(m.DOCUMENT_TYPE, '[^;]+', 1, lv.n))) AS TOKEN, "
+            "UPPER(TRIM(m.DOCUMENT_TYPE)) AS TOKEN, "
             "COUNT(DISTINCT m.SPL_ID) AS N "
             "FROM matched m "
-            f'JOIN (SELECT LEVEL n FROM DUAL CONNECT BY LEVEL <= {_MAX_SPLIT_PARTS}) lv '
-            "ON lv.n <= REGEXP_COUNT(m.DOCUMENT_TYPE, ';') + 1 "
             f"WHERE m.DOCUMENT_TYPE IS NOT NULL{extra_sql} "
-            "GROUP BY UPPER(TRIM(REGEXP_SUBSTR(m.DOCUMENT_TYPE, '[^;]+', 1, lv.n)))"
+            "GROUP BY UPPER(TRIM(m.DOCUMENT_TYPE))"
         )
     if category == 'deaSchedule':
         # The only branch that leaves `matched`: the schedule lives on

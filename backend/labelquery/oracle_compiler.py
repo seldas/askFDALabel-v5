@@ -159,30 +159,27 @@ def _compile_labeling_type(value, bag, base_table=BASE_TABLE_HUMAN, warnings=Non
 def _compile_labeling_type_values(value, bag, alias='s'):
     """The DOCUMENT_TYPE half of labelingType -- the `labelingTypes` facet."""
     values = _as_list(value.get('values'))
-
-    clauses = []
-    if values:
-        type_clauses = []
-        for v in values:
-            v_clean = v.strip('%').strip()
-            if not v_clean:
-                continue
-            p = bag.add(v_clean)
-            if '%' in v_clean:
-                type_clauses.append(
-                    f"REGEXP_LIKE({alias}.DOCUMENT_TYPE, '(^|;)[[:space:]]*' || REPLACE({p}, '%', '.*') || '([[:space:]]*;|$)', 'i')"
-                )
-            else:
-                type_clauses.append(
-                    f"REGEXP_LIKE({alias}.DOCUMENT_TYPE, '(^|;)[[:space:]]*' || {p} || '([[:space:]]*;|$)', 'i')"
-                )
-        if type_clauses:
-            clauses.append('(' + ' OR '.join(type_clauses) + ')')
-
-    if not clauses:
+    if not values:
         return None
 
-    return '(' + ' AND '.join(clauses) + ')'
+    exact_vals = []
+    wildcard_clauses = []
+    for v in values:
+        v_clean = v.strip()
+        if not v_clean:
+            continue
+        if '%' in v_clean:
+            p_like = bag.add(f'%{v_clean.strip("%").upper()}%')
+            wildcard_clauses.append(f"UPPER({alias}.DOCUMENT_TYPE) LIKE {p_like}")
+        else:
+            exact_vals.append(v_clean.upper())
+
+    clauses = list(wildcard_clauses)
+    if exact_vals:
+        p_list = ', '.join([bag.add(ev) for ev in exact_vals])
+        clauses.append(f"UPPER({alias}.DOCUMENT_TYPE) IN ({p_list})")
+
+    return '(' + ' OR '.join(clauses) + ')' if clauses else None
 
 
 def _compile_labeling_format(value, base_table=BASE_TABLE_HUMAN, warnings=None, alias='s'):
