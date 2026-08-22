@@ -307,28 +307,16 @@ def _compile_dosage_form(value, bag, alias='s'):
 def _compile_dea_schedule(value, bag):
     """
     DEA controlled-substance schedule, via PROD_DEA joined to DEA_SCHEDULE.
-
-    PROD_DEA is per-product and its PK leads with PRODUCT_ID, so SPL_ID is not
-    an indexed access path here -- but the table is small relative to SPL_SEC
-    and the EXISTS stops at the first hit.
-
-    Both the NCIT code and the SPL acceptable term ("CII", "CIII") are matched,
-    since the UI sends terms and callers integrating programmatically may hold
-    codes. NCIT_DEA_NAME on PROD_DEA carries the term directly, which avoids
-    the join to DEA_SCHEDULE in the common case.
     """
     values = _as_list(value.get('values'))
-    if not values:
+    clean_vals = [v.strip().upper() for v in values if v.strip()]
+    if not clean_vals:
         return None
-    clauses = []
-    for v in values:
-        p = bag.add(v.upper())
-        clauses.append(
-            'EXISTS (SELECT 1 FROM druglabel.PROD_DEA dea '
-            f'WHERE dea.SPL_ID = s.SPL_ID AND (UPPER(dea.NCIT_DEA_NAME) = {p} '
-            f'OR UPPER(dea.NCIT_DEA_CODE) = {p}))'
-        )
-    return '(' + ' OR '.join(clauses) + ')'
+    p_list = ', '.join([bag.add(cv) for cv in clean_vals])
+    return (
+        f"s.SPL_ID IN (SELECT dea.SPL_ID FROM druglabel.PROD_DEA dea "
+        f"WHERE UPPER(dea.NCIT_DEA_NAME) IN ({p_list}) OR UPPER(dea.NCIT_DEA_CODE) IN ({p_list}))"
+    )
 
 
 def _compile_active_moiety(value, bag):
@@ -459,22 +447,18 @@ def _compile_market_status(value, bag, alias='s'):
         p_max = bag.add(max_date)
         conds.append(f"mkt.LOW_DATE <= {p_max}")
 
-    rld_cond = None
-    if 'rld' in values:
-        rld_cond = f"EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = {alias}.SPL_ID)"
-
-    if not conds and not rld_cond:
-        return None
-
     res = []
     if conds:
         res.append(
-            f"EXISTS (SELECT 1 FROM druglabel.PROD_MKT_ACT mkt WHERE mkt.SPL_ID = {alias}.SPL_ID AND {' AND '.join(conds)})"
+            f"{alias}.SPL_ID IN (SELECT mkt.SPL_ID FROM druglabel.PROD_MKT_ACT mkt WHERE {' AND '.join(conds)})"
         )
     if rld_cond:
         res.append(rld_cond)
 
-    return '(' + ' AND '.join(res) + ')' if res else None
+    if not res:
+        return None
+
+    return '(' + ' AND '.join(res) + ')'
 
 
 def _meddra_selection(value):
@@ -853,7 +837,7 @@ def compile_oracle_predicates(query, expand_meddra=None, capabilities=None,
                 if text_query:
                     p = bag.add(text_query)
                     contains_label += 1
-                    clause = f'CONTAINS(sec.CONTENT_XML, {p}, {contains_label}) > 0'
+                    contains_expr = f'CONTAINS(sec.CONTENT_XML, {p}, {contains_label}) > 0'
                     if sections:
                         sec_loincs_set = set()
                         for s in sections:
@@ -869,8 +853,12 @@ def compile_oracle_predicates(query, expand_meddra=None, capabilities=None,
                                 else:
                                     sec_loincs_set.add(s)
                         if sec_loincs_set:
-                            loinc_preds = [f'sec.LOINC_CODE = {bag.add(l)}' for l in sec_loincs_set]
-                            clause += f' AND ({" OR ".join(loinc_preds)})'
+                            loinc_params = ', '.join([bag.add(l) for l in sec_loincs_set])
+                            clause = f'sec.LOINC_CODE IN ({loinc_params}) AND {contains_expr}'
+                        else:
+                            clause = contains_expr
+                    else:
+                        clause = contains_expr
                     group_text.append(clause)
             elif ctype == 'labelingType':
                 c = _compile_labeling_type(cval, bag, base_table=base_table, warnings=warnings)
@@ -1079,7 +1067,7 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
                p.MANUFACTURER, p.APPR_NUM, p.NDC_CODES, p.NDC3_CODES, p.EFF_TIME as REVISED_DATE,
                p.MARKET_CATEGORIES, p.DOCUMENT_TYPE, p.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
                p.DOSAGE_FORMS, p.ROUTES, p.EPC,
-               (SELECT COUNT(*) FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = p.SPL_ID) as IS_RLD,
+               CASE WHEN EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = p.SPL_ID) THEN 1 ELSE 0 END as IS_RLD,
                p.TOTAL_COUNT,
                p.ACT_INGR_UNIIS as ACTIVE_UNIIS,
                {moiety_project}
