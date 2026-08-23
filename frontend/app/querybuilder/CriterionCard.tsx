@@ -1051,7 +1051,7 @@ export function CriterionCard({
                   }}
                   title="Paste and configure multiple SET-IDs"
                 >
-                  <span>📋 Multi SET-IDs {multiGuids.length > 0 ? `(${multiGuids.length})` : ''}</span>
+                  <span>Multi SET-IDs {multiGuids.length > 0 ? `(${multiGuids.length})` : ''}</span>
                 </button>
               </div>
 
@@ -1470,7 +1470,7 @@ function MultiSetIdModal({
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b', fontWeight: 700 }}>
-            📋 Multi SET-IDs Input
+            Multi SET-IDs Input
           </h3>
           <button
             type="button"

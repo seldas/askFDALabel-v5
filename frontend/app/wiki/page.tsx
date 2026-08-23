@@ -177,7 +177,7 @@ const GUIDES: WikiItem[] = [
           To look up a specific cohort of drug labels in batch using their unique <strong>SET IDs</strong> (or SPL GUIDs):
         </p>
         <ol>
-          <li>In the <strong>Labeling, Product and Ingredient Identifiers</strong> card, click the <strong>📋 Multi SET-IDs</strong> button.</li>
+          <li>In the <strong>Labeling, Product and Ingredient Identifiers</strong> card, click the <strong>Multi SET-IDs</strong> button.</li>
           <li>Paste your list of SET-IDs. The input accepts IDs separated by <strong>newlines</strong> (copied from Excel or text documents), <strong>commas (,)</strong>, or <strong>semicolons (;)</strong>.</li>
           <li>The modal automatically removes spaces, strips duplicates, and displays the total number of valid IDs recognized.</li>
           <li>Click <strong>Save SET-IDs</strong> and execute your search to retrieve all matching labels together.</li>

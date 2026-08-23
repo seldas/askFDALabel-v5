@@ -137,7 +137,7 @@ export function AiIntentPanel({
       <div className="fdl-ai__head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 className="fdl-ai__title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.25rem', color: '#0f172a', fontWeight: 800 }}>
-            <span style={{ fontSize: '1.2rem' }}>✨</span> AskFDALabel - Describe what you are looking for
+            AskFDALabel - Describe what you are looking for
           </h2>
           {!isFolded && (
             <p className="fdl-ai__lede" style={{ color: '#64748b', fontSize: '0.88rem', marginTop: '4px' }}>
