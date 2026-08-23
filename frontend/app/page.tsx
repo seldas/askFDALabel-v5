@@ -34,6 +34,8 @@ import {
   applyPrefilters,
   countFilled,
   fromWire,
+  hasInvalidCommonFullText,
+  hasInvalidMeddraLevel,
   hasUnverifiedProductNames,
   type LabelQuery,
   makeEmptyQuery,
@@ -262,10 +264,13 @@ function HomePage() {
   const filled = countFilled(query);
   const checkedPrefilters = prefilters.filter((p) => p.checked).length;
   const hasUnverified = hasUnverifiedProductNames(query);
+  const hasCommonFullText = hasInvalidCommonFullText(query);
+  const hasHigherMeddra = hasInvalidMeddraLevel(query);
+  const hasBlockers = hasUnverified || hasCommonFullText || hasHigherMeddra;
 
   const actionBar = (position: 'top' | 'bottom') => (
     <div className={position === 'top' ? 'fdl-actions' : 'fdl-actions fdl-actions--bottom'}>
-      <div style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
         {filled > 0 ? (
           <span className="fdl-active-tag fdl-active-tag--highlight">
             {filled} active {filled === 1 ? 'criterion' : 'criteria'} configured
@@ -296,6 +301,42 @@ function HomePage() {
             }}
           >
             ⚠️ Please confirm name(s) / MedDRA term(s)
+          </span>
+        )}
+        {hasCommonFullText && (
+          <span
+            style={{
+              backgroundColor: '#fef3c7',
+              color: '#92400e',
+              border: '1px solid #f59e0b',
+              padding: '4px 10px',
+              borderRadius: '8px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            ⚠️ Please refine common full-text term(s)
+          </span>
+        )}
+        {hasHigherMeddra && (
+          <span
+            style={{
+              backgroundColor: '#fef3c7',
+              color: '#92400e',
+              border: '1px solid #f59e0b',
+              padding: '4px 10px',
+              borderRadius: '8px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            ⚠️ MedDRA levels above PT are disabled (use PT/LLT)
           </span>
         )}
       </div>
@@ -351,9 +392,17 @@ function HomePage() {
         type="button"
         className="fdl-btn fdl-btn--search"
         onClick={runSearch}
-        disabled={hasUnverified}
-        style={hasUnverified ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
-        title={hasUnverified ? 'Please confirm all product names and MedDRA terms by selecting from standard suggestions' : undefined}
+        disabled={hasBlockers}
+        style={hasBlockers ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+        title={
+          hasUnverified
+            ? 'Please confirm all product names and MedDRA terms by selecting from standard suggestions'
+            : hasCommonFullText
+            ? 'Full-text search for common/generic words is restricted to prevent slow queries'
+            : hasHigherMeddra
+            ? 'MedDRA searches above Preferred Term (PT) level are disabled'
+            : undefined
+        }
       >
         Search Labels »
       </button>

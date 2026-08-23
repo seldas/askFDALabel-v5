@@ -15,6 +15,7 @@ import {
   CRITERION_DEFS,
   type Criterion,
   type CriterionValue,
+  isCommonFullTextQuery,
   type TargetDb,
   unsupportedReason,
 } from './types';
@@ -499,6 +500,7 @@ export function CriterionCard({
 
       case 'fullText': {
         const isAdv = (v.mode || 'simple') === 'advanced';
+        const isCommon = isCommonFullTextQuery(v.text);
         return (
           <>
             <div className="fdl-row">
@@ -520,6 +522,30 @@ export function CriterionCard({
                 onChange={(e) => set({ text: e.target.value })}
               />
             </div>
+            {isCommon && (
+              <div
+                style={{
+                  marginTop: '8px',
+                  backgroundColor: '#fef3c7',
+                  color: '#92400e',
+                  border: '1px solid #f59e0b',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  lineHeight: 1.4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span>⚠️</span>
+                <span>
+                  <strong>Generic Word Warning:</strong> Full-text search for common/generic words
+                  like &ldquo;{v.text}&rdquo; matches almost all drug labels and is restricted to prevent slow query execution. Please search for a specific medical term, condition, or multi-word phrase.
+                </span>
+              </div>
+            )}
             {SEARCH_HELP}
           </>
         );
@@ -535,6 +561,7 @@ export function CriterionCard({
           groupedMap.get(g)!.push(opt);
         }
         const isAdv = (v.mode || 'simple') === 'advanced';
+        const isCommon = isCommonFullTextQuery(v.text);
 
         return (
           <>
@@ -583,6 +610,30 @@ export function CriterionCard({
                 ))}
               </select>
             </div>
+            {isCommon && (
+              <div
+                style={{
+                  marginTop: '8px',
+                  backgroundColor: '#fef3c7',
+                  color: '#92400e',
+                  border: '1px solid #f59e0b',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  lineHeight: 1.4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span>⚠️</span>
+                <span>
+                  <strong>Generic Word Warning:</strong> Section text search for common/generic words
+                  like &ldquo;{v.text}&rdquo; matches almost all drug labels and is restricted to prevent slow query execution. Please search for a specific medical term, condition, or multi-word phrase.
+                </span>
+              </div>
+            )}
             {sections.length > 0 ? (
               <Chips
                 values={sections}
@@ -831,6 +882,30 @@ export function CriterionCard({
                     />
                   </div>
                 ))}
+              </div>
+            )}
+
+            {['soc', 'hlgt', 'hlt'].includes(String(v.level || '').toLowerCase()) && (
+              <div
+                style={{
+                  marginBottom: '10px',
+                  backgroundColor: '#fef3c7',
+                  color: '#92400e',
+                  border: '1px solid #f59e0b',
+                  borderRadius: '6px',
+                  padding: '8px 12px',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  lineHeight: 1.4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span>⚠️</span>
+                <span>
+                  <strong>Higher MedDRA Level Disabled:</strong> Searches above Preferred Term (PT) level (such as {String(v.level).toUpperCase()}) are disabled to prevent query timeouts. Please select Preferred Term (PT) or Lowest Level Term (LLT).
+                </span>
               </div>
             )}
 

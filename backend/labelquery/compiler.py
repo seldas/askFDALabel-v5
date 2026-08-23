@@ -70,6 +70,50 @@ _UNII_RE = re.compile(r'^[0-9A-Z]{10}$')
 _APPL_PREFIXES = ('ANADA', 'ANDA', 'NADA', 'BLA', 'NDA')
 _PREFIXED_APPL_RE = re.compile(r'^(' + '|'.join(_APPL_PREFIXES) + r')[\s-]*(\d{3,6})$', re.I)
 
+COMMON_FULLTEXT_WORDS = {
+    # Standard English stopwords
+    'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and',
+    'any', 'are', 'aren', 'as', 'at', 'be', 'because', 'been', 'before', 'being',
+    'below', 'between', 'both', 'but', 'by', 'can', 'cannot', 'could', 'did',
+    'do', 'does', 'doing', 'down', 'during', 'each', 'few', 'for', 'from',
+    'further', 'had', 'has', 'have', 'having', 'he', 'her', 'here', 'hers',
+    'herself', 'him', 'himself', 'his', 'how', 'i', 'if', 'in', 'into', 'is',
+    'it', 'its', 'itself', 'just', 'me', 'more', 'most', 'my', 'myself', 'no',
+    'nor', 'not', 'now', 'of', 'off', 'on', 'once', 'only', 'or', 'other',
+    'our', 'ours', 'ourselves', 'out', 'over', 'own', 'same', 'she', 'should',
+    'so', 'some', 'such', 'than', 'that', 'the', 'their', 'theirs', 'them',
+    'themselves', 'then', 'there', 'these', 'they', 'this', 'those', 'through',
+    'to', 'too', 'under', 'until', 'up', 'very', 'was', 'we', 'were', 'what',
+    'when', 'where', 'which', 'while', 'who', 'whom', 'why', 'with', 'would',
+    'you', 'your', 'yours', 'yourself', 'yourselves',
+
+    # Ubiquitous drug labeling terms
+    'drug', 'drugs', 'product', 'products', 'patient', 'patients', 'dose', 'doses',
+    'dosage', 'dosages', 'mg', 'ml', 'g', 'mcg', 'kg', 'tablet', 'tablets',
+    'capsule', 'capsules', 'treatment', 'treatments', 'treat', 'treated', 'treating',
+    'administer', 'administered', 'administration', 'administering',
+    'clinical', 'effect', 'effects', 'safety', 'efficacy', 'study', 'studies',
+    'label', 'labels', 'labeling', 'information', 'daily', 'day', 'days',
+    'use', 'used', 'uses', 'using', 'contraindication', 'contraindications',
+    'warning', 'warnings', 'precaution', 'precautions', 'indication', 'indications',
+    'adverse', 'reaction', 'reactions', 'table', 'section', 'package', 'insert',
+    'oral', 'injectable', 'solution', 'usp', 'fda', 'ndc', 'rx'
+}
+
+
+def is_common_fulltext_query(text):
+    if not text or not str(text).strip():
+        return False, []
+    clean = re.sub(r'[{}\[\]\(\)"\',;:\-]', ' ', str(text).lower())
+    tokens = [t.strip() for t in clean.split() if t.strip()]
+    tokens = [t for t in tokens if t not in ('and', 'or', 'not')]
+    if not tokens:
+        return False, []
+    common = [t for t in tokens if t in COMMON_FULLTEXT_WORDS or len(t) <= 1]
+    if len(common) == len(tokens):
+        return True, common
+    return False, []
+
 
 class QueryCompileError(ValueError):
     """Raised for a criterion the compiler cannot turn into valid SQL."""

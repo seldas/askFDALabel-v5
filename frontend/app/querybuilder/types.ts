@@ -684,3 +684,66 @@ export function hasUnverifiedCriteria(query: LabelQuery): boolean {
 }
 
 export const hasUnverifiedProductNames = hasUnverifiedCriteria;
+
+export const COMMON_FULLTEXT_WORDS = new Set([
+  // Standard English stopwords
+  'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and',
+  'any', 'are', 'aren', 'as', 'at', 'be', 'because', 'been', 'before', 'being',
+  'below', 'between', 'both', 'but', 'by', 'can', 'cannot', 'could', 'did',
+  'do', 'does', 'doing', 'down', 'during', 'each', 'few', 'for', 'from',
+  'further', 'had', 'has', 'have', 'having', 'he', 'her', 'here', 'hers',
+  'herself', 'him', 'himself', 'his', 'how', 'i', 'if', 'in', 'into', 'is',
+  'it', 'its', 'itself', 'just', 'me', 'more', 'most', 'my', 'myself', 'no',
+  'nor', 'not', 'now', 'of', 'off', 'on', 'once', 'only', 'or', 'other',
+  'our', 'ours', 'ourselves', 'out', 'over', 'own', 'same', 'she', 'should',
+  'so', 'some', 'such', 'than', 'that', 'the', 'their', 'theirs', 'them',
+  'themselves', 'then', 'there', 'these', 'they', 'this', 'those', 'through',
+  'to', 'too', 'under', 'until', 'up', 'very', 'was', 'we', 'were', 'what',
+  'when', 'where', 'which', 'while', 'who', 'whom', 'why', 'with', 'would',
+  'you', 'your', 'yours', 'yourself', 'yourselves',
+
+  // Ubiquitous drug labeling terms
+  'drug', 'drugs', 'product', 'products', 'patient', 'patients', 'dose', 'doses',
+  'dosage', 'dosages', 'mg', 'ml', 'g', 'mcg', 'kg', 'tablet', 'tablets',
+  'capsule', 'capsules', 'treatment', 'treatments', 'treat', 'treated', 'treating',
+  'administer', 'administered', 'administration', 'administering',
+  'clinical', 'effect', 'effects', 'safety', 'efficacy', 'study', 'studies',
+  'label', 'labels', 'labeling', 'information', 'daily', 'day', 'days',
+  'use', 'used', 'uses', 'using', 'contraindication', 'contraindications',
+  'warning', 'warnings', 'precaution', 'precautions', 'indication', 'indications',
+  'adverse', 'reaction', 'reactions', 'table', 'section', 'package', 'insert',
+  'oral', 'injectable', 'solution', 'usp', 'fda', 'ndc', 'rx'
+]);
+
+export function isCommonFullTextQuery(text: string | null | undefined): boolean {
+  if (!text || !text.trim()) return false;
+  const clean = text.replace(/[{}\[\]\(\)"',;:\-]/g, ' ').toLowerCase();
+  const tokens = clean.split(/\s+/).filter((t) => t.length > 0 && !['and', 'or', 'not'].includes(t));
+  if (tokens.length === 0) return false;
+  return tokens.every((t) => COMMON_FULLTEXT_WORDS.has(t) || t.length <= 1);
+}
+
+export function hasInvalidCommonFullText(query: LabelQuery): boolean {
+  return query.groups.some((g) =>
+    g.criteria.some((c) => {
+      if (c.type === 'fullText' || c.type === 'labelingSection') {
+        const text = (c.value as Record<string, any>)?.text;
+        return Boolean(text && String(text).trim()) && isCommonFullTextQuery(text);
+      }
+      return false;
+    })
+  );
+}
+
+export function hasInvalidMeddraLevel(query: LabelQuery): boolean {
+  return query.groups.some((g) =>
+    g.criteria.some((c) => {
+      if (c.type === 'meddra') {
+        const v = c.value as Record<string, any>;
+        const lvl = String(v?.level || '').toLowerCase();
+        return ['soc', 'hlgt', 'hlt'].includes(lvl);
+      }
+      return false;
+    })
+  );
+}

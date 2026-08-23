@@ -25,7 +25,7 @@ only speaks for the Oracle path.
 """
 
 import re
-from .compiler import TITLE_TO_LOINCS
+from .compiler import TITLE_TO_LOINCS, COMMON_FULLTEXT_WORDS, is_common_fulltext_query
 from .facets import CATEGORY_CRITERION
 
 _PRODUCT_NAME_COLUMNS = {
@@ -535,20 +535,8 @@ def _meddra_llt_codes_sql(level, term, bag, exclude_sql=''):
                 f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
                 f"WHERE llt.PT_CODE = {p_code}{exclude_sql}"
             )
-        if level in ('hlt', 'hlgt', 'soc'):
-            column = {'hlt': 'HLT_CODE', 'hlgt': 'HLGT_CODE', 'soc': 'SOC_CODE'}[level]
-            return (
-                f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
-                f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
-                f"WHERE mh.{column} = {p_code}{exclude_sql}"
-            )
-        return (
-            f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
-            f"LEFT JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
-            f"WHERE (llt.LLT_CODE = {p_code} OR llt.PT_CODE = {p_code} "
-            f"OR mh.HLT_CODE = {p_code} OR mh.HLGT_CODE = {p_code} "
-            f"OR mh.SOC_CODE = {p_code}){exclude_sql}"
-        )
+        # Levels above PT (HLT, HLGT, SOC) are disabled to prevent performance timeouts
+        return None
 
     # Text MedDRA term
     if '%' in t_clean:
@@ -569,33 +557,18 @@ def _meddra_llt_codes_sql(level, term, bag, exclude_sql=''):
             f"JOIN meddra.preferred_term pt ON pt.PT_CODE = llt.PT_CODE "
             f"WHERE UPPER(pt.PT_NAME) {match_op} {p_pattern}{exclude_sql}"
         )
-    if level in ('hlt', 'hlgt'):
-        column = {'hlt': 'HLT_NAME', 'hlgt': 'HLGT_NAME'}[level]
-        return (
-            f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
-            f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
-            f"WHERE UPPER(mh.{column}) {match_op} {p_pattern}{exclude_sql}"
-        )
-    if level == 'soc':
-        return (
-            f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
-            f"JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
-            f"WHERE (UPPER(mh.SOC_NAME) {match_op} {p_pattern} "
-            f"OR UPPER(mh.SOC_ABBREV) {match_op} {p_pattern}){exclude_sql}"
-        )
-    return (
-        f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
-        f"LEFT JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE "
-        f"WHERE (UPPER(llt.LLT_NAME) {match_op} {p_pattern} "
-        f"OR UPPER(mh.PT_NAME) {match_op} {p_pattern} "
-        f"OR UPPER(mh.HLT_NAME) {match_op} {p_pattern} "
-        f"OR UPPER(mh.HLGT_NAME) {match_op} {p_pattern} "
-        f"OR UPPER(mh.SOC_NAME) {match_op} {p_pattern}){exclude_sql}"
-    )
+    # Levels above PT (HLT, HLGT, SOC) are disabled
+    return None
 
 
-def _compile_meddra(value, bag, expand_meddra=None, alias='s'):
+def _compile_meddra(value, bag, expand_meddra=None, alias='s', warnings=None):
     level, pts, llts, excluded, other = _meddra_selection(value)
+    if level in ('soc', 'hlgt', 'hlt') or (other and level not in ('pt', 'llt')):
+        if warnings is not None:
+            warnings.append(
+                f"MedDRA search above Preferred Term (PT) level (requested level '{level.upper()}') is disabled to prevent query timeouts. Please specify a Preferred Term (PT) or Lowest Level Term (LLT)."
+            )
+        other = []
     if not (pts or llts or other):
         return None
 
@@ -806,9 +779,17 @@ def compile_oracle_predicates(query, expand_meddra=None, capabilities=None,
             cval = criterion.get('value') or {}
 
             if ctype in ('fullText', 'labelingSection'):
+                raw_text = cval.get('text') or ''
+                is_common, _ = is_common_fulltext_query(raw_text)
+                if is_common:
+                    warnings.append(
+                        f"Warning: Full-text search for common/generic word(s) ('{raw_text.strip()}') was omitted to prevent query timeouts. Please specify a more specific clinical term, condition, or multi-word phrase."
+                    )
+                    continue
+
                 # Text matching using Oracle Text CONTAINS over SPL_SEC
                 mode = cval.get('mode') or 'simple'
-                text_query = _format_contains_query(cval.get('text'), mode)
+                text_query = _format_contains_query(raw_text, mode)
                 sections = _as_list(cval.get('sections'))
                 
                 if text_query:
@@ -862,7 +843,7 @@ def compile_oracle_predicates(query, expand_meddra=None, capabilities=None,
                 c = _compile_market_status(cval, bag)
                 if c: group_relational.append(c)
             elif ctype == 'meddra':
-                c = _compile_meddra(cval, bag, expand_meddra)
+                c = _compile_meddra(cval, bag, expand_meddra, warnings=warnings)
                 if c: group_relational.append(c)
             elif ctype == 'pharmClass':
                 c = _compile_pharm_class(cval, bag)

@@ -25,6 +25,8 @@ from dashboard.services.fdalabel_db import FDALabelDBService
 from dashboard.services import feature_gates
 from .compiler import (
     CLASS_TYPE_FILTERS,
+    COMMON_FULLTEXT_WORDS,
+    is_common_fulltext_query,
     SELECT_COLUMNS,
     QueryCompileError,
     compile_where,
@@ -537,7 +539,7 @@ def suggest_meddra():
     q = (request.args.get('q') or '').strip()
     level = (request.args.get('level') or 'pt').lower()
     target_db = _resolve_target_db(request.args.get('target_db') or request.args.get('targetDb'))
-    if len(q) < 2 or level not in _MEDDRA_LEVELS:
+    if len(q) < 2 or level not in ('pt', 'llt'):
         return jsonify({'suggestions': []})
 
     try:
@@ -1474,8 +1476,8 @@ Rules:
    this exact note to "notes":
    "Note: Pharmacologic class filter ('[Class Name]') was omitted from the initial query. You can apply this class filter directly from the Results sidebar."
    (replace [Class Name] with the pharmacologic class name mentioned in the query).
-3. Adverse events and medical concepts: prefer "meddra" over free text. Give the ONE Preferred Term that names the concept.
-4. Free text is the fallback for wording MedDRA does not cover.
+3. Adverse events and medical concepts: prefer "meddra" over free text. Only Preferred Term ("pt") or Lowest Level Term ("llt") levels are allowed. Higher MedDRA levels (SOC, HLGT, HLT) are disabled to avoid query timeouts. If a high-level category is requested, map it to the most relevant PT(s) or add a warning note in "notes".
+4. Free text is the fallback for wording MedDRA does not cover. Do NOT generate "fullText" or "labelingSection" for generic common words or stopwords (e.g. "drug", "patient", "dose", "tablet", "treatment", "effects", etc.) that match almost all labels. If the user asks for a generic common word in full text, omit the criterion and add an explanatory warning note in "notes".
 5. Target Sections: When specific sections are named (e.g. "Boxed Warning", "Warnings and Precautions", "Adverse Reactions"), use "labelingSection" or attach "sections" to "meddra".
 6. A drug name goes in "productName", never "identifier". "identifier" is for codes: application number, Set ID, SPL ID, UNII, NDC. If the request provides one or more Set IDs / SPL GUIDs (UUID format), emit them in "identifier" under "setSplGuids" as an array.
 7. Never return an empty "groups" array when medical concepts, drug names, or labeling sections are requested.
@@ -1882,6 +1884,16 @@ def _sanitize_translation(parsed, target_db):
                             }
                 else:
                     value = {'field': 'any', 'op': 'equals', 'text': '', 'verified': False}
+            elif ctype in ('fullText', 'labelingSection'):
+                if isinstance(value, str):
+                    value = {'mode': 'advanced' if ' OR ' in value or ' AND ' in value else 'simple', 'text': value}
+                f_text = value.get('text') if isinstance(value, dict) else ''
+                is_common, _ = is_common_fulltext_query(f_text)
+                if is_common:
+                    notes.append(
+                        f"Warning: Full-text search for generic common word(s) ('{f_text}') was omitted to prevent slow query performance. Please specify a more specific clinical term or condition."
+                    )
+                    continue
             elif ctype == 'meddra':
                 terms = []
                 if isinstance(value, str):
@@ -1891,10 +1903,17 @@ def _sanitize_translation(parsed, target_db):
                 elif isinstance(value, dict):
                     terms = value.get('terms') or value.get('ptTerms') or value.get('lltTerms') or ([value.get('text')] if value.get('text') else [])
                 
+                lvl = (value.get('level') or 'pt').lower() if isinstance(value, dict) else 'pt'
+                if lvl in ('soc', 'hlgt', 'hlt'):
+                    notes.append(
+                        f"Warning: MedDRA searches above Preferred Term (PT) level (such as {lvl.upper()}) are disabled to prevent query timeouts. The search was set to PT level."
+                    )
+                    lvl = 'pt'
+
                 verified_pts, verified_llts, unverified = _auto_verify_meddra(terms, target_db)
                 is_fully_verified = len(unverified) == 0 and (len(verified_pts) > 0 or len(verified_llts) > 0)
                 value = {
-                    'level': 'pt' if verified_pts or not verified_llts else 'llt',
+                    'level': lvl if lvl in ('pt', 'llt') else 'pt',
                     'ptTerms': verified_pts,
                     'lltTerms': verified_llts,
                     'unverifiedTerms': unverified,
