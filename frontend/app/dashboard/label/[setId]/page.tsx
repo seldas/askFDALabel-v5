@@ -389,7 +389,7 @@ function LabelContent() {
   const { session, loading: userLoading, openAuthModal } = useUser();
 
   // Supplied by the workspace shell; see ./LabelContext.
-  const { setId, data, loading, error } = useLabel();
+  const { setId, data, loading, error, headerCollapsed, setHeaderCollapsed } = useLabel();
 
   const activeTab = TOOL_LABEL;
 
@@ -654,27 +654,21 @@ function LabelContent() {
     { id: 'examine-view', label: 'Examine', isAI: true },
   ];
 
-  const [isScrolled, setIsScrolled] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const scrollEl = document.querySelector('.afl-label-shell__scroll');
     if (!scrollEl) return;
 
     const onScroll = () => {
-      if (sentinelRef.current) {
-        const rect = sentinelRef.current.getBoundingClientRect();
-        // Since scroll container sits right below the app header (~56px)
-        setIsScrolled(rect.top <= 65);
-      } else {
-        setIsScrolled(scrollEl.scrollTop > 160);
+      if (scrollEl.scrollTop > 80 && !headerCollapsed) {
+        setHeaderCollapsed(true);
+      } else if (scrollEl.scrollTop === 0 && headerCollapsed) {
+        setHeaderCollapsed(false);
       }
     };
 
     scrollEl.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
     return () => scrollEl.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [headerCollapsed, setHeaderCollapsed]);
 
   if (loading) {
     return (
@@ -702,9 +696,8 @@ function LabelContent() {
   if (isToolbox) {
     return (
       <>
-        <div ref={sentinelRef} style={{ height: '1px', marginTop: '-1px', pointerEvents: 'none' }} />
-        <div className={`afl-sticky-header-bar ${isScrolled ? 'is-sticky' : ''}`}>
-          {isScrolled && (
+        <div className={`afl-sticky-header-bar ${headerCollapsed ? 'is-collapsed' : ''}`}>
+          {headerCollapsed && (
             <div className="afl-sticky-line1">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
                 <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a', textTransform: 'capitalize', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -716,16 +709,36 @@ function LabelContent() {
                   </span>
                 )}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 {data.label_format && <span className={`afl-badge afl-badge--${data.label_format === 'PLR' ? 'success' : 'neutral'}`} style={{ fontSize: '0.72rem', padding: '2px 8px' }}>{data.label_format}</span>}
                 {data.is_rld && <span className="afl-badge afl-badge--danger" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>RLD</span>}
                 {data.openfda_status && <span className={`afl-badge afl-badge--${data.openfda_status === 'Current' ? 'info' : 'warn'}`} style={{ fontSize: '0.72rem', padding: '2px 8px' }}>{data.openfda_status}</span>}
                 {data.application_number && <span style={{ fontSize: '0.74rem', fontFamily: 'ui-monospace, monospace', fontWeight: 700, color: '#475569', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>{data.application_number}</span>}
+                <button
+                  type="button"
+                  onClick={() => setHeaderCollapsed(false)}
+                  className="afl-collapse-toggle-btn"
+                  title="Expand full drug header"
+                >
+                  <span>Expand Header</span>
+                  <span>▲</span>
+                </button>
               </div>
             </div>
           )}
           <div className="afl-label-tools" style={{ margin: 0 }}>
             <LabelToolStrip setId={setId} />
+            {!headerCollapsed && (
+              <button
+                type="button"
+                onClick={() => setHeaderCollapsed(true)}
+                className="afl-collapse-toggle-btn"
+                title="Collapse drug header into compact bar"
+              >
+                <span>Compact Header</span>
+                <span>▼</span>
+              </button>
+            )}
           </div>
         </div>
         <ToolboxPanel setId={setId} data={data} />
@@ -755,9 +768,8 @@ function LabelContent() {
 
   return (
     <>
-      <div ref={sentinelRef} style={{ height: '1px', marginTop: '-1px', pointerEvents: 'none' }} />
-      <div className={`afl-sticky-header-bar ${isScrolled ? 'is-sticky' : ''}`}>
-        {isScrolled && (
+      <div className={`afl-sticky-header-bar ${headerCollapsed ? 'is-collapsed' : ''}`}>
+        {headerCollapsed && (
           <div className="afl-sticky-line1">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
               <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a', textTransform: 'capitalize', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -769,16 +781,38 @@ function LabelContent() {
                 </span>
               )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
               {data.label_format && <span className={`afl-badge afl-badge--${data.label_format === 'PLR' ? 'success' : 'neutral'}`} style={{ fontSize: '0.72rem', padding: '2px 8px' }}>{data.label_format}</span>}
               {data.is_rld && <span className="afl-badge afl-badge--danger" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>RLD</span>}
               {data.openfda_status && <span className={`afl-badge afl-badge--${data.openfda_status === 'Current' ? 'info' : 'warn'}`} style={{ fontSize: '0.72rem', padding: '2px 8px' }}>{data.openfda_status}</span>}
               {data.application_number && <span style={{ fontSize: '0.74rem', fontFamily: 'ui-monospace, monospace', fontWeight: 700, color: '#475569', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>{data.application_number}</span>}
+              <button
+                type="button"
+                onClick={() => setHeaderCollapsed(false)}
+                className="afl-collapse-toggle-btn"
+                title="Expand full drug header"
+              >
+                <span>Expand Header</span>
+                <span>▲</span>
+              </button>
             </div>
           </div>
         )}
         <div className="afl-label-tools" style={{ margin: 0 }}>
-          <LabelToolStrip setId={setId} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <LabelToolStrip setId={setId} />
+            {!headerCollapsed && (
+              <button
+                type="button"
+                onClick={() => setHeaderCollapsed(true)}
+                className="afl-collapse-toggle-btn"
+                title="Collapse drug header into compact bar"
+              >
+                <span>Compact Header</span>
+                <span>▼</span>
+              </button>
+            )}
+          </div>
         <div className="label-toolbar">
           {/* Product Specifications — pop window to the left of AI Chat */}
           <button

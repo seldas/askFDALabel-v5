@@ -114,9 +114,11 @@ export default function LabelLayout({
     return SEGMENT_TO_TOOL[segment] ?? 'label-reader';
   }, [pathname]);
 
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+
   const ctx = useMemo(
-    () => ({ setId, splId, data, loading, error, refresh }),
-    [setId, splId, data, loading, error, refresh],
+    () => ({ setId, splId, data, loading, error, refresh, headerCollapsed, setHeaderCollapsed }),
+    [setId, splId, data, loading, error, refresh, headerCollapsed, setHeaderCollapsed],
   );
 
   const isStale = data?.openfda_status === 'Archived' || data?.is_latest === false;
@@ -130,7 +132,7 @@ export default function LabelLayout({
 
       <div className="afl-label-shell__scroll">
         <div className="afl-label-shell__inner">
-          {!hideCrumbsAndTools && (
+          {!hideCrumbsAndTools && !headerCollapsed && (
             <nav className="afl-label-crumbs">
               <span className="afl-label-crumbs__current">{title}</span>
             </nav>
@@ -165,15 +167,12 @@ export default function LabelLayout({
 
           {data ? (
             <section
-              className={`afl-label-identity${isStale ? ' afl-label-identity--stale' : ''}`}
+              className={`afl-label-identity${isStale ? ' afl-label-identity--stale' : ''}${headerCollapsed ? ' afl-label-identity--collapsed' : ''}`}
               aria-label="Label identity"
               style={{
                 background: (data?.openfda_status === 'Archived' || data?.is_latest === false) ? '#fdfbf7' : '#ffffff',
-                padding: '24px',
-                borderRadius: '16px',
                 boxShadow: (data?.openfda_status === 'Archived' || data?.is_latest === false) ? '0 4px 20px rgba(60,45,30,0.04)' : '0 4px 20px rgba(0,0,0,0.04)',
                 border: (data?.openfda_status === 'Archived' || data?.is_latest === false) ? '1px solid #dcd3bf' : '1px solid #e2e8f0',
-                marginBottom: '20px'
               }}
             >
               <div className="afl-label-identity__title-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>

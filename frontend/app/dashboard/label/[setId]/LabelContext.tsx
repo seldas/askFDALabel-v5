@@ -21,6 +21,8 @@ export interface LabelContextValue {
   error: string | null;
   /** Re-fetch, e.g. after an annotation write. */
   refresh: () => void;
+  headerCollapsed: boolean;
+  setHeaderCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void;
 }
 
 const LabelContext = createContext<LabelContextValue | null>(null);

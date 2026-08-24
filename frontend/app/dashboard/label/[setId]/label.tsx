@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react';
 import { Section, LabelData, TOCItem } from './types';
+import { useLabel } from './LabelContext';
 import Link from 'next/link';
 
 const SectionComponent = memo(function SectionComponent({ section }: { section: Section }) {
@@ -91,9 +92,26 @@ export default function LabelView({
   toggleSection: (id: string) => void;
   TOCItemComponent: any;
 }) {
+  const { headerCollapsed, setHeaderCollapsed } = useLabel();
   const [currentIndex, setCurrentIndex] = useState(0); // 0-based index of sections
   const labelViewRef = useRef<HTMLDivElement>(null);
   const disableScrollObserver = useRef(false);
+
+  useEffect(() => {
+    const el = labelViewRef.current;
+    if (!el) return;
+
+    const onScroll = () => {
+      if (el.scrollTop > 50 && !headerCollapsed) {
+        setHeaderCollapsed(true);
+      } else if (el.scrollTop === 0 && headerCollapsed) {
+        setHeaderCollapsed(false);
+      }
+    };
+
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [headerCollapsed, setHeaderCollapsed]);
 
   // Flatten top-level sections into a single list for sequential navigation
   const sections = useMemo(() => [
