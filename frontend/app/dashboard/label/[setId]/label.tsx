@@ -111,6 +111,32 @@ export default function LabelView({
     return () => el.removeEventListener('scroll', onScroll);
   }, [headerCollapsed, setHeaderCollapsed]);
 
+  // Handle wheel events on outer blank spaces / margins to scroll the content panel and fold header
+  useEffect(() => {
+    const handleGlobalWheel = (e: WheelEvent) => {
+      // If scrolling downward anywhere, minimize header
+      if (e.deltaY > 0 && !headerCollapsed) {
+        setHeaderCollapsed(true);
+      }
+
+      // If wheel event happened outside of the main label viewport and TOC panel (e.g. whitespace, header, margins)
+      const target = e.target as HTMLElement | null;
+      const isInsideTOC = target?.closest('#toc-panel');
+      const isInsideViewport = target?.closest('.label-viewport');
+      const isInsideModal = target?.closest('.modal') || target?.closest('[role="dialog"]') || target?.closest('#product-specs-btn');
+
+      if (!isInsideViewport && !isInsideTOC && !isInsideModal) {
+        const el = labelViewRef.current;
+        if (el) {
+          el.scrollTop += e.deltaY;
+        }
+      }
+    };
+
+    window.addEventListener('wheel', handleGlobalWheel, { passive: true });
+    return () => window.removeEventListener('wheel', handleGlobalWheel);
+  }, [headerCollapsed, setHeaderCollapsed]);
+
   // Flatten top-level sections into a single list for sequential navigation
   const sections = useMemo(() => [
     ...(data.highlights && data.highlights.length > 0 ? [{ id: 'highlights-section', is_highlights: true, title: 'Highlights' }] : []),
