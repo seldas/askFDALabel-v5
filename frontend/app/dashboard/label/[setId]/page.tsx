@@ -8,8 +8,7 @@ import { TOOL_LABEL, useLabel } from './LabelContext';
 import { labelRoute, type LaunchContext } from '../../../platform/context';
 import { useUser } from '../../../context/UserContext';
 import { withApiBase } from '../../../utils/appPaths';
-import { ToolIcon } from '../../../platform/icons';
-import { useToolboxTools } from '../../../platform/ToolLauncher';
+import { LabelToolStrip, useToolboxTools } from '../../../platform/ToolLauncher';
 import type { ToolPattern } from '../../../platform/registry';
 
 // The reader body. FAERS, Deep Dive and Examine are sibling routes now, and
@@ -678,7 +677,14 @@ function LabelContent() {
   if (!data) return null;
 
   if (isToolbox) {
-    return <ToolboxPanel setId={setId} data={data} />;
+    return (
+      <>
+        <div className="afl-label-tools">
+          <LabelToolStrip setId={setId} />
+        </div>
+        <ToolboxPanel setId={setId} data={data} />
+      </>
+    );
   }
 
   const handleDownloadMeddraProfile = async () => {
@@ -703,131 +709,123 @@ function LabelContent() {
 
   return (
     <>
-      {/*
-        The page-level chrome — Header, breadcrumb, and the drug title/badges —
-        now lives in ../layout.tsx, which wraps every tool route. What remains
-        here is reader-specific: the label actions, the metadata grid, the
-        table of contents, and the label body.
-      */}
+      <div className="afl-label-tools">
+        <LabelToolStrip setId={setId} />
+        <div className="label-toolbar">
+          {/* Product Specifications — pop window to the left of AI Chat */}
+          <button
+            id="product-specs-btn"
+            className="label-tool-btn label-tool-specs"
+            onClick={() => setProductSpecsModalOpen(true)}
+            data-tooltip="Product Specifications"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+            <span>Specs</span>
+            <svg className="pop-indicator" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          </button>
 
-            <div className="function-content-area" style={{ 
-                flex: 1, 
-                display: 'flex', 
-                flexDirection: 'column', 
-                minHeight: 0,
-                background: '#ffffff',
-                borderRadius: '16px',
-                border: '1px solid #cbd5e1',
-                boxShadow: '0 4px 20px rgba(15, 23, 42, 0.05)',
-                padding: '16px',
-                marginBottom: '20px'
-            }}>
-                <div id="top-annotations-container" className="top-annotations-container"></div>
-                {/*
-                  FAERS, Deep Dive and Examine are their own routes now. They
-                  used to be mounted here alongside the reader and hidden with
-                  an activeTab check, so every tool's scripts and effects ran on
-                  every view.
-                */}
-                <LabelView data={data} activeTab={activeTab} tocCollapsed={tocCollapsed} setTocCollapsed={setTocCollapsed} expandedSections={expandedSections} toggleSection={toggleSection} TOCItemComponent={TOCItemComponent} />
+          {/* Chat — always available */}
+          <button
+            id="chat-bubble"
+            className="label-tool-btn label-tool-chat"
+            data-tooltip="AI Assistant Chat"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            <span>AI Chat</span>
+            <svg className="pop-indicator" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          </button>
 
-            </div>
+          {/* MedDRA Stats — label tab only */}
+          {activeTab === 'label-view' && (
+            <button
+              id="meddra-stats-btn"
+              className="label-tool-btn label-tool-meddra"
+              data-tooltip="Adverse Events (MedDRA)"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+              <span>AEs</span>
+              <svg className="pop-indicator" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+            </button>
+          )}
 
-            <div className="function-tabs-bar" style={{ width: '100%', padding: '0 0 20px 0', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px' }}>
-                <div className="label-toolbar">
-                  {/* Product Specifications — pop window to the left of AI Chat */}
-                  <button
-                    id="product-specs-btn"
-                    className="label-tool-btn label-tool-specs"
-                    onClick={() => setProductSpecsModalOpen(true)}
-                    title="View Product Specifications table for this label"
-                    style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', color: '#1d4ed8', border: '1px solid #93c5fd', fontWeight: 800 }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-                    <span>Product Specifications</span>
-                    <svg className="pop-indicator" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px', verticalAlign: 'middle' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                  </button>
+          {/* Notes — label tab + authenticated only */}
+          {activeTab === 'label-view' && session?.is_authenticated && (
+            <button
+              id="user-notes-btn"
+              className="label-tool-btn label-tool-notes"
+              data-tooltip="Annotation Notes"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              <span>Notes</span>
+              <svg className="pop-indicator" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+            </button>
+          )}
 
-                  {/* Chat — always available */}
-                  <button
-                    id="chat-bubble"
-                    className="label-tool-btn label-tool-chat"
-                    title="AI Assistant — ask questions about this label"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                    <span>AI Chat</span>
-                    <svg className="pop-indicator" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px', verticalAlign: 'middle' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                  </button>
+          {/* Export — authenticated only */}
+          {session?.is_authenticated && (
+            <button 
+              id="export-pdf-btn"
+              onClick={() => {
+                const allIds = new Set<string>();
+                const addIdsRecursive = (items: any[]) => {
+                  items.forEach(i => {
+                    allIds.add(i.id);
+                    if (i.children && i.children.length > 0) {
+                      addIdsRecursive(i.children);
+                    }
+                  });
+                };
+                if (data.table_of_contents) {
+                  addIdsRecursive(data.table_of_contents);
+                }
+                setSelectedSectionsForExport(allIds);
+                setExportModalOpen(true);
+              }}
+              data-tooltip="Export Selected Sections"
+              className="label-tool-btn label-tool-export"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>Export</span>
+              <svg className="pop-indicator" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+            </button>
+          )}
 
-                  {/* MedDRA Stats — label tab only */}
-                  {activeTab === 'label-view' && (
-                    <button
-                      id="meddra-stats-btn"
-                      className="label-tool-btn label-tool-meddra"
-                      title="Adverse Event term statistics for this label"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-                      Adverse Events
-                      <svg className="pop-indicator" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px', verticalAlign: 'middle' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                    </button>
-                  )}
+          {/* Add to Projects button (Fav) */}
+          <button 
+            id="favorite-btn" 
+            className={`label-tool-btn label-tool-fav ${isFavoriteAny ? 'active' : ''}`}
+            onClick={handleFavoriteClick}
+            disabled={!session?.is_authenticated}
+            data-tooltip={session?.is_authenticated ? "Add to Projects" : "Login Required to Add to Projects"}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>Projects</span>
+            <svg className="pop-indicator" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          </button>
+        </div>
+      </div>
 
-                  {/* Notes — label tab + authenticated only */}
-                  {activeTab === 'label-view' && session?.is_authenticated && (
-                    <button
-                      id="user-notes-btn"
-                      className="label-tool-btn label-tool-notes"
-                      title="My saved annotation notes"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                      Notes
-                      <svg className="pop-indicator" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px', verticalAlign: 'middle' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                    </button>
-                  )}
-
-                  {/* Export — authenticated only */}
-                  {session?.is_authenticated && (
-                    <button 
-                      id="export-pdf-btn"
-                      onClick={() => {
-                        const allIds = new Set<string>();
-                        const addIdsRecursive = (items: any[]) => {
-                          items.forEach(i => {
-                            allIds.add(i.id);
-                            if (i.children && i.children.length > 0) {
-                              addIdsRecursive(i.children);
-                            }
-                          });
-                        };
-                        if (data.table_of_contents) {
-                          addIdsRecursive(data.table_of_contents);
-                        }
-                        setSelectedSectionsForExport(allIds);
-                        setExportModalOpen(true);
-                      }}
-                      title="Export Selected Sections"
-                      className="label-tool-btn label-tool-export"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                      <span>EXPORT</span>
-                      <svg className="pop-indicator" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px', verticalAlign: 'middle' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                    </button>
-                  )}
-
-                  {/* Add to Projects button (Fav) */}
-                  <button 
-                    id="favorite-btn" 
-                    className={`label-tool-btn label-tool-fav ${isFavoriteAny ? 'active' : ''}`}
-                    onClick={handleFavoriteClick}
-                    disabled={!session?.is_authenticated}
-                    title={session?.is_authenticated ? "Add to Projects" : "Login is required to add to projects"}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    <span>Add to Projects</span>
-                    <svg className="pop-indicator" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px', verticalAlign: 'middle' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                  </button>
-                </div>
-            </div>
+      <div className="function-content-area" style={{ 
+          flex: 1, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          minHeight: 0,
+          background: '#ffffff',
+          borderRadius: '16px',
+          border: '1px solid #cbd5e1',
+          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.05)',
+          padding: '16px',
+          marginBottom: '20px'
+      }}>
+          <div id="top-annotations-container" className="top-annotations-container"></div>
+          {/*
+            FAERS, Deep Dive and Examine are their own routes now. They
+            used to be mounted here alongside the reader and hidden with
+            an activeTab check, so every tool's scripts and effects ran on
+            every view.
+          */}
+          <LabelView data={data} activeTab={activeTab} tocCollapsed={tocCollapsed} setTocCollapsed={setTocCollapsed} expandedSections={expandedSections} toggleSection={toggleSection} TOCItemComponent={TOCItemComponent} />
+      </div>
 
       {/* Product Specifications Modal Dialog */}
       {productSpecsModalOpen && (

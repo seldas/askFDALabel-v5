@@ -278,12 +278,6 @@ export default function LabelLayout({
             </div>
           )}
 
-          {!hideCrumbsAndTools && (
-            <div className="afl-label-tools">
-              <LabelToolStrip setId={setId} activeToolId={activeToolId} />
-            </div>
-          )}
-
           <div className="afl-label-content">
             <LabelContextProvider value={ctx}>{children}</LabelContextProvider>
           </div>
