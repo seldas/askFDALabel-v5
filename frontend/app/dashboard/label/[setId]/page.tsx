@@ -8,6 +8,7 @@ import { TOOL_LABEL, useLabel } from './LabelContext';
 import { labelRoute, type LaunchContext } from '../../../platform/context';
 import { useUser } from '../../../context/UserContext';
 import { withApiBase } from '../../../utils/appPaths';
+import { ToolIcon } from '../../../platform/icons';
 import { LabelToolStrip, useToolboxTools } from '../../../platform/ToolLauncher';
 import type { ToolPattern } from '../../../platform/registry';
 
