@@ -163,6 +163,50 @@
   margin-bottom: var(--afl-space-4);
 }
 
+/* ---- Sticky header bar on scroll --------------------------------------- */
+
+.afl-sticky-header-bar {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.afl-sticky-header-bar.is-sticky {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid #cbd5e1;
+  box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.08);
+  margin-left: -20px;
+  margin-right: -20px;
+  padding: 8px 20px;
+  margin-bottom: 16px;
+  border-radius: 0 0 12px 12px;
+}
+
+.afl-sticky-line1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+  animation: afl-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes afl-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .afl-label-content {
   flex: 1;
   display: flex;
