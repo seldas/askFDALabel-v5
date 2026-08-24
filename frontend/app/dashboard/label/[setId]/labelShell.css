@@ -13,6 +13,9 @@
 
 .afl-label-shell__scroll {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   overflow-y: auto;
   padding-top: var(--afl-header-height);
 }
@@ -21,10 +24,11 @@
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
-  padding: var(--afl-space-5);
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 /* ---- Breadcrumb --------------------------------------------------------- */
@@ -181,9 +185,9 @@
   padding: 10px 16px;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  position: sticky;
-  top: 0;
-  z-index: 90;
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
 }
 
 .afl-sticky-header-bar.is-collapsed {

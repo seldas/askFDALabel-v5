@@ -661,8 +661,6 @@ function LabelContent() {
     const onScroll = () => {
       if (scrollEl.scrollTop > 80 && !headerCollapsed) {
         setHeaderCollapsed(true);
-      } else if (scrollEl.scrollTop === 0 && headerCollapsed) {
-        setHeaderCollapsed(false);
       }
     };
 

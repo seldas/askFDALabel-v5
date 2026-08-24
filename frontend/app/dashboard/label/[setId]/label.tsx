@@ -104,8 +104,6 @@ export default function LabelView({
     const onScroll = () => {
       if (el.scrollTop > 50 && !headerCollapsed) {
         setHeaderCollapsed(true);
-      } else if (el.scrollTop === 0 && headerCollapsed) {
-        setHeaderCollapsed(false);
       }
     };
 
@@ -278,14 +276,13 @@ export default function LabelView({
       minHeight: 0,
       gap: '20px',
       alignItems: 'stretch',
-      marginTop: '10px'
+      marginTop: '0px'
     }}>
         
         {/* TOC Panel */}
         <div id="toc-panel" className={`toc-side-panel-inline ${tocCollapsed ? 'collapsed' : ''}`} style={{ 
           width: tocCollapsed ? '0' : '300px', 
           height: '100%',
-          maxHeight: '80vh',
           flexShrink: 0,
           background: 'white',
           borderRadius: '16px',
@@ -358,7 +355,7 @@ export default function LabelView({
         </div>
 
         {/* Main Content */}
-        <div className="label-main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto', maxHeight: '80vh' }}>
+        <div className="label-main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
             {tocCollapsed && (
               <button onClick={() => setTocCollapsed(false)} style={{ position: 'absolute', left: '20px', zIndex: 10, background: 'white', border: '1px solid var(--afl-n-200)', borderRadius: '8px', padding: '4px 12px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                 ☰ SHOW MENU
