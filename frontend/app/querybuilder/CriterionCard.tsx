@@ -760,16 +760,23 @@ export function CriterionCard({
         const addTerm = (term: string) => {
           const field = level === 'pt' ? 'ptTerms' : 'lltTerms';
           const current: string[] = field === 'ptTerms' ? meddraPts : meddraLlts;
-          if (current.includes(term)) return;
+          const nextTerms = current.includes(term) ? current : [...current, term];
+          const nextUnverified = unverifiedTerms.filter((u) => u !== term);
           // Adding a term back clears any standing exclusion of it, or the
           // pick would land already crossed out.
           set({
-            [field]: [...current, term],
+            [field]: nextTerms,
             excludedLlts: meddraExcluded.filter((x) => x !== term),
+            verified: nextUnverified.length === 0,
+            unverifiedTerms: nextUnverified,
           });
         };
 
-        const removePt = (pt: string) => set({ ptTerms: meddraPts.filter((x) => x !== pt) });
+        const removePt = (pt: string) =>
+          set({
+            ptTerms: meddraPts.filter((x) => x !== pt),
+            verified: unverifiedTerms.length === 0,
+          });
 
         const toggleExcluded = (llt: string) =>
           set({
@@ -787,6 +794,7 @@ export function CriterionCard({
           set({
             lltTerms: meddraLlts.filter((x) => x !== llt),
             ptTerms: meddraPts.includes(pt) ? meddraPts : [...meddraPts, pt],
+            verified: unverifiedTerms.length === 0,
           });
         };
 
@@ -819,7 +827,11 @@ export function CriterionCard({
               <button
                 type="button"
                 className="fdl-term-badge__x"
-                onClick={() => (direct ? set({ lltTerms: meddraLlts.filter((x) => x !== llt) }) : toggleExcluded(llt))}
+                onClick={() =>
+                  direct
+                    ? set({ lltTerms: meddraLlts.filter((x) => x !== llt), verified: unverifiedTerms.length === 0 })
+                    : toggleExcluded(llt)
+                }
                 title={
                   direct
                     ? `Remove ${llt}`
@@ -928,7 +940,6 @@ export function CriterionCard({
                   }
                   onCommit={(term) => {
                     addTerm(term);
-                    set({ verified: true, unverifiedTerms: unverifiedTerms.filter((u) => u !== term) });
                   }}
                   fetchSuggestions={fetchMeddra}
                   requireSuggestion={true}
