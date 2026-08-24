@@ -17,8 +17,8 @@ import { PreFilterChips } from './PreFilterChips';
 const EXAMPLES = [
   {
     category: 'Multiple SET-IDs',
-    prompt: 'ca73b519-015a-436d-aa3c-af53492825a1, c7247391-7fb8-4bd8-90db-2d1d072fec01, 88e0b675-ea22-4809-b4be-5ce26857945d',
-    display: 'Multiple SET-IDs paste (ca73b519-…, c7247391-…, 88e0b675-…)',
+    prompt: 'e5cbf204-c10d-444b-aba0-180a30645d55, 44fb1e25-ad03-4a7f-9f35-2e29f5025661, f7633480-25aa-4326-bec9-82835b486a20, 4b286ec6-68a7-4ec0-af07-5a27ec9cb35d',
+    display: 'Multiple SET-IDs paste (e5cbf204-…, 44fb1e25-…, f7633480-…)',
   },
   {
     category: 'Drug Name + Typo',
