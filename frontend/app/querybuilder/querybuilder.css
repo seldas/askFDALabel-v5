@@ -617,6 +617,17 @@
   color: var(--afl-text-secondary);
 }
 
+@keyframes fdl-toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* ---- Results page --------------------------------------------------------- */
 
 /* Result tables are wide by nature; the builder is not. */
