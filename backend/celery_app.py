@@ -5,8 +5,8 @@ from app import create_unified_app
 def make_celery(app):
     celery = Celery(
         app.import_name,
-        backend=app.config['CELERY_RESULT_BACKEND'],
-        broker=app.config['CELERY_BROKER_URL']
+        backend=app.config.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0'),
+        broker=app.config.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
     )
     celery.conf.update(app.config)
 

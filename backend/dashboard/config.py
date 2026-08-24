@@ -27,6 +27,7 @@ class Config:
     RATELIMIT_ENABLED = os.getenv('RATELIMIT_ENABLED', 'True').lower() in ('true', '1', 'yes')
     RATELIMIT_DEFAULT = os.getenv('RATELIMIT_DEFAULT', '120 per minute')
     RATELIMIT_AUTH = os.getenv('RATELIMIT_AUTH', '10 per minute')
+    CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
     CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
 
     OPENFDA_API_KEY=os.getenv('OPENFDA_API_KEY','')
