@@ -9,6 +9,7 @@ import { labelRoute, type LaunchContext } from '../../../platform/context';
 import { useUser } from '../../../context/UserContext';
 import { withApiBase } from '../../../utils/appPaths';
 import { LabelToolStrip, useToolboxTools } from '../../../platform/ToolLauncher';
+import { ToolIcon } from '../../../platform/icons';
 import type { ToolPattern } from '../../../platform/registry';
 
 // The reader body. FAERS, Deep Dive and Examine are sibling routes now, and
