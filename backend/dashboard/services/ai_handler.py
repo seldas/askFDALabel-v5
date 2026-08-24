@@ -47,14 +47,20 @@ class AIClientFactory:
         Returns the appropriate client and model based on user preferences.
         Caches clients to avoid 'client closed' errors during streaming.
         """
-        # Read the global AI model setting
-        provider = EnvService.get_setting("ai_model_provider")
+        # Read allowed providers and global default
+        allowed_raw = os.getenv("ALLOWED_AI_PROVIDERS", "gemini,elsa,llama,vllm,ollama,customized")
+        allowed_providers = [p.strip().lower() for p in allowed_raw.split(',') if p.strip()]
+
+        default_provider = os.getenv("DEFAULT_AI_MODEL", "elsa" if "elsa" in allowed_providers else (allowed_providers[0] if allowed_providers else "gemini"))
+        provider = EnvService.get_setting("ai_model_provider") or default_provider
+        if provider not in allowed_providers:
+            provider = default_provider
         use_llama = False
         
         # User override logic: custom AI settings and provider overrides are restricted to admins
         is_admin = bool(user and user.is_authenticated and getattr(user, 'is_admin', False))
         if is_admin and user.ai_provider:
-            if user.ai_provider in ["gemini", "elsa", "llama", "vllm", "ollama"]:
+            if user.ai_provider in allowed_providers:
                 provider = user.ai_provider
                 
         # Load user settings if available (admins only)
@@ -167,35 +173,69 @@ def call_llm(user, system_prompt, user_message, history=None, model_override=Non
                 
             return response.choices[0].message.content
         except Exception as e:
-            logger.error(f"LLM error (llama): {e}. Attempting fallback to Gemini.")
-            # FALLBACK TO GEMINI
-            try:
-                # Re-fetch client specifically for gemini
-                gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-                if ("gemini", gemini_key) not in AIClientFactory._clients:
-                    AIClientFactory._clients[("gemini", gemini_key)] = genai.Client(api_key=gemini_key)
-                
-                fallback_client = AIClientFactory._clients[("gemini", gemini_key)]
-                fallback_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
-                
-                config = types.GenerateContentConfig(
-                    temperature=temperature, top_p=top_p, max_output_tokens=max_tokens,
-                    system_instruction=system_prompt if system_prompt else None
-                )
-                contents = []
-                if history:
-                    for turn in history:
-                        role = "model" if turn.get('role') in ['assistant', 'ai'] else "user"
-                        contents.append(types.Content(role=role, parts=[types.Part.from_text(text=turn.get('content', ''))]))
-                contents.append(types.Content(role="user", parts=[types.Part.from_text(text=user_message)]))
-                
-                resp = fallback_client.models.generate_content(model=fallback_model, contents=contents, config=config)
-                if hasattr(resp, 'usage_metadata') and resp.usage_metadata:
-                    _record_usage(user, fallback_model, getattr(resp.usage_metadata, 'prompt_token_count', 0), getattr(resp.usage_metadata, 'candidates_token_count', 0))
-                return resp.text
-            except Exception as fallback_err:
-                logger.error(f"Fallback to Gemini also failed: {fallback_err}")
-                raise e
+            allowed_raw = os.getenv("ALLOWED_AI_PROVIDERS", "gemini,elsa,llama,vllm,ollama,customized")
+            allowed_providers = [p.strip().lower() for p in allowed_raw.split(',') if p.strip()]
+            
+            # 1. Try Elsa fallback if allowed
+            if "elsa" in allowed_providers and provider != "elsa":
+                logger.warning(f"LLM error ({provider}): {e}. Attempting fallback to Elsa.")
+                try:
+                    _, elsa_cfg, elsa_mod = AIClientFactory.get_client(user)
+                    if not isinstance(elsa_cfg, dict) or 'model_engine_id' not in elsa_cfg:
+                        # Direct Elsa config fetch
+                        elsa_cfg = {
+                            'username': os.getenv("ELSA_API_NAME"),
+                            'password': os.getenv("ELSA_API_KEY"),
+                            'base_url': os.getenv("ELSA_API_URL"),
+                            'model_engine_id': os.getenv("ELSA_MODEL_ID"),
+                            'model_name': os.getenv("ELSA_MODEL_NAME") or "CLAUDE_4_SONNET"
+                        }
+                    full_prompt = f"SYSTEM INSTRUCTIONS:\n{system_prompt}\n\n" if system_prompt else ""
+                    if history:
+                        full_prompt += "CONVERSATION HISTORY:\n"
+                        for turn in history: full_prompt += f"{turn.get('role', 'user').upper()}: {turn.get('content', '')}\n"
+                        full_prompt += "\n"
+                    full_prompt += f"USER: {user_message}"
+                    cmd = f'''LLM(engine = "{elsa_cfg['model_engine_id']}", command = "<encode>{full_prompt}</encode>", paramValues = [{{"max_completion_tokens": {max_tokens}, "temperature": {temperature}}}])'''
+                    res = requests.post(elsa_cfg['base_url'], headers={"Content-Type": "application/x-www-form-urlencoded"}, data=f'expression={quote_plus(cmd)}', auth=(elsa_cfg['username'], elsa_cfg['password']), verify=False, timeout=(120, 600))
+                    if res.status_code == 200:
+                        ret = json.loads(res.text).get("pixelReturn", [{}])[0].get("output", "")
+                        if isinstance(ret, dict): ret = ret.get("response", "")
+                        if ret:
+                            _record_usage(user, elsa_cfg.get('model_name', 'ELSA'), len(full_prompt) // 4, len(ret) // 4)
+                            return ret
+                except Exception as elsa_err:
+                    logger.error(f"Elsa fallback failed: {elsa_err}")
+
+            # 2. Try Gemini fallback only if explicitly allowed
+            if "gemini" in allowed_providers:
+                logger.warning(f"LLM error ({provider}): {e}. Attempting fallback to Gemini.")
+                try:
+                    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+                    if ("gemini", gemini_key) not in AIClientFactory._clients:
+                        AIClientFactory._clients[("gemini", gemini_key)] = genai.Client(api_key=gemini_key)
+                    
+                    fallback_client = AIClientFactory._clients[("gemini", gemini_key)]
+                    fallback_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+                    
+                    config = types.GenerateContentConfig(
+                        temperature=temperature, top_p=top_p, max_output_tokens=max_tokens,
+                        system_instruction=system_prompt if system_prompt else None
+                    )
+                    contents = []
+                    if history:
+                        for turn in history:
+                            role = "model" if turn.get('role') in ['assistant', 'ai'] else "user"
+                            contents.append(types.Content(role=role, parts=[types.Part.from_text(text=turn.get('content', ''))]))
+                    contents.append(types.Content(role="user", parts=[types.Part.from_text(text=user_message)]))
+                    
+                    resp = fallback_client.models.generate_content(model=fallback_model, contents=contents, config=config)
+                    if hasattr(resp, 'usage_metadata') and resp.usage_metadata:
+                        _record_usage(user, fallback_model, getattr(resp.usage_metadata, 'prompt_token_count', 0), getattr(resp.usage_metadata, 'candidates_token_count', 0))
+                    return resp.text
+                except Exception as fallback_err:
+                    logger.error(f"Fallback to Gemini also failed: {fallback_err}")
+            raise e
 
     elif provider == "rapid":
         messages = []

@@ -43,6 +43,7 @@ export interface UserSession {
   env_ollama_url?: string;
   has_gemini_key?: boolean;
   has_vllm_key?: boolean;
+  allowed_ai_providers?: string[];
 }
 
 export interface ActiveTask {

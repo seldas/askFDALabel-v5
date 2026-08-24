@@ -31,29 +31,50 @@ def run_cmd(cmd, cwd=REPO_ROOT, check=True):
     return res.returncode == 0
 
 def load_docker_images(source_dir):
-    """Loads docker images from individual tar archives in source_dir."""
+    """Loads docker images from individual tar.gz or tar archives in source_dir."""
     print("\n--- Loading Docker Images ---")
-    tar_files = sorted(list(source_dir.glob("image_*.tar")) + list(source_dir.glob("images.tar")))
-    if not tar_files:
-        print(f"[ERROR] No image tar archives found in: {source_dir}")
+    image_archives = sorted(
+        list(source_dir.glob("image_*.tar.gz")) +
+        list(source_dir.glob("image_*.tgz")) +
+        list(source_dir.glob("image_*.tar")) +
+        list(source_dir.glob("images.tar.gz")) +
+        list(source_dir.glob("images.tar"))
+    )
+    # Deduplicate in case multiple patterns match
+    seen = set()
+    unique_archives = []
+    for arc in image_archives:
+        if arc.resolve() not in seen:
+            seen.add(arc.resolve())
+            unique_archives.append(arc)
+
+    if not unique_archives:
+        print(f"[ERROR] No image tar/tar.gz archives found in: {source_dir}")
         sys.exit(1)
 
-    for tar_path in tar_files:
-        print(f"[LOAD] Loading Docker image from: {tar_path.name}...")
-        run_cmd(["docker", "load", "-i", str(tar_path)])
+    for archive_path in unique_archives:
+        print(f"[LOAD] Loading Docker image from: {archive_path.name}...")
+        run_cmd(["docker", "load", "-i", str(archive_path)])
     print("[SUCCESS] All Docker images loaded successfully.")
 
-def unzip_archive(zip_path, dest_dir):
-    """Unzips a zip file into dest_dir, overwriting existing files."""
+def unzip_archive(zip_path, dest_dir, exclude_filenames=None):
+    """Unzips a zip file into dest_dir, overwriting existing files except excluded ones."""
     if not zip_path.exists():
         print(f"[ERROR] Zip archive not found: {zip_path}")
         sys.exit(1)
 
+    exclude_set = set(exclude_filenames or [".env"])
     print(f"[UNZIP] Extracting {zip_path.name} to {dest_dir} (overwriting existing files)...")
     dest_dir.mkdir(parents=True, exist_ok=True)
     
     with zipfile.ZipFile(zip_path, "r") as zf:
         for member in zf.infolist():
+            # Skip excluded files (such as .env to protect environment settings)
+            member_name = Path(member.filename).name
+            if member.filename in exclude_set or member_name in exclude_set:
+                print(f"  - Skipped protected file: {member.filename}")
+                continue
+
             # Extract member explicitly to support overwrite
             target_path = dest_dir / member.filename
             if member.is_dir():
@@ -93,10 +114,10 @@ def main():
     else:
         print("[INFO] Skipping Docker image load (--skip-images flag set).")
 
-    # 2. Extract Config & Mounted Files
+    # 2. Extract Config & Mounted Files (protect .env)
     rapid_files_zip = source_dir / "rapid_files.zip"
     if rapid_files_zip.exists():
-        unzip_archive(rapid_files_zip, target_dir)
+        unzip_archive(rapid_files_zip, target_dir, exclude_filenames=[".env"])
     else:
         print(f"[WARNING] {rapid_files_zip.name} not found. Skipping file extraction.")
 
@@ -111,10 +132,27 @@ def main():
     else:
         print("\n[INFO] Data extraction skipped (use --include-data to unpack data.zip).")
 
+    # 4. Check for .env file existence
+    target_env = target_dir / ".env"
+    if not target_env.exists():
+        rapid_template = target_dir / ".env.rapid.template"
+        std_template = target_dir / ".env.template"
+        print("\n[NOTICE] .env file not found in target directory.")
+        if rapid_template.exists():
+            print(f"         For RAPID environment, copy: cp .env.rapid.template .env")
+        elif std_template.exists():
+            print(f"         Copy template: cp .env.template .env")
+        else:
+            print("         Please create and configure your .env file before starting the server.")
+    else:
+        print(f"\n[INFO] Preserved existing .env configuration ({target_env}).")
+
     print("\n==================================================")
     print("[COMPLETE] Migration import finished successfully!")
-    print("You can now launch RAPID using:")
-    print("  python start_server.py --rapid")
+    print("Next steps:")
+    print("  1. Configure .env:             cp .env.rapid.template .env")
+    print("  2. (If new DB) Restore DB:    python deploy/rapid_migration/restore_db.py")
+    print("  3. Launch RAPID Server:        python start_server.py --rapid")
     print("==================================================")
 
 if __name__ == "__main__":

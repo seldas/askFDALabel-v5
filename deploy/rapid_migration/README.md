@@ -7,14 +7,18 @@ This directory contains automated Python utilities to build, package, export, an
 The RAPID migration suite simplifies air-gapped or target server deployments by packaging Docker images and mounted configuration files into zip/tar archives.
 
 Generated archives:
-- Individual Docker image archives:
-  - `image_backend.tar`: `fdalabel-v3-backend:latest`
-  - `image_frontend.tar`: `fdalabel-v3-frontend:latest`
-  - `image_nginx.tar`: `fdalabel-v3-nginx:latest`
-  - `image_db.tar`: `fdalabel-v3-db:latest`
-  - `image_redis.tar`: `fdalabel-v3-redis:latest`
-- `rapid_files.zip`: Configuration scripts (`start_server.py`, `.env`, `.env.template.txt`), Nginx configurations, webtest folders, and public assets.
+- Individual compressed Docker image archives (`.tar.gz`):
+  - `image_backend.tar.gz`: `fdalabel-v3-backend:latest`
+  - `image_frontend.tar.gz`: `fdalabel-v3-frontend:latest`
+  - `image_redis.tar.gz`: `fdalabel-v3-redis:latest`
+  - `image_nginx.tar.gz`: `fdalabel-v3-nginx:latest` (Optional, with `--all-images`)
+  - `image_db.tar.gz`: `fdalabel-v3-db:latest` (Optional, with `--all-images`)
+- `rapid_files.zip`: Configuration scripts (`start_server.py`, `.env.template`, `.env.rapid.template`, `restore_db.py`, `dump_db.py`), Nginx configurations, webtest folders, and public assets (note: `.env` is deliberately excluded to protect target environment configuration).
 - `data.zip`: (Optional) Contents of the `data/` directory.
+
+---
+
+> **Important**: The `.env` file is **not** included in the migration package and will **not** be overwritten during import. Since configuration parameters (remote PostgreSQL database host/port, Oracle 10.* proxy, Elsa AI credentials, local vLLM endpoint) vary across environments, configure the target server's `.env` independently using `.env.rapid.template`.
 
 ---
 
@@ -22,7 +26,7 @@ Generated archives:
 
 Run this script on the source machine to build Docker images and generate migration archives.
 
-### Default Usage (Without `data.zip`)
+### Default RAPID Usage (Exports backend, frontend, redis + config files)
 ```bash
 python deploy/rapid_migration/export_rapid_package.py
 ```
@@ -34,63 +38,49 @@ python deploy/rapid_migration/export_rapid_package.py --include-data
 
 ### Options:
 - `--include-data`: Also package `data/` folder into `data.zip` (default: `False`).
+- `--all-images`: Export all 5 images (including Nginx and local DB container).
 - `--skip-build`: Skip running `docker build` and use existing local images.
 - `--output-dir OUTPUT_DIR`: Specify custom destination folder for generated archives (default: `deploy/rapid_migration`).
 
 ---
 
-## 2. Importing a Migration Package (`import_rapid_package.py`)
+## 2. Exporting Database Dump (`dump_db.py`)
+
+To dump the PostgreSQL database from a running local database container:
+```bash
+python deploy/rapid_migration/dump_db.py
+```
+This writes `deploy/rapid_migration/fdalabel_db.dump`.
+
+---
+
+## 3. Importing a Migration Package (`import_rapid_package.py`)
 
 Run this script on the destination RAPID server to load Docker images and extract files.
 
-> **Note**: `import_rapid_package.py` **automatically overwrites** existing files and directories when extracting `rapid_files.zip` and `data.zip`.
+> **Note**: `import_rapid_package.py` extracts files and directories from `rapid_files.zip` and `data.zip` while protecting any existing `.env` from being overwritten.
 
-### Default Usage (Extracts Images and Overwrites Config Files)
 ```bash
 python deploy/rapid_migration/import_rapid_package.py
 ```
 
-### Importing with Data Extraction (Overwrites `data/` directory)
-```bash
-python deploy/rapid_migration/import_rapid_package.py --include-data
-```
-
-### Options:
-- `--include-data`: Unzip `data.zip` to overwrite `./data/` folder (default: `False`).
-- `--source-dir SOURCE_DIR`: Source directory containing `image_*.tar`, `rapid_files.zip`, and optional `data.zip` (default: `deploy/rapid_migration`).
-- `--target-dir TARGET_DIR`: Project root directory to extract files into (default: repo root).
-- `--skip-images`: Skip loading Docker images (`docker load`).
-
 ---
 
-## 3. Manual Unzip Instructions (Overwriting Files)
+## 4. RAPID Quickstart & Server Launch
 
-If you prefer to extract zip archives manually instead of using `import_rapid_package.py`, make sure to use the **overwrite** flag (`-o` on Linux / `-Force` on Windows):
+1. **Configure Environment Variables**:
+   ```bash
+   cp .env.rapid.template .env
+   # Edit .env to set PG_HOST, Elsa credentials, vLLM endpoint, and Oracle proxy credentials
+   ```
 
-### Linux / macOS (Use `-o` to overwrite existing files without prompting):
-```bash
-# Overwrite project configuration and mounted files
-unzip -o deploy/rapid_migration/rapid_files.zip -d .
+2. **Restore Database (for fresh remote databases)**:
+   ```bash
+   python deploy/rapid_migration/restore_db.py
+   ```
 
-# Overwrite data folder (if data.zip exists)
-unzip -o deploy/rapid_migration/data.zip -d .
-```
-
-### Windows PowerShell (Use `-Force` to overwrite existing files):
-```powershell
-# Overwrite project configuration and mounted files
-Expand-Archive -Path deploy\rapid_migration\rapid_files.zip -DestinationPath . -Force
-
-# Overwrite data folder (if data.zip exists)
-Expand-Archive -Path deploy\rapid_migration\data.zip -DestinationPath . -Force
-```
-
----
-
-## 4. Launching RAPID Server
-
-After importing the migration package, launch the stack using `start_server.py`:
-
-```bash
-python start_server.py --rapid
-```
+3. **Launch Server in RAPID Mode**:
+   ```bash
+   python start_server.py --rapid
+   ```
+   *In `--rapid` mode, the orchestrator connects to the remote PostgreSQL DB, disables internal Nginx container (allowing external Nginx on the host to proxy requests), and publishes frontend (`8841:8841`) and backend (`8842:8842`) ports.*

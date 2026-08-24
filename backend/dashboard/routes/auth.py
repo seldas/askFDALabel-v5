@@ -194,9 +194,11 @@ def session():
             'env_vllm_model': os.getenv("LLM_MODEL", ""),
             'env_ollama_url': os.getenv("OLLAMA_URL", ""),
             'has_gemini_key': bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
-            'has_vllm_key': bool(os.getenv("LLM_KEY"))
+            'has_vllm_key': bool(os.getenv("LLM_KEY")),
+            'allowed_ai_providers': [p.strip().lower() for p in os.getenv("ALLOWED_AI_PROVIDERS", "gemini,elsa,llama,vllm,ollama,customized").split(',') if p.strip()]
         })
     return jsonify({
         'is_authenticated': False,
-        'is_internal': is_internal
+        'is_internal': is_internal,
+        'allowed_ai_providers': [p.strip().lower() for p in os.getenv("ALLOWED_AI_PROVIDERS", "gemini,elsa,llama,vllm,ollama,customized").split(',') if p.strip()]
     })

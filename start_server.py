@@ -133,7 +133,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
     # 3. Backend Service
     backend_env = {
         "FLASK_ENV": "development" if mode == "dev" else "production",
-        "DATABASE_URL": "postgresql://${PG_USERNAME:-afd_user}:${PG_PASSWORD:-afd_password}@${PG_HOST:-db}:${PG_PORT:-5432}/${PG_DATABASE:-fdalabel-v3}",
+        "DATABASE_URL": "${DATABASE_URL:-postgresql://${PG_USERNAME:-afd_user}:${PG_PASSWORD:-afd_password}@${PG_HOST:-db}:${PG_PORT:-5432}/${PG_DATABASE:-fdalabel-v3}}",
         "BACKEND_PORT": 8842,
         "HOST": "0.0.0.0",
         "CELERY_BROKER_URL": "redis://redis:6379/0",
@@ -195,6 +195,8 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
     if mode == "dev":
         backend_service["command"] = ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=8842", "--reload"]
         backend_service["ports"] = ["8842:8842"]
+    elif not include_nginx:
+        backend_service["ports"] = ["8842:8842"]
     else:
         backend_service["expose"] = ["8842"]
 
@@ -215,7 +217,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
         "env_file": ["./.env"],
         "environment": {
             "FLASK_ENV": "production",
-            "DATABASE_URL": "postgresql://${PG_USERNAME:-afd_user}:${PG_PASSWORD:-afd_password}@${PG_HOST:-db}:${PG_PORT:-5432}/${PG_DATABASE:-fdalabel-v3}",
+            "DATABASE_URL": "${DATABASE_URL:-postgresql://${PG_USERNAME:-afd_user}:${PG_PASSWORD:-afd_password}@${PG_HOST:-db}:${PG_PORT:-5432}/${PG_DATABASE:-fdalabel-v3}}",
             "CELERY_BROKER_URL": "redis://redis:6379/0",
             "CELERY_RESULT_BACKEND": "redis://redis:6379/0"
         },
@@ -281,6 +283,8 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
 
     if mode == "dev":
         frontend_service["command"] = ["npm", "run", "dev"]
+        frontend_service["ports"] = ["8841:8841"]
+    elif not include_nginx:
         frontend_service["ports"] = ["8841:8841"]
     else:
         frontend_service["expose"] = ["8841"]

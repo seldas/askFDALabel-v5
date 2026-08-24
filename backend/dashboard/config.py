@@ -37,7 +37,10 @@ class Config:
 
     # Gemini Models
     PRIMARY_MODEL_ID = os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite')
-    FALLBACK_MODEL_ID = os.getenv('GEMINI_FALLBACK_MODEL', 'gemini-2.5-pro')
+    # AI Providers Configuration
+    _allowed_providers_raw = os.getenv('ALLOWED_AI_PROVIDERS', 'gemini,elsa,llama,vllm,ollama,customized')
+    ALLOWED_AI_PROVIDERS = [p.strip().lower() for p in _allowed_providers_raw.split(',') if p.strip()]
+    DEFAULT_AI_MODEL = os.getenv('DEFAULT_AI_MODEL', 'elsa' if 'elsa' in ALLOWED_AI_PROVIDERS else 'gemini')
 
     ELSA_API_NAME=os.getenv('ELSA_API_NAME','')
     ELSA_API_KEY=os.getenv('ELSA_API_KEY','')

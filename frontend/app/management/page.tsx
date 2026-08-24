@@ -956,6 +956,7 @@ export default function ManagementPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                   
                   {/* Gemini Card */}
+                  {(!session?.allowed_ai_providers || session.allowed_ai_providers.includes('gemini')) && (
                   <div 
                     onClick={() => setSelectedProvider('gemini')}
                     style={{
@@ -1021,8 +1022,10 @@ export default function ManagementPage() {
                       </div>
                     )}
                   </div>
+                  )}
 
                   {/* ELSA Card */}
+                  {(!session?.allowed_ai_providers || session.allowed_ai_providers.includes('elsa')) && (
                   <div 
                     onClick={() => setSelectedProvider('elsa')}
                     style={{
@@ -1135,8 +1138,10 @@ export default function ManagementPage() {
                       </div>
                     )}
                   </div>
+                  )}
 
                   {/* vLLM Card */}
+                  {(!session?.allowed_ai_providers || session.allowed_ai_providers.includes('vllm') || session.allowed_ai_providers.includes('llama')) && (
                   <div 
                     onClick={() => setSelectedProvider('vllm')}
                     style={{
@@ -1223,8 +1228,10 @@ export default function ManagementPage() {
                       </div>
                     )}
                   </div>
+                  )}
 
                   {/* Ollama Card */}
+                  {(!session?.allowed_ai_providers || session.allowed_ai_providers.includes('ollama')) && (
                   <div 
                     onClick={() => setSelectedProvider('ollama')}
                     style={{
@@ -1298,6 +1305,7 @@ export default function ManagementPage() {
                       </div>
                     )}
                   </div>
+                  )}
 
 
                 </div>

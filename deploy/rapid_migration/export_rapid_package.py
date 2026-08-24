@@ -15,6 +15,7 @@ import sys
 import argparse
 import subprocess
 import zipfile
+import gzip
 import shutil
 from pathlib import Path
 
@@ -22,7 +23,13 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1] if (SCRIPT_DIR.name == "rapid_migration" and SCRIPT_DIR.parent.name == "deploy") else SCRIPT_DIR.parent
 
-IMAGES_TO_EXPORT = [
+DEFAULT_RAPID_IMAGES = [
+    "fdalabel-v3-backend:latest",
+    "fdalabel-v3-frontend:latest",
+    "fdalabel-v3-redis:latest",
+]
+
+ALL_IMAGES = [
     "fdalabel-v3-backend:latest",
     "fdalabel-v3-frontend:latest",
     "fdalabel-v3-nginx:latest",
@@ -55,47 +62,101 @@ def check_or_prepare_image(image_name, base_image):
             return True
     return False
 
-def build_images():
-    """Builds all project docker images."""
+def build_images(images_to_build):
+    """Builds required project docker images."""
     print("\n--- Building Docker Images ---")
 
     # 1. Backend
-    print("[BUILD] Building backend image...")
-    run_cmd(["docker", "build", "-t", "fdalabel-v3-backend:latest", "./backend"])
+    if "fdalabel-v3-backend:latest" in images_to_build:
+        print("[BUILD] Building backend image...")
+        run_cmd(["docker", "build", "-t", "fdalabel-v3-backend:latest", "./backend"])
 
     # 2. Frontend
-    print("[BUILD] Building frontend image...")
-    run_cmd(["docker", "build", "-t", "fdalabel-v3-frontend:latest", "--build-arg", "BUILD_ENV=production", "./frontend"])
+    if "fdalabel-v3-frontend:latest" in images_to_build:
+        print("[BUILD] Building frontend image...")
+        run_cmd(["docker", "build", "-t", "fdalabel-v3-frontend:latest", "--build-arg", "BUILD_ENV=production", "./frontend"])
 
     # 3. Nginx
-    print("[BUILD] Building Nginx image...")
-    run_cmd(["docker", "build", "-t", "fdalabel-v3-nginx:latest", "./deploy/nginx"])
+    if "fdalabel-v3-nginx:latest" in images_to_build:
+        print("[BUILD] Building Nginx image...")
+        run_cmd(["docker", "build", "-t", "fdalabel-v3-nginx:latest", "./deploy/nginx"])
 
     # 4. DB Image (ankane/pgvector:latest -> fdalabel-v3-db:latest)
-    check_or_prepare_image("fdalabel-v3-db:latest", "ankane/pgvector:latest")
+    if "fdalabel-v3-db:latest" in images_to_build:
+        check_or_prepare_image("fdalabel-v3-db:latest", "ankane/pgvector:latest")
 
     # 5. Redis Image (bitnami/redis:latest or redis:alpine -> fdalabel-v3-redis:latest)
-    if not check_or_prepare_image("fdalabel-v3-redis:latest", "bitnami/redis:latest"):
-        check_or_prepare_image("fdalabel-v3-redis:latest", "redis:alpine")
+    if "fdalabel-v3-redis:latest" in images_to_build:
+        if not check_or_prepare_image("fdalabel-v3-redis:latest", "bitnami/redis:latest"):
+            check_or_prepare_image("fdalabel-v3-redis:latest", "redis:alpine")
 
-def export_images(target_dir):
-    """Saves each required docker image to its own individual tar archive."""
-    print("\n--- Saving Docker Images to Individual Tar Archives ---")
-    for img in IMAGES_TO_EXPORT:
-        # e.g., fdalabel-v3-backend:latest -> image_backend.tar
+def export_images(target_dir, images_to_export):
+    """Saves each required docker image to its own compressed tar.gz archive."""
+    print("\n--- Saving Docker Images to Compressed (.tar.gz) Archives ---")
+    for img in images_to_export:
         service_name = img.split(":")[0].replace("fdalabel-v3-", "")
-        tar_name = f"image_{service_name}.tar"
-        tar_path = target_dir / tar_name
-        print(f"[SAVE] Exporting '{img}' -> {tar_name}...")
-        cmd = ["docker", "save", "-o", str(tar_path), img]
-        run_cmd(cmd)
-        print(f"  + Exported: {tar_path}")
+        targz_name = f"image_{service_name}.tar.gz"
+        targz_path = target_dir / targz_name
+        print(f"[SAVE] Exporting and compressing '{img}' -> {targz_name}...")
+        
+        proc = subprocess.Popen(["docker", "save", img], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        with gzip.open(targz_path, "wb", compresslevel=6) as gz_out:
+            shutil.copyfileobj(proc.stdout, gz_out)
+        proc.wait()
+        
+        if proc.returncode != 0:
+            err = proc.stderr.read().decode(errors="replace")
+            print(f"[ERROR] Failed to export '{img}': {err}")
+            sys.exit(proc.returncode)
+            
+        size_mb = targz_path.stat().st_size / (1024 * 1024)
+        print(f"  + Exported: {targz_path.name} ({size_mb:.1f} MB)")
 
-def archive_files(zip_path, files_to_include, dirs_to_include):
-    """Helper to write specified files and directory trees into a zip archive."""
+DATA_EXCLUDE_PATTERNS = [
+    "*.tmp",
+    "*.temp",
+    "*.part",
+    "*.crdownload",
+    "*.log",
+    "__pycache__",
+    "*.pyc",
+    "*.pyo",
+    ".DS_Store",
+    "Thumbs.db",
+    "cache",
+    "data/cache",
+    "data/cache/*",
+    "data/downloads/*.tmp",
+    "data/downloads/tmp*",
+    "data/downloads/temp*",
+    "data/logs/*",
+    "data/uploads/*.tmp",
+]
+
+def archive_files(zip_path, files_to_include, dirs_to_include, exclude_patterns=None):
+    """Helper to write specified files and directory trees into a zip archive with exclusions."""
     print(f"[ZIP] Creating archive: {zip_path.name}...")
+    import fnmatch
+    exclude_patterns = exclude_patterns or []
+
+    def should_exclude(rel_path_str: str) -> bool:
+        norm_path = rel_path_str.replace("\\", "/")
+        path_obj = Path(norm_path)
+        for pattern in exclude_patterns:
+            if fnmatch.fnmatch(norm_path, pattern):
+                return True
+            if fnmatch.fnmatch(path_obj.name, pattern):
+                return True
+            for part in path_obj.parts:
+                if fnmatch.fnmatch(part, pattern):
+                    return True
+        return False
+
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for rel_file in files_to_include:
+            if should_exclude(str(rel_file)):
+                print(f"  - Skipped (excluded): {rel_file}")
+                continue
             full_path = REPO_ROOT / rel_file
             if full_path.exists():
                 zf.write(full_path, arcname=rel_file)
@@ -110,6 +171,9 @@ def archive_files(zip_path, files_to_include, dirs_to_include):
                     for f in files:
                         fp = Path(root) / f
                         arcname = fp.relative_to(REPO_ROOT)
+                        if should_exclude(str(arcname)):
+                            print(f"  - Skipped (excluded): {arcname}")
+                            continue
                         zf.write(fp, arcname=arcname)
                 print(f"  + Added directory: {rel_dir}/")
             else:
@@ -121,10 +185,13 @@ def export_mounted_files(target_dir):
     zip_path = target_dir / "rapid_files.zip"
     files = [
         "start_server.py",
-        ".env",
         ".env.template",
+        ".env.rapid.template",
         "AGENTS.md",
-        "README.md"
+        "README.md",
+        "deploy/rapid_migration/restore_db.py",
+        "deploy/rapid_migration/dump_db.py",
+        "deploy/rapid_migration/README.md",
     ]
     dirs = [
         "deploy/nginx",
@@ -132,15 +199,15 @@ def export_mounted_files(target_dir):
         "backend/webtest/history",
         "frontend/public",
     ]
-    archive_files(zip_path, files, dirs)
+    archive_files(zip_path, files, dirs, exclude_patterns=["*.pyc", "__pycache__", ".DS_Store", "Thumbs.db"])
     print(f"[SUCCESS] Created config archive: {zip_path}")
 
 def export_data_folder(target_dir):
-    """Packages data/ directory into data.zip."""
-    print("\n--- Packaging Data Directory ---")
+    """Packages data/ directory into data.zip, excluding temporary download caches."""
+    print("\n--- Packaging Data Directory (excluding temporary caches) ---")
     zip_path = target_dir / "data.zip"
     dirs = ["data"]
-    archive_files(zip_path, [], dirs)
+    archive_files(zip_path, [], dirs, exclude_patterns=DATA_EXCLUDE_PATTERNS)
     print(f"[SUCCESS] Created data archive: {zip_path}")
 
 def main():
@@ -149,6 +216,8 @@ def main():
                         help="Include data/ directory archive (data.zip). Default is False.")
     parser.add_argument("--skip-build", action="store_true", default=False,
                         help="Skip docker build step and use existing local images.")
+    parser.add_argument("--all-images", action="store_true", default=False,
+                        help="Export all images including Nginx and Local DB (default: False, exports only backend, frontend, redis for RAPID).")
     parser.add_argument("--output-dir", default=str(SCRIPT_DIR),
                         help="Destination directory for output archives (default: deploy/rapid_migration).")
 
@@ -156,20 +225,23 @@ def main():
     target_dir = Path(args.output_dir).resolve()
     target_dir.mkdir(parents=True, exist_ok=True)
 
+    images_to_process = ALL_IMAGES if args.all_images else DEFAULT_RAPID_IMAGES
+
     print(f"==================================================")
     print(f" RAPID Migration Package Exporter")
     print(f"  Repo Root:   {REPO_ROOT}")
     print(f"  Output Dir:  {target_dir}")
     print(f"  Include Data:{args.include_data}")
+    print(f"  All Images:  {args.all_images} (Count: {len(images_to_process)})")
     print(f"  Skip Build:  {args.skip_build}")
     print(f"==================================================")
 
     if not args.skip_build:
-        build_images()
+        build_images(images_to_process)
     else:
         print("[INFO] Skipping build step (--skip-build flag set).")
 
-    export_images(target_dir)
+    export_images(target_dir, images_to_process)
     export_mounted_files(target_dir)
 
     if args.include_data:
