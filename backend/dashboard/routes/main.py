@@ -85,8 +85,13 @@ def upload_label():
         if not meta or not meta.get('set_id'):
             return jsonify({'error': 'Could not parse SPL metadata or Set ID from the XML.'}), 400
 
+        raw_set_id = str(meta.get('set_id', '')).strip()
+        try:
+            new_set_id = str(uuid.UUID(raw_set_id))
+        except (ValueError, TypeError, AttributeError):
+            return jsonify({'error': 'Invalid Set ID in SPL XML. Set ID must follow a valid UUID format.'}), 400
+
         new_label_format = meta.get('label_format')
-        new_set_id = meta.get('set_id')
 
         # VALIDATION: Check against existing labels
         if current_set_ids:
@@ -632,6 +637,11 @@ def preferences():
 
     if not data:
         return jsonify({'success': False, 'error': 'No data provided'}), 400
+
+    ai_fields = {'ai_provider', 'custom_gemini_key', 'openai_api_key', 'openai_base_url', 'openai_model_name', 'ai_settings'}
+    has_ai_settings = any(k in data for k in ai_fields)
+    if has_ai_settings and not getattr(current_user, 'is_admin', False):
+        return jsonify({'success': False, 'error': 'Custom AI configuration is restricted to administrators.'}), 403
 
     if 'ai_provider' in data:
         current_user.ai_provider = data.get('ai_provider')

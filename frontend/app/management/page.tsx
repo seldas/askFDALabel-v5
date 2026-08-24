@@ -102,7 +102,7 @@ export default function ManagementPage() {
   };
 
   // Modals state
-  const [activeTab, setActiveTab] = useState<string>('ai');
+  const [activeTab, setActiveTab] = useState<string>('users');
   const [initialTabSet, setInitialTabSet] = useState(false);
 
   useEffect(() => {
@@ -110,12 +110,14 @@ export default function ManagementPage() {
       const requestedTab = typeof window === 'undefined'
         ? null
         : new URLSearchParams(window.location.search).get('tab');
-      if (requestedTab === 'ai' && session.username?.toLowerCase() !== 'guest') {
+      if (requestedTab === 'ai' && session.is_admin) {
         setActiveTab('ai');
       } else if (session.username?.toLowerCase() === 'guest') {
         setActiveTab('tokens');
+      } else if (session.is_admin) {
+        setActiveTab(requestedTab || 'ai');
       } else {
-        setActiveTab('ai');
+        setActiveTab(requestedTab === 'tokens' ? 'tokens' : 'users');
       }
       setInitialTabSet(true);
     }
@@ -880,19 +882,21 @@ export default function ManagementPage() {
 
           {/* SIDEBAR NAVIGATION */}
           <div style={{ width: '250px', display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
-            <button
-              className={`sidebar-tab ${activeTab === 'ai' ? 'active' : ''}`}
-              onClick={() => setActiveTab('ai')}
-              disabled={session?.username?.toLowerCase() === 'guest'}
-              style={{ opacity: session?.username?.toLowerCase() === 'guest' ? 0.5 : 1, cursor: session?.username?.toLowerCase() === 'guest' ? 'not-allowed' : 'pointer' }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                <line x1="12" y1="22.08" x2="12" y2="12"></line>
-              </svg>
-              AI Settings
-            </button>
+            {session?.is_admin && (
+              <button
+                className={`sidebar-tab ${activeTab === 'ai' ? 'active' : ''}`}
+                onClick={() => setActiveTab('ai')}
+                disabled={session?.username?.toLowerCase() === 'guest'}
+                style={{ opacity: session?.username?.toLowerCase() === 'guest' ? 0.5 : 1, cursor: session?.username?.toLowerCase() === 'guest' ? 'not-allowed' : 'pointer' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                AI Settings
+              </button>
+            )}
             <button
               className={`sidebar-tab ${activeTab === 'users' ? 'active' : ''}`}
               onClick={() => setActiveTab('users')}
@@ -942,7 +946,7 @@ export default function ManagementPage() {
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
 
-            {activeTab === 'ai' && session?.username?.toLowerCase() !== 'guest' && (
+            {activeTab === 'ai' && session?.is_admin && (
               <section id="ai-settings" className="mgmt-card" style={{ maxWidth: '800px' }}>
                 <h2 className="section-title">AI Model Preferences</h2>
                 <p style={{ color: 'var(--afl-n-500)', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.5 }}>

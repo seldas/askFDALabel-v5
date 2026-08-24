@@ -2,8 +2,10 @@ import os
 import sys
 import zipfile
 import re
-import multiprocessing
-import xml.etree.ElementTree as ET
+try:
+    import defusedxml.ElementTree as ET
+except ImportError:
+    import xml.etree.ElementTree as ET
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import psycopg2

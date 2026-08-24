@@ -3,7 +3,10 @@ from flask_login import login_required, current_user
 import json, re, os
 import uuid
 import requests
-import xml.etree.ElementTree as ET
+try:
+    import defusedxml.ElementTree as ET
+except ImportError:
+    import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 import logging
 import hashlib

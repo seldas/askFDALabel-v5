@@ -6,17 +6,17 @@ env_path = Path(__file__).resolve().parent.parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'afd-psw-prod')
-    if SECRET_KEY == 'afd-psw-prod' and os.getenv('FLASK_ENV') == 'production':
-        import logging
-        logging.getLogger('config').warning(
-            "SECURITY WARNING: Default SECRET_KEY is in use in production mode. "
-            "Please set a strong SECRET_KEY in your .env file."
+    if os.getenv('FLASK_ENV') == 'production' and (not SECRET_KEY or SECRET_KEY == 'afd-psw-prod'):
+        raise ValueError(
+            "SECURITY ERROR: Default or empty SECRET_KEY is in use in production mode. "
+            "Please configure a strong, unique SECRET_KEY in your .env file."
         )
 
     SESSION_COOKIE_PATH = '/'
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
-    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
+    _default_cookie_secure = 'True' if os.getenv('FLASK_ENV') == 'production' else 'False'
+    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', _default_cookie_secure).lower() in ('true', '1', 'yes')
     PERMANENT_SESSION_LIFETIME = int(os.getenv('PERMANENT_SESSION_LIFETIME', 86400 * 7)) # 7 days
 
     # CORS configuration: comma-separated list of origins or '*'

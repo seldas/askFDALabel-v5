@@ -5,8 +5,10 @@ import zipfile
 import argparse
 import sys
 from pathlib import Path
-from concurrent.futures import ProcessPoolExecutor, as_completed
-import xml.etree.ElementTree as ET
+try:
+    import defusedxml.ElementTree as ET
+except ImportError:
+    import xml.etree.ElementTree as ET
 
 # Dynamic path resolution to support both host execution and container environments
 current_dir = Path(__file__).resolve().parent

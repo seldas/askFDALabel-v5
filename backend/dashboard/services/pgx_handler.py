@@ -4,7 +4,10 @@ import re
 from database import db, PgxBiomarker, PgxAssessment, PgxSynonym
 from dashboard.services.fda_client import get_label_metadata, get_label_xml
 from dashboard.services.ai_handler import generate_assessment
-import xml.etree.ElementTree as ET
+try:
+    import defusedxml.ElementTree as ET
+except ImportError:
+    import xml.etree.ElementTree as ET
 import uuid
 from datetime import datetime
 

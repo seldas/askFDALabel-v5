@@ -51,14 +51,15 @@ class AIClientFactory:
         provider = EnvService.get_setting("ai_model_provider")
         use_llama = False
         
-        # User override logic if we're not globally forcing a single provider
-        if user and user.is_authenticated and user.ai_provider:
+        # User override logic: custom AI settings and provider overrides are restricted to admins
+        is_admin = bool(user and user.is_authenticated and getattr(user, 'is_admin', False))
+        if is_admin and user.ai_provider:
             if user.ai_provider in ["gemini", "elsa", "llama", "vllm", "ollama"]:
                 provider = user.ai_provider
                 
-        # Load user settings if available
+        # Load user settings if available (admins only)
         user_settings = {}
-        if user and user.is_authenticated and user.ai_settings:
+        if is_admin and user.ai_settings:
             try:
                 import json
                 user_settings = json.loads(user.ai_settings)

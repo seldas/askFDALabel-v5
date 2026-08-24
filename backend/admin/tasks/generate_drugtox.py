@@ -191,7 +191,10 @@ def extract_summary(html_content):
     return "No summary provided."
 
 from dashboard.services.fda_client import get_label_xml
-import xml.etree.ElementTree as ET
+try:
+    import defusedxml.ElementTree as ET
+except ImportError:
+    import xml.etree.ElementTree as ET
 
 def get_target_sections_content(set_id, spl_id, force_local=False):
     # get_label_xml/FDALabelDBService can print Oracle config for every label.

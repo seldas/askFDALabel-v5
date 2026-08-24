@@ -8,7 +8,10 @@ import multiprocessing
 from datetime import datetime, timezone
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
-import xml.etree.ElementTree as ET
+try:
+    import defusedxml.ElementTree as ET
+except ImportError:
+    import xml.etree.ElementTree as ET
 from sqlalchemy import text
 
 # Add backend to path
