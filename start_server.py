@@ -452,6 +452,20 @@ def main():
     print(f"Running command: {' '.join(cmd)}")
     try:
         subprocess.run(cmd, check=True)
+        if not args.down:
+            app_url = "http://localhost/fdalabel-v3/" if args.mode == "prod" and include_nginx else "http://localhost:8841/fdalabel-v3/"
+            print("\n" + "=" * 60)
+            print(f"[SUCCESS] askFDALabel ({args.mode.upper()} mode) is up and running!")
+            print(f"          Application UI: {app_url}")
+            if args.mode == "dev":
+                print(f"          Backend API:    http://localhost:8842/health")
+            print("=" * 60)
+            print("\n[INFO] You have two standardized ways to manage this stack:")
+            print("  Method 1: python start_server.py [--mode dev|prod] [--down] [--build]")
+            print("  Method 2: docker compose up -d (using the generated docker-compose.yml)")
+            print("            docker compose down  /  docker compose logs -f\n")
+        else:
+            print("\n[SUCCESS] Stack stopped and cleaned up successfully.")
     except FileNotFoundError:
         print("[ERROR] 'docker' command not found. Make sure Docker is installed and in your PATH.")
         sys.exit(1)

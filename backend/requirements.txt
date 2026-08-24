@@ -6,16 +6,10 @@ numpy
 openai
 python-dotenv
 Pillow
-flask
-flask_cors
-openpyxl
-
-fastapi
-uvicorn
-sqlalchemy
-python-multipart
-
 Flask
+flask-cors
+openpyxl
+SQLAlchemy
 requests
 google-genai
 Flask-SQLAlchemy
@@ -25,7 +19,6 @@ gunicorn
 psycopg2-binary
 flashtext
 waitress
-
 beautifulsoup4
 celery
 redis

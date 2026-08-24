@@ -34,7 +34,8 @@ def create_unified_app():
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     
     # 2. Configure CORS for the whole app
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    cors_origins = app.config.get('CORS_ORIGINS', '*')
+    CORS(app, resources={r"/api/*": {"origins": cors_origins}}, supports_credentials=True)
 
     # 3. Register Blueprints with prefixes
     app.register_blueprint(search_bp, url_prefix='/api/search')
@@ -46,6 +47,69 @@ def create_unified_app():
     app.register_blueprint(webtest_bp, url_prefix='/api/webtest')
     app.register_blueprint(chemsearch_bp, url_prefix='/api/chemsearch')
     
+    # 4. Security Headers Middleware
+    @app.after_request
+    def set_security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
+        
+        # Enable HSTS if HTTPS is active
+        from flask import request
+        if request.is_secure or request.headers.get('X-Forwarded-Proto', '').lower() == 'https':
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+            
+        return response
+
+    # 5. Database Session Teardown Safety
+    @app.teardown_appcontext
+    def shutdown_session(exception=None):
+        from database import db
+        try:
+            if exception:
+                db.session.rollback()
+            db.session.remove()
+        except Exception as e:
+            logger.debug(f"Error during db session teardown: {e}")
+
+    # 6. Centralized Error Handlers
+    @app.errorhandler(400)
+    def bad_request_error(e):
+        return jsonify({'error': 'Bad Request', 'message': getattr(e, 'description', str(e))}), 400
+
+    @app.errorhandler(401)
+    def unauthorized_error(e):
+        return jsonify({'error': 'Unauthorized', 'message': 'Authentication required.'}), 401
+
+    @app.errorhandler(403)
+    def forbidden_error(e):
+        return jsonify({'error': 'Forbidden', 'message': 'Access forbidden.'}), 403
+
+    @app.errorhandler(404)
+    def not_found_error(e):
+        return jsonify({'error': 'Not Found', 'message': 'The requested resource was not found.'}), 404
+
+    @app.errorhandler(405)
+    def method_not_allowed_error(e):
+        return jsonify({'error': 'Method Not Allowed', 'message': 'HTTP method is not allowed for this endpoint.'}), 405
+
+    @app.errorhandler(429)
+    def ratelimit_error(e):
+        return jsonify({'error': 'Too Many Requests', 'message': getattr(e, 'description', 'Rate limit exceeded.')}), 429
+
+    @app.errorhandler(500)
+    def internal_server_error(e):
+        import uuid
+        error_id = str(uuid.uuid4())[:8]
+        logger.error(f"Internal Server Error [ref: {error_id}]: {e}", exc_info=True)
+        return jsonify({
+            'error': 'Internal Server Error',
+            'message': 'An unexpected error occurred. Please contact support or try again.',
+            'error_ref': error_id
+        }), 500
+
     @app.route('/api/check-fdalabel', methods=['POST'])
     def check_fdalabel():
         from flask import current_app

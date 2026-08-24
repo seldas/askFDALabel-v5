@@ -4,6 +4,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_user, login_required, logout_user, current_user
 from database import db, User, ROLE_USER
 from dashboard.services import feature_gates
+from dashboard.services.rate_limiter import rate_limit
 import logging
 
 logger = logging.getLogger(__name__)
@@ -11,6 +12,7 @@ logger = logging.getLogger(__name__)
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/login', methods=['POST'])
+@rate_limit('10 per minute')
 def login():
     if current_user.is_authenticated:
         if (current_user.username or '').lower() == 'guest':
@@ -50,6 +52,7 @@ def login():
         return jsonify({'success': False, 'error': 'Invalid username or password'}), 401
 
 @auth_bp.route('/register', methods=['POST'])
+@rate_limit('5 per minute')
 def register():
     if current_user.is_authenticated:
         if (current_user.username or '').lower() == 'guest':
@@ -92,6 +95,7 @@ def logout():
     return jsonify({'success': True})
 
 @auth_bp.route('/guest-login', methods=['POST'])
+@rate_limit('15 per minute')
 def guest_login():
     if current_user.is_authenticated:
         return jsonify({'success': True, 'message': 'Already authenticated'})
@@ -120,6 +124,7 @@ def guest_login():
 
 @auth_bp.route('/change_password', methods=['POST'])
 @login_required
+@rate_limit('5 per minute')
 def change_password():
     if (current_user.username or '').lower() == 'guest':
         return jsonify({'success': False, 'error': 'Guest account cannot change password'}), 403

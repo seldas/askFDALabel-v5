@@ -4,12 +4,29 @@ from pathlib import Path
 
 env_path = Path(__file__).resolve().parent.parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
-
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'afd-psw-prod')
-    SESSION_COOKIE_PATH = '/'
+    if SECRET_KEY == 'afd-psw-prod' and os.getenv('FLASK_ENV') == 'production':
+        import logging
+        logging.getLogger('config').warning(
+            "SECURITY WARNING: Default SECRET_KEY is in use in production mode. "
+            "Please set a strong SECRET_KEY in your .env file."
+        )
 
-    CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+    SESSION_COOKIE_PATH = '/'
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
+    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
+    PERMANENT_SESSION_LIFETIME = int(os.getenv('PERMANENT_SESSION_LIFETIME', 86400 * 7)) # 7 days
+
+    # CORS configuration: comma-separated list of origins or '*'
+    _cors_raw = os.getenv('CORS_ORIGINS', '*')
+    CORS_ORIGINS = [o.strip() for o in _cors_raw.split(',') if o.strip()] if _cors_raw != '*' else '*'
+
+    # Rate Limiting configuration
+    RATELIMIT_ENABLED = os.getenv('RATELIMIT_ENABLED', 'True').lower() in ('true', '1', 'yes')
+    RATELIMIT_DEFAULT = os.getenv('RATELIMIT_DEFAULT', '120 per minute')
+    RATELIMIT_AUTH = os.getenv('RATELIMIT_AUTH', '10 per minute')
     CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
 
     OPENFDA_API_KEY=os.getenv('OPENFDA_API_KEY','')
@@ -88,7 +105,8 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
-        'pool_recycle': 3600,
+        'pool_recycle': int(os.getenv('DB_POOL_RECYCLE', 1800)),
+        'pool_timeout': int(os.getenv('DB_POOL_TIMEOUT', 30)),
         'pool_size': int(os.getenv('DB_POOL_SIZE', 20)),
         'max_overflow': int(os.getenv('DB_MAX_OVERFLOW', 40)),
     }

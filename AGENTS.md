@@ -10,31 +10,29 @@ All backend entry points load the `.env` from the **repo root** (`Path(__file__)
 
 ## Commands
 
-### Docker stack (preferred)
+### Server execution (Two official methods)
 
-`start_server.py` generates `docker-compose.yml` on the fly from `.env` and then shells out to `docker compose`. The generated file is gitignored — edit the generator, not the YAML.
+The server should be started in one of two standardized ways:
+
+#### Method 1: `start_server.py` orchestrator (Recommended)
+`start_server.py` generates `docker-compose.yml` on the fly from `.env` and then shells out to `docker compose`.
 
 ```bash
-python start_server.py --mode dev    # HMR, ports 8841 (web) + 8842 (api)
-python start_server.py --mode prod   # nginx on :80
-python start_server.py --mode dev --down
-python start_server.py --mode dev --dry-run   # write docker-compose.yml only
+python start_server.py --mode dev    # Hot reload (HMR), ports 8841 (web) + 8842 (api)
+python start_server.py --mode prod   # Production build, nginx on :80 / :443
+python start_server.py --mode dev --down   # Stop and clean up containers
+python start_server.py --mode dev --dry-run   # Write docker-compose.yml only
 ```
 
 Other flags: `--efficient` (lower pool/worker limits), `--local-db true|false` (overrides `LOCAL-PG`), `--build`, `--rapid` (implies prod, no nginx, remote DB).
 
-### Local development
+#### Method 2: Standard Docker Compose
+Once `docker-compose.yml` has been generated:
 
 ```bash
-cd frontend && npm run dev:all    # concurrently runs Next.js + Flask
-```
-
-`npm run dev:all` is the normal entry point. It uses `frontend/scripts/start-{frontend,backend}.js`, which auto-detect `venv/` at the repo root and — critically — spawn Python with **`cwd` set to `backend/`**.
-
-```bash
-npm run dev          # Next.js only, :8841
-npm run dev:backend  # Flask only, :8842
-npm run build
+docker compose up -d       # Start all services
+docker compose down        # Stop all services
+docker compose logs -f     # Follow container logs
 ```
 
 Backend health check: `http://localhost:8842/health`.
@@ -91,7 +89,7 @@ No pytest, no jest/vitest, no test config anywhere in `backend/` or `frontend/`.
 
 ### Backend imports are rooted at `backend/`, not the repo root
 
-Modules import as `from dashboard.config import Config`, `from database import db`, `from celery_app import ...` — bare, with no `backend.` prefix, and `backend/__init__.py` does not exist. Anything invoking backend code must have `backend/` as CWD or on `PYTHONPATH`. This is why `start-backend.js` sets `cwd`. Keep new imports in this style.
+Modules import as `from dashboard.config import Config`, `from database import db`, `from celery_app import ...` — bare, with no `backend.` prefix, and `backend/__init__.py` does not exist. Anything invoking backend code must have `backend/` as CWD or on `PYTHONPATH` (as configured in the container runtime and `start_server.py`). Keep new imports in this style.
 
 ### Path-prefix handling is the trickiest part of the frontend
 

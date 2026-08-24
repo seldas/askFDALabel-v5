@@ -4,13 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/start-frontend.js",
-    "dev:backend": "node scripts/start-backend.js",
-    "db:start": "node scripts/db-start.js",
-    "dev:all": "concurrently \"npm run dev\" \"npm run dev:backend\"",
     "build": "next build",
     "start": "cross-env NODE_ENV=production node scripts/start-frontend.js",
-    "start:backend": "cross-env NODE_ENV=production node scripts/start-backend.js",
-    "prod": "npm run build && concurrently \"npm run start\" \"npm run start:backend\"",
     "lint": "next lint",
     "check:colors": "node scripts/check-hardcoded-colors.js"
   },

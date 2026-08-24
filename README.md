@@ -185,109 +185,52 @@ Routing note:
 - the suite now uses standardized path-prefix handling. For most deployments (including local development), keep `NEXT_PUBLIC_API_BASE=/fdalabel-v3_api` and `NEXT_PUBLIC_APP_BASE=/fdalabel-v3`.
 - the `next.config.ts` and `FetchPrefix.tsx` utilities ensure that these paths work correctly whether running behind nginx or during direct local development.
 
-## Running with Docker
+## Starting the Application
 
-We provide a dynamic launcher script, `start_server.py`, which generates a customized `docker-compose.yml` configuration on-the-fly and starts the container stack. 
+The server can be started in **two straightforward ways**:
 
-### 1. Copy the environment template
-From the repo root:
+### Method 1: Using the Startup Script (Recommended)
 
-```bash
-cp .env.template.txt .env
-# edit .env and configure the credentials
-```
-
-### 2. Start the stack
-Start the stack using the orchestrator script:
+`start_server.py` reads your `.env`, automatically generates `docker-compose.yml`, prepares base images, and starts the container stack.
 
 ```bash
-# For Development Mode (runs Webpack dev server with HMR, exposes ports on 8841 and 8842)
+# 1. Development Mode (hot-reload for frontend & backend, ports 8841 and 8842 exposed)
 python start_server.py --mode dev
 
-# For Production Mode (hides service ports, exposes Nginx proxy on port 80)
+# 2. Production Mode (Gunicorn workers, compiled Next.js, Nginx reverse proxy on port 80/443)
 python start_server.py --mode prod
 ```
 
-Useful options:
-- `--efficient`: Enables low-resource limits (reduced database connections, fewer gunicorn workers, memory limits).
-- `--local-db true/false`: Forces local containerized PostgreSQL or connects to a remote DB.
-- `--build`: Rebuilds the docker images during startup.
+**Useful flags for `start_server.py`:**
+- `--down`: Stop and clean up active containers (`python start_server.py --mode dev --down`)
+- `--build`: Rebuild Docker images during startup
+- `--efficient`: Low-resource mode (fewer workers, reduced database connection limits)
+- `--local-db true|false`: Force local PostgreSQL container vs. external database
+- `--dry-run`: Generate `docker-compose.yml` without starting containers
 
-### 3. Access the application
-- **If you ran the Dev configuration**, open your browser to `http://localhost:8841/fdalabel-v3/`.
-- **If you ran the Prod configuration**, open your browser to `http://localhost/fdalabel-v3/`.
+---
 
-### 4. Stopping containers
+### Method 2: Using Docker Compose Directly
 
-To stop and clean up containers:
-```bash
-python start_server.py --mode dev --down
-```
-
-To completely wipe the database volume contents as well, append `-v` (e.g., `docker compose -f docker-compose.dev.yml down -v`).
-
-### 2. Running in local development
-
-Local development is fully supported with consistent path-prefix behavior across all modules. The standardized `APP_BASE` and `API_BASE` configurations ensure that the local development environment closely matches the production nginx routing layout.
-
-#### 1. Start PostgreSQL
-You can use the bundled container for the database:
+Once `docker-compose.yml` has been generated (either by running `start_server.py` or via `python start_server.py --dry-run`), you can manage the stack directly using standard Docker commands:
 
 ```bash
-docker compose up -d db
+# Start all services in the background
+docker compose up -d
+
+# View live container logs
+docker compose logs -f
+
+# Stop all services
+docker compose down
 ```
 
-#### 2. Create the Python environment
-From the repo root:
+---
 
-```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r backend/requirements.txt
-```
+### Accessing the Application
 
-On Windows, activate the environment with `venv\Scripts\activate`.
-
-#### 3. Install frontend dependencies
-
-```bash
-cd frontend
-npm install
-```
-
-#### 4. Start Redis and Celery (Required for Background Tasks)
-To support heavy AI processing, you must run Redis and Celery locally.
-
-Start Redis (using the provided docker service is easiest):
-```bash
-docker compose up -d redis
-```
-
-In a new terminal window (with your Python `venv` activated), start the Celery worker:
-```bash
-# Windows
-celery -A backend.celery_app.celery worker --loglevel=info --pool=solo
-
-# Mac/Linux
-celery -A backend.celery_app.celery worker --loglevel=info
-```
-
-#### 5. Start frontend and backend together
-From `frontend/`:
-
-```bash
-npm run dev:all
-```
-
-This uses the helper scripts in `frontend/scripts/` to:
-- start Next.js on `http://localhost:8841/fdalabel-v3`
-- start Flask on `http://localhost:8842`
-
-Backend health check:
-
-```text
-http://localhost:8842/health
-```
+- **Development Mode**: `http://localhost:8841/fdalabel-v3/` (Backend API: `http://localhost:8842/health`)
+- **Production Mode**: `http://localhost/fdalabel-v3/` (proxied via Nginx)
 
 ## Database Initialization and Maintenance
 
