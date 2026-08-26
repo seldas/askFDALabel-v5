@@ -465,32 +465,46 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
     document.body.removeChild(link);
   };
 
-  // Render Helper for SIDER Heatbars & Qualitative Warnings
+  // Render Helper for SIDER Clinical Evidence & Incidence Data
   const renderDataForDrug = (item: PvItem) => {
     const val = item.drug_max_pct ?? item.drug_min_pct;
     if (val != null) {
-      const barWidth = Math.min(100, Math.max(6, (val / 40) * 100));
-      let colorClass = 'rare';
-      if (val >= 10) colorClass = 'very-common';
-      else if (val >= 1) colorClass = 'common';
-      else if (val >= 0.1) colorClass = 'uncommon';
-
+      const barWidth = Math.min(100, Math.max(4, (val / 40) * 100));
       return (
-        <div className="pv-heatbar-container">
-          <div className="pv-heatbar-bg">
-            <div className={`pv-heatbar-fill ${colorClass}`} style={{ width: `${barWidth}%` }} />
+        <div className="pv-freq-cell">
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.45rem', flexWrap: 'wrap' }}>
+            <span className="pv-freq-val">
+              {item.drug_frequency_text || `${val}%`}
+            </span>
+            {(item.placebo_pct != null || item.placebo_frequency_text) && (
+              <span className="pv-placebo-text">
+                vs Placebo {item.placebo_frequency_text || `${item.placebo_pct}%`}
+              </span>
+            )}
+            {item.risk_difference_pct != null && (
+              <span className={`pv-risk-diff ${item.risk_difference_pct > 0 ? 'positive' : 'neutral'}`}>
+                (Δ {item.risk_difference_pct > 0 ? `+${item.risk_difference_pct}%` : `${item.risk_difference_pct}%`})
+              </span>
+            )}
           </div>
-          <span className="pv-heatbar-text">
-            {item.drug_frequency_text || `${val}%`}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: '0.15rem' }}>
+            <div className="pv-sparkbar-track">
+              <div className="pv-sparkbar-fill" style={{ width: `${barWidth}%` }} />
+            </div>
+            {item.frequency_category && item.frequency_category !== 'not_quantified' && (
+              <span style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'capitalize' }}>
+                · {item.frequency_category.replace(/_/g, ' ')}
+              </span>
+            )}
+          </div>
         </div>
       );
     }
 
-    // For Boxed Warning & Warnings & Precautions: render inline excerpt snippet in the space
+    // For Boxed Warning & Warnings & Precautions: render clean inline quote snippet
     return (
-      <div className={`pv-inline-excerpt ${item.severity_tier === 1 ? 'boxed' : ''}`} title={item.excerpt || item.section_name}>
-        {item.excerpt ? `"${item.excerpt}"` : `Reported in ${item.section_name}`}
+      <div className="pv-quote-snippet" title={item.excerpt || item.section_name}>
+        {item.excerpt ? `\u201C${item.excerpt}\u201D` : `Reported in ${item.section_name}`}
       </div>
     );
   };
@@ -661,24 +675,31 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
         <div className="pv-title-group">
           <h2>
             PV-Profile: {data.brand_name || data.generic_name || 'Drug Product'}
-            <span className="pv-badge pv-badge-tier-4" style={{ fontSize: '0.72rem', marginLeft: '0.5rem' }}>
+            <span className="pv-badge pv-badge-tier-4" style={{ fontSize: '0.68rem', marginLeft: '0.4rem' }}>
               {data.label_format}
             </span>
           </h2>
           <div className="pv-meta-sub">
-            {data.active_ingredient && <span><strong>Active Ingredient:</strong> {data.active_ingredient}</span>}
-            {data.manufacturer_name && <span><strong>Manufacturer:</strong> {data.manufacturer_name}</span>}
-            {data.effective_time && <span><strong>Effective:</strong> {data.effective_time}</span>}
-            {data.cached && <span className="pv-meta-tag">Cached {data.cached_at ? new Date(data.cached_at).toLocaleDateString() : ''}</span>}
+            {data.active_ingredient && <span><strong>Active Substance:</strong>&nbsp;{data.active_ingredient}</span>}
+            {data.active_ingredient && <span className="pv-stat-sep">·</span>}
+            {data.manufacturer_name && <span><strong>Applicant:</strong>&nbsp;{data.manufacturer_name}</span>}
+            {data.manufacturer_name && <span className="pv-stat-sep">·</span>}
+            {data.effective_time && <span><strong>Label Date:</strong>&nbsp;{data.effective_time}</span>}
+            {data.cached && (
+              <>
+                <span className="pv-stat-sep">·</span>
+                <span className="pv-meta-tag">Cached {data.cached_at ? new Date(data.cached_at).toLocaleDateString() : ''}</span>
+              </>
+            )}
           </div>
         </div>
         <div className="pv-actions">
           <button className="pv-btn" onClick={exportCsv} title="Export current table to CSV">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export CSV
           </button>
           <button className="pv-btn pv-btn-primary" onClick={() => fetchProfile(true, true)} disabled={generating}>
-            {generating ? 'Re-analyzing...' : 'Refresh AI'}
+            {generating ? 'Re-analyzing...' : 'Re-analyze'}
           </button>
           {isDevOrAdmin && (
             <button
@@ -706,27 +727,38 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
         </div>
       </div>
 
-      {/* Severity Ribbon */}
+      {/* Publication Metrics Strip */}
       <div className="pv-stats-ribbon">
-        <div className="pv-stat-card" style={{ borderLeft: '4px solid #ef4444' }}>
-          <span className="pv-stat-title" style={{ color: '#991b1b' }}>Tier 1: Boxed / Critical</span>
-          <span className="pv-stat-num" style={{ color: '#991b1b' }}>{data.tier_summary[1] || 0}</span>
+        <div className="pv-stat-item">
+          <span className="pv-stat-label">Total Signals:</span>
+          <span className="pv-stat-value">{data.total_adverse_events}</span>
         </div>
-        <div className="pv-stat-card" style={{ borderLeft: '4px solid #f97316' }}>
-          <span className="pv-stat-title" style={{ color: '#9a3412' }}>Tier 2: Contraindications</span>
-          <span className="pv-stat-num" style={{ color: '#9a3412' }}>{data.tier_summary[2] || 0}</span>
+        <span className="pv-stat-sep">|</span>
+        <div className="pv-stat-item">
+          <span className="pv-stat-label">Boxed Warnings (Tier 1):</span>
+          <span className="pv-stat-value" style={{ color: '#991b1b' }}>{data.tier_summary[1] || 0}</span>
         </div>
-        <div className="pv-stat-card" style={{ borderLeft: '4px solid #eab308' }}>
-          <span className="pv-stat-title" style={{ color: '#92400e' }}>Tier 3: Warnings</span>
-          <span className="pv-stat-num" style={{ color: '#92400e' }}>{data.tier_summary[3] || 0}</span>
+        <span className="pv-stat-sep">|</span>
+        <div className="pv-stat-item">
+          <span className="pv-stat-label">Contraindications (Tier 2):</span>
+          <span className="pv-stat-value" style={{ color: '#9a3412' }}>{data.tier_summary[2] || 0}</span>
         </div>
-        <div className="pv-stat-card" style={{ borderLeft: '4px solid #3b82f6' }}>
-          <span className="pv-stat-title" style={{ color: '#1e40af' }}>Tier 4: Adverse Reactions</span>
-          <span className="pv-stat-num" style={{ color: '#1e40af' }}>{data.tier_summary[4] || 0}</span>
+        <span className="pv-stat-sep">|</span>
+        <div className="pv-stat-item">
+          <span className="pv-stat-label">Warnings (Tier 3):</span>
+          <span className="pv-stat-value" style={{ color: '#854d0e' }}>{data.tier_summary[3] || 0}</span>
         </div>
-        <div className="pv-stat-card" style={{ borderLeft: '4px solid #64748b' }}>
-          <span className="pv-stat-title" style={{ color: '#475569' }}>Total Extracted</span>
-          <span className="pv-stat-num" style={{ color: '#0f172a' }}>{data.total_adverse_events}</span>
+        <span className="pv-stat-sep">|</span>
+        <div className="pv-stat-item">
+          <span className="pv-stat-label">Trial Table AEs (Tier 4):</span>
+          <span className="pv-stat-value" style={{ color: '#1e40af' }}>{data.tier_summary[4] || 0}</span>
+        </div>
+        <span className="pv-stat-sep">|</span>
+        <div className="pv-stat-item">
+          <span className="pv-stat-label">Candidate Leftovers:</span>
+          <span className="pv-stat-value" style={{ color: '#64748b' }}>
+            {data.total_leftover_terms || (data.leftover_terms ? data.leftover_terms.length : 0)}
+          </span>
         </div>
       </div>
 
@@ -734,12 +766,28 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
       {allSocChartData.length > 0 && (
         <div className="pv-chart-card">
           <div className="pv-chart-header" onClick={() => setShowChart(!showChart)}>
-            <div className="pv-chart-header-title">
-              <span style={{ fontSize: '1rem' }}>📊</span>
-              <h4>Adverse Event Profile by MedDRA System Organ Class (SOC)</h4>
-              <span className="pv-chart-header-subtitle">
-                ({allSocChartData.length} Organ Systems across {data.total_adverse_events} safety signals)
-              </span>
+            <div>
+              <div className="pv-chart-header-title">
+                <h4>Adverse Event Distribution by MedDRA System Organ Class (SOC)</h4>
+                <span className="pv-chart-header-subtitle">
+                  ({allSocChartData.length} Organ Systems across {data.total_adverse_events} safety signals)
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', marginTop: '0.35rem', fontSize: '0.71rem', color: '#64748b', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 600, color: '#475569' }}>Highest Tier:</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#dc2626' }} /> Tier 1 (Boxed)
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#ea580c' }} /> Tier 2 (Contra)
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#d97706' }} /> Tier 3 (Warnings)
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#2563eb' }} /> Tier 4 (AE Table)
+                </span>
+              </div>
             </div>
             <button
               type="button"
@@ -756,20 +804,15 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
 
           {showChart && (
             <div className="pv-chart-body">
-              <div style={{ height: Math.max(240, allSocChartData.length * 28 + 30), width: '100%' }}>
+              <div style={{ height: Math.max(220, allSocChartData.length * 26 + 25), width: '100%' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={allSocChartData}
                     layout="vertical"
-                    margin={{ top: 8, right: 30, left: 10, bottom: 8 }}
+                    margin={{ top: 6, right: 25, left: 5, bottom: 6 }}
                   >
-                    <defs>
-                      <filter id="activeGlow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feDropShadow dx="0" dy="1" stdDeviation="3" floodColor="#f97316" floodOpacity="0.4" />
-                      </filter>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                    <XAxis type="number" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} />
+                    <CartesianGrid strokeDasharray="2 2" horizontal={false} stroke="#f1f5f9" />
+                    <XAxis type="number" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
                     <YAxis
                       dataKey="soc_name"
                       type="category"
@@ -777,7 +820,7 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                       width={270}
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 11, fill: '#334155', fontWeight: 500 }}
+                      tick={{ fontSize: 10.5, fill: '#334155', fontWeight: 500 }}
                     />
                     <Tooltip
                       cursor={false}
@@ -787,14 +830,11 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                           return (
                             <div className="pv-chart-tooltip">
                               <div className="pv-chart-tooltip-title">{p.full_soc_name}</div>
-                              <div style={{ marginTop: '0.2rem' }}>
+                              <div style={{ marginTop: '0.15rem' }}>
                                 <strong>Adverse Events:</strong> {p.count} signals
                               </div>
-                              <div style={{ marginTop: '0.15rem' }}>
-                                <strong>Highest Severity:</strong> Tier {p.max_severity_tier}
-                              </div>
-                              <div style={{ fontSize: '0.7rem', color: '#ea580c', marginTop: '0.35rem', fontWeight: 600 }}>
-                                👆 Click bar to filter table below
+                              <div style={{ marginTop: '0.1rem', color: '#64748b' }}>
+                                <strong>Highest Tier:</strong> Tier {p.max_severity_tier}
                               </div>
                             </div>
                           );
@@ -804,7 +844,7 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                     />
                     <Bar
                       dataKey="count"
-                      radius={[0, 4, 4, 0]}
+                      radius={[0, 2, 2, 0]}
                       onClick={(barData) => {
                         if (barData && barData.full_soc_name) {
                           setSelectedSoc((prev) => (prev === barData.full_soc_name ? null : barData.full_soc_name));
@@ -816,25 +856,26 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                         const isSelected = selectedSoc === entry.full_soc_name;
                         const isDimmed = selectedSoc !== null && !isSelected;
 
-                        const tierColor =
+                        const tierAcademicColor =
                           entry.max_severity_tier === 1
-                            ? '#ef4444'
+                            ? '#dc2626'
                             : entry.max_severity_tier === 2
-                            ? '#f97316'
+                            ? '#ea580c'
                             : entry.max_severity_tier === 3
-                            ? '#eab308'
+                            ? '#d97706'
                             : entry.max_severity_tier === 4
-                            ? '#3b82f6'
+                            ? '#2563eb'
                             : '#64748b';
 
                         return (
                           <Cell
                             key={`cell-${index}`}
-                            fill={isDimmed ? '#e2e8f0' : tierColor}
-                            opacity={isDimmed ? 0.6 : 1}
+                            fill={isDimmed ? '#e2e8f0' : tierAcademicColor}
+                            opacity={isDimmed ? 0.45 : isSelected ? 1 : 0.85}
+                            stroke={isSelected ? '#0f172a' : 'none'}
+                            strokeWidth={isSelected ? 1.5 : 0}
                             style={{
-                              filter: isSelected ? 'url(#activeGlow)' : 'none',
-                              transition: 'all 0.2s ease',
+                              transition: 'all 0.15s ease',
                               outline: 'none',
                             }}
                           />
@@ -947,13 +988,11 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
         <table className="pv-table">
           <thead>
             <tr>
-              <th style={{ width: '90px' }}>Severity</th>
-              <th style={{ minWidth: '200px' }}>Side Effect (MedDRA PT)</th>
-              <th style={{ minWidth: '280px' }}>Data for Drug / Warning Context</th>
-              <th style={{ width: '85px' }}>Placebo</th>
-              <th style={{ width: '95px' }}>Risk Diff (Δ)</th>
-              <th style={{ width: '120px' }}>Category</th>
-              <th style={{ width: '65px', textAlign: 'center' }}>Detail</th>
+              <th style={{ width: '85px' }}>Severity</th>
+              <th style={{ minWidth: '220px' }}>Adverse Event (MedDRA PT)</th>
+              <th style={{ minWidth: '380px' }}>Clinical Evidence & Incidence Data</th>
+              <th style={{ width: '200px' }}>Organ System (SOC)</th>
+              <th style={{ width: '120px', textAlign: 'center' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -963,7 +1002,7 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                 <React.Fragment key={group.key}>
                   {groupBy !== 'flat' && (
                     <tr>
-                      <td colSpan={7} style={{ padding: 0 }}>
+                      <td colSpan={5} style={{ padding: 0 }}>
                         <div className="pv-group-header" onClick={() => toggleGroup(group.key)}>
                           <div className="pv-group-left">
                             <span style={{ fontSize: '0.7rem', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.15s ease' }}>
@@ -983,7 +1022,6 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                   )}
 
                   {!isCollapsed && group.items.map((item, idx) => {
-                    const isQualitative = item.drug_max_pct == null && item.drug_min_pct == null;
                     return (
                       <tr key={`${group.key}-${item.meddra_pt}-${idx}`} className="pv-row" onClick={() => setActiveDrawerItem(item)}>
                         <td>
@@ -1014,31 +1052,12 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                             {item.term !== item.meddra_pt && (
                               <span className="pv-term-raw">Raw: {item.term}</span>
                             )}
-                            <span className="pv-term-soc">{item.soc_name}</span>
                           </div>
                         </td>
                         <td>{renderDataForDrug(item)}</td>
                         <td>
-                          {isQualitative ? (
-                            <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontStyle: 'italic' }}>N/A</span>
-                          ) : (
-                            <span className="pv-placebo-text">
-                              {item.placebo_frequency_text || (item.placebo_pct != null ? `${item.placebo_pct}%` : '-')}
-                            </span>
-                          )}
-                        </td>
-                        <td>
-                          {item.risk_difference_pct != null ? (
-                            <span className={`pv-risk-diff ${item.risk_difference_pct > 0 ? 'positive' : 'neutral'}`}>
-                              {item.risk_difference_pct > 0 ? `+${item.risk_difference_pct}%` : `${item.risk_difference_pct}%`}
-                            </span>
-                          ) : (
-                            <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>-</span>
-                          )}
-                        </td>
-                        <td>
-                          <span style={{ fontSize: '0.72rem', textTransform: 'capitalize', color: '#475569', fontWeight: 500 }}>
-                            {item.frequency_category.replace(/_/g, ' ')}
+                          <span style={{ fontSize: '0.74rem', color: '#475569' }}>
+                            {item.soc_name}
                           </span>
                         </td>
                         <td style={{ textAlign: 'center' }}>
@@ -1056,7 +1075,7 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                             </button>
                             <button
                               className="pv-btn"
-                              style={{ padding: '0.15rem 0.4rem', fontSize: '0.7rem' }}
+                              style={{ padding: '0.12rem 0.4rem', fontSize: '0.68rem' }}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setActiveDrawerItem(item);
@@ -1076,16 +1095,15 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
         </table>
       </div>
 
-      {/* Leftover MedDRA Dictionary Matches (Mentioned in text but not included in final profile) */}
+      {/* Candidate Leftover MedDRA Mentions */}
       {data.leftover_terms && data.leftover_terms.length > 0 && (
-        <div className="pv-leftovers-section">
-          <div className="pv-leftovers-header" onClick={() => setShowLeftovers(!showLeftovers)}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.85rem' }}>🔍</span>
-              <strong style={{ fontSize: '0.85rem', color: '#334155' }}>
-                Leftover MedDRA Dictionary Matches (Mentioned in text but not included in final profile)
+        <div className="pv-leftover-card">
+          <div className="pv-leftover-header" onClick={() => setShowLeftovers(!showLeftovers)}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+              <strong style={{ fontSize: '0.82rem', color: '#0f172a' }}>
+                Candidate MedDRA Mentions Excluded from Adverse Reactions
               </strong>
-              <span className="pv-meta-tag" style={{ fontSize: '0.72rem' }}>
+              <span className="pv-meta-tag" style={{ fontSize: '0.7rem' }}>
                 {data.leftover_terms.length} candidate terms
               </span>
             </div>
@@ -1097,35 +1115,35 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                 setShowLeftovers(!showLeftovers);
               }}
             >
-              <span>{showLeftovers ? 'Hide Leftovers' : 'Show Leftovers'}</span>
+              <span>{showLeftovers ? 'Hide Candidates' : 'Show Candidates'}</span>
               <span>{showLeftovers ? '▲' : '▼'}</span>
             </button>
           </div>
 
           {showLeftovers && (
-            <div className="pv-leftovers-body">
-              <p style={{ margin: '0 0 0.6rem 0', fontSize: '0.78rem', color: '#64748b' }}>
-                These MedDRA terms have been mentioned in the safety sections but were not included in the final adverse event list. Please double-check with them:
+            <div style={{ marginTop: '0.65rem' }}>
+              <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.76rem', color: '#64748b' }}>
+                The following terms matched the MedDRA dictionary in the safety sections but were evaluated as background indications, baseline context, or non-AE descriptions by clinical AI. Reviewers can verify or tag missing items:
               </p>
 
-              <div style={{ marginBottom: '0.6rem', maxWidth: '280px' }}>
+              <div style={{ marginBottom: '0.5rem', maxWidth: '260px' }}>
                 <input
                   type="text"
                   className="pv-search-input"
-                  placeholder="Filter leftover terms..."
+                  placeholder="Filter candidate terms..."
                   value={leftoverSearch}
                   onChange={(e) => setLeftoverSearch(e.target.value)}
                 />
               </div>
 
-              <div style={{ maxHeight: '240px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '5px' }}>
-                <table className="pv-leftovers-table">
+              <div style={{ maxHeight: '240px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
+                <table className="pv-leftover-table">
                   <thead>
                     <tr>
                       <th style={{ width: '30%' }}>Matched Term</th>
                       <th style={{ width: '35%' }}>MedDRA Organ Class (SOC)</th>
                       <th style={{ width: '20%' }}>Source Section</th>
-                      <th style={{ width: '15%', textAlign: 'center' }}>User Tag</th>
+                      <th style={{ width: '15%', textAlign: 'center' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1138,7 +1156,7 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                           <button
                             type="button"
                             className={`pv-tag-btn ${feedbackMap[lt.term.toLowerCase()] === 'is_ae' ? 'active-is-ae' : ''}`}
-                            title={feedbackMap[lt.term.toLowerCase()] === 'is_ae' ? 'Reported as Real AE by user. Click to undo.' : 'Report this leftover term as a Real AE'}
+                            title={feedbackMap[lt.term.toLowerCase()] === 'is_ae' ? 'Reported as Real AE by user. Click to undo.' : 'Report this candidate term as a Real AE'}
                             onClick={() => handleToggleFeedback(lt.term, 'is_ae', lt)}
                           >
                             {feedbackMap[lt.term.toLowerCase()] === 'is_ae' ? '✓ Real AE' : '+ Tag as AE'}
