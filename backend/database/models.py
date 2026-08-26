@@ -585,6 +585,28 @@ class LabelPvProfile(db.Model):
         db.UniqueConstraint('set_id', name='_pv_profile_set_id_uc'),
     )
 
+class LabelPvFeedback(db.Model):
+    __tablename__ = 'label_pv_feedbacks'
+    id = db.Column(db.Integer, primary_key=True)
+    set_id = db.Column(db.String(100), index=True, nullable=False)
+    spl_id = db.Column(db.String(100), index=True, nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    term = db.Column(db.String(255), nullable=False)
+    meddra_pt = db.Column(db.String(255), nullable=True)
+    soc_name = db.Column(db.String(255), nullable=True)
+    section_name = db.Column(db.String(255), nullable=True)
+    feedback_type = db.Column(db.String(32), nullable=False) # 'is_ae' (reported real AE from leftovers), 'not_ae' (reported not AE from main table)
+    comment = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(32), default='pending') # pending, reviewed, resolved
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('pv_feedbacks', lazy='dynamic'))
+
+    __table_args__ = (
+        db.UniqueConstraint('set_id', 'term', 'feedback_type', name='_pv_feedback_term_type_uc'),
+    )
+
 class TokenUsage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)

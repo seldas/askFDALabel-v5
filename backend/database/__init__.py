@@ -7,7 +7,7 @@ from .models import (
     PgxBiomarker, PgxSynonym, PgxAssessment,
     ProjectAeReport, ProjectAeReportDetail,
     AeAiAssessment, OrangeBook, SystemTask,
-    DrugLabel, ActiveIngredientMap, LabelMeddraProfile, LabelPvProfile, TokenUsage,
+    DrugLabel, ActiveIngredientMap, LabelMeddraProfile, LabelPvProfile, LabelPvFeedback, TokenUsage,
     SearchHistory, UserQueryHistory,
     ExaminePrompt, ExamineHistory,
     FeatureGate

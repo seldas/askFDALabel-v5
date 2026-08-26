@@ -3773,3 +3773,79 @@ def refresh_pv_profile(set_id):
     except Exception as e:
         logger.exception(f"Error refreshing PV-Profile for {set_id}: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/pv_profile/<set_id>/feedback', methods=['GET', 'POST'])
+def handle_pv_profile_feedback(set_id):
+    """
+    Handles user feedback for adverse events and leftover terms:
+    - POST: records or toggles a feedback tag ('is_ae' or 'not_ae')
+    - GET: returns all recorded feedback tags for the given set_id
+    """
+    from dashboard.services.pv_profile_service import PVProfileService
+    from flask_login import current_user
+
+    user = current_user if current_user.is_authenticated else None
+
+    if request.method == 'GET':
+        feedbacks = PVProfileService.get_feedbacks(set_id)
+        return jsonify({'set_id': set_id, 'feedbacks': feedbacks})
+
+    data = request.get_json(silent=True) or {}
+    term = data.get('term')
+    feedback_type = data.get('feedback_type') # 'is_ae' or 'not_ae'
+    spl_id = data.get('spl_id')
+    meddra_pt = data.get('meddra_pt')
+    soc_name = data.get('soc_name')
+    section_name = data.get('section_name')
+    comment = data.get('comment')
+
+    if not term or not feedback_type:
+        return jsonify({'error': 'term and feedback_type are required'}), 400
+
+    result = PVProfileService.record_feedback(
+        set_id=set_id,
+        term=term,
+        feedback_type=feedback_type,
+        spl_id=spl_id,
+        meddra_pt=meddra_pt,
+        soc_name=soc_name,
+        section_name=section_name,
+        comment=comment,
+        user=user
+    )
+
+    if isinstance(result, tuple) and len(result) == 2 and isinstance(result[1], int):
+        return jsonify(result[0]), result[1]
+
+    return jsonify(result)
+
+
+@api_bp.route('/pv_profile/<set_id>/update_with_tags', methods=['POST'])
+def update_pv_profile_with_tags(set_id):
+    """
+    Admin/Developer endpoint: incorporates reviewer-approved tagged terms into the PV Profile,
+    finding original label quotes and standardizing them with a [Manual Adjusted] badge.
+    """
+    from dashboard.services.pv_profile_service import PVProfileService
+    from flask_login import current_user
+
+    user = current_user if current_user.is_authenticated else None
+    data = request.get_json(silent=True) or {}
+    approved_terms = data.get('approved_terms') # list of approved term strings (or None for all)
+    spl_id = data.get('spl_id')
+
+    try:
+        result = PVProfileService.update_profile_with_tags(
+            set_id=set_id,
+            approved_terms=approved_terms,
+            spl_id=spl_id,
+            user=user
+        )
+        if isinstance(result, tuple) and len(result) == 2 and isinstance(result[1], int):
+            return jsonify(result[0]), result[1]
+
+        return jsonify(result)
+    except Exception as e:
+        logger.exception(f"Error updating PV Profile with tags for {set_id}: {e}")
+        return jsonify({'error': str(e)}), 500

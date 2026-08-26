@@ -2,8 +2,26 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Cell,
+  CartesianGrid
+} from 'recharts';
 import { labelRoute } from '../../../../platform/context';
+import { useUser } from '../../../../context/UserContext';
 import './pv-profile.css';
+
+export interface PvOccurrence {
+  tier: number;
+  section_title: string;
+  excerpt: string;
+  drug_pct?: number | null;
+}
 
 export interface PvItem {
   term: string;
@@ -14,6 +32,8 @@ export interface PvItem {
   severity_tier: number;
   section_name: string;
   is_quantitative: boolean;
+  is_mapped?: boolean;
+  is_manual_adjusted?: boolean;
   drug_frequency_text: string | null;
   drug_min_pct: number | null;
   drug_max_pct: number | null;
@@ -22,6 +42,19 @@ export interface PvItem {
   risk_difference_pct: number | null;
   frequency_category: string;
   excerpt: string;
+  sections_present?: Array<{ tier: number; title: string }>;
+  occurrences?: PvOccurrence[];
+}
+
+export interface PvLeftoverTerm {
+  term: string;
+  meddra_pt?: string;
+  meddra_pt_code?: number | null;
+  soc_name: string;
+  soc_code?: number | null;
+  section_name: string;
+  status: string;
+  reason: string;
 }
 
 export interface PvPeer {
@@ -57,27 +90,141 @@ export interface PvProfileData {
   severity_tier_defs: Record<number, { level: number; name: string; badge: string; color: string; description: string }>;
   tier_summary: Record<number, number>;
   soc_summary: Array<{ soc_name: string; soc_code?: number; count: number; max_severity_tier: number }>;
+  chart_data?: Array<{ soc_name: string; count: number; max_severity_tier: number }>;
   items: PvItem[];
+  leftover_terms?: PvLeftoverTerm[];
+  total_leftover_terms?: number;
+  feedbacks?: Record<string, Array<{ id: number; term: string; feedback_type: string; comment?: string; status?: string }>>;
   harvested_sections: Array<{ code: string; title: string; severity_tier: number }>;
   peers: PvPeer[];
 }
 
 export default function PvProfileView({ setId, splId }: { setId: string; splId?: string | null }) {
+  const { session } = useUser();
+  const isDevOrAdmin = Boolean(session?.is_admin || session?.role === 'admin' || session?.role === 'developer' || session?.has_developer_access);
+
   const [data, setData] = useState<PvProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  // Filters & State
+  // User feedback tags: map term.toLowerCase() -> 'is_ae' | 'not_ae'
+  const [feedbackMap, setFeedbackMap] = useState<Record<string, 'is_ae' | 'not_ae'>>({});
+
+  // Admin "Update with tags" modal state
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [selectedTermsToApply, setSelectedTermsToApply] = useState<Set<string>>(new Set());
+  const [updatingWithTags, setUpdatingWithTags] = useState(false);
+
+  // UI state
+  const [showChart, setShowChart] = useState(true);
+  const [selectedSoc, setSelectedSoc] = useState<string | null>(null);
+  const [showLeftovers, setShowLeftovers] = useState(false);
+  const [leftoverSearch, setLeftoverSearch] = useState('');
+
+  // Filters & Sorting
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTierFilter, setSelectedTierFilter] = useState<number | 'all' | 'quant'>('all');
+  const [selectedTierFilter, setSelectedTierFilter] = useState<number | 'all' | 'quant' | 'mapped' | 'manual'>('all');
   const [groupBy, setGroupBy] = useState<'tier' | 'soc' | 'flat'>('tier');
   const [sortBy, setSortBy] = useState<'severity' | 'freq_desc' | 'risk_diff' | 'alpha'>('severity');
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [activeDrawerItem, setActiveDrawerItem] = useState<PvItem | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Tagged terms eligible to be added to profile
+  const taggedTermsToAdd = useMemo(() => {
+    const terms: Array<{ term: string; soc_name?: string; section_name?: string }> = [];
+    Object.entries(feedbackMap).forEach(([termKey, fbType]) => {
+      if (fbType === 'is_ae') {
+        const leftoverItem = data?.leftover_terms?.find(
+          (lt) => lt.term.toLowerCase() === termKey || (lt.meddra_pt && lt.meddra_pt.toLowerCase() === termKey)
+        );
+        terms.push({
+          term: leftoverItem?.term || termKey,
+          soc_name: leftoverItem?.soc_name || 'General disorders',
+          section_name: leftoverItem?.section_name || 'Safety Section'
+        });
+      }
+    });
+    return terms;
+  }, [feedbackMap, data]);
+
+  // Sync feedbacks from server
+  useEffect(() => {
+    if (data?.feedbacks) {
+      const initialMap: Record<string, 'is_ae' | 'not_ae'> = {};
+      Object.entries(data.feedbacks).forEach(([termKey, fbList]) => {
+        if (fbList && fbList.length > 0) {
+          initialMap[termKey] = fbList[fbList.length - 1].feedback_type as 'is_ae' | 'not_ae';
+        }
+      });
+      setFeedbackMap(initialMap);
+    }
+  }, [data]);
+
+  // Toggle user feedback tag
+  const handleToggleFeedback = async (
+    term: string,
+    feedbackType: 'is_ae' | 'not_ae',
+    itemMeta?: { meddra_pt?: string; soc_name?: string; section_name?: string }
+  ) => {
+    const termKey = term.trim().toLowerCase();
+    const currentVal = feedbackMap[termKey];
+    const nextVal = currentVal === feedbackType ? undefined : feedbackType;
+
+    // Optimistic local update
+    setFeedbackMap((prev) => {
+      const next = { ...prev };
+      if (nextVal) next[termKey] = nextVal;
+      else delete next[termKey];
+      return next;
+    });
+
+    try {
+      await fetch(`/api/dashboard/pv_profile/${encodeURIComponent(setId)}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          term: term,
+          feedback_type: feedbackType,
+          spl_id: splId,
+          meddra_pt: itemMeta?.meddra_pt,
+          soc_name: itemMeta?.soc_name,
+          section_name: itemMeta?.section_name
+        })
+      });
+    } catch (err) {
+      console.error('Failed to record user tag:', err);
+    }
+  };
+
+  // Admin Action: Confirm and update PV Profile with selected tags
+  const handleConfirmUpdateWithTags = async () => {
+    setUpdatingWithTags(true);
+    try {
+      const res = await fetch(`/api/dashboard/pv_profile/${encodeURIComponent(setId)}/update_with_tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          approved_terms: Array.from(selectedTermsToApply),
+          spl_id: splId
+        })
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || 'Failed to update profile with tags');
+      }
+      const updatedData: PvProfileData = await res.json();
+      setData(updatedData);
+      setShowUpdateModal(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err));
+    } finally {
+      setUpdatingWithTags(false);
+    }
+  };
 
   // Live Timer for AI generation
   useEffect(() => {
@@ -128,7 +275,7 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
   }, [setId, splId]);
 
   useEffect(() => {
-    // Initial fetch: do NOT auto-generate; check if cached record exists
+    // Initial fetch: check cache without auto-generating
     fetchProfile(false, false);
   }, [fetchProfile]);
 
@@ -146,9 +293,18 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
     if (!data || !data.items) return [];
 
     let result = data.items.filter((item) => {
-      // Tier filter
+      // SOC filter from chart click
+      if (selectedSoc && item.soc_name !== selectedSoc) {
+        return false;
+      }
+
+      // Tier / Mapped / Manual / Quant filter
       if (selectedTierFilter === 'quant') {
         if (!item.is_quantitative || (item.drug_max_pct == null && item.drug_min_pct == null)) return false;
+      } else if (selectedTierFilter === 'mapped') {
+        if (!item.is_mapped) return false;
+      } else if (selectedTierFilter === 'manual') {
+        if (!item.is_manual_adjusted) return false;
       } else if (typeof selectedTierFilter === 'number') {
         if (item.severity_tier !== selectedTierFilter) return false;
       }
@@ -194,7 +350,7 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
     });
 
     return result;
-  }, [data, selectedTierFilter, searchQuery, sortBy]);
+  }, [data, selectedSoc, selectedTierFilter, searchQuery, sortBy]);
 
   // Grouping
   const groupedData = useMemo(() => {
@@ -243,15 +399,39 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
     return [];
   }, [groupBy, filteredAndSortedItems, data]);
 
-  // CSV Export
+  // Chart data: ALL SOCs without omission
+  const allSocChartData = useMemo(() => {
+    if (!data?.soc_summary) return [];
+    return data.soc_summary.map((soc) => ({
+      soc_name: soc.soc_name.replace(' disorders', '').replace(' and administration site conditions', ''),
+      full_soc_name: soc.soc_name,
+      count: soc.count,
+      max_severity_tier: soc.max_severity_tier,
+    }));
+  }, [data]);
+
+  // Leftover terms filtered by search
+  const filteredLeftovers = useMemo(() => {
+    if (!data?.leftover_terms) return [];
+    if (!leftoverSearch.trim()) return data.leftover_terms;
+    const q = leftoverSearch.toLowerCase();
+    return data.leftover_terms.filter(
+      (l) => l.term.toLowerCase().includes(q) || l.soc_name.toLowerCase().includes(q) || l.section_name.toLowerCase().includes(q)
+    );
+  }, [data, leftoverSearch]);
+
+  // CSV Export (includes main AE table and leftover dictionary matches)
   const exportCsv = () => {
-    if (!filteredAndSortedItems.length) return;
-    const headers = ['Severity Tier', 'Section', 'Side Effect (PT)', 'Raw Term', 'MedDRA SOC', 'Drug Frequency', 'Placebo Frequency', 'Risk Difference (%)', 'Category', 'Excerpt'];
+    if (!filteredAndSortedItems.length && (!data?.leftover_terms || !data.leftover_terms.length)) return;
+
+    // 1. Primary AE Table
+    const headers = ['Severity Tier', 'Section', 'Side Effect (PT)', 'Raw Term', 'Is Mapped', 'MedDRA SOC', 'Drug Frequency', 'Placebo Frequency', 'Risk Difference (%)', 'Category', 'Excerpt'];
     const rows = filteredAndSortedItems.map((i) => [
       `Tier ${i.severity_tier}`,
       `"${(i.section_name || '').replace(/"/g, '""')}"`,
       `"${(i.meddra_pt || '').replace(/"/g, '""')}"`,
       `"${(i.term || '').replace(/"/g, '""')}"`,
+      i.is_mapped ? 'Mapped' : 'Exact Match',
       `"${(i.soc_name || '').replace(/"/g, '""')}"`,
       `"${(i.drug_frequency_text || '').replace(/"/g, '""')}"`,
       `"${(i.placebo_frequency_text || '').replace(/"/g, '""')}"`,
@@ -260,7 +440,22 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
       `"${(i.excerpt || '').replace(/"/g, '""')}"`,
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    let csvParts = [headers.join(','), ...rows.map((e) => e.join(','))];
+
+    // 2. Leftover MedDRA Terms (if present)
+    if (data?.leftover_terms && data.leftover_terms.length > 0) {
+      csvParts.push('\n');
+      csvParts.push('"--- LEFTOVER MEDDRA DICTIONARY MATCHES (Mentioned in text but not included in final profile) ---"');
+      csvParts.push('Matched Term,MedDRA Organ Class (SOC),Source Section');
+      const leftoverRows = data.leftover_terms.map((lt) => [
+        `"${(lt.term || '').replace(/"/g, '""')}"`,
+        `"${(lt.soc_name || '').replace(/"/g, '""')}"`,
+        `"${(lt.section_name || '').replace(/"/g, '""')}"`
+      ]);
+      csvParts = csvParts.concat(leftoverRows.map((e) => e.join(',')));
+    }
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + csvParts.join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -309,10 +504,10 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
 
   // Dynamic progress stage during AI analysis
   const getProgressStage = (sec: number) => {
-    if (sec < 4) return 'Harvesting safety sections (Boxed Warning, Warnings & Precautions, Adverse Reactions)...';
-    if (sec < 14) return 'Analyzing clinical trial tables, percentages & warnings with AI model...';
-    if (sec < 24) return 'Structuring drug vs. placebo incidence rates & calculating risk differences...';
-    return 'Standardizing MedDRA Preferred Terms (PT) & primary System Organ Classes (SOC)...';
+    if (sec < 4) return 'Scanning safety sections & matching MedDRA dictionary keywords...';
+    if (sec < 14) return 'Calling clinical AI engine to evaluate incidence rates & safety warnings...';
+    if (sec < 24) return 'Structuring drug vs. placebo frequencies and identifying non-standard terms...';
+    return 'Grounding standard MedDRA Preferred Terms (PT) & primary Organ Classes (SOC)...';
   };
 
   // 1. Loading Initial Cache Check
@@ -339,7 +534,7 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
           </h3>
           <div className="pv-timer-clock">{formatTimer(elapsedSeconds)}</div>
           <p style={{ margin: '0 0 0.5rem 0', color: '#64748b', fontSize: '0.85rem' }}>
-            Extracting quantitative adverse reaction tables, warnings, and MedDRA terms.
+            Harvesting safety sections, evaluating dictionary candidate terms, and mapping to MedDRA hierarchy.
           </p>
 
           <div className="pv-progress-steps">
@@ -458,7 +653,7 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
     );
   }
 
-  // 6. Main PV-Profile Heatmap Interface
+  // 6. Main PV-Profile Heatmap & Bar Chart Interface
   return (
     <div className="pv-container">
       {/* Header */}
@@ -485,6 +680,29 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
           <button className="pv-btn pv-btn-primary" onClick={() => fetchProfile(true, true)} disabled={generating}>
             {generating ? 'Re-analyzing...' : 'Refresh AI'}
           </button>
+          {isDevOrAdmin && (
+            <button
+              type="button"
+              className="pv-btn pv-btn-accent"
+              title={
+                taggedTermsToAdd.length === 0
+                  ? 'No terms currently tagged as Real AE. Tag terms in the leftover list below first.'
+                  : `Incorporate ${taggedTermsToAdd.length} reviewer-tagged terms into the safety profile`
+              }
+              disabled={generating || updatingWithTags || taggedTermsToAdd.length === 0}
+              onClick={() => {
+                setSelectedTermsToApply(new Set(taggedTermsToAdd.map((t) => t.term.toLowerCase())));
+                setShowUpdateModal(true);
+              }}
+            >
+              <span>{updatingWithTags ? 'Updating...' : 'Update with tags'}</span>
+              {taggedTermsToAdd.length > 0 && (
+                <span className="pv-badge-pill">
+                  {taggedTermsToAdd.length}
+                </span>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -511,6 +729,136 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
           <span className="pv-stat-num" style={{ color: '#0f172a' }}>{data.total_adverse_events}</span>
         </div>
       </div>
+
+      {/* MedDRA SOC Adverse Event Bar Chart (Collapsible above table) */}
+      {allSocChartData.length > 0 && (
+        <div className="pv-chart-card">
+          <div className="pv-chart-header" onClick={() => setShowChart(!showChart)}>
+            <div className="pv-chart-header-title">
+              <span style={{ fontSize: '1rem' }}>📊</span>
+              <h4>Adverse Event Profile by MedDRA System Organ Class (SOC)</h4>
+              <span className="pv-chart-header-subtitle">
+                ({allSocChartData.length} Organ Systems across {data.total_adverse_events} safety signals)
+              </span>
+            </div>
+            <button
+              type="button"
+              className="pv-chart-toggle-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowChart(!showChart);
+              }}
+            >
+              <span>{showChart ? 'Hide Chart' : 'Show Chart'}</span>
+              <span>{showChart ? '▲' : '▼'}</span>
+            </button>
+          </div>
+
+          {showChart && (
+            <div className="pv-chart-body">
+              <div style={{ height: Math.max(240, allSocChartData.length * 28 + 30), width: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={allSocChartData}
+                    layout="vertical"
+                    margin={{ top: 8, right: 30, left: 10, bottom: 8 }}
+                  >
+                    <defs>
+                      <filter id="activeGlow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="1" stdDeviation="3" floodColor="#f97316" floodOpacity="0.4" />
+                      </filter>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                    <XAxis type="number" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} />
+                    <YAxis
+                      dataKey="soc_name"
+                      type="category"
+                      interval={0}
+                      width={270}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: '#334155', fontWeight: 500 }}
+                    />
+                    <Tooltip
+                      cursor={false}
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const p = payload[0].payload;
+                          return (
+                            <div className="pv-chart-tooltip">
+                              <div className="pv-chart-tooltip-title">{p.full_soc_name}</div>
+                              <div style={{ marginTop: '0.2rem' }}>
+                                <strong>Adverse Events:</strong> {p.count} signals
+                              </div>
+                              <div style={{ marginTop: '0.15rem' }}>
+                                <strong>Highest Severity:</strong> Tier {p.max_severity_tier}
+                              </div>
+                              <div style={{ fontSize: '0.7rem', color: '#ea580c', marginTop: '0.35rem', fontWeight: 600 }}>
+                                👆 Click bar to filter table below
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar
+                      dataKey="count"
+                      radius={[0, 4, 4, 0]}
+                      onClick={(barData) => {
+                        if (barData && barData.full_soc_name) {
+                          setSelectedSoc((prev) => (prev === barData.full_soc_name ? null : barData.full_soc_name));
+                        }
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {allSocChartData.map((entry, index) => {
+                        const isSelected = selectedSoc === entry.full_soc_name;
+                        const isDimmed = selectedSoc !== null && !isSelected;
+
+                        const tierColor =
+                          entry.max_severity_tier === 1
+                            ? '#ef4444'
+                            : entry.max_severity_tier === 2
+                            ? '#f97316'
+                            : entry.max_severity_tier === 3
+                            ? '#eab308'
+                            : entry.max_severity_tier === 4
+                            ? '#3b82f6'
+                            : '#64748b';
+
+                        return (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={isDimmed ? '#e2e8f0' : tierColor}
+                            opacity={isDimmed ? 0.6 : 1}
+                            style={{
+                              filter: isSelected ? 'url(#activeGlow)' : 'none',
+                              transition: 'all 0.2s ease',
+                              outline: 'none',
+                            }}
+                          />
+                        );
+                      })}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {selectedSoc && (
+                <div className="pv-active-soc-banner">
+                  <div>
+                    <strong>Active Organ System Filter:</strong> {selectedSoc}
+                  </div>
+                  <button className="pv-active-soc-clear" onClick={() => setSelectedSoc(null)}>
+                    ✕ Show All Organ Systems
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Toolbar & Filters */}
       <div className="pv-toolbar">
@@ -550,8 +898,22 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
             className={`pv-filter-chip ${selectedTierFilter === 'quant' ? 'active' : ''}`}
             onClick={() => setSelectedTierFilter('quant')}
           >
-            Quantitative (with %)
+            Quantitative (%)
           </button>
+          <button
+            className={`pv-filter-chip ${selectedTierFilter === 'mapped' ? 'active' : ''}`}
+            onClick={() => setSelectedTierFilter('mapped')}
+          >
+            Mapped Terms
+          </button>
+          {data.items.some((i) => i.is_manual_adjusted) && (
+            <button
+              className={`pv-filter-chip ${selectedTierFilter === 'manual' ? 'active' : ''}`}
+              onClick={() => setSelectedTierFilter('manual')}
+            >
+              Manual Adjusted ({data.items.filter((i) => i.is_manual_adjusted).length})
+            </button>
+          )}
 
           <span style={{ fontSize: '0.8rem', color: '#cbd5e1', margin: '0 0.2rem' }}>|</span>
 
@@ -586,7 +948,7 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
           <thead>
             <tr>
               <th style={{ width: '90px' }}>Severity</th>
-              <th style={{ minWidth: '190px' }}>Side Effect (MedDRA PT)</th>
+              <th style={{ minWidth: '200px' }}>Side Effect (MedDRA PT)</th>
               <th style={{ minWidth: '280px' }}>Data for Drug / Warning Context</th>
               <th style={{ width: '85px' }}>Placebo</th>
               <th style={{ width: '95px' }}>Risk Diff (Δ)</th>
@@ -631,9 +993,26 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                         </td>
                         <td>
                           <div className="pv-term-cell">
-                            <span className="pv-term-name">{item.meddra_pt}</span>
+                            <div className="pv-term-name">
+                              <span>{item.meddra_pt}</span>
+                              {item.is_mapped && (
+                                <span className="pv-badge-mapped" title={`AI normalized non-standard term "${item.term}" to MedDRA PT "${item.meddra_pt}"`}>
+                                  Mapped
+                                </span>
+                              )}
+                              {item.is_manual_adjusted && (
+                                <span className="pv-badge-manual" title="Manually incorporated by reviewer tag">
+                                  Manual Adjusted
+                                </span>
+                              )}
+                              {item.occurrences && item.occurrences.length > 1 && (
+                                <span className="pv-badge-occ" title={`Cited across ${item.occurrences.length} safety sections in chronological order`}>
+                                  {item.occurrences.length} Sections
+                                </span>
+                              )}
+                            </div>
                             {item.term !== item.meddra_pt && (
-                              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Raw: {item.term}</span>
+                              <span className="pv-term-raw">Raw: {item.term}</span>
                             )}
                             <span className="pv-term-soc">{item.soc_name}</span>
                           </div>
@@ -663,16 +1042,29 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                           </span>
                         </td>
                         <td style={{ textAlign: 'center' }}>
-                          <button
-                            className="pv-btn"
-                            style={{ padding: '0.15rem 0.4rem', fontSize: '0.7rem' }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveDrawerItem(item);
-                            }}
-                          >
-                            Quote
-                          </button>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                            <button
+                              type="button"
+                              className={`pv-tag-btn ${feedbackMap[item.term.toLowerCase()] === 'not_ae' || feedbackMap[item.meddra_pt.toLowerCase()] === 'not_ae' ? 'active-not-ae' : ''}`}
+                              title={feedbackMap[item.term.toLowerCase()] === 'not_ae' ? 'Tagged as Not an AE by user. Click to undo.' : 'Tag this item as Not an Adverse Event'}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleFeedback(item.term, 'not_ae', item);
+                              }}
+                            >
+                              {feedbackMap[item.term.toLowerCase()] === 'not_ae' || feedbackMap[item.meddra_pt.toLowerCase()] === 'not_ae' ? '⊘ Not AE' : 'Not AE'}
+                            </button>
+                            <button
+                              className="pv-btn"
+                              style={{ padding: '0.15rem 0.4rem', fontSize: '0.7rem' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveDrawerItem(item);
+                              }}
+                            >
+                              Quote
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -683,6 +1075,84 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
           </tbody>
         </table>
       </div>
+
+      {/* Leftover MedDRA Dictionary Matches (Mentioned in text but not included in final profile) */}
+      {data.leftover_terms && data.leftover_terms.length > 0 && (
+        <div className="pv-leftovers-section">
+          <div className="pv-leftovers-header" onClick={() => setShowLeftovers(!showLeftovers)}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.85rem' }}>🔍</span>
+              <strong style={{ fontSize: '0.85rem', color: '#334155' }}>
+                Leftover MedDRA Dictionary Matches (Mentioned in text but not included in final profile)
+              </strong>
+              <span className="pv-meta-tag" style={{ fontSize: '0.72rem' }}>
+                {data.leftover_terms.length} candidate terms
+              </span>
+            </div>
+            <button
+              type="button"
+              className="pv-chart-toggle-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowLeftovers(!showLeftovers);
+              }}
+            >
+              <span>{showLeftovers ? 'Hide Leftovers' : 'Show Leftovers'}</span>
+              <span>{showLeftovers ? '▲' : '▼'}</span>
+            </button>
+          </div>
+
+          {showLeftovers && (
+            <div className="pv-leftovers-body">
+              <p style={{ margin: '0 0 0.6rem 0', fontSize: '0.78rem', color: '#64748b' }}>
+                These MedDRA terms have been mentioned in the safety sections but were not included in the final adverse event list. Please double-check with them:
+              </p>
+
+              <div style={{ marginBottom: '0.6rem', maxWidth: '280px' }}>
+                <input
+                  type="text"
+                  className="pv-search-input"
+                  placeholder="Filter leftover terms..."
+                  value={leftoverSearch}
+                  onChange={(e) => setLeftoverSearch(e.target.value)}
+                />
+              </div>
+
+              <div style={{ maxHeight: '240px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '5px' }}>
+                <table className="pv-leftovers-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '30%' }}>Matched Term</th>
+                      <th style={{ width: '35%' }}>MedDRA Organ Class (SOC)</th>
+                      <th style={{ width: '20%' }}>Source Section</th>
+                      <th style={{ width: '15%', textAlign: 'center' }}>User Tag</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredLeftovers.map((lt, idx) => (
+                      <tr key={`leftover-${idx}`}>
+                        <td style={{ fontWeight: 600, color: '#0f172a' }}>{lt.term}</td>
+                        <td style={{ color: '#475569' }}>{lt.soc_name}</td>
+                        <td style={{ color: '#64748b' }}>{lt.section_name}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            className={`pv-tag-btn ${feedbackMap[lt.term.toLowerCase()] === 'is_ae' ? 'active-is-ae' : ''}`}
+                            title={feedbackMap[lt.term.toLowerCase()] === 'is_ae' ? 'Reported as Real AE by user. Click to undo.' : 'Report this leftover term as a Real AE'}
+                            onClick={() => handleToggleFeedback(lt.term, 'is_ae', lt)}
+                          >
+                            {feedbackMap[lt.term.toLowerCase()] === 'is_ae' ? '✓ Real AE' : '+ Tag as AE'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Evidence Drawer Modal */}
       {activeDrawerItem && (
@@ -701,6 +1171,11 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                 {activeDrawerItem.meddra_pt_code && (
                   <p style={{ margin: '0.2rem 0', fontSize: '0.825rem', color: '#64748b' }}>
                     <strong>MedDRA PT Code:</strong> {activeDrawerItem.meddra_pt_code}
+                  </p>
+                )}
+                {activeDrawerItem.is_mapped && (
+                  <p style={{ margin: '0.2rem 0', fontSize: '0.825rem', color: '#7e22ce' }}>
+                    <strong>Original Text Mention:</strong> "{activeDrawerItem.term}" (AI standardized to {activeDrawerItem.meddra_pt})
                   </p>
                 )}
               </div>
@@ -724,19 +1199,43 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
               </div>
 
               <div>
-                <span className="pv-drawer-section-title">Label Source Section</span>
-                <p style={{ margin: '0.2rem 0', fontWeight: 600, fontSize: '0.825rem' }}>
-                  {activeDrawerItem.section_name}
-                </p>
-                <span className={`pv-badge pv-badge-tier-${activeDrawerItem.severity_tier}`}>
-                  Severity Tier {activeDrawerItem.severity_tier}
-                </span>
-              </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                  <span className="pv-drawer-section-title" style={{ margin: 0 }}>
+                    Original Label Excerpts (Chronological Evidence)
+                  </span>
+                  {activeDrawerItem.occurrences && activeDrawerItem.occurrences.length > 1 && (
+                    <span className="pv-meta-tag" style={{ fontSize: '0.7rem' }}>
+                      {activeDrawerItem.occurrences.length} mentions across sections
+                    </span>
+                  )}
+                </div>
 
-              <div>
-                <span className="pv-drawer-section-title">Original Label Excerpt (Evidence)</span>
-                <div className="pv-quote-card">
-                  "{activeDrawerItem.excerpt || 'No specific quotation excerpt recorded.'}"
+                {/* Dedicated Scrollable Excerpt Overflow Bar Container */}
+                <div className="pv-drawer-excerpt-scroll">
+                  {(activeDrawerItem.occurrences && activeDrawerItem.occurrences.length > 0
+                    ? activeDrawerItem.occurrences
+                    : [{
+                        tier: activeDrawerItem.severity_tier,
+                        section_title: activeDrawerItem.section_name,
+                        excerpt: activeDrawerItem.excerpt,
+                        drug_pct: activeDrawerItem.drug_max_pct || activeDrawerItem.drug_min_pct
+                      }]
+                  ).map((occ, oIdx) => (
+                    <div key={`occ-${oIdx}`} className="pv-occ-card">
+                      <div className="pv-occ-header">
+                        <span className={`pv-badge pv-badge-tier-${occ.tier}`}>
+                          {occ.tier === 1 ? 'BOXED' : occ.tier === 2 ? 'CONTRA' : occ.tier === 3 ? 'WARNING' : occ.tier === 4 ? 'AE TABLE' : 'POSTMKT'}
+                        </span>
+                        <span className="pv-occ-section-title">{occ.section_title}</span>
+                        {occ.drug_pct != null && (
+                          <span className="pv-occ-rate-badge">{occ.drug_pct}% incidence</span>
+                        )}
+                      </div>
+                      <div className="pv-occ-quote">
+                        &ldquo;{occ.excerpt}&rdquo;
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -766,6 +1265,126 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Admin/Developer Update with Tags Confirmation Modal */}
+      {showUpdateModal && (
+        <div className="pv-modal-overlay" onClick={() => setShowUpdateModal(false)}>
+          <div className="pv-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="pv-modal-header">
+              <h3>
+                <span>✨</span>
+                <span>Confirm Incorporating Reviewer-Tagged Terms</span>
+              </h3>
+              <button
+                className="pv-drawer-close"
+                onClick={() => setShowUpdateModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="pv-modal-body">
+              <p style={{ margin: '0 0 0.75rem 0', color: '#475569', fontSize: '0.825rem' }}>
+                The following terms were tagged as real adverse events. Their source quotes will be harvested from the label text and incorporated into the safety table with a <span className="pv-badge-manual">Manual Adjusted</span> badge. Uncheck any terms you do not wish to incorporate:
+              </p>
+
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.6rem' }}>
+                <button
+                  type="button"
+                  className="pv-btn"
+                  style={{ padding: '0.15rem 0.5rem', fontSize: '0.72rem' }}
+                  onClick={() => setSelectedTermsToApply(new Set(taggedTermsToAdd.map((t) => t.term.toLowerCase())))}
+                >
+                  Select All ({taggedTermsToAdd.length})
+                </button>
+                <button
+                  type="button"
+                  className="pv-btn"
+                  style={{ padding: '0.15rem 0.5rem', fontSize: '0.72rem' }}
+                  onClick={() => setSelectedTermsToApply(new Set())}
+                >
+                  Deselect All
+                </button>
+              </div>
+
+              <div style={{ maxHeight: '280px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+                <table className="pv-modal-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '50px', textAlign: 'center' }}>Include</th>
+                      <th>Tagged Term</th>
+                      <th>MedDRA SOC</th>
+                      <th>Source Section</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {taggedTermsToAdd.map((t) => {
+                      const isChecked = selectedTermsToApply.has(t.term.toLowerCase());
+                      return (
+                        <tr
+                          key={`modal-tag-${t.term}`}
+                          style={{ background: isChecked ? '#f0fdf4' : '#ffffff', cursor: 'pointer' }}
+                          onClick={() => {
+                            setSelectedTermsToApply((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(t.term.toLowerCase())) next.delete(t.term.toLowerCase());
+                              else next.add(t.term.toLowerCase());
+                              return next;
+                            });
+                          }}
+                        >
+                          <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setSelectedTermsToApply((prev) => {
+                                  const next = new Set(prev);
+                                  if (checked) next.add(t.term.toLowerCase());
+                                  else next.delete(t.term.toLowerCase());
+                                  return next;
+                                });
+                              }}
+                            />
+                          </td>
+                          <td style={{ fontWeight: 600, color: '#0f172a' }}>{t.term}</td>
+                          <td style={{ color: '#475569' }}>{t.soc_name}</td>
+                          <td style={{ color: '#64748b' }}>{t.section_name}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="pv-modal-footer">
+              <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                <strong>{selectedTermsToApply.size}</strong> of {taggedTermsToAdd.length} terms selected
+              </span>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="pv-btn"
+                  onClick={() => setShowUpdateModal(false)}
+                  disabled={updatingWithTags}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="pv-btn pv-btn-accent"
+                  disabled={updatingWithTags || selectedTermsToApply.size === 0}
+                  onClick={handleConfirmUpdateWithTags}
+                >
+                  {updatingWithTags ? 'Incorporating...' : `Confirm & Update (${selectedTermsToApply.size})`}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
