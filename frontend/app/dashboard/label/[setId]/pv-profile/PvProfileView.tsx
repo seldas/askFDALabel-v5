@@ -518,10 +518,11 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
 
   // Dynamic progress stage during AI analysis
   const getProgressStage = (sec: number) => {
-    if (sec < 4) return 'Scanning safety sections & matching MedDRA dictionary keywords...';
-    if (sec < 14) return 'Calling clinical AI engine to evaluate incidence rates & safety warnings...';
-    if (sec < 24) return 'Structuring drug vs. placebo frequencies and identifying non-standard terms...';
-    return 'Grounding standard MedDRA Preferred Terms (PT) & primary Organ Classes (SOC)...';
+    if (sec < 6) return 'Scanning safety sections & matching MedDRA dictionary keywords...';
+    if (sec < 25) return 'Calling clinical AI engine to evaluate incidence rates & safety warnings...';
+    if (sec < 60) return 'Structuring drug vs. placebo frequencies and identifying non-standard terms...';
+    if (sec < 120) return 'Grounding standard MedDRA Preferred Terms (PT) & primary Organ Classes (SOC)...';
+    return 'Finalizing multi-section adverse event consolidation & severity tier rankings...';
   };
 
   // 1. Loading Initial Cache Check
@@ -556,8 +557,8 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
               <span style={{ color: '#ea580c' }}>⏳</span>
               <span><strong>Status:</strong> {getProgressStage(elapsedSeconds)}</span>
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#9a3412', marginTop: '0.5rem', opacity: 0.85 }}>
-              * Full safety analysis typically takes 10 to 25 seconds. The result will be cached for instant retrieval next time.
+            <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '0.6rem', lineHeight: 1.4 }}>
+              * Extraction time depends on the active AI model and label length. Fast models take ~15–30s, while deep clinical reasoning models may take <strong>3 to 5 minutes</strong>. The completed profile will be cached in the database for instant retrieval.
             </div>
           </div>
         </div>
@@ -597,6 +598,9 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
             Generate a SIDER 4.1-style Adverse Event & Safety Profile for <strong>{data.brand_name || data.generic_name}</strong>.
             The AI engine will harvest Boxed Warnings, Warnings & Precautions, and Clinical Trial tables to structure drug vs. placebo incidence rates.
           </p>
+          <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '1.25rem' }}>
+            (Note: Depending on the configured AI model, full analysis may take between 30 seconds and 3–5 minutes)
+          </div>
 
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
             {data.active_ingredient && <span className="pv-meta-tag"><strong>Ingredient:</strong> {data.active_ingredient}</span>}

@@ -422,6 +422,33 @@ function LabelContent() {
   const [projects, setProjects] = useState<any[]>([]);
   const [isTogglingProject, setIsTogglingProject] = useState<number | null>(null);
 
+  // PV-Profile verification state: AEs button and highlights are only enabled when ready
+  const [pvProfileReady, setPvProfileReady] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!setId) return;
+    let isMounted = true;
+    fetch(`/api/dashboard/pv_profile/${encodeURIComponent(setId)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((pvData) => {
+        if (!isMounted) return;
+        const isReady = Boolean(pvData && pvData.has_record && Array.isArray(pvData.items) && pvData.items.length > 0);
+        setPvProfileReady(isReady);
+        if (typeof window !== 'undefined') {
+          (window as any).pvProfileData = pvData;
+          if (isReady && (window as any).loadMeddraScan) {
+            (window as any).loadMeddraScan(setId);
+          }
+        }
+      })
+      .catch(() => {
+        if (isMounted) setPvProfileReady(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [setId]);
+
   /*
    * Legacy script loading is handled by <LegacyBridge> in the render below.
    * It replaces a 100ms setInterval that polled for five window.init* globals
@@ -746,21 +773,21 @@ function LabelContent() {
 
   const handleDownloadMeddraProfile = async () => {
     try {
-      const response = await fetch(`/api/dashboard/meddra/profile/${setId}`);
-      if (!response.ok) throw new Error("Failed to fetch MedDRA profile");
+      const response = await fetch(`/api/dashboard/pv_profile/${encodeURIComponent(setId)}`);
+      if (!response.ok) throw new Error("Failed to fetch PV profile");
       const dataJson = await response.json();
       const blob = new Blob([JSON.stringify(dataJson, null, 2)], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `MedDRA_Profile_${dataJson.metadata?.brand_name || setId}.json`;
+      a.download = `PV_Profile_${dataJson.brand_name || dataJson.generic_name || setId}.json`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err) {
-      console.error("MedDRA Profile Export Error:", err);
-      alert("Failed to export MedDRA profile.");
+      console.error("PV Profile Export Error:", err);
+      alert("Failed to export PV profile.");
     }
   };
 
@@ -835,12 +862,18 @@ function LabelContent() {
             <svg className="pop-indicator" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
           </button>
 
-          {/* MedDRA Stats — label tab only */}
+          {/* MedDRA Stats — label tab only, enabled ONLY when PV-profile is ready */}
           {activeTab === 'label-view' && (
             <button
               id="meddra-stats-btn"
-              className="label-tool-btn label-tool-meddra"
-              data-tooltip="Adverse Events (MedDRA)"
+              disabled={pvProfileReady === false}
+              className={`label-tool-btn label-tool-meddra ${pvProfileReady === false ? 'disabled' : ''}`}
+              data-tooltip={
+                pvProfileReady === false
+                  ? "PV-Profile not generated yet. Open Toolbox > PV-Profile to generate adverse event profile."
+                  : "Adverse Events & MedDRA Statistics (Verified by PV-Profile)"
+              }
+              style={pvProfileReady === false ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
               <span>AEs</span>

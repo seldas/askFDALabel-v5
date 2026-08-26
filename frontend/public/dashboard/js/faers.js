@@ -1336,7 +1336,7 @@ window.initFaers = function() {
     async function loadMeddraScan(setId) {
         // --- Caching Logic ---
         if (window.meddraScanData) {
-            console.log("Using cached MedDRA scan data.");
+            console.log("Using cached MedDRA scan data from PV-profile.");
             const labelContainer = document.getElementById('label-view');
             if (labelContainer) {
                 highlightSafetyTerms(labelContainer, window.meddraScanData);
@@ -1345,21 +1345,38 @@ window.initFaers = function() {
         }
 
         try {
-            const response = await fetch(`/api/dashboard/meddra/scan_label/${setId}`);
+            const response = await fetch(`/api/dashboard/pv_profile/${encodeURIComponent(setId)}`);
             if (!response.ok) return;
             const data = await response.json();
             
-            if (data.found_terms && data.found_terms.length > 0) {
-                // Create a map where count is null/0 to indicate base highlighting
+            // Only underline terms that have been verified in PV-Profile (not leftover ones)
+            if (data && data.has_record && Array.isArray(data.items) && data.items.length > 0) {
+                window.pvProfileData = data;
                 const termsMap = {};
-                data.found_terms.forEach(item => {
-                    const term = item.term;
-                    if (term && term.length > 2) {
-                        termsMap[term.toLowerCase()] = {
-                            count: 0, 
-                            term: term,
-                            soc: item.soc || 'Unknown',
-                            soc_abbrev: item.soc_abbrev || ''
+                
+                data.items.forEach(item => {
+                    const pt = item.meddra_pt;
+                    const raw = item.term;
+                    const soc = item.soc_name || 'Unknown';
+                    const socAbbrev = item.soc_abbrev || '';
+                    
+                    if (pt && pt.length > 2) {
+                        termsMap[pt.toLowerCase()] = {
+                            count: item.occurrences ? item.occurrences.length : 1,
+                            term: pt,
+                            soc: soc,
+                            soc_abbrev: socAbbrev,
+                            severity_tier: item.severity_tier
+                        };
+                    }
+                    if (raw && raw.length > 2 && raw.toLowerCase() !== pt.toLowerCase()) {
+                        termsMap[raw.toLowerCase()] = {
+                            count: item.occurrences ? item.occurrences.length : 1,
+                            term: pt,
+                            raw_term: raw,
+                            soc: soc,
+                            soc_abbrev: socAbbrev,
+                            severity_tier: item.severity_tier
                         };
                     }
                 });
@@ -1371,9 +1388,12 @@ window.initFaers = function() {
                     highlightSafetyTerms(labelContainer, termsMap);
                 }
                 return termsMap;
+            } else {
+                window.pvProfileData = data;
+                window.meddraScanData = null;
             }
         } catch (e) {
-            console.error("Error scanning MedDRA terms:", e);
+            console.error("Error scanning MedDRA terms from PV-Profile:", e);
         }
     }
 
@@ -1426,41 +1446,42 @@ window.initFaers = function() {
 
         if (!modalBody) return;
 
-        // 1. Gather Data (Strictly from base MedDRA terms found in labeling)
-        const signals = document.querySelectorAll('.meddra-term-base');
+        const pvData = window.pvProfileData;
+        if (!pvData || !pvData.has_record || !Array.isArray(pvData.items) || pvData.items.length === 0) {
+            modalBody.innerHTML = `
+                <div style="text-align: center; padding: 40px 20px; color: #64748b;">
+                    <p style="font-size: 1.1em; font-weight: 600; color: #0f172a; margin-bottom: 8px;">PV-Profile Not Generated Yet</p>
+                    <p style="font-size: 0.875rem; max-width: 420px; margin: 0 auto 16px auto; line-height: 1.5;">
+                        Please open the <strong>PV-Profile</strong> tool in the Toolbox tab to generate and verify Adverse Event statistics for this drug product.
+                    </p>
+                </div>
+            `;
+            return;
+        }
+
+        // 1. Gather Data (Consistent with verified PV-profile)
         const socCounts = {};
         const uniqueTerms = new Set();
         const socTermsMap = {}; // Map SOC -> Map Term -> Set of Sections
 
-        signals.forEach(el => {
-            const term = (el.getAttribute('data-term') || el.textContent).toLowerCase();
-            const soc = el.getAttribute('data-soc') || 'Unknown';
+        pvData.items.forEach(item => {
+            const pt = item.meddra_pt;
+            const soc = item.soc_name || 'General disorders and administration site conditions';
             
-            // Find Section
-            let sectionName = null;
-            const sectionDiv = el.closest('.Section');
-            if (sectionDiv) {
-                // Try to find numeric ID first
-                const numericId = sectionDiv.getAttribute('data-section-number');
-                if (numericId) {
-                    sectionName = numericId;
-                } else {
-                    // Use header title
-                    const header = sectionDiv.querySelector('h1, h2, h3, h4');
-                    if (header) sectionName = header.textContent.trim();
-                }
-            }
-
-            if (!uniqueTerms.has(term)) {
-                uniqueTerms.add(term);
+            if (!uniqueTerms.has(pt.toLowerCase())) {
+                uniqueTerms.add(pt.toLowerCase());
                 socCounts[soc] = (socCounts[soc] || 0) + 1;
             }
             
             if (!socTermsMap[soc]) socTermsMap[soc] = {};
-            if (!socTermsMap[soc][term]) socTermsMap[soc][term] = new Set();
+            if (!socTermsMap[soc][pt]) socTermsMap[soc][pt] = new Set();
             
-            if (sectionName) {
-                socTermsMap[soc][term].add(sectionName);
+            if (Array.isArray(item.occurrences) && item.occurrences.length > 0) {
+                item.occurrences.forEach(occ => {
+                    if (occ.section_title) socTermsMap[soc][pt].add(occ.section_title);
+                });
+            } else if (item.section_name) {
+                socTermsMap[soc][pt].add(item.section_name);
             }
         });
 
@@ -1474,7 +1495,7 @@ window.initFaers = function() {
 
         // 3. Render
         modalBody.innerHTML = `
-            <div style="height: 300px; width: 100%;">
+            <div style="height: 320px; width: 100%;">
                 <canvas id="meddraStatsChart"></canvas>
             </div>
             <div id="meddra-drilldown-container" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; display: none;">
@@ -1502,7 +1523,7 @@ window.initFaers = function() {
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Count',
+                    label: 'Adverse Events',
                     data: data,
                     backgroundColor: colors,
                     borderColor: borderColors,
@@ -1517,7 +1538,7 @@ window.initFaers = function() {
                     legend: { display: false },
                     title: {
                         display: true,
-                        text: `Labeling MedDRA Terms: ${uniqueTerms.size}`
+                        text: `Verified Adverse Events: ${uniqueTerms.size} signals across ${labels.length} Organ Systems`
                     },
                     tooltip: {
                         callbacks: {
@@ -1530,7 +1551,7 @@ window.initFaers = function() {
                 scales: {
                     y: { beginAtZero: true },
                     x: { 
-                        display: true, // Show the axis
+                        display: true,
                         ticks: {
                             maxRotation: 90,
                             minRotation: 90,
