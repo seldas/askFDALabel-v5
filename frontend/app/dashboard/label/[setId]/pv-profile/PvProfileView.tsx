@@ -845,9 +845,10 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                     <Bar
                       dataKey="count"
                       radius={[0, 2, 2, 0]}
-                      onClick={(barData) => {
-                        if (barData && barData.full_soc_name) {
-                          setSelectedSoc((prev) => (prev === barData.full_soc_name ? null : barData.full_soc_name));
+                      onClick={(barData: any) => {
+                        const socName = barData?.full_soc_name || barData?.payload?.full_soc_name;
+                        if (socName) {
+                          setSelectedSoc((prev) => (prev === socName ? null : socName));
                         }
                       }}
                       style={{ cursor: 'pointer' }}
