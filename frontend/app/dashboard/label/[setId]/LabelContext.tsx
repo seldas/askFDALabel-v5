@@ -48,3 +48,4 @@ export const TOOL_FAERS = 'faers-view';
 export const TOOL_TOX = 'tox-view';
 export const TOOL_EXAMINE = 'examine-view';
 export const TOOL_DEEPDIVE = 'deep-dive-view';
+export const TOOL_PV_PROFILE = 'pv-profile-view';

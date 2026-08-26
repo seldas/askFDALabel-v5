@@ -1,0 +1,774 @@
+'use client';
+
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import Link from 'next/link';
+import { labelRoute } from '../../../../platform/context';
+import './pv-profile.css';
+
+export interface PvItem {
+  term: string;
+  meddra_pt: string;
+  meddra_pt_code?: number | null;
+  soc_name: string;
+  soc_code?: number | null;
+  severity_tier: number;
+  section_name: string;
+  is_quantitative: boolean;
+  drug_frequency_text: string | null;
+  drug_min_pct: number | null;
+  drug_max_pct: number | null;
+  placebo_frequency_text: string | null;
+  placebo_pct: number | null;
+  risk_difference_pct: number | null;
+  frequency_category: string;
+  excerpt: string;
+}
+
+export interface PvPeer {
+  index: number;
+  set_id: string;
+  brand_name: string;
+  generic_name: string;
+  active_ingredient: string;
+  manufacturer_name: string;
+  effective_time: string | null;
+  dosage_form: string | null;
+  is_rld: boolean;
+  has_cached_profile: boolean;
+}
+
+export interface PvProfileData {
+  set_id: string;
+  spl_id: string | null;
+  brand_name: string;
+  generic_name: string;
+  active_ingredient: string;
+  manufacturer_name: string;
+  effective_time: string | null;
+  label_format: string;
+  generated_at?: string;
+  cached: boolean;
+  cached_at?: string;
+  has_record?: boolean;
+  status?: string;
+  is_supported?: boolean;
+  message?: string;
+  total_adverse_events: number;
+  severity_tier_defs: Record<number, { level: number; name: string; badge: string; color: string; description: string }>;
+  tier_summary: Record<number, number>;
+  soc_summary: Array<{ soc_name: string; soc_code?: number; count: number; max_severity_tier: number }>;
+  items: PvItem[];
+  harvested_sections: Array<{ code: string; title: string; severity_tier: number }>;
+  peers: PvPeer[];
+}
+
+export default function PvProfileView({ setId, splId }: { setId: string; splId?: string | null }) {
+  const [data, setData] = useState<PvProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  // Filters & State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTierFilter, setSelectedTierFilter] = useState<number | 'all' | 'quant'>('all');
+  const [groupBy, setGroupBy] = useState<'tier' | 'soc' | 'flat'>('tier');
+  const [sortBy, setSortBy] = useState<'severity' | 'freq_desc' | 'risk_diff' | 'alpha'>('severity');
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [activeDrawerItem, setActiveDrawerItem] = useState<PvItem | null>(null);
+
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Live Timer for AI generation
+  useEffect(() => {
+    if (generating) {
+      setElapsedSeconds(0);
+      timerRef.current = setInterval(() => {
+        setElapsedSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [generating]);
+
+  const fetchProfile = useCallback(async (isGenerate = false, isRefresh = false) => {
+    if (isGenerate || isRefresh) setGenerating(true);
+    else setLoading(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams();
+      if (splId) params.set('spl_id', splId);
+      if (isGenerate) params.set('generate', '1');
+      if (isRefresh) params.set('refresh', '1');
+
+      const url = `/api/dashboard/pv_profile/${encodeURIComponent(setId)}?${params.toString()}`;
+      const res = await fetch(url, {
+        method: isGenerate || isRefresh ? 'POST' : 'GET',
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || `Failed to fetch PV profile (HTTP ${res.status})`);
+      }
+      const json: PvProfileData = await res.json();
+      setData(json);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+      setGenerating(false);
+    }
+  }, [setId, splId]);
+
+  useEffect(() => {
+    // Initial fetch: do NOT auto-generate; check if cached record exists
+    fetchProfile(false, false);
+  }, [fetchProfile]);
+
+  const toggleGroup = (groupKey: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) next.delete(groupKey);
+      else next.add(groupKey);
+      return next;
+    });
+  };
+
+  // Filter and Sort Items
+  const filteredAndSortedItems = useMemo(() => {
+    if (!data || !data.items) return [];
+
+    let result = data.items.filter((item) => {
+      // Tier filter
+      if (selectedTierFilter === 'quant') {
+        if (!item.is_quantitative || (item.drug_max_pct == null && item.drug_min_pct == null)) return false;
+      } else if (typeof selectedTierFilter === 'number') {
+        if (item.severity_tier !== selectedTierFilter) return false;
+      }
+
+      // Search query filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const termMatch = item.term.toLowerCase().includes(q);
+        const ptMatch = item.meddra_pt.toLowerCase().includes(q);
+        const socMatch = item.soc_name.toLowerCase().includes(q);
+        const secMatch = item.section_name.toLowerCase().includes(q);
+        if (!termMatch && !ptMatch && !socMatch && !secMatch) return false;
+      }
+
+      return true;
+    });
+
+    // Sorting
+    result = [...result].sort((a, b) => {
+      if (sortBy === 'severity') {
+        if (a.severity_tier !== b.severity_tier) return a.severity_tier - b.severity_tier;
+        const aVal = a.drug_max_pct ?? a.drug_min_pct ?? -1;
+        const bVal = b.drug_max_pct ?? b.drug_min_pct ?? -1;
+        if (bVal !== aVal) return bVal - aVal;
+        return a.meddra_pt.localeCompare(b.meddra_pt);
+      }
+      if (sortBy === 'freq_desc') {
+        const aVal = a.drug_max_pct ?? a.drug_min_pct ?? -1;
+        const bVal = b.drug_max_pct ?? b.drug_min_pct ?? -1;
+        if (bVal !== aVal) return bVal - aVal;
+        return a.severity_tier - b.severity_tier;
+      }
+      if (sortBy === 'risk_diff') {
+        const aDiff = a.risk_difference_pct ?? -999;
+        const bDiff = b.risk_difference_pct ?? -999;
+        if (bDiff !== aDiff) return bDiff - aDiff;
+        return a.severity_tier - b.severity_tier;
+      }
+      if (sortBy === 'alpha') {
+        return a.meddra_pt.localeCompare(b.meddra_pt);
+      }
+      return 0;
+    });
+
+    return result;
+  }, [data, selectedTierFilter, searchQuery, sortBy]);
+
+  // Grouping
+  const groupedData = useMemo(() => {
+    if (groupBy === 'flat') {
+      return [{ key: 'all', title: 'All Safety Signals & Adverse Events', items: filteredAndSortedItems }];
+    }
+
+    if (groupBy === 'tier') {
+      const groupsMap: Record<number, PvItem[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+      filteredAndSortedItems.forEach((item) => {
+        const t = item.severity_tier || 4;
+        if (!groupsMap[t]) groupsMap[t] = [];
+        groupsMap[t].push(item);
+      });
+
+      return [1, 2, 3, 4, 5]
+        .filter((t) => groupsMap[t] && groupsMap[t].length > 0)
+        .map((t) => {
+          const tierDef = data?.severity_tier_defs?.[t] || { name: `Tier ${t}`, badge: `TIER ${t}` };
+          return {
+            key: `tier-${t}`,
+            title: `${tierDef.badge} — ${tierDef.name}`,
+            tier: t,
+            items: groupsMap[t],
+          };
+        });
+    }
+
+    if (groupBy === 'soc') {
+      const socMap: Record<string, PvItem[]> = {};
+      filteredAndSortedItems.forEach((item) => {
+        const soc = item.soc_name || 'General / Unclassified';
+        if (!socMap[soc]) socMap[soc] = [];
+        socMap[soc].push(item);
+      });
+
+      return Object.keys(socMap)
+        .sort((a, b) => socMap[b].length - socMap[a].length)
+        .map((soc) => ({
+          key: `soc-${soc}`,
+          title: soc,
+          items: socMap[soc],
+        }));
+    }
+
+    return [];
+  }, [groupBy, filteredAndSortedItems, data]);
+
+  // CSV Export
+  const exportCsv = () => {
+    if (!filteredAndSortedItems.length) return;
+    const headers = ['Severity Tier', 'Section', 'Side Effect (PT)', 'Raw Term', 'MedDRA SOC', 'Drug Frequency', 'Placebo Frequency', 'Risk Difference (%)', 'Category', 'Excerpt'];
+    const rows = filteredAndSortedItems.map((i) => [
+      `Tier ${i.severity_tier}`,
+      `"${(i.section_name || '').replace(/"/g, '""')}"`,
+      `"${(i.meddra_pt || '').replace(/"/g, '""')}"`,
+      `"${(i.term || '').replace(/"/g, '""')}"`,
+      `"${(i.soc_name || '').replace(/"/g, '""')}"`,
+      `"${(i.drug_frequency_text || '').replace(/"/g, '""')}"`,
+      `"${(i.placebo_frequency_text || '').replace(/"/g, '""')}"`,
+      i.risk_difference_pct != null ? `${i.risk_difference_pct}%` : '',
+      i.frequency_category,
+      `"${(i.excerpt || '').replace(/"/g, '""')}"`,
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `PV_Profile_${data?.brand_name || setId}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Render Helper for SIDER Heatbars & Qualitative Warnings
+  const renderDataForDrug = (item: PvItem) => {
+    const val = item.drug_max_pct ?? item.drug_min_pct;
+    if (val != null) {
+      const barWidth = Math.min(100, Math.max(6, (val / 40) * 100));
+      let colorClass = 'rare';
+      if (val >= 10) colorClass = 'very-common';
+      else if (val >= 1) colorClass = 'common';
+      else if (val >= 0.1) colorClass = 'uncommon';
+
+      return (
+        <div className="pv-heatbar-container">
+          <div className="pv-heatbar-bg">
+            <div className={`pv-heatbar-fill ${colorClass}`} style={{ width: `${barWidth}%` }} />
+          </div>
+          <span className="pv-heatbar-text">
+            {item.drug_frequency_text || `${val}%`}
+          </span>
+        </div>
+      );
+    }
+
+    // For Boxed Warning & Warnings & Precautions: render inline excerpt snippet in the space
+    return (
+      <div className={`pv-inline-excerpt ${item.severity_tier === 1 ? 'boxed' : ''}`} title={item.excerpt || item.section_name}>
+        {item.excerpt ? `"${item.excerpt}"` : `Reported in ${item.section_name}`}
+      </div>
+    );
+  };
+
+  // Format Elapsed Time
+  const formatTimer = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  // Dynamic progress stage during AI analysis
+  const getProgressStage = (sec: number) => {
+    if (sec < 4) return 'Harvesting safety sections (Boxed Warning, Warnings & Precautions, Adverse Reactions)...';
+    if (sec < 14) return 'Analyzing clinical trial tables, percentages & warnings with AI model...';
+    if (sec < 24) return 'Structuring drug vs. placebo incidence rates & calculating risk differences...';
+    return 'Standardizing MedDRA Preferred Terms (PT) & primary System Organ Classes (SOC)...';
+  };
+
+  // 1. Loading Initial Cache Check
+  if (loading) {
+    return (
+      <div className="pv-container">
+        <div className="pv-state-card">
+          <div className="pv-spinner" />
+          <h3 style={{ margin: '0 0 0.25rem 0', color: '#0f172a', fontSize: '1.1rem' }}>Checking PV-Profile status...</h3>
+          <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>Reading local database cache...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Active AI Generation with Timer & Live Progress
+  if (generating) {
+    return (
+      <div className="pv-container">
+        <div className="pv-timer-card">
+          <div className="pv-spinner" />
+          <h3 style={{ margin: '0 0 0.25rem 0', color: '#0f172a', fontSize: '1.25rem' }}>
+            Generating PV-Profile for {data?.brand_name || data?.generic_name || 'Drug Product'}
+          </h3>
+          <div className="pv-timer-clock">{formatTimer(elapsedSeconds)}</div>
+          <p style={{ margin: '0 0 0.5rem 0', color: '#64748b', fontSize: '0.85rem' }}>
+            Extracting quantitative adverse reaction tables, warnings, and MedDRA terms.
+          </p>
+
+          <div className="pv-progress-steps">
+            <div className="pv-progress-step">
+              <span style={{ color: '#ea580c' }}>⏳</span>
+              <span><strong>Status:</strong> {getProgressStage(elapsedSeconds)}</span>
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#9a3412', marginTop: '0.5rem', opacity: 0.85 }}>
+              * Full safety analysis typically takes 10 to 25 seconds. The result will be cached for instant retrieval next time.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Error State
+  if (error) {
+    return (
+      <div className="pv-container">
+        <div className="pv-state-card" style={{ borderColor: '#fca5a5', background: '#fef2f2' }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', color: '#991b1b' }}>Failed to Load PV-Profile</h3>
+          <p style={{ margin: '0 0 1rem 0', color: '#b91c1c', fontSize: '0.85rem' }}>{error}</p>
+          <button className="pv-btn pv-btn-primary" onClick={() => fetchProfile(true, true)}>
+            Retry Analysis
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 4. Initial "No Record Yet" Start Screen
+  if (data && data.has_record === false) {
+    return (
+      <div className="pv-container">
+        <div className="pv-start-card">
+          <div className="pv-start-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            </svg>
+          </div>
+          <h3 style={{ margin: '0 0 0.5rem 0', color: '#0f172a', fontSize: '1.3rem' }}>
+            PV-Profile Not Generated Yet
+          </h3>
+          <p style={{ margin: '0 auto 1.25rem auto', color: '#64748b', fontSize: '0.875rem', maxWidth: '560px' }}>
+            Generate a SIDER 4.1-style Adverse Event & Safety Profile for <strong>{data.brand_name || data.generic_name}</strong>.
+            The AI engine will harvest Boxed Warnings, Warnings & Precautions, and Clinical Trial tables to structure drug vs. placebo incidence rates.
+          </p>
+
+          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+            {data.active_ingredient && <span className="pv-meta-tag"><strong>Ingredient:</strong> {data.active_ingredient}</span>}
+            {data.manufacturer_name && <span className="pv-meta-tag"><strong>Applicant:</strong> {data.manufacturer_name}</span>}
+            {data.effective_time && <span className="pv-meta-tag"><strong>Date:</strong> {data.effective_time}</span>}
+          </div>
+
+          <button
+            className="pv-btn pv-btn-primary"
+            style={{ padding: '0.65rem 1.5rem', fontSize: '0.95rem', borderRadius: '8px' }}
+            onClick={() => fetchProfile(true, false)}
+          >
+            ⚡ Start PV-Profile Analysis
+          </button>
+
+          {data.peers && data.peers.length > 0 && (
+            <div style={{ textAlign: 'left', marginTop: '2rem', borderTop: '1px solid #e2e8f0', paddingTop: '1.25rem' }}>
+              <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', color: '#475569' }}>
+                Other Available Labelings for {data.active_ingredient}:
+              </h4>
+              <div className="pv-peers-grid">
+                {data.peers.slice(0, 4).map((p) => (
+                  <div key={p.set_id} className="pv-peer-card">
+                    <Link href={labelRoute(p.set_id, 'pv-profile')} className="pv-peer-name">
+                      {p.brand_name}
+                    </Link>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                      {p.manufacturer_name} {p.has_cached_profile ? '• (Profile Ready)' : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // 5. Unsupported / Non-standard SPL Empty State
+  if (!data || data.is_supported === false || data.total_adverse_events === 0) {
+    return (
+      <div className="pv-container">
+        <div className="pv-state-card">
+          <h3 style={{ margin: '0 0 0.5rem 0', color: '#334155' }}>No Standard Safety Profile Available</h3>
+          <p style={{ margin: '0 0 1.25rem 0', color: '#64748b', fontSize: '0.875rem', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' }}>
+            {data?.message || 'This product labeling does not contain structured safety or adverse reaction sections (e.g. bulk raw materials, medical gas, or unformatted listing).'}
+          </p>
+          {data?.peers && data.peers.length > 0 && (
+            <div style={{ textAlign: 'left', marginTop: '1.5rem' }}>
+              <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', color: '#0f172a' }}>
+                Other Available Labelings with Same Active Ingredient ({data.active_ingredient}):
+              </h4>
+              <div className="pv-peers-grid">
+                {data.peers.slice(0, 4).map((p) => (
+                  <div key={p.set_id} className="pv-peer-card">
+                    <Link href={labelRoute(p.set_id, 'pv-profile')} className="pv-peer-name">
+                      {p.brand_name}
+                    </Link>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>{p.manufacturer_name} • {p.dosage_form || 'N/A'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // 6. Main PV-Profile Heatmap Interface
+  return (
+    <div className="pv-container">
+      {/* Header */}
+      <div className="pv-header">
+        <div className="pv-title-group">
+          <h2>
+            PV-Profile: {data.brand_name || data.generic_name || 'Drug Product'}
+            <span className="pv-badge pv-badge-tier-4" style={{ fontSize: '0.72rem', marginLeft: '0.5rem' }}>
+              {data.label_format}
+            </span>
+          </h2>
+          <div className="pv-meta-sub">
+            {data.active_ingredient && <span><strong>Active Ingredient:</strong> {data.active_ingredient}</span>}
+            {data.manufacturer_name && <span><strong>Manufacturer:</strong> {data.manufacturer_name}</span>}
+            {data.effective_time && <span><strong>Effective:</strong> {data.effective_time}</span>}
+            {data.cached && <span className="pv-meta-tag">Cached {data.cached_at ? new Date(data.cached_at).toLocaleDateString() : ''}</span>}
+          </div>
+        </div>
+        <div className="pv-actions">
+          <button className="pv-btn" onClick={exportCsv} title="Export current table to CSV">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </button>
+          <button className="pv-btn pv-btn-primary" onClick={() => fetchProfile(true, true)} disabled={generating}>
+            {generating ? 'Re-analyzing...' : 'Refresh AI'}
+          </button>
+        </div>
+      </div>
+
+      {/* Severity Ribbon */}
+      <div className="pv-stats-ribbon">
+        <div className="pv-stat-card" style={{ borderLeft: '4px solid #ef4444' }}>
+          <span className="pv-stat-title" style={{ color: '#991b1b' }}>Tier 1: Boxed / Critical</span>
+          <span className="pv-stat-num" style={{ color: '#991b1b' }}>{data.tier_summary[1] || 0}</span>
+        </div>
+        <div className="pv-stat-card" style={{ borderLeft: '4px solid #f97316' }}>
+          <span className="pv-stat-title" style={{ color: '#9a3412' }}>Tier 2: Contraindications</span>
+          <span className="pv-stat-num" style={{ color: '#9a3412' }}>{data.tier_summary[2] || 0}</span>
+        </div>
+        <div className="pv-stat-card" style={{ borderLeft: '4px solid #eab308' }}>
+          <span className="pv-stat-title" style={{ color: '#92400e' }}>Tier 3: Warnings</span>
+          <span className="pv-stat-num" style={{ color: '#92400e' }}>{data.tier_summary[3] || 0}</span>
+        </div>
+        <div className="pv-stat-card" style={{ borderLeft: '4px solid #3b82f6' }}>
+          <span className="pv-stat-title" style={{ color: '#1e40af' }}>Tier 4: Adverse Reactions</span>
+          <span className="pv-stat-num" style={{ color: '#1e40af' }}>{data.tier_summary[4] || 0}</span>
+        </div>
+        <div className="pv-stat-card" style={{ borderLeft: '4px solid #64748b' }}>
+          <span className="pv-stat-title" style={{ color: '#475569' }}>Total Extracted</span>
+          <span className="pv-stat-num" style={{ color: '#0f172a' }}>{data.total_adverse_events}</span>
+        </div>
+      </div>
+
+      {/* Toolbar & Filters */}
+      <div className="pv-toolbar">
+        <div className="pv-search-box">
+          <input
+            type="text"
+            className="pv-search-input"
+            placeholder="Search adverse event, MedDRA PT, SOC..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button className="pv-search-clear" onClick={() => setSearchQuery('')}>×</button>
+          )}
+        </div>
+
+        <div className="pv-filters-group">
+          <button
+            className={`pv-filter-chip ${selectedTierFilter === 'all' ? 'active' : ''}`}
+            onClick={() => setSelectedTierFilter('all')}
+          >
+            All ({data.total_adverse_events})
+          </button>
+          <button
+            className={`pv-filter-chip ${selectedTierFilter === 1 ? 'active' : ''}`}
+            onClick={() => setSelectedTierFilter(1)}
+          >
+            Tier 1 Boxed ({data.tier_summary[1] || 0})
+          </button>
+          <button
+            className={`pv-filter-chip ${selectedTierFilter === 4 ? 'active' : ''}`}
+            onClick={() => setSelectedTierFilter(4)}
+          >
+            Tier 4 AEs ({data.tier_summary[4] || 0})
+          </button>
+          <button
+            className={`pv-filter-chip ${selectedTierFilter === 'quant' ? 'active' : ''}`}
+            onClick={() => setSelectedTierFilter('quant')}
+          >
+            Quantitative (with %)
+          </button>
+
+          <span style={{ fontSize: '0.8rem', color: '#cbd5e1', margin: '0 0.2rem' }}>|</span>
+
+          <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 600 }}>Group:</label>
+          <select
+            className="pv-select"
+            value={groupBy}
+            onChange={(e) => setGroupBy(e.target.value as 'tier' | 'soc' | 'flat')}
+          >
+            <option value="tier">By Severity Tier</option>
+            <option value="soc">By MedDRA SOC</option>
+            <option value="flat">Flat Table</option>
+          </select>
+
+          <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 600 }}>Sort:</label>
+          <select
+            className="pv-select"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'severity' | 'freq_desc' | 'risk_diff' | 'alpha')}
+          >
+            <option value="severity">Severity Tier (1 → 5)</option>
+            <option value="freq_desc">Drug % (High → Low)</option>
+            <option value="risk_diff">Placebo Risk Diff (Δ)</option>
+            <option value="alpha">Alphabetical (A → Z)</option>
+          </select>
+        </div>
+      </div>
+
+      {/* SIDER 4.1 Compact Heatmap Table */}
+      <div className="pv-table-wrapper">
+        <table className="pv-table">
+          <thead>
+            <tr>
+              <th style={{ width: '90px' }}>Severity</th>
+              <th style={{ minWidth: '190px' }}>Side Effect (MedDRA PT)</th>
+              <th style={{ minWidth: '280px' }}>Data for Drug / Warning Context</th>
+              <th style={{ width: '85px' }}>Placebo</th>
+              <th style={{ width: '95px' }}>Risk Diff (Δ)</th>
+              <th style={{ width: '120px' }}>Category</th>
+              <th style={{ width: '65px', textAlign: 'center' }}>Detail</th>
+            </tr>
+          </thead>
+          <tbody>
+            {groupedData.map((group) => {
+              const isCollapsed = collapsedGroups.has(group.key);
+              return (
+                <React.Fragment key={group.key}>
+                  {groupBy !== 'flat' && (
+                    <tr>
+                      <td colSpan={7} style={{ padding: 0 }}>
+                        <div className="pv-group-header" onClick={() => toggleGroup(group.key)}>
+                          <div className="pv-group-left">
+                            <span style={{ fontSize: '0.7rem', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.15s ease' }}>
+                              ▼
+                            </span>
+                            <span>{group.title}</span>
+                            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 500 }}>
+                              ({group.items.length} signals)
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                            {isCollapsed ? 'Expand' : 'Collapse'}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
+                  {!isCollapsed && group.items.map((item, idx) => {
+                    const isQualitative = item.drug_max_pct == null && item.drug_min_pct == null;
+                    return (
+                      <tr key={`${group.key}-${item.meddra_pt}-${idx}`} className="pv-row" onClick={() => setActiveDrawerItem(item)}>
+                        <td>
+                          <span className={`pv-badge pv-badge-tier-${item.severity_tier}`}>
+                            {item.severity_tier === 1 ? 'BOXED' : item.severity_tier === 2 ? 'CONTRA' : item.severity_tier === 3 ? 'WARNING' : item.severity_tier === 4 ? 'AE TABLE' : 'POSTMKT'}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="pv-term-cell">
+                            <span className="pv-term-name">{item.meddra_pt}</span>
+                            {item.term !== item.meddra_pt && (
+                              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Raw: {item.term}</span>
+                            )}
+                            <span className="pv-term-soc">{item.soc_name}</span>
+                          </div>
+                        </td>
+                        <td>{renderDataForDrug(item)}</td>
+                        <td>
+                          {isQualitative ? (
+                            <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontStyle: 'italic' }}>N/A</span>
+                          ) : (
+                            <span className="pv-placebo-text">
+                              {item.placebo_frequency_text || (item.placebo_pct != null ? `${item.placebo_pct}%` : '-')}
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          {item.risk_difference_pct != null ? (
+                            <span className={`pv-risk-diff ${item.risk_difference_pct > 0 ? 'positive' : 'neutral'}`}>
+                              {item.risk_difference_pct > 0 ? `+${item.risk_difference_pct}%` : `${item.risk_difference_pct}%`}
+                            </span>
+                          ) : (
+                            <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>-</span>
+                          )}
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '0.72rem', textTransform: 'capitalize', color: '#475569', fontWeight: 500 }}>
+                            {item.frequency_category.replace(/_/g, ' ')}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <button
+                            className="pv-btn"
+                            style={{ padding: '0.15rem 0.4rem', fontSize: '0.7rem' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveDrawerItem(item);
+                            }}
+                          >
+                            Quote
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Evidence Drawer Modal */}
+      {activeDrawerItem && (
+        <div className="pv-drawer-overlay" onClick={() => setActiveDrawerItem(null)}>
+          <div className="pv-drawer" onClick={(e) => e.stopPropagation()}>
+            <div className="pv-drawer-header">
+              <h3>{activeDrawerItem.meddra_pt}</h3>
+              <button className="pv-drawer-close" onClick={() => setActiveDrawerItem(null)}>×</button>
+            </div>
+            <div className="pv-drawer-body">
+              <div>
+                <span className="pv-drawer-section-title">MedDRA Classification</span>
+                <p style={{ margin: '0.2rem 0', fontSize: '0.825rem' }}>
+                  <strong>Primary SOC:</strong> {activeDrawerItem.soc_name}
+                </p>
+                {activeDrawerItem.meddra_pt_code && (
+                  <p style={{ margin: '0.2rem 0', fontSize: '0.825rem', color: '#64748b' }}>
+                    <strong>MedDRA PT Code:</strong> {activeDrawerItem.meddra_pt_code}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <span className="pv-drawer-section-title">Frequency & Incidence</span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.2rem' }}>
+                  <div style={{ padding: '0.45rem', background: '#f8fafc', borderRadius: '5px', border: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Drug Incidence</span>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a' }}>
+                      {activeDrawerItem.drug_frequency_text || 'Reported in warning'}
+                    </div>
+                  </div>
+                  <div style={{ padding: '0.45rem', background: '#f8fafc', borderRadius: '5px', border: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Placebo Rate</span>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a' }}>
+                      {activeDrawerItem.placebo_frequency_text || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <span className="pv-drawer-section-title">Label Source Section</span>
+                <p style={{ margin: '0.2rem 0', fontWeight: 600, fontSize: '0.825rem' }}>
+                  {activeDrawerItem.section_name}
+                </p>
+                <span className={`pv-badge pv-badge-tier-${activeDrawerItem.severity_tier}`}>
+                  Severity Tier {activeDrawerItem.severity_tier}
+                </span>
+              </div>
+
+              <div>
+                <span className="pv-drawer-section-title">Original Label Excerpt (Evidence)</span>
+                <div className="pv-quote-card">
+                  "{activeDrawerItem.excerpt || 'No specific quotation excerpt recorded.'}"
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Same-Drug Peer Labels Strip */}
+      {data.peers && data.peers.length > 0 && (
+        <div className="pv-peers-section">
+          <h4>Same Active Ingredient Labelings ({data.active_ingredient || data.generic_name})</h4>
+          <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0 0 0.6rem 0' }}>
+            Compare adverse event profiles across other products and NDA/ANDAs sharing this active substance:
+          </p>
+          <div className="pv-peers-grid">
+            {data.peers.map((peer) => (
+              <div key={peer.set_id} className="pv-peer-card">
+                <Link href={labelRoute(peer.set_id, 'pv-profile')} className="pv-peer-name">
+                  {peer.brand_name}
+                </Link>
+                <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                  {peer.manufacturer_name} {peer.dosage_form ? `• ${peer.dosage_form}` : ''}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.2rem' }}>
+                  {peer.is_rld && <span className="pv-badge" style={{ background: '#ecfdf5', color: '#047857' }}>RLD</span>}
+                  {peer.has_cached_profile && <span style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 600 }}>● Profile Ready</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

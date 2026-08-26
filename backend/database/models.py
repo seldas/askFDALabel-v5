@@ -568,6 +568,23 @@ class LabelMeddraProfile(db.Model):
         db.UniqueConstraint('set_id', 'section_loinc', name='_set_section_uc'),
     )
 
+class LabelPvProfile(db.Model):
+    __tablename__ = 'label_pv_profiles'
+    id = db.Column(db.Integer, primary_key=True)
+    set_id = db.Column(db.String(100), index=True, nullable=False)
+    spl_id = db.Column(db.String(100), index=True, nullable=True)
+    brand_name = db.Column(db.String(255))
+    generic_name = db.Column(db.String(255))
+    active_ingredient = db.Column(db.String(255))
+    label_format = db.Column(db.String(20)) # PLR, NON-PLR, OTC
+    profile_data = db.Column(db.Text) # JSON string of extracted adverse events and summary
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('set_id', name='_pv_profile_set_id_uc'),
+    )
+
 class TokenUsage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)

@@ -3710,3 +3710,66 @@ def run_examine_query():
     except Exception as e:
         logger.exception(f"Error running examine query: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+# ==========================================
+# PV-PROFILE (SIDER 4.1-STYLE SAFETY PROFILE)
+# ==========================================
+
+@api_bp.route('/pv_profile/<set_id>', methods=['GET', 'POST'])
+def get_pv_profile(set_id):
+    """
+    Returns the PV-Profile (Pharmacovigilance / Adverse Event Heatmap)
+    for a single drug label (PLR, Non-PLR, or OTC).
+    """
+    from dashboard.services.pv_profile_service import PVProfileService
+    from flask_login import current_user
+
+    spl_id = request.args.get('spl_id')
+    auto_generate = request.args.get('generate', '0').lower() in ('1', 'true') or request.method == 'POST'
+    force_refresh = request.args.get('refresh', '0').lower() in ('1', 'true')
+    user = current_user if current_user.is_authenticated else None
+
+    try:
+        result = PVProfileService.get_or_generate_profile(
+            set_id=set_id,
+            spl_id=spl_id,
+            force_refresh=force_refresh,
+            auto_generate=auto_generate,
+            user=user
+        )
+
+        if isinstance(result, tuple) and len(result) == 2 and isinstance(result[1], int):
+            return jsonify(result[0]), result[1]
+
+        return jsonify(result)
+    except Exception as e:
+        logger.exception(f"Error generating PV-Profile for {set_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/pv_profile/<set_id>/refresh', methods=['POST'])
+def refresh_pv_profile(set_id):
+    """
+    Forces re-extraction of the PV-Profile via AI and updates the database cache.
+    """
+    from dashboard.services.pv_profile_service import PVProfileService
+    from flask_login import current_user
+
+    spl_id = request.args.get('spl_id')
+    user = current_user if current_user.is_authenticated else None
+
+    try:
+        result = PVProfileService.get_or_generate_profile(
+            set_id=set_id,
+            spl_id=spl_id,
+            force_refresh=True,
+            user=user
+        )
+        if isinstance(result, tuple) and len(result) == 2 and isinstance(result[1], int):
+            return jsonify(result[0]), result[1]
+
+        return jsonify(result)
+    except Exception as e:
+        logger.exception(f"Error refreshing PV-Profile for {set_id}: {e}")
+        return jsonify({'error': str(e)}), 500

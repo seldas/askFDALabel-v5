@@ -202,7 +202,16 @@ FEATURE_CATALOG = [
         category='Product Toolbox',
         enforced_at='Product Toolbox and /dashboard/label/[setId]/deepdive',
         default_min_role=ROLE_DEVELOPER,
-        default_allow_guest=False,
+        guest_relevant=False,
+    ),
+    FeatureSpec(
+        key='tool_pv_profile',
+        name='PV-Profile',
+        blurb='SIDER-style Adverse Event & Safety Profile with severity heatmap.',
+        category='Product Toolbox',
+        enforced_at='Product Toolbox and /dashboard/label/[setId]/pv-profile',
+        default_min_role=ROLE_USER,
+        default_allow_guest=True,
     ),
     FeatureSpec(
         key='tool_history_set_id',
