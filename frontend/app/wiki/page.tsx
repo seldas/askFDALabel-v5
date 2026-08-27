@@ -402,7 +402,7 @@ curl -X GET "https://${apiHost}/fdalabel-v3_api/api/v1/search?appl_num=NDA021436
   -H "X-API-Key: afl_live_YOUR_KEY"
 
 # Direct single label lookup by SET-ID:
-curl -X GET "https://${apiHost}/fdalabel-v3_api/api/v1/labels/a84b5749-923f-4279-bb7d-304b08d4b3c4" \\
+curl -X GET "https://${apiHost}/fdalabel-v3_api/api/v1/labels/f7633480-25aa-4326-bec9-82835b486a20" \\
   -H "X-API-Key: afl_live_YOUR_KEY"`}
         </pre>
       </div>
