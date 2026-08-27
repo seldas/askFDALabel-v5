@@ -5,14 +5,21 @@ deploy/generate_pv_profiles.py
 Batch processor for generating Pharmacovigilance (PV) Side Effect Profiles
 for FDA drug labeling records (CDER-CBER dataset, ~155k total labels).
 
-Features:
-- Default mode: Filters RLD drugs (~3,310 labels) for token efficiency.
-- Mode to run all 155k CDER-CBER labels (--all).
-- Resume-safety & Completeness Check: Checks existing rows in `label_pv_profiles`;
-  skips if valid and complete, avoiding wasted LLM tokens and API calls.
-- Multi-threaded concurrency (--concurrency N) with thread-safe DB transactions.
-- Automatic retries with exponential backoff for transient LLM timeouts/errors.
-- Direct persistence into PostgreSQL `label_pv_profiles` table.
+Docker Execution (Recommended):
+-------------------------------
+1. Run inside existing backend container (connects to network PG & mounted /data):
+   docker compose exec backend python /deploy/generate_pv_profiles.py
+
+2. Standalone container run:
+   docker run --rm --network fdalabel_v3_network \\
+     --env-file .env \\
+     -v $(pwd)/backend:/app \\
+     -v $(pwd)/deploy:/deploy \\
+     -v $(pwd)/data:/data \\
+     fdalabel-v3-backend:latest python /deploy/generate_pv_profiles.py
+
+3. Direct host execution (with custom PG host / connection string):
+   python deploy/generate_pv_profiles.py --db-url postgresql://user:pass@remote-pg-host:5432/fdalabel-v3
 """
 
 import os
@@ -226,8 +233,17 @@ def main():
         default=3,
         help="Maximum retries per label on error (Default: 3)."
     )
+    parser.add_argument(
+        '--db-url',
+        type=str,
+        default=None,
+        help="Explicit PostgreSQL connection URL (e.g. postgresql://user:pass@host:5432/dbname)."
+    )
 
     args = parser.parse_args()
+
+    if args.db_url:
+        os.environ["DATABASE_URL"] = args.db_url
 
     app = create_app()
 
