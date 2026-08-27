@@ -1808,23 +1808,66 @@ export default function ManagementPage() {
                 {/* API USAGE & QUICK START DOCUMENTATION */}
                 <section className="mgmt-card">
                   <h2 className="section-title">REST API Quick Start Guide</h2>
-                  <p style={{ color: 'var(--afl-n-500)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                  <p style={{ color: 'var(--afl-n-500)', fontSize: '0.9rem', marginBottom: '1rem' }}>
                     The askFDALabel REST API provides direct querying over the official CDER-CBER Oracle labeling database.
                   </p>
 
+                  {/* Dev Server Host Notice */}
+                  {(() => {
+                    const apiHost = session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov';
+                    const devApiUrl = `http://${apiHost}/fdalabel-v3_api/api/v1`;
+                    return (
+                      <div style={{
+                        background: '#eff6ff',
+                        border: '1px solid #bfdbfe',
+                        borderLeft: '4px solid #2563eb',
+                        padding: '1rem 1.25rem',
+                        borderRadius: '8px',
+                        marginBottom: '1.5rem'
+                      }}>
+                        <div style={{ fontWeight: 800, color: '#1e40af', marginBottom: '4px', fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>🚀</span>
+                          <span>Development Server API Endpoint</span>
+                        </div>
+                        <p style={{ margin: '0 0 6px 0', fontSize: '0.88rem', color: '#1e3a8a', lineHeight: 1.55 }}>
+                          Current Server Address:{' '}
+                          <code style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, fontFamily: 'monospace' }}>
+                            {apiHost}/fdalabel-v3_api/api/v1/...
+                          </code>
+                        </p>
+                        <div style={{
+                          background: '#fef3c7',
+                          border: '1px solid #fde68a',
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          fontSize: '0.82rem',
+                          color: '#92400e',
+                          lineHeight: 1.45
+                        }}>
+                          ⚠️ <strong>Critical Path Notice:</strong> The server API route prefix is <strong><code>/fdalabel-v3_api/api/</code></strong> (using <code>fdalabel-v3_api/api</code>, <em>not</em> <code>fdalabel-v3/api</code>).
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                     {/* Endpoint Overview */}
-                    <div style={{ background: 'var(--afl-n-50)', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid var(--afl-n-200)' }}>
-                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--afl-n-800)', marginBottom: '0.5rem' }}>
-                        Primary Endpoints
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem', fontFamily: 'monospace' }}>
-                        <div><span style={{ color: 'var(--afl-success-700)', fontWeight: 800 }}>GET</span> /api/v1/search?q=diabetes&limit=20</div>
-                        <div><span style={{ color: 'var(--afl-a-600)', fontWeight: 800 }}>POST</span> /api/v1/search (JSON payload)</div>
-                        <div><span style={{ color: 'var(--afl-success-700)', fontWeight: 800 }}>GET</span> /api/v1/labels/:set_id_or_spl_id</div>
-                        <div><span style={{ color: 'var(--afl-success-700)', fontWeight: 800 }}>GET</span> /api/v1/status</div>
-                      </div>
-                    </div>
+                    {(() => {
+                      const apiHost = session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov';
+                      return (
+                        <div style={{ background: 'var(--afl-n-50)', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid var(--afl-n-200)' }}>
+                          <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--afl-n-800)', marginBottom: '0.5rem' }}>
+                            Primary Endpoints ({apiHost})
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem', fontFamily: 'monospace' }}>
+                            <div><span style={{ color: 'var(--afl-success-700)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/search?q=diabetes&limit=20</div>
+                            <div><span style={{ color: 'var(--afl-a-600)', fontWeight: 800 }}>POST</span> /fdalabel-v3_api/api/v1/search (JSON payload)</div>
+                            <div><span style={{ color: 'var(--afl-success-700)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/labels/:set_id_or_spl_id</div>
+                            <div><span style={{ color: 'var(--afl-success-700)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/status</div>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Example 1: Full-Text Search */}
                     <div>
@@ -1840,7 +1883,7 @@ export default function ManagementPage() {
                         overflowX: 'auto',
                         fontFamily: 'monospace'
                       }}>
-{`curl -X GET "${typeof window !== 'undefined' ? window.location.origin : ''}/api/v1/search?q=myocardial+infarction&limit=10" \\
+{`curl -X GET "http://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/search?q=myocardial+infarction&limit=10" \\
   -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
                       </pre>
                     </div>
@@ -1859,7 +1902,7 @@ export default function ManagementPage() {
                         overflowX: 'auto',
                         fontFamily: 'monospace'
                       }}>
-{`curl -X GET "${typeof window !== 'undefined' ? window.location.origin : ''}/api/v1/search?appl_num=NDA021436&limit=5" \\
+{`curl -X GET "http://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/search?appl_num=NDA021436&limit=5" \\
   -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
                       </pre>
                     </div>
@@ -1878,7 +1921,7 @@ export default function ManagementPage() {
                         overflowX: 'auto',
                         fontFamily: 'monospace'
                       }}>
-{`curl -X GET "${typeof window !== 'undefined' ? window.location.origin : ''}/api/v1/search?section=34066-1&section_text=hepatotoxicity&limit=10" \\
+{`curl -X GET "http://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/search?section=34066-1&section_text=hepatotoxicity&limit=10" \\
   -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
                       </pre>
                     </div>
@@ -1899,7 +1942,7 @@ export default function ManagementPage() {
                       }}>
 {`import requests
 
-api_url = "${typeof window !== 'undefined' ? window.location.origin : ''}/api/v1/search"
+api_url = "http://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/search"
 headers = {"X-API-Key": "${apiKey || 'YOUR_API_KEY'}"}
 params = {
     "product_name": "Lipitor",

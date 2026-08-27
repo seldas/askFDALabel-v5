@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { Page } from '../platform/primitives';
+import { useUser } from '../context/UserContext';
 
 interface WikiItem {
   id: string;
@@ -37,7 +38,7 @@ const CATEGORIES = [
   { id: 'faq', label: 'Frequently Asked Questions', icon: '❓' },
 ];
 
-const GUIDES: WikiItem[] = [
+const getGuides = (apiHost: string): WikiItem[] => [
   {
     id: 'guide-getting-started',
     category: 'getting-started',
@@ -240,6 +241,38 @@ const GUIDES: WikiItem[] = [
           AskFDALabel provides a high-throughput, RESTful search API under the <code>/api/v1</code> namespace. The API allows external scripts, regulatory pipelines, and third-party tools to perform high-speed structured and full-text searches over official FDA drug labeling data.
         </p>
 
+        {/* Development Server Callout Box */}
+        <div style={{
+          background: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          borderLeft: '4px solid #2563eb',
+          padding: '14px 16px',
+          borderRadius: '8px',
+          margin: '14px 0'
+        }}>
+          <div style={{ fontWeight: 800, color: '#1e40af', marginBottom: '4px', fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>🚀</span>
+            <span>Current Development Server Endpoint</span>
+          </div>
+          <p style={{ margin: '0 0 8px 0', fontSize: '0.88rem', color: '#1e3a8a', lineHeight: 1.55 }}>
+            The active development server API is hosted at:{' '}
+            <code style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, fontFamily: 'monospace' }}>
+              http://{apiHost}/fdalabel-v3_api/api/v1/...
+            </code>
+          </p>
+          <div style={{
+            background: '#fef3c7',
+            border: '1px solid #fde68a',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            fontSize: '0.84rem',
+            color: '#92400e',
+            lineHeight: 1.45
+          }}>
+            ⚠️ <strong>Critical Path Notice:</strong> The server API route prefix is <strong><code>/fdalabel-v3_api/api/</code></strong> (using <code>fdalabel-v3_api/api</code>, <em>not</em> <code>fdalabel-v3/api</code>).
+          </div>
+        </div>
+
         <h4 style={{ color: '#1e40af', marginTop: '14px', marginBottom: '6px' }}>1. Database Target & Pinned Scope</h4>
         <p style={{ fontSize: '0.9rem', lineHeight: 1.55 }}>
           The REST API is permanently pinned to the curated <strong>CDER-CBER Oracle Database</strong> (<code>druglabel.DGV_SUM_RX_SPL</code>), ensuring high performance and regulatory data consistency. Any client-supplied parameters attempting to change the database target (e.g. <code>db_source</code> or <code>target_db</code>) are accepted for compatibility but safely ignored.
@@ -247,12 +280,12 @@ const GUIDES: WikiItem[] = [
 
         <h4 style={{ color: '#1e40af', marginTop: '14px', marginBottom: '6px' }}>2. API Base URL Structure</h4>
         <p style={{ fontSize: '0.9rem', lineHeight: 1.55 }}>
-          Replace <code>&lt;hostname&gt;</code> with your server domain or IP address:
+          Depending on your network environment and deployment mode, use the appropriate base URL:
         </p>
         <ul>
-          <li><strong>Deployed / Production Server:</strong> <code>http://&lt;hostname&gt;/api/v1/search</code> or <code>https://&lt;hostname&gt;/api/v1/search</code></li>
-          <li><strong>Local Development / Host Port:</strong> <code>http://localhost:8842/api/v1/search</code></li>
-          <li><strong>Service Health & Status Check:</strong> <code>http://&lt;hostname&gt;/api/v1/status</code> (or <code>http://localhost:8842/api/v1/status</code>)</li>
+          <li><strong>Development Server:</strong> <code>http://{apiHost}/fdalabel-v3_api/api/v1/search</code> (or <code>https://{apiHost}/fdalabel-v3_api/api/v1/search</code>)</li>
+          <li><strong>Direct Host/Container Port (Local Dev):</strong> <code>http://localhost:8842/api/v1/search</code></li>
+          <li><strong>Service Health & Status Check:</strong> <code>http://{apiHost}/fdalabel-v3_api/api/v1/status</code> (or <code>http://localhost:8842/api/v1/status</code>)</li>
         </ul>
 
         <h4 style={{ color: '#1e40af', marginTop: '14px', marginBottom: '6px' }}>3. Obtaining & Managing Your API Key</h4>
@@ -270,7 +303,7 @@ const GUIDES: WikiItem[] = [
         <ul>
           <li><strong>HTTP Header (Recommended):</strong> <code>X-API-Key: afl_live_YOUR_KEY</code></li>
           <li><strong>Bearer Token:</strong> <code>Authorization: Bearer afl_live_YOUR_KEY</code></li>
-          <li><strong>Query Parameter:</strong> <code>http://&lt;hostname&gt;/api/v1/search?api_key=afl_live_YOUR_KEY&q=...</code></li>
+          <li><strong>Query Parameter:</strong> <code>http://{apiHost}/fdalabel-v3_api/api/v1/search?api_key=afl_live_YOUR_KEY&q=...</code></li>
         </ul>
 
         <div style={{ background: '#eff6ff', padding: '12px 16px', borderRadius: '8px', borderLeft: '4px solid #2563eb', margin: '12px 0' }}>
@@ -303,7 +336,7 @@ const GUIDES: WikiItem[] = [
           Matches labels containing the exact multi-word phrase anywhere in the prescribing text:
         </p>
         <pre style={{ background: '#0f172a', color: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', overflowX: 'auto', fontFamily: 'monospace' }}>
-{`curl -X GET "http://<hostname>/api/v1/search?q=myocardial+infarction&limit=10" \\
+{`curl -X GET "http://${apiHost}/fdalabel-v3_api/api/v1/search?q=myocardial+infarction&limit=10" \\
   -H "X-API-Key: afl_live_YOUR_KEY"`}
         </pre>
 
@@ -313,11 +346,11 @@ const GUIDES: WikiItem[] = [
         </p>
         <pre style={{ background: '#0f172a', color: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', overflowX: 'auto', fontFamily: 'monospace' }}>
 {`# Labels mentioning both lactic acidosis and metformin:
-curl -X GET "http://<hostname>/api/v1/search?q=lactic+acidosis+AND+metformin&full_text_mode=advanced&limit=10" \\
+curl -X GET "http://${apiHost}/fdalabel-v3_api/api/v1/search?q=lactic+acidosis+AND+metformin&full_text_mode=advanced&limit=10" \\
   -H "X-API-Key: afl_live_YOUR_KEY"
 
 # Labels mentioning hypertension but NOT pediatric:
-curl -X GET "http://<hostname>/api/v1/search?q=hypertension+NOT+pediatric&full_text_mode=advanced&limit=10" \\
+curl -X GET "http://${apiHost}/fdalabel-v3_api/api/v1/search?q=hypertension+NOT+pediatric&full_text_mode=advanced&limit=10" \\
   -H "X-API-Key: afl_live_YOUR_KEY"`}
         </pre>
       </div>
@@ -345,11 +378,11 @@ curl -X GET "http://<hostname>/api/v1/search?q=hypertension+NOT+pediatric&full_t
 
         <pre style={{ background: '#0f172a', color: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', overflowX: 'auto', fontFamily: 'monospace' }}>
 {`# Search for all products starting with "Tylenol":
-curl -X GET "http://<hostname>/api/v1/search?product_name=Tylenol&match_mode=starts_with&limit=10" \\
+curl -X GET "http://${apiHost}/fdalabel-v3_api/api/v1/search?product_name=Tylenol&match_mode=starts_with&limit=10" \\
   -H "X-API-Key: afl_live_YOUR_KEY"
 
 # Search for exact generic name "atorvastatin calcium":
-curl -X GET "http://<hostname>/api/v1/search?generic_name=atorvastatin+calcium&match_mode=equals" \\
+curl -X GET "http://${apiHost}/fdalabel-v3_api/api/v1/search?generic_name=atorvastatin+calcium&match_mode=equals" \\
   -H "X-API-Key: afl_live_YOUR_KEY"`}
         </pre>
 
@@ -365,11 +398,11 @@ curl -X GET "http://<hostname>/api/v1/search?generic_name=atorvastatin+calcium&m
 
         <pre style={{ background: '#0f172a', color: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', overflowX: 'auto', fontFamily: 'monospace' }}>
 {`# Search by NDA Number:
-curl -X GET "http://<hostname>/api/v1/search?appl_num=NDA021436" \\
+curl -X GET "http://${apiHost}/fdalabel-v3_api/api/v1/search?appl_num=NDA021436" \\
   -H "X-API-Key: afl_live_YOUR_KEY"
 
 # Direct single label lookup by SET-ID:
-curl -X GET "http://<hostname>/api/v1/labels/a84b5749-923f-4279-bb7d-304b08d4b3c4" \\
+curl -X GET "http://${apiHost}/fdalabel-v3_api/api/v1/labels/a84b5749-923f-4279-bb7d-304b08d4b3c4" \\
   -H "X-API-Key: afl_live_YOUR_KEY"`}
         </pre>
       </div>
@@ -414,7 +447,7 @@ curl -X GET "http://<hostname>/api/v1/labels/a84b5749-923f-4279-bb7d-304b08d4b3c
         <h4 style={{ color: '#1e40af', marginTop: '14px', marginBottom: '6px' }}>Example: Querying Boxed Warnings</h4>
         <pre style={{ background: '#0f172a', color: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', overflowX: 'auto', fontFamily: 'monospace' }}>
 {`# Find labels with hepatotoxicity warnings in the Boxed Warning section:
-curl -X GET "http://<hostname>/api/v1/search?section=34066-1&section_text=hepatotoxicity&limit=20" \\
+curl -X GET "http://${apiHost}/fdalabel-v3_api/api/v1/search?section=34066-1&section_text=hepatotoxicity&limit=20" \\
   -H "X-API-Key: afl_live_YOUR_KEY"`}
         </pre>
       </div>
@@ -455,7 +488,7 @@ curl -X GET "http://<hostname>/api/v1/search?section=34066-1&section_text=hepato
 
         <pre style={{ background: '#0f172a', color: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', overflowX: 'auto', fontFamily: 'monospace' }}>
 {`# Oral NDA Prescription Drugs in the statin pharmacologic class:
-curl -X GET "http://<hostname>/api/v1/search?application_type=NDA&route=ORAL&pharm_class=HMG-CoA+Reductase+Inhibitor&is_rld=true&limit=25&page=1" \\
+curl -X GET "http://${apiHost}/fdalabel-v3_api/api/v1/search?application_type=NDA&route=ORAL&pharm_class=HMG-CoA+Reductase+Inhibitor&is_rld=true&limit=25&page=1" \\
   -H "X-API-Key: afl_live_YOUR_KEY"`}
         </pre>
       </div>
@@ -476,8 +509,8 @@ curl -X GET "http://<hostname>/api/v1/search?application_type=NDA&route=ORAL&pha
         <pre style={{ background: '#0f172a', color: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', overflowX: 'auto', fontFamily: 'monospace' }}>
 {`import requests
 
-# Use http://localhost:8842/api/v1/search for local host, or http://<hostname>/api/v1/search for server deployment
-API_URL = "http://<hostname>/api/v1/search"
+# Live server endpoint (Note: path is /fdalabel-v3_api/api/, NOT /fdalabel-v3/api/)
+API_URL = "http://${apiHost}/fdalabel-v3_api/api/v1/search"
 HEADERS = {"X-API-Key": "afl_live_YOUR_API_KEY"}
 
 # Example: Search for Oral Diabetes medications with Boxed Warnings
@@ -504,9 +537,9 @@ for label in data["results"]:
 {`library(httr)
 library(jsonlite)
 
-# Use http://localhost:8842/api/v1/search for local host, or http://<hostname>/api/v1/search for server deployment
+# Live server endpoint (Note: path is /fdalabel-v3_api/api/)
 res <- GET(
-  "http://<hostname>/api/v1/search",
+  "http://${apiHost}/fdalabel-v3_api/api/v1/search",
   add_headers("X-API-Key" = "afl_live_YOUR_API_KEY"),
   query = list(
     product_name = "Lipitor",
@@ -524,8 +557,8 @@ print(df[, c("product_names", "generic_names", "appr_num", "revised_date")])`}
         <h4 style={{ color: '#1e40af', marginTop: '14px', marginBottom: '6px' }}>Node.js / TypeScript (Fetch API)</h4>
         <pre style={{ background: '#0f172a', color: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', overflowX: 'auto', fontFamily: 'monospace' }}>
 {`async function searchLabels() {
-  // Use http://localhost:8842/api/v1/search for local host, or http://<hostname>/api/v1/search for server deployment
-  const url = new URL('http://<hostname>/api/v1/search');
+  // Live server endpoint (Note: path is /fdalabel-v3_api/api/)
+  const url = new URL('http://${apiHost}/fdalabel-v3_api/api/v1/search');
   url.searchParams.set('product_name', 'aspirin');
   url.searchParams.set('limit', '20');
 
@@ -680,6 +713,10 @@ const FAQS: FaqItem[] = [
 ];
 
 export default function WikiPage() {
+  const { session } = useUser();
+  const apiHost = session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov';
+  const guides = useMemo(() => getGuides(apiHost), [apiHost]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [expandedFaqs, setExpandedFaqs] = useState<Record<string, boolean>>({});
@@ -714,7 +751,7 @@ export default function WikiPage() {
   const q = searchQuery.toLowerCase().trim();
 
   const filteredGuides = useMemo(() => {
-    return GUIDES.filter((item) => {
+    return guides.filter((item) => {
       const matchCat = selectedCategory === 'all' || item.category === selectedCategory;
       if (!matchCat) return false;
       if (!q) return true;

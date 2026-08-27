@@ -45,6 +45,7 @@ export interface UserSession {
   has_vllm_key?: boolean;
   allowed_ai_providers?: string[];
   api_key?: string;
+  api_server_host?: string;
 }
 
 export interface ActiveTask {
