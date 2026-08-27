@@ -205,7 +205,7 @@ const Header: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               gap: '6px'
-            }} title="AI model is set on the Home page">
+            }} title={!session?.is_admin ? "this model is selected by the admin" : undefined}>
               <span style={{ opacity: 0.7 }}>AI:</span>
               <span style={{ fontWeight: 700 }}>{session.ai_provider?.toUpperCase()}</span>
             </div>

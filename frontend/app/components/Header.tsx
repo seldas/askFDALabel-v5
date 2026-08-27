@@ -547,11 +547,14 @@ export default function Header({
                   <div className="account-block">
                     <div className="account-label">ACCOUNT</div>
                     <div className="account-name">{session.username}</div>
-                    <div className="account-ai-status">
+                    <div 
+                      className="account-ai-status"
+                      title={!session?.is_admin ? "this model is selected by the admin" : undefined}
+                    >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>
                         AI: {session.ai_provider?.toUpperCase()}
                     </div>
-                    {!isGuest ? (
+                    {session?.is_admin && !isGuest ? (
                       <Link
                         href="/management?tab=ai#ai-settings"
                         className="account-ai-config"
