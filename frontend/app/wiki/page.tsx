@@ -520,6 +520,83 @@ curl -X GET "http://${apiHost}/fdalabel-v3_api/api/v1/sections/7e606a5b-010e-405
     ),
   },
   {
+    id: 'guide-api-pvlabeling',
+    category: 'api-service',
+    categoryLabel: 'REST API & Integration',
+    title: 'PV-Profile & PV Labeling Adverse Events Table Export (JSON)',
+    summary: 'Export structured clinical adverse event tables (Severity Tiers, MedDRA PTs/SOCs, Frequencies, Leftover Terms) matching the PV-Profile tool CSV export.',
+    tags: ['pv-profile', 'adverse events', 'meddra', 'pvlabeling', 'side effects', 'export', 'csv', 'safety'],
+    content: (
+      <div>
+        <p>
+          The <code>/api/v1/pvlabeling/:set_id</code> endpoint returns the structured pharmacovigilance adverse event table corresponding to the CSV exported by the PV-Profile tool.
+        </p>
+
+        <h4 style={{ color: '#1e40af', marginTop: '14px', marginBottom: '6px' }}>Endpoint Details:</h4>
+        <ul>
+          <li><strong>URL:</strong> <code>GET http://${apiHost}/fdalabel-v3_api/api/v1/pvlabeling/:set_id_or_spl_id</code></li>
+          <li><strong>Headers:</strong> <code>X-API-Key: afl_live_YOUR_KEY</code></li>
+          <li><strong>Behavior when not generated:</strong> If the PV-Profile has not yet been generated for this label, the API returns HTTP <code>404</code> with <code>"status": "not_generated"</code>, guidance instructions, and a direct URL to generate the analysis manually on the PV-Profile tool.</li>
+        </ul>
+
+        <h4 style={{ color: '#1e40af', marginTop: '14px', marginBottom: '6px' }}>cURL Example:</h4>
+        <pre style={{ background: '#0f172a', color: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', overflowX: 'auto', fontFamily: 'monospace' }}>
+{`curl -X GET "http://${apiHost}/fdalabel-v3_api/api/v1/pvlabeling/7e606a5b-010e-4050-bf6c-6712b32bbbc4" \\
+  -H "X-API-Key: afl_live_YOUR_KEY"`}
+        </pre>
+
+        <h4 style={{ color: '#1e40af', marginTop: '14px', marginBottom: '6px' }}>Sample Response (Generated Profile):</h4>
+        <pre style={{ background: '#0f172a', color: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', overflowX: 'auto', fontFamily: 'monospace' }}>
+{`{
+  "status": "success",
+  "has_pv_profile": true,
+  "label": {
+    "set_id": "7e606a5b-010e-4050-bf6c-6712b32bbbc4",
+    "brand_name": "LIPITOR",
+    "generic_name": "ATORVASTATIN CALCIUM",
+    "appr_num": "NDA020702"
+  },
+  "summary": {
+    "total_adverse_events": 42,
+    "total_leftover_terms": 15,
+    "model_used": "gemini-2.5-flash",
+    "tier_summary": { "1": 2, "2": 5, "3": 8, "4": 20, "5": 7 },
+    "soc_summary": [
+      { "soc_name": "Gastrointestinal disorders", "count": 12 },
+      { "soc_name": "Musculoskeletal and connective tissue disorders", "count": 8 }
+    ]
+  },
+  "adverse_events": [
+    {
+      "severity_tier": 1,
+      "severity_tier_label": "Tier 1",
+      "section": "BOXED WARNING",
+      "side_effect_pt": "Hepatotoxicity",
+      "raw_term": "Severe liver injury",
+      "is_mapped": true,
+      "match_type": "Mapped",
+      "meddra_soc": "Hepatobiliary disorders",
+      "drug_frequency": "2.5%",
+      "placebo_frequency": "0.5%",
+      "risk_difference_pct": 2.0,
+      "frequency_category": "Common (1% - 10%)",
+      "excerpt": "Severe liver injury has been reported..."
+    }
+  ],
+  "leftover_terms": [
+    {
+      "matched_term": "Headache",
+      "meddra_soc": "Nervous system disorders",
+      "source_section": "6 ADVERSE REACTIONS"
+    }
+  ],
+  "pv_profile_tool_url": "http://${apiHost}/fdalabel-v3/dashboard/label/7e606a5b-010e-4050-bf6c-6712b32bbbc4/pv-profile"
+}`}
+        </pre>
+      </div>
+    ),
+  },
+  {
     id: 'guide-api-categorical-filtering',
     category: 'api-service',
     categoryLabel: 'REST API & Integration',

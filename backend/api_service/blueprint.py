@@ -17,6 +17,7 @@ Note on Database:
 
 import os
 import re
+import json
 from datetime import datetime
 from flask import Blueprint, request, jsonify, g, current_app
 
@@ -26,7 +27,7 @@ except ImportError:
     import xml.etree.ElementTree as ET
 
 from dashboard.services.fdalabel_db import FDALabelDBService
-from database import db, User
+from database import db, User, LabelPvProfile
 from labelquery.oracle_compiler import (
     BASE_TABLE_HUMAN,
     compile_oracle_query,
@@ -314,6 +315,7 @@ def api_status():
             'GET  /api/v1/labels/<set_id_or_spl_id>',
             'GET  /api/v1/sections/<set_id_or_spl_id>',
             'POST /api/v1/sections/<set_id_or_spl_id>',
+            'GET  /api/v1/pvlabeling/<set_id_or_spl_id>',
             'GET  /api/v1/status'
         ]
     })
@@ -864,4 +866,142 @@ def get_label_sections_by_id(id_val):
             'user': g.api_user.username if g.api_user else None
         }
     })
+
+
+@api_v1_bp.route('/pvlabeling/<id_val>', methods=['GET'])
+@api_v1_bp.route('/pv-profile/<id_val>', methods=['GET'])
+def get_pvlabeling_by_id(id_val):
+    """
+    Retrieves the extracted PV-Profile adverse event table and leftover MedDRA terms
+    in structured JSON corresponding to the PV Labeling CSV export.
+    
+    If no PV-Profile has been generated yet for this label, returns a 404 response
+    with clear guidance and a direct link to the PV-Profile tool in the UI.
+    """
+    id_clean = (id_val or '').strip()
+    if not id_clean:
+        return jsonify({'status': 'error', 'error': 'ID is required'}), 400
+
+    data, set_id, spl_id = _fetch_label_metadata_row(id_clean)
+    lookup_set_id = set_id or id_clean
+    lookup_spl_id = spl_id or (id_clean if not set_id else None)
+
+    # Check for cached LabelPvProfile
+    cached = None
+    try:
+        cached = LabelPvProfile.query.filter(
+            (db.func.upper(LabelPvProfile.set_id) == lookup_set_id.upper()) |
+            (db.func.upper(LabelPvProfile.spl_id) == (lookup_spl_id or '').upper())
+        ).first()
+    except Exception as e:
+        current_app.logger.warning(f"Error querying LabelPvProfile for {id_clean}: {e}")
+
+    api_server_host = os.getenv('API_SERVER_HOST') or 'ncshpcgpu01.fda.gov'
+    pv_tool_url = f"http://{api_server_host}/fdalabel-v3/dashboard/label/{lookup_set_id}/pv-profile"
+
+    if not cached or not cached.profile_data:
+        return jsonify({
+            'status': 'not_generated',
+            'has_pv_profile': False,
+            'message': 'No PV-Profile has been generated for this labeling yet. Please open the PV-Profile tool in askFDALabel web interface to generate it manually before accessing it via API.',
+            'pv_profile_tool_url': pv_tool_url,
+            'label': data or {
+                'set_id': lookup_set_id,
+                'spl_id': lookup_spl_id
+            },
+            'meta': {
+                'database': 'oracle_cder_cber',
+                'authenticated': bool(g.api_user),
+                'user': g.api_user.username if g.api_user else None
+            }
+        }), 404
+
+    # Parse profile payload
+    try:
+        profile_data = json.loads(cached.profile_data)
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': f'Corrupt PV profile data stored in cache: {str(e)}'
+        }), 500
+
+    # Build structured adverse events corresponding to CSV export table
+    items = profile_data.get('items', [])
+    adverse_events = []
+    for item in items:
+        drug_freq = item.get('drug_frequency_text')
+        if not drug_freq and item.get('drug_max_pct') is not None:
+            drug_freq = f"{item.get('drug_max_pct')}%"
+        elif not drug_freq and item.get('drug_min_pct') is not None:
+            drug_freq = f"{item.get('drug_min_pct')}%"
+
+        placebo_freq = item.get('placebo_frequency_text')
+        if not placebo_freq and item.get('placebo_pct') is not None:
+            placebo_freq = f"{item.get('placebo_pct')}%"
+
+        adverse_events.append({
+            'severity_tier': item.get('severity_tier'),
+            'severity_tier_label': f"Tier {item.get('severity_tier')}" if item.get('severity_tier') else "",
+            'section': item.get('section_name') or item.get('source_section') or '',
+            'side_effect_pt': item.get('meddra_pt') or item.get('term') or '',
+            'raw_term': item.get('term') or '',
+            'is_mapped': bool(item.get('is_mapped')),
+            'match_type': 'Mapped' if item.get('is_mapped') else 'Exact Match',
+            'meddra_soc': item.get('soc_name') or '',
+            'drug_frequency': drug_freq or '',
+            'placebo_frequency': placebo_freq or '',
+            'risk_difference_pct': item.get('risk_difference_pct'),
+            'frequency_category': item.get('frequency_category') or '',
+            'excerpt': item.get('excerpt') or '',
+            'occurrences': item.get('occurrences', [])
+        })
+
+    # Build leftover MedDRA dictionary matches corresponding to CSV export
+    leftover_terms_raw = profile_data.get('leftover_terms', [])
+    leftover_terms = []
+    for lt in leftover_terms_raw:
+        leftover_terms.append({
+            'matched_term': lt.get('term') or '',
+            'meddra_soc': lt.get('soc_name') or '',
+            'source_section': lt.get('section_name') or ''
+        })
+
+    return jsonify({
+        'status': 'success',
+        'has_pv_profile': True,
+        'label': {
+            'set_id': lookup_set_id,
+            'spl_id': cached.spl_id or lookup_spl_id,
+            'brand_name': cached.brand_name or (data.get('product_names') if data else ''),
+            'generic_name': cached.generic_name or (data.get('generic_names') if data else ''),
+            'active_ingredient': cached.active_ingredient or (data.get('active_ingredients') if data else ''),
+            'manufacturer': data.get('manufacturer') if data else '',
+            'appr_num': data.get('appr_num') if data else '',
+            'effective_time': str(data.get('revised_date') if data else ''),
+            'label_format': cached.label_format or profile_data.get('label_format'),
+            'links': data.get('links') if data else {
+                'fdalabel': f"https://nctr-crs.fda.gov/fdalabel/ui/search/spl/{lookup_set_id}",
+                'dailymed': f"https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid={lookup_set_id}",
+                'dailymed_pdf': f"https://dailymed.nlm.nih.gov/dailymed/getpdf.cfm?setid={lookup_set_id}"
+            }
+        },
+        'summary': {
+            'total_adverse_events': len(adverse_events),
+            'total_leftover_terms': len(leftover_terms),
+            'generated_at': profile_data.get('generated_at'),
+            'cached_at': cached.created_at.isoformat() if cached.created_at else None,
+            'model_used': profile_data.get('model_used'),
+            'tier_summary': profile_data.get('tier_summary', {}),
+            'soc_summary': profile_data.get('soc_summary', [])
+        },
+        'adverse_events': adverse_events,
+        'leftover_terms': leftover_terms,
+        'pv_profile_tool_url': pv_tool_url,
+        'meta': {
+            'database': 'oracle_cder_cber',
+            'authenticated': bool(g.api_user),
+            'user': g.api_user.username if g.api_user else None
+        }
+    })
+
 
