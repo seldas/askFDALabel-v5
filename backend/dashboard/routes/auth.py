@@ -183,6 +183,7 @@ def session():
             'openai_model_name': current_user.openai_model_name,
             'ai_settings': current_user.ai_settings,
             'is_internal': is_internal,
+            'api_key': getattr(current_user, 'api_key', None),
             'gemini_model': os.environ.get('GEMINI_MODEL', 'Gemini'),
             'gemini_fallback_model': os.environ.get('GEMINI_FALLBACK_MODEL', ''),
             'env_elsa_url': os.getenv("ELSA_API_URL", ""),
@@ -202,3 +203,47 @@ def session():
         'is_internal': is_internal,
         'allowed_ai_providers': [p.strip().lower() for p in os.getenv("ALLOWED_AI_PROVIDERS", "gemini,elsa,llama,vllm,ollama,customized").split(',') if p.strip()]
     })
+
+
+@auth_bp.route('/api-key', methods=['GET'])
+@login_required
+def get_api_key():
+    """Returns the current user's API key."""
+    if current_user.is_guest:
+        return jsonify({'error': 'API key generation is not available for guest accounts.'}), 403
+    return jsonify({
+        'success': True,
+        'api_key': getattr(current_user, 'api_key', None)
+    })
+
+
+@auth_bp.route('/api-key/generate', methods=['POST'])
+@login_required
+def generate_api_key():
+    """Generates a new API key for the current user (rotating any existing key)."""
+    if current_user.is_guest:
+        return jsonify({'error': 'API key generation is not available for guest accounts.'}), 403
+    
+    key = current_user.generate_api_key()
+    db.session.commit()
+    return jsonify({
+        'success': True,
+        'api_key': key,
+        'message': 'New API key generated successfully.'
+    })
+
+
+@auth_bp.route('/api-key', methods=['DELETE'])
+@login_required
+def revoke_api_key():
+    """Revokes the current user's API key."""
+    if current_user.is_guest:
+        return jsonify({'error': 'Guest accounts do not have API keys.'}), 403
+    
+    current_user.api_key = None
+    db.session.commit()
+    return jsonify({
+        'success': True,
+        'message': 'API key revoked successfully.'
+    })
+

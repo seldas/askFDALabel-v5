@@ -113,6 +113,9 @@ def ensure_user_schema():
                 'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role VARCHAR(20) '
                 "NOT NULL DEFAULT 'user';"
             ))
+            db.session.execute(text(
+                'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS api_key VARCHAR(64);'
+            ))
             # Existing admins keep admin; everyone else lands on 'user', so no
             # account silently gains database selection during the upgrade.
             # Guarded on the default value: this must not overwrite a role an

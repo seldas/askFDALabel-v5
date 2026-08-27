@@ -13,6 +13,7 @@ interface User {
   role?: 'user' | 'developer' | 'admin';
   ai_provider: string;
   is_active?: boolean;
+  api_key?: string;
   created_at?: string;
 }
 
@@ -122,6 +123,97 @@ export default function ManagementPage() {
       setInitialTabSet(true);
     }
   }, [session, initialTabSet]);
+
+  // API Key state
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [loadingApiKey, setLoadingApiKey] = useState(false);
+  const [generatingKey, setGeneratingKey] = useState(false);
+  const [revokingKey, setRevokingKey] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
+  const [showKey, setShowKey] = useState(false);
+
+  const fetchApiKey = async () => {
+    setLoadingApiKey(true);
+    try {
+      const res = await fetch('/api/dashboard/auth/api-key');
+      const data = await res.json();
+      if (data.success) {
+        setApiKey(data.api_key || null);
+      }
+    } catch (e) {
+      console.error('Failed to fetch API key', e);
+    }
+    setLoadingApiKey(false);
+  };
+
+  useEffect(() => {
+    if (session && session.username?.toLowerCase() !== 'guest') {
+      if (session.api_key !== undefined) {
+        setApiKey(session.api_key);
+      } else if (activeTab === 'apikey') {
+        fetchApiKey();
+      }
+    }
+  }, [session, activeTab]);
+
+  const handleGenerateApiKey = async () => {
+    if (apiKey && !window.confirm('Generating a new API key will replace and invalidate your current key immediately. Are you sure you want to continue?')) {
+      return;
+    }
+    setGeneratingKey(true);
+    try {
+      const res = await fetch('/api/dashboard/auth/api-key/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setApiKey(data.api_key);
+        setShowKey(true);
+        if (typeof refreshSession === 'function') {
+          refreshSession();
+        }
+      } else {
+        alert(data.error || 'Failed to generate API key');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error generating API key');
+    }
+    setGeneratingKey(false);
+  };
+
+  const handleRevokeApiKey = async () => {
+    if (!window.confirm('Are you sure you want to revoke your API key? Any applications or scripts using this key will no longer be authenticated.')) {
+      return;
+    }
+    setRevokingKey(true);
+    try {
+      const res = await fetch('/api/dashboard/auth/api-key', {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setApiKey(null);
+        if (typeof refreshSession === 'function') {
+          refreshSession();
+        }
+      } else {
+        alert(data.error || 'Failed to revoke API key');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error revoking API key');
+    }
+    setRevokingKey(false);
+  };
+
+  const handleCopyApiKey = () => {
+    if (!apiKey) return;
+    navigator.clipboard.writeText(apiKey);
+    setCopiedKey(true);
+    setTimeout(() => setCopiedKey(false), 2000);
+  };
 
   const [pendingUpdateType, setPendingUpdateType] = useState<string | null>(null);
   const [pendingUpdateStats, setPendingUpdateStats] = useState<any>(null);
@@ -907,6 +999,20 @@ export default function ManagementPage() {
               {session?.is_admin ? 'User Management' : 'My Account'}
             </button>
             <button
+              className={`sidebar-tab ${activeTab === 'apikey' ? 'active' : ''}`}
+              onClick={() => setActiveTab('apikey')}
+              disabled={session?.username?.toLowerCase() === 'guest'}
+              style={{ opacity: session?.username?.toLowerCase() === 'guest' ? 0.5 : 1, cursor: session?.username?.toLowerCase() === 'guest' ? 'not-allowed' : 'pointer' }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 2l-2 2m-1.5 1.5L16 7l-1.5-1.5L13 7l-1.5-1.5L10 7l-1.5-1.5L7 7l-1.5-1.5L4 7l-2-2"></path>
+                <circle cx="7.5" cy="15.5" r="5.5"></circle>
+                <path d="m11.5 11.5 8.5-8.5"></path>
+                <path d="m16 4 4 4"></path>
+              </svg>
+              API Key
+            </button>
+            <button
               className={`sidebar-tab ${activeTab === 'tokens' ? 'active' : ''}`}
               onClick={() => setActiveTab('tokens')}
             >
@@ -1518,6 +1624,300 @@ export default function ManagementPage() {
                   </table>
                 </div>
               </section>
+            )}
+
+            {activeTab === 'apikey' && session?.username?.toLowerCase() !== 'guest' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                {/* API KEY MANAGEMENT CARD */}
+                <section className="mgmt-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <div>
+                      <h2 className="section-title" style={{ margin: 0 }}>API Access & Keys</h2>
+                      <p style={{ color: 'var(--afl-n-500)', fontSize: '0.9rem', margin: '4px 0 0 0' }}>
+                        Generate your personal API key for authenticating RESTful search queries to askFDALabel.
+                      </p>
+                    </div>
+                  </div>
+
+                  {apiKey ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                      <div style={{
+                        background: 'var(--afl-n-50)',
+                        border: '1px solid var(--afl-n-200)',
+                        borderRadius: '12px',
+                        padding: '1.25rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.75rem'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--afl-n-700)' }}>
+                            Personal REST API Key
+                          </span>
+                          <span style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            background: 'var(--afl-success-100)',
+                            color: 'var(--afl-success-700)'
+                          }}>
+                            ACTIVE
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                          <div style={{
+                            flex: 1,
+                            position: 'relative',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}>
+                            <input
+                              type={showKey ? 'text' : 'password'}
+                              readOnly
+                              value={apiKey}
+                              style={{
+                                width: '100%',
+                                padding: '0.65rem 0.85rem',
+                                paddingRight: '4.5rem',
+                                borderRadius: '8px',
+                                border: '1px solid var(--afl-n-300)',
+                                background: 'white',
+                                fontFamily: 'monospace',
+                                fontSize: '0.9rem',
+                                color: 'var(--afl-n-900)'
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowKey(!showKey)}
+                              style={{
+                                position: 'absolute',
+                                right: '8px',
+                                padding: '4px 8px',
+                                fontSize: '0.75rem',
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'var(--afl-n-500)',
+                                cursor: 'pointer',
+                                fontWeight: 600
+                              }}
+                            >
+                              {showKey ? 'Hide' : 'Reveal'}
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={handleCopyApiKey}
+                            className="btn-primary"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '0.65rem 1.25rem',
+                              borderRadius: '8px',
+                              fontWeight: 700,
+                              fontSize: '0.85rem'
+                            }}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                            {copiedKey ? 'Copied!' : 'Copy Key'}
+                          </button>
+                        </div>
+
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--afl-n-500)' }}>
+                          Keep your API key secure. Authenticate requests by sending the header <code style={{ background: 'var(--afl-n-200)', padding: '1px 5px', borderRadius: '4px' }}>X-API-Key: {showKey ? apiKey : 'your_key'}</code> or <code style={{ background: 'var(--afl-n-200)', padding: '1px 5px', borderRadius: '4px' }}>Authorization: Bearer {showKey ? apiKey : 'your_key'}</code>.
+                        </p>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                        <button
+                          type="button"
+                          onClick={handleRevokeApiKey}
+                          disabled={revokingKey}
+                          className="btn-ghost"
+                          style={{ color: 'var(--afl-danger-500)', borderColor: 'var(--afl-danger-200)' }}
+                        >
+                          {revokingKey ? 'Revoking...' : 'Revoke Key'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleGenerateApiKey}
+                          disabled={generatingKey}
+                          className="btn-ghost"
+                          style={{ color: 'var(--afl-a-600)', borderColor: 'var(--afl-a-300)' }}
+                        >
+                          {generatingKey ? 'Regenerating...' : 'Regenerate New Key'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{
+                      padding: '2.5rem 1.5rem',
+                      textAlign: 'center',
+                      background: 'var(--afl-n-50)',
+                      borderRadius: '12px',
+                      border: '1px dashed var(--afl-n-300)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '1rem'
+                    }}>
+                      <div style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%',
+                        background: 'var(--afl-a-50)',
+                        color: 'var(--afl-a-600)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="7.5" cy="15.5" r="5.5"></circle>
+                          <path d="m11.5 11.5 8.5-8.5"></path>
+                          <path d="m16 4 4 4"></path>
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--afl-n-800)' }}>
+                          No API Key Generated
+                        </h3>
+                        <p style={{ margin: '6px 0 0 0', color: 'var(--afl-n-500)', fontSize: '0.85rem', maxWidth: '460px' }}>
+                          Generate your exclusive API key to query drug labels programmatically using standard RESTful HTTP requests.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleGenerateApiKey}
+                        disabled={generatingKey}
+                        className="btn-primary"
+                        style={{ padding: '0.65rem 1.5rem', borderRadius: '8px', fontWeight: 700 }}
+                      >
+                        {generatingKey ? 'Generating Key...' : 'Generate API Key'}
+                      </button>
+                    </div>
+                  )}
+                </section>
+
+                {/* API USAGE & QUICK START DOCUMENTATION */}
+                <section className="mgmt-card">
+                  <h2 className="section-title">REST API Quick Start Guide</h2>
+                  <p style={{ color: 'var(--afl-n-500)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                    The askFDALabel REST API provides direct querying over the official CDER-CBER Oracle labeling database.
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    {/* Endpoint Overview */}
+                    <div style={{ background: 'var(--afl-n-50)', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid var(--afl-n-200)' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--afl-n-800)', marginBottom: '0.5rem' }}>
+                        Primary Endpoints
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem', fontFamily: 'monospace' }}>
+                        <div><span style={{ color: 'var(--afl-success-700)', fontWeight: 800 }}>GET</span> /api/v1/search?q=diabetes&limit=20</div>
+                        <div><span style={{ color: 'var(--afl-a-600)', fontWeight: 800 }}>POST</span> /api/v1/search (JSON payload)</div>
+                        <div><span style={{ color: 'var(--afl-success-700)', fontWeight: 800 }}>GET</span> /api/v1/labels/:set_id_or_spl_id</div>
+                        <div><span style={{ color: 'var(--afl-success-700)', fontWeight: 800 }}>GET</span> /api/v1/status</div>
+                      </div>
+                    </div>
+
+                    {/* Example 1: Full-Text Search */}
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-700)', marginBottom: '4px' }}>
+                        1. Full-Text Search
+                      </div>
+                      <pre style={{
+                        background: 'var(--afl-n-900)',
+                        color: 'var(--afl-n-50)',
+                        padding: '0.85rem 1rem',
+                        borderRadius: '8px',
+                        fontSize: '0.8rem',
+                        overflowX: 'auto',
+                        fontFamily: 'monospace'
+                      }}>
+{`curl -X GET "${typeof window !== 'undefined' ? window.location.origin : ''}/api/v1/search?q=myocardial+infarction&limit=10" \\
+  -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
+                      </pre>
+                    </div>
+
+                    {/* Example 2: Product Name & ID Search */}
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-700)', marginBottom: '4px' }}>
+                        2. Product Identifier / Application Number Search
+                      </div>
+                      <pre style={{
+                        background: 'var(--afl-n-900)',
+                        color: 'var(--afl-n-50)',
+                        padding: '0.85rem 1rem',
+                        borderRadius: '8px',
+                        fontSize: '0.8rem',
+                        overflowX: 'auto',
+                        fontFamily: 'monospace'
+                      }}>
+{`curl -X GET "${typeof window !== 'undefined' ? window.location.origin : ''}/api/v1/search?appl_num=NDA021436&limit=5" \\
+  -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
+                      </pre>
+                    </div>
+
+                    {/* Example 3: Section-Targeted Search */}
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-700)', marginBottom: '4px' }}>
+                        3. Targeted Labeling Section Search (Boxed Warning, Indications, etc.)
+                      </div>
+                      <pre style={{
+                        background: 'var(--afl-n-900)',
+                        color: 'var(--afl-n-50)',
+                        padding: '0.85rem 1rem',
+                        borderRadius: '8px',
+                        fontSize: '0.8rem',
+                        overflowX: 'auto',
+                        fontFamily: 'monospace'
+                      }}>
+{`curl -X GET "${typeof window !== 'undefined' ? window.location.origin : ''}/api/v1/search?section=34066-1&section_text=hepatotoxicity&limit=10" \\
+  -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
+                      </pre>
+                    </div>
+
+                    {/* Example 4: Python Script */}
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-700)', marginBottom: '4px' }}>
+                        4. Python Integration Example
+                      </div>
+                      <pre style={{
+                        background: 'var(--afl-n-900)',
+                        color: 'var(--afl-n-50)',
+                        padding: '0.85rem 1rem',
+                        borderRadius: '8px',
+                        fontSize: '0.8rem',
+                        overflowX: 'auto',
+                        fontFamily: 'monospace'
+                      }}>
+{`import requests
+
+api_url = "${typeof window !== 'undefined' ? window.location.origin : ''}/api/v1/search"
+headers = {"X-API-Key": "${apiKey || 'YOUR_API_KEY'}"}
+params = {
+    "product_name": "Lipitor",
+    "match_mode": "contains",
+    "limit": 10
+}
+
+response = requests.get(api_url, headers=headers, params=params)
+data = response.json()
+
+print(f"Total matching labels: {data['pagination']['total']}")
+for label in data["results"]:
+    print(f"- {label['product_names']} (Set ID: {label['set_id']}, NDA/ANDA: {label['appr_num']})")`}
+                      </pre>
+                    </div>
+                  </div>
+                </section>
+              </div>
             )}
 
             {activeTab === 'tokens' && (
