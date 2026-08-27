@@ -158,6 +158,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
         backend_volumes.append("./backend:/app")
     backend_volumes.extend([
         "./data:/data",
+        "./deploy:/deploy",
         "./backend/webtest/results:/app/webtest/results",
         "./backend/webtest/history:/app/webtest/history"
     ])
