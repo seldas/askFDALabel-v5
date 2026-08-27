@@ -1862,7 +1862,8 @@ export default function ManagementPage() {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem', fontFamily: 'monospace' }}>
                             <div><span style={{ color: 'var(--afl-success-700)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/search?q=diabetes&limit=20</div>
                             <div><span style={{ color: 'var(--afl-a-600)', fontWeight: 800 }}>POST</span> /fdalabel-v3_api/api/v1/search (JSON payload)</div>
-                            <div><span style={{ color: 'var(--afl-success-700)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/labels/:set_id_or_spl_id</div>
+                            <div><span style={{ color: 'var(--afl-success-700)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/labels/:set_id_or_spl_id <span style={{ color: 'var(--afl-n-500)', fontSize: '0.78rem' }}>(Metadata + Full XML)</span></div>
+                            <div><span style={{ color: 'var(--afl-success-700)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/sections/:set_id_or_spl_id?loinc_code=34066-1,34067-9 <span style={{ color: 'var(--afl-n-500)', fontSize: '0.78rem' }}>(Section XMLs)</span></div>
                             <div><span style={{ color: 'var(--afl-success-700)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/status</div>
                           </div>
                         </div>
@@ -1907,10 +1908,10 @@ export default function ManagementPage() {
                       </pre>
                     </div>
 
-                    {/* Example 3: Section-Targeted Search */}
+                    {/* Example 3: Multi-Section XML Extraction */}
                     <div>
                       <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-700)', marginBottom: '4px' }}>
-                        3. Targeted Labeling Section Search (Boxed Warning, Indications, etc.)
+                        3. Extract Targeted Section XMLs by LOINC Code (Boxed Warning, Indications, etc.)
                       </div>
                       <pre style={{
                         background: 'var(--afl-n-900)',
@@ -1921,15 +1922,35 @@ export default function ManagementPage() {
                         overflowX: 'auto',
                         fontFamily: 'monospace'
                       }}>
-{`curl -X GET "http://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/search?section=34066-1&section_text=hepatotoxicity&limit=10" \\
+{`# Multi-section query (34066-1 Boxed Warning & 34067-9 Indications)
+curl -X GET "http://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/sections/7e606a5b-010e-4050-bf6c-6712b32bbbc4?loinc_code=34066-1,34067-9" \\
   -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
                       </pre>
                     </div>
 
-                    {/* Example 4: Python Script */}
+                    {/* Example 4: Label Metadata & Full XML */}
                     <div>
                       <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-700)', marginBottom: '4px' }}>
-                        4. Python Integration Example
+                        4. Retrieve Label Metadata and Full SPL XML
+                      </div>
+                      <pre style={{
+                        background: 'var(--afl-n-900)',
+                        color: 'var(--afl-n-50)',
+                        padding: '0.85rem 1rem',
+                        borderRadius: '8px',
+                        fontSize: '0.8rem',
+                        overflowX: 'auto',
+                        fontFamily: 'monospace'
+                      }}>
+{`curl -X GET "http://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/labels/7e606a5b-010e-4050-bf6c-6712b32bbbc4" \\
+  -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
+                      </pre>
+                    </div>
+
+                    {/* Example 5: Python Script */}
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-700)', marginBottom: '4px' }}>
+                        5. Python Integration Example (Fetch Sections & XML)
                       </div>
                       <pre style={{
                         background: 'var(--afl-n-900)',
@@ -1942,20 +1963,20 @@ export default function ManagementPage() {
                       }}>
 {`import requests
 
-api_url = "http://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/search"
+base_url = "http://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1"
 headers = {"X-API-Key": "${apiKey || 'YOUR_API_KEY'}"}
-params = {
-    "product_name": "Lipitor",
-    "match_mode": "contains",
-    "limit": 10
-}
 
-response = requests.get(api_url, headers=headers, params=params)
-data = response.json()
+# 1. Search labels
+search_resp = requests.get(f"{base_url}/search", headers=headers, params={"product_name": "Lipitor", "limit": 1})
+first_label = search_resp.json()["results"][0]
+set_id = first_label["set_id"]
 
-print(f"Total matching labels: {data['pagination']['total']}")
-for label in data["results"]:
-    print(f"- {label['product_names']} (Set ID: {label['set_id']}, NDA/ANDA: {label['appr_num']})")`}
+# 2. Extract specific section XMLs (Boxed Warning 34066-1 & Indications 34067-9)
+sections_resp = requests.get(f"{base_url}/sections/{set_id}", headers=headers, params={"loinc_code": "34066-1,34067-9"})
+sections_data = sections_resp.json()
+
+for sec in sections_data.get("sections", []):
+    print(f"[{sec['loinc_code']}] {sec['title']}: {len(sec['xml_content'])} bytes XML")`}
                       </pre>
                     </div>
                   </div>

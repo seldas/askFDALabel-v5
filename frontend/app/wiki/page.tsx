@@ -454,6 +454,72 @@ curl -X GET "http://${apiHost}/fdalabel-v3_api/api/v1/search?section=34066-1&sec
     ),
   },
   {
+    id: 'guide-api-sections-xml',
+    category: 'api-service',
+    categoryLabel: 'REST API & Integration',
+    title: 'Extracting Section XMLs & Full Label XML by LOINC Code',
+    summary: 'Retrieve raw XML snippets for specific labeling sections (e.g., Boxed Warning, Indications) or the complete SPL document.',
+    tags: ['xml', 'sections', 'loinc', 'multi-sections', 'boxed warning', 'snippets', 'spl xml'],
+    content: (
+      <div>
+        <p>
+          askFDALabel provides specialized endpoints for extracting structured XML content directly from SPL documents without having to download and parse large multi-megabyte XML files locally:
+        </p>
+
+        <h4 style={{ color: '#1e40af', marginTop: '14px', marginBottom: '6px' }}>1. Targeted Section XML Snippets (<code>/api/v1/sections/:id</code>)</h4>
+        <p>
+          Retrieve basic metadata along with the raw XML snippets for one or more specific Prescribing Information sections by passing <code>loinc_code</code> query parameter:
+        </p>
+        <ul>
+          <li><strong>Single Section:</strong> <code>?loinc_code=34066-1</code> (Boxed Warning)</li>
+          <li><strong>Multi-Section:</strong> <code>?loinc_code=34066-1,34067-9,43685-7</code> (Boxed Warning, Indications, and Warnings &amp; Precautions)</li>
+          <li><strong>All Structured Sections:</strong> Omit <code>loinc_code</code> to return all parsed sections.</li>
+        </ul>
+
+        <pre style={{ background: '#0f172a', color: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', overflowX: 'auto', fontFamily: 'monospace' }}>
+{`# Extract Boxed Warning (34066-1) and Indications (34067-9) sections:
+curl -X GET "http://${apiHost}/fdalabel-v3_api/api/v1/sections/7e606a5b-010e-4050-bf6c-6712b32bbbc4?loinc_code=34066-1,34067-9" \\
+  -H "X-API-Key: afl_live_YOUR_KEY"`}
+        </pre>
+
+        <p style={{ marginTop: '10px' }}><strong>Response Structure:</strong></p>
+        <pre style={{ background: '#0f172a', color: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', overflowX: 'auto', fontFamily: 'monospace' }}>
+{`{
+  "status": "success",
+  "label": {
+    "set_id": "7e606a5b-010e-4050-bf6c-6712b32bbbc4",
+    "product_names": "LIPITOR",
+    "generic_names": "ATORVASTATIN CALCIUM",
+    "appr_num": "NDA020702"
+  },
+  "requested_loinc_codes": ["34066-1", "34067-9"],
+  "matched_sections_count": 2,
+  "sections": [
+    {
+      "loinc_code": "34066-1",
+      "display_name": "BOXED WARNING SECTION",
+      "title": "WARNING: RISK OF HEPATOTOXICITY",
+      "section_number": "Boxed Warning",
+      "xml_content": "<section ID=\\"...\\"><code code=\\"34066-1\\" .../><title>...</title><text>...</text></section>",
+      "text_content": "WARNING: RISK OF HEPATOTOXICITY..."
+    }
+  ]
+}`}
+        </pre>
+
+        <h4 style={{ color: '#1e40af', marginTop: '16px', marginBottom: '6px' }}>2. Full SPL XML Document Retrieval (<code>/api/v1/labels/:id</code>)</h4>
+        <p>
+          To retrieve the complete, untouched HL7 CDA XML document along with full label metadata:
+        </p>
+
+        <pre style={{ background: '#0f172a', color: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '0.82rem', overflowX: 'auto', fontFamily: 'monospace' }}>
+{`curl -X GET "http://${apiHost}/fdalabel-v3_api/api/v1/labels/7e606a5b-010e-4050-bf6c-6712b32bbbc4" \\
+  -H "X-API-Key: afl_live_YOUR_KEY"`}
+        </pre>
+      </div>
+    ),
+  },
+  {
     id: 'guide-api-categorical-filtering',
     category: 'api-service',
     categoryLabel: 'REST API & Integration',
