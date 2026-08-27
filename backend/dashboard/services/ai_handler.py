@@ -35,8 +35,20 @@ def _record_usage(user, model_name, input_tokens, output_tokens):
         db.session.rollback()
 
 def _check_is_internal():
-    """Retired: network probe disabled. AI Chat and local queries consistently use local DB."""
-    return False
+    """
+    Returns True when running in internal FDA / CDER-CBER environment
+    (e.g. ELSA_API_NAME is configured or Oracle is reachable).
+    """
+    try:
+        from flask import current_app
+        if current_app:
+            elsa_api = (os.environ.get('ELSA_API_NAME') or current_app.config.get('ELSA_API_NAME') or '').strip()
+            if elsa_api:
+                return True
+    except Exception:
+        pass
+    elsa_api = (os.environ.get('ELSA_API_NAME') or '').strip()
+    return bool(elsa_api)
 
 class AIClientFactory:
     _clients = {} # Cache for clients: (provider, api_key) -> client
@@ -46,13 +58,24 @@ class AIClientFactory:
         """
         Returns the appropriate client and model based on user preferences.
         Caches clients to avoid 'client closed' errors during streaming.
+        In internal environment (CDER-CBER available), Gemini is strictly disabled.
         """
+        is_internal = _check_is_internal()
+
         # Read allowed providers and global default
         allowed_raw = os.getenv("ALLOWED_AI_PROVIDERS", "gemini,elsa,llama,vllm,ollama,customized")
         allowed_providers = [p.strip().lower() for p in allowed_raw.split(',') if p.strip()]
+        if is_internal:
+            allowed_providers = [p for p in allowed_providers if p != 'gemini']
 
-        default_provider = os.getenv("DEFAULT_AI_MODEL", "elsa" if "elsa" in allowed_providers else (allowed_providers[0] if allowed_providers else "gemini"))
+        if is_internal:
+            default_provider = "elsa" if "elsa" in allowed_providers else (allowed_providers[0] if allowed_providers else "elsa")
+        else:
+            default_provider = os.getenv("DEFAULT_AI_MODEL", "elsa" if "elsa" in allowed_providers else (allowed_providers[0] if allowed_providers else "gemini"))
+
         provider = EnvService.get_setting("ai_model_provider") or default_provider
+        if is_internal and provider == 'gemini':
+            provider = default_provider
         if provider not in allowed_providers:
             provider = default_provider
         use_llama = False
@@ -60,7 +83,7 @@ class AIClientFactory:
         # User override logic: custom AI settings and provider overrides are restricted to admins
         is_admin = bool(user and user.is_authenticated and getattr(user, 'is_admin', False))
         if is_admin and user.ai_provider:
-            if user.ai_provider in allowed_providers:
+            if user.ai_provider in allowed_providers and (not is_internal or user.ai_provider != 'gemini'):
                 provider = user.ai_provider
                 
         # Load user settings if available (admins only)
@@ -116,7 +139,7 @@ class AIClientFactory:
              }
              return "rapid", rapid_config, model
 
-        if provider == 'elsa':
+        if provider == 'elsa' or is_internal or 'gemini' not in allowed_providers:
             elsa_opts = user_settings.get("elsa", {})
             elsa_config = {
                 'username': elsa_opts.get("user") or os.getenv("ELSA_API_NAME"),
@@ -127,7 +150,7 @@ class AIClientFactory:
             }
             return "elsa", elsa_config, elsa_config['model_name']
 
-        # Default: Gemini
+        # Default: Gemini (external/public environments only)
         gemini_key = user_settings.get("gemini", {}).get("api_key") or (user.custom_gemini_key if user else None) or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if (provider, gemini_key) not in AIClientFactory._clients:
             AIClientFactory._clients[(provider, gemini_key)] = genai.Client(api_key=gemini_key)
@@ -207,8 +230,8 @@ def call_llm(user, system_prompt, user_message, history=None, model_override=Non
                 except Exception as elsa_err:
                     logger.error(f"Elsa fallback failed: {elsa_err}")
 
-            # 2. Try Gemini fallback only if explicitly allowed
-            if "gemini" in allowed_providers:
+            # 2. Try Gemini fallback only if explicitly allowed and not in internal env
+            if "gemini" in allowed_providers and not _check_is_internal():
                 logger.warning(f"LLM error ({provider}): {e}. Attempting fallback to Gemini.")
                 try:
                     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
@@ -267,33 +290,34 @@ def call_llm(user, system_prompt, user_message, history=None, model_override=Non
             return response_text
             
         except Exception as e:
-            logger.error(f"LLM error (RAPID): {e}. Attempting fallback to Gemini.")
-            try:
-                gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-                if ("gemini", gemini_key) not in AIClientFactory._clients:
-                    AIClientFactory._clients[("gemini", gemini_key)] = genai.Client(api_key=gemini_key)
-                
-                fallback_client = AIClientFactory._clients[("gemini", gemini_key)]
-                fallback_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
-                
-                config = types.GenerateContentConfig(
-                    temperature=temperature, top_p=top_p, max_output_tokens=max_tokens,
-                    system_instruction=system_prompt if system_prompt else None
-                )
-                contents = []
-                if history:
-                    for turn in history:
-                        role = "model" if turn.get('role') in ['assistant', 'ai'] else "user"
-                        contents.append(types.Content(role=role, parts=[types.Part.from_text(text=turn.get('content', ''))]))
-                contents.append(types.Content(role="user", parts=[types.Part.from_text(text=user_message)]))
-                
-                resp = fallback_client.models.generate_content(model=fallback_model, contents=contents, config=config)
-                if hasattr(resp, 'usage_metadata') and resp.usage_metadata:
-                    _record_usage(user, fallback_model, getattr(resp.usage_metadata, 'prompt_token_count', 0), getattr(resp.usage_metadata, 'candidates_token_count', 0))
-                return resp.text
-            except Exception as fallback_err:
-                logger.error(f"Fallback to Gemini also failed: {fallback_err}")
-                raise e
+            if not _check_is_internal() and "gemini" in os.getenv("ALLOWED_AI_PROVIDERS", ""):
+                logger.error(f"LLM error (RAPID): {e}. Attempting fallback to Gemini.")
+                try:
+                    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+                    if ("gemini", gemini_key) not in AIClientFactory._clients:
+                        AIClientFactory._clients[("gemini", gemini_key)] = genai.Client(api_key=gemini_key)
+                    
+                    fallback_client = AIClientFactory._clients[("gemini", gemini_key)]
+                    fallback_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+                    
+                    config = types.GenerateContentConfig(
+                        temperature=temperature, top_p=top_p, max_output_tokens=max_tokens,
+                        system_instruction=system_prompt if system_prompt else None
+                    )
+                    contents = []
+                    if history:
+                        for turn in history:
+                            role = "model" if turn.get('role') in ['assistant', 'ai'] else "user"
+                            contents.append(types.Content(role=role, parts=[types.Part.from_text(text=turn.get('content', ''))]))
+                    contents.append(types.Content(role="user", parts=[types.Part.from_text(text=user_message)]))
+                    
+                    resp = fallback_client.models.generate_content(model=fallback_model, contents=contents, config=config)
+                    if hasattr(resp, 'usage_metadata') and resp.usage_metadata:
+                        _record_usage(user, fallback_model, getattr(resp.usage_metadata, 'prompt_token_count', 0), getattr(resp.usage_metadata, 'candidates_token_count', 0))
+                    return resp.text
+                except Exception as fallback_err:
+                    logger.error(f"Fallback to Gemini also failed: {fallback_err}")
+            raise e
 
     elif provider == "elsa":
         full_prompt = f"SYSTEM INSTRUCTIONS:\n{system_prompt}\n\n" if system_prompt else ""
@@ -359,6 +383,8 @@ def call_llm(user, system_prompt, user_message, history=None, model_override=Non
             raise
 
     elif provider == "gemini":
+        if _check_is_internal():
+            raise RuntimeError("Gemini model is disabled in internal environment.")
         config = types.GenerateContentConfig(
             temperature=temperature, top_p=top_p, max_output_tokens=max_tokens,
             system_instruction=system_prompt if system_prompt else None,

@@ -192,9 +192,10 @@ def db_search():
     payload    = request.json or {}
     query      = (payload.get("query") or "").strip()
     ai_provider = payload.get("ai_provider")
-    user_obj   = current_user._get_current_object() if current_user.is_authenticated else None
+    from dashboard.services.ai_handler import _check_is_internal
     if user_obj and ai_provider:
-        user_obj.ai_provider = ai_provider
+        if not (_check_is_internal() and ai_provider == 'gemini'):
+            user_obj.ai_provider = ai_provider
 
     if not query:
         return jsonify({"action": "ai_fallback", "count": 0, "is_keyword": False}), 200
@@ -271,9 +272,10 @@ def chat_with_ai():
     """
     payload = request.json or {}
     ai_provider = payload.get("ai_provider")
-    user_obj = current_user._get_current_object() if current_user.is_authenticated else None
+    from dashboard.services.ai_handler import _check_is_internal
     if user_obj and ai_provider:
-        user_obj.ai_provider = ai_provider
+        if not (_check_is_internal() and ai_provider == 'gemini'):
+            user_obj.ai_provider = ai_provider
     
     user_input = payload.get("query")
     raw_history = payload.get("chat_history", [])

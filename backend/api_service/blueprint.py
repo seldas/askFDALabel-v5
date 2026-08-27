@@ -897,7 +897,7 @@ def get_pvlabeling_by_id(id_val):
         current_app.logger.warning(f"Error querying LabelPvProfile for {id_clean}: {e}")
 
     api_server_host = os.getenv('API_SERVER_HOST') or 'ncshpcgpu01.fda.gov'
-    pv_tool_url = f"http://{api_server_host}/fdalabel-v3/dashboard/label/{lookup_set_id}/pv-profile"
+    pv_tool_url = f"https://{api_server_host}/fdalabel-v3/dashboard/label/{lookup_set_id}/pv-profile"
 
     if not cached or not cached.profile_data:
         return jsonify({

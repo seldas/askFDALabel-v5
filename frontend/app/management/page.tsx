@@ -40,7 +40,11 @@ export default function ManagementPage() {
   useEffect(() => {
     if (session) {
       if (session.ai_provider) {
-        setSelectedProvider(session.ai_provider);
+        if (session.is_internal && session.ai_provider === 'gemini') {
+          setSelectedProvider('elsa');
+        } else {
+          setSelectedProvider(session.ai_provider);
+        }
       }
       try {
         const parsed = session.ai_settings ? JSON.parse(session.ai_settings) : {};
@@ -1062,7 +1066,7 @@ export default function ManagementPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                   
                   {/* Gemini Card */}
-                  {(!session?.allowed_ai_providers || session.allowed_ai_providers.includes('gemini')) && (
+                  {!session?.is_internal && (!session?.allowed_ai_providers || session.allowed_ai_providers.includes('gemini')) && (
                   <div 
                     onClick={() => setSelectedProvider('gemini')}
                     style={{
@@ -1603,7 +1607,9 @@ export default function ManagementPage() {
                                   }}
                                 >
                                   <option value="elsa">ELSA</option>
-                                  <option value="gemini">Gemini</option>
+                                  {!session?.is_internal && (!session?.allowed_ai_providers || session.allowed_ai_providers.includes('gemini')) && (
+                                    <option value="gemini">Gemini</option>
+                                  )}
                                   <option value="vllm">vLLM</option>
                                   <option value="ollama">Ollama</option>
                                 </select>
@@ -1815,7 +1821,7 @@ export default function ManagementPage() {
                   {/* Dev Server Host Notice */}
                   {(() => {
                     const apiHost = session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov';
-                    const devApiUrl = `http://${apiHost}/fdalabel-v3_api/api/v1`;
+                    const devApiUrl = `https://${apiHost}/fdalabel-v3_api/api/v1`;
                     return (
                       <div style={{
                         background: '#eff6ff',
@@ -1885,7 +1891,7 @@ export default function ManagementPage() {
                         overflowX: 'auto',
                         fontFamily: 'monospace'
                       }}>
-{`curl -X GET "http://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/search?q=myocardial+infarction&limit=10" \\
+{`curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/search?q=myocardial+infarction&limit=10" \\
   -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
                       </pre>
                     </div>
@@ -1904,7 +1910,7 @@ export default function ManagementPage() {
                         overflowX: 'auto',
                         fontFamily: 'monospace'
                       }}>
-{`curl -X GET "http://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/search?appl_num=NDA021436&limit=5" \\
+{`curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/search?appl_num=NDA021436&limit=5" \\
   -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
                       </pre>
                     </div>
@@ -1924,7 +1930,7 @@ export default function ManagementPage() {
                         fontFamily: 'monospace'
                       }}>
 {`# Multi-section query (34066-1 Boxed Warning & 34067-9 Indications)
-curl -X GET "http://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/sections/7e606a5b-010e-4050-bf6c-6712b32bbbc4?loinc_code=34066-1,34067-9" \\
+curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/sections/7e606a5b-010e-4050-bf6c-6712b32bbbc4?loinc_code=34066-1,34067-9" \\
   -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
                       </pre>
                     </div>
@@ -1944,7 +1950,7 @@ curl -X GET "http://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SE
                         fontFamily: 'monospace'
                       }}>
 {`# Returns adverse events, severity tiers, frequencies, MedDRA PTs, and leftover matches
-curl -X GET "http://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/pvlabeling/7e606a5b-010e-4050-bf6c-6712b32bbbc4" \\
+curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/pvlabeling/7e606a5b-010e-4050-bf6c-6712b32bbbc4" \\
   -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
                       </pre>
                     </div>
@@ -1963,7 +1969,7 @@ curl -X GET "http://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SE
                         overflowX: 'auto',
                         fontFamily: 'monospace'
                       }}>
-{`curl -X GET "http://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/labels/7e606a5b-010e-4050-bf6c-6712b32bbbc4" \\
+{`curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/labels/7e606a5b-010e-4050-bf6c-6712b32bbbc4" \\
   -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
                       </pre>
                     </div>
@@ -1984,7 +1990,7 @@ curl -X GET "http://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SE
                       }}>
 {`import requests
 
-base_url = "http://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1"
+base_url = "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1"
 headers = {"X-API-Key": "${apiKey || 'YOUR_API_KEY'}"}
 
 set_id = "7e606a5b-010e-4050-bf6c-6712b32bbbc4"

@@ -643,9 +643,15 @@ def preferences():
     if has_ai_settings and not getattr(current_user, 'is_admin', False):
         return jsonify({'success': False, 'error': 'Custom AI configuration is restricted to administrators.'}), 403
 
+    from dashboard.services.ai_handler import _check_is_internal
+    is_internal = _check_is_internal()
+
     if 'ai_provider' in data:
-        current_user.ai_provider = data.get('ai_provider')
-    if 'custom_gemini_key' in data:
+        req_provider = data.get('ai_provider')
+        if is_internal and req_provider == 'gemini':
+            return jsonify({'success': False, 'error': 'Gemini model is disabled in internal environment.'}), 400
+        current_user.ai_provider = req_provider
+    if 'custom_gemini_key' in data and not is_internal:
         current_user.custom_gemini_key = data.get('custom_gemini_key')
     if 'openai_api_key' in data:
         current_user.openai_api_key = data.get('openai_api_key')

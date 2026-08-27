@@ -153,7 +153,15 @@ def session():
         logger.error(f"Error checking internal status: {e}")
         is_internal = False
     
+    allowed_providers = [p.strip().lower() for p in os.getenv("ALLOWED_AI_PROVIDERS", "gemini,elsa,llama,vllm,ollama,customized").split(',') if p.strip()]
+    if is_internal:
+        allowed_providers = [p for p in allowed_providers if p != 'gemini']
+
     if current_user.is_authenticated:
+        effective_provider = current_user.ai_provider or os.getenv("DEFAULT_AI_MODEL") or ('elsa' if is_internal else 'gemini')
+        if is_internal and effective_provider == 'gemini':
+            effective_provider = 'elsa' if 'elsa' in allowed_providers else (allowed_providers[0] if allowed_providers else 'elsa')
+
         return jsonify({
             'is_authenticated': True,
             'id': current_user.id,
@@ -176,16 +184,16 @@ def session():
             # every anonymous visitor shares, so both are closed to the guest
             # account. Enforced on the routes as well as hidden in the UI.
             'is_guest': current_user.is_guest,
-            'ai_provider': current_user.ai_provider or os.getenv("DEFAULT_AI_MODEL") or ('elsa' if is_internal else 'gemini'),
-            'custom_gemini_key': current_user.custom_gemini_key,
+            'ai_provider': effective_provider,
+            'custom_gemini_key': '' if is_internal else current_user.custom_gemini_key,
             'openai_api_key': current_user.openai_api_key,
             'openai_base_url': current_user.openai_base_url,
             'openai_model_name': current_user.openai_model_name,
             'ai_settings': current_user.ai_settings,
             'is_internal': is_internal,
             'api_key': getattr(current_user, 'api_key', None),
-            'gemini_model': os.environ.get('GEMINI_MODEL', 'Gemini'),
-            'gemini_fallback_model': os.environ.get('GEMINI_FALLBACK_MODEL', ''),
+            'gemini_model': '' if is_internal else os.environ.get('GEMINI_MODEL', 'Gemini'),
+            'gemini_fallback_model': '' if is_internal else os.environ.get('GEMINI_FALLBACK_MODEL', ''),
             'env_elsa_url': os.getenv("ELSA_API_URL", ""),
             'env_elsa_user': os.getenv("ELSA_API_NAME", ""),
             'has_elsa_key': bool(os.getenv("ELSA_API_KEY")),
@@ -194,15 +202,15 @@ def session():
             'env_vllm_url': os.getenv("LLM_URL", ""),
             'env_vllm_model': os.getenv("LLM_MODEL", ""),
             'env_ollama_url': os.getenv("OLLAMA_URL", ""),
-            'has_gemini_key': bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
+            'has_gemini_key': False if is_internal else bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
             'api_server_host': os.getenv("API_SERVER_HOST") or os.getenv("DEV_SERVER_HOST") or "ncshpcgpu01.fda.gov",
-            'allowed_ai_providers': [p.strip().lower() for p in os.getenv("ALLOWED_AI_PROVIDERS", "gemini,elsa,llama,vllm,ollama,customized").split(',') if p.strip()]
+            'allowed_ai_providers': allowed_providers
         })
     return jsonify({
         'is_authenticated': False,
         'is_internal': is_internal,
         'api_server_host': os.getenv("API_SERVER_HOST") or os.getenv("DEV_SERVER_HOST") or "ncshpcgpu01.fda.gov",
-        'allowed_ai_providers': [p.strip().lower() for p in os.getenv("ALLOWED_AI_PROVIDERS", "gemini,elsa,llama,vllm,ollama,customized").split(',') if p.strip()]
+        'allowed_ai_providers': allowed_providers
     })
 
 

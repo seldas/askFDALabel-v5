@@ -117,14 +117,16 @@ class User(UserMixin, db.Model):
 
     @staticmethod
     def _default_ai_provider():
+        try:
+            from dashboard.services.ai_handler import _check_is_internal
+            if _check_is_internal():
+                return 'elsa'
+        except Exception:
+            pass
         default_model = os.getenv("DEFAULT_AI_MODEL")
         if default_model:
             return default_model
-        try:
-            from dashboard.services.ai_handler import _check_is_internal
-            return 'elsa' if _check_is_internal() else 'gemini'
-        except Exception:
-            return 'gemini'
+        return 'gemini'
 
     ai_provider = db.Column(db.String(20), default=_default_ai_provider)
     custom_gemini_key = db.Column(db.String(255), nullable=True)
