@@ -23,7 +23,11 @@ const DASHBOARD_PREFIXES = [
 const normalizeRoute = (value: string) => value.replace(/\/{2,}/g, "/");
 const shouldUseDashboardBase = (value: string) =>
   DASHBOARD_PREFIXES.some(
-    (prefix) => value === prefix || value.startsWith(`${prefix}/`),
+    (prefix) =>
+      value === prefix ||
+      value.startsWith(`${prefix}/`) ||
+      value.startsWith(`${prefix}?`) ||
+      value.startsWith(`${prefix}#`),
   );
 
 const prefixString = (value: string) => {
