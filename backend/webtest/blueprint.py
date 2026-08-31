@@ -104,7 +104,28 @@ def start_test():
     if not current_user.is_authenticated:
         return jsonify({"error": "Unauthorized"}), 401
     
-    # We no longer need template_name. Just start for all tasks.
+    # Concurrency check: reject if another test is currently running
+    active_task = SystemTask.query.filter(
+        SystemTask.task_type == 'webtest',
+        SystemTask.status.in_(['pending', 'processing'])
+    ).first()
+    if active_task:
+        return jsonify({
+            "error": "A web test is already in progress. Please wait for it to complete.",
+            "task_id": active_task.id,
+            "running": True
+        }), 409
+
+    # Rate limiting: prevent rapid-fire triggering within 60s
+    recent_task = SystemTask.query.filter(
+        SystemTask.task_type == 'webtest',
+        SystemTask.completed_at >= (datetime.utcnow() - pd.Timedelta(seconds=60))
+    ).first()
+    if recent_task:
+        return jsonify({
+            "error": "A web test was completed very recently. Please wait a moment before starting another run."
+        }), 429
+
     new_task = TaskService.create_task(
         task_type='webtest',
         user_id=current_user.id,
@@ -162,7 +183,18 @@ def get_task_history():
     query = WebtestHistory.query.filter_by(task_id=task_id)
     if cutoff: query = query.filter(WebtestHistory.query_date >= cutoff)
         
-    histories = query.order_by(WebtestHistory.query_date.asc()).all()
+    histories = query.order_by(WebtestHistory.query_date.desc()).all()
+    
+    # Deduplicate: only retain the latest test record for each calendar date
+    seen_dates = set()
+    deduped = []
+    for h in histories:
+        d = h.query_date.date() if h.query_date else None
+        if d not in seen_dates:
+            seen_dates.add(d)
+            deduped.append(h)
+            
+    deduped.reverse()
     results = [{
         "Date": h.query_date.strftime("%Y-%m-%d %H:%M:%S") if h.query_date else "",
         "URL": h.url,
@@ -170,7 +202,7 @@ def get_task_history():
         "Count": h.count,
         "Delay": h.delay,
         "Notes": h.notes
-    } for h in histories]
+    } for h in deduped]
     return jsonify(results)
 
 @webtest_bp.route('/group_history', methods=['GET'])
@@ -185,7 +217,19 @@ def get_group_history():
     
     if cutoff: query = query.filter(WebtestHistory.query_date >= cutoff)
         
-    histories = query.order_by(WebtestHistory.query_date.asc()).all()
+    histories = query.order_by(WebtestHistory.query_date.desc()).all()
+    
+    # Deduplicate: only retain the latest test record per task/version for each calendar date
+    seen = set()
+    deduped = []
+    for h in histories:
+        d = h.query_date.date() if h.query_date else None
+        key = (h.task_id or h.url, d)
+        if key not in seen:
+            seen.add(key)
+            deduped.append(h)
+            
+    deduped.reverse()
     results = [{
         "Date": h.query_date.strftime("%Y-%m-%d %H:%M:%S") if h.query_date else "",
         "URL": h.url,
@@ -193,7 +237,7 @@ def get_group_history():
         "Count": h.count,
         "Delay": h.delay,
         "Notes": h.notes
-    } for h in histories]
+    } for h in deduped]
     return jsonify(results)
 
 @webtest_bp.route('/calendar_dates', methods=['GET'])
@@ -204,14 +248,13 @@ def get_calendar_dates():
 
     query = db.session.query(
         db.func.date(WebtestHistory.query_date).label('test_date'),
-        db.func.count(WebtestHistory.id).label('run_count'),
         db.func.count(db.func.distinct(WebtestHistory.task_id)).label('task_count')
     )
     if cutoff:
         query = query.filter(WebtestHistory.query_date >= cutoff)
 
     rows = query.group_by(db.func.date(WebtestHistory.query_date)).order_by(db.text('test_date DESC')).all()
-    return jsonify([{"date": str(r.test_date), "run_count": r.run_count, "task_count": r.task_count} for r in rows])
+    return jsonify([{"date": str(r.test_date), "run_count": r.task_count, "task_count": r.task_count} for r in rows])
 
 
 @webtest_bp.route('/date_snapshot', methods=['GET'])
@@ -248,17 +291,17 @@ def get_date_snapshot():
         version = get_combined_version(h.url)
         if qd not in snapshot:
             snapshot[qd] = {"task_id": h.task_id, "versions": {}}
+        # If multiple runs exist on the same date, only keep the latest one
         if version not in snapshot[qd]["versions"]:
             snapshot[qd]["versions"][version] = {
                 "latest": {"count": h.count, "delay": h.delay},
-                "runs": []
+                "runs": [{
+                    "count": h.count,
+                    "delay": h.delay,
+                    "time": h.query_date.strftime("%H:%M UTC") if h.query_date else "N/A",
+                    "notes": h.notes
+                }]
             }
-        snapshot[qd]["versions"][version]["runs"].append({
-            "count": h.count,
-            "delay": h.delay,
-            "time": h.query_date.strftime("%H:%M UTC") if h.query_date else "N/A",
-            "notes": h.notes
-        })
 
     result = []
     for qd, data in snapshot.items():
@@ -289,10 +332,21 @@ def download_history():
         end_dt = pd.to_datetime(end_date_str) + pd.Timedelta(days=1) - pd.Timedelta(microseconds=1)
         query = query.filter(WebtestHistory.query_date <= end_dt)
         
-    histories = query.order_by(WebtestHistory.query_date.asc()).all()
+    histories = query.order_by(WebtestHistory.query_date.desc()).all()
     if not histories:
         return jsonify({"error": "No history found for this range."}), 404
         
+    # Deduplicate: only retain the latest test record per task/version for each calendar date
+    seen = set()
+    deduped = []
+    for h in histories:
+        d = h.query_date.date() if h.query_date else None
+        key = (h.task_id or h.url, d)
+        if key not in seen:
+            seen.add(key)
+            deduped.append(h)
+            
+    deduped.reverse()
     df = pd.DataFrame([{
         "Environment": h.server,
         "App Version": h.version,
@@ -302,7 +356,7 @@ def download_history():
         "Date Executed": h.query_date.strftime("%Y-%m-%d %H:%M:%S") if h.query_date else "",
         "Target URL": h.url,
         "Notes": h.notes
-    } for h in histories])
+    } for h in deduped])
     
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:

@@ -90,7 +90,7 @@ FEATURE_CATALOG = [
         blurb='Automated regression testing of FDALabel web endpoints.',
         category='Modules',
         enforced_at='/api/webtest/* and the /webtest page',
-        default_min_role=ROLE_DEVELOPER,
+        default_min_role=ROLE_USER,
         guest_relevant=False,
     ),
     FeatureSpec(
@@ -249,20 +249,27 @@ def seed_feature_gates():
     restart never reverts a change.
     """
     try:
-        existing = {row.key for row in FeatureGate.query.all()}
+        existing_rows = {row.key: row for row in FeatureGate.query.all()}
         added = 0
+        updated = 0
         for spec in FEATURE_CATALOG:
-            if spec.key in existing:
-                continue
-            db.session.add(FeatureGate(
-                key=spec.key,
-                min_role=spec.default_min_role,
-                allow_guest=spec.default_allow_guest,
-            ))
-            added += 1
-        if added:
+            row = existing_rows.get(spec.key)
+            if row is None:
+                db.session.add(FeatureGate(
+                    key=spec.key,
+                    min_role=spec.default_min_role,
+                    allow_guest=spec.default_allow_guest,
+                ))
+                added += 1
+            elif spec.key == 'webtest' and row.min_role == ROLE_DEVELOPER:
+                row.min_role = spec.default_min_role
+                updated += 1
+        if added or updated:
             db.session.commit()
-            print(f"[INFO] Seeded {added} feature gate(s).")
+            if added:
+                print(f"[INFO] Seeded {added} feature gate(s).")
+            if updated:
+                print(f"[INFO] Updated {updated} feature gate(s) to new defaults.")
     except Exception as e:
         print(f"[WARN] Could not seed feature gates: {e}")
         db.session.rollback()

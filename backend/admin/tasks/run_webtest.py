@@ -132,6 +132,14 @@ def main():
                     elapsed = round(time.time() - start_time, 2)
                     status_msg = "Inaccessible"
 
+                # Overwrite any existing records for this task on the same calendar date
+                existing_for_today = WebtestHistory.query.filter(
+                    WebtestHistory.task_id == task.id,
+                    db.func.date(WebtestHistory.query_date) == now.date()
+                ).all()
+                for old_h in existing_for_today:
+                    db.session.delete(old_h)
+
                 h = WebtestHistory(
                     task_id=task.id,
                     server=server,
