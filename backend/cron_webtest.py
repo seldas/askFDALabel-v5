@@ -5,8 +5,14 @@ Scheduled Webtest Automation Script
 Designed to be executed automatically by crontab (e.g., every Monday)
 or manually by backend operators.
 
-Crontab Configuration Example:
-    # Run every Monday at 02:00 UTC (or server local time)
+Crontab Configuration Examples (Run every Monday at 02:00 UTC):
+    # Option 1: Via Docker Compose (Recommended if running in containers)
+    0 2 * * 1 cd /path/to/askFDALabel_v5 && docker compose exec -T backend python cron_webtest.py >> /path/to/askFDALabel_v5/data/logs/cron_webtest.log 2>&1
+
+    # Option 2: Via Docker container name directly
+    0 2 * * 1 docker exec -i fdalabel-v3-backend python cron_webtest.py >> /path/to/askFDALabel_v5/data/logs/cron_webtest.log 2>&1
+
+    # Option 3: Directly on host with Python virtual environment
     0 2 * * 1 cd /path/to/askFDALabel_v5 && /path/to/venv/bin/python backend/cron_webtest.py >> /path/to/askFDALabel_v5/data/logs/cron_webtest.log 2>&1
 
 Features:
@@ -272,9 +278,15 @@ def main():
         description='askFDALabel Scheduled Webtest Runner',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Crontab Setup:
-  Run every Monday at 02:00:
-    0 2 * * 1 cd /path/to/askFDALabel_v5 && python backend/cron_webtest.py >> data/logs/cron_webtest.log 2>&1
+Crontab Setup Examples (Run every Monday at 02:00 UTC):
+  1) Docker Compose (Recommended):
+     0 2 * * 1 cd /path/to/askFDALabel_v5 && docker compose exec -T backend python cron_webtest.py >> data/logs/cron_webtest.log 2>&1
+
+  2) Docker Exec (Container name directly):
+     0 2 * * 1 docker exec -i fdalabel-v3-backend python cron_webtest.py >> /path/to/askFDALabel_v5/data/logs/cron_webtest.log 2>&1
+
+  3) Host Python Virtual Environment:
+     0 2 * * 1 cd /path/to/askFDALabel_v5 && /path/to/venv/bin/python backend/cron_webtest.py >> data/logs/cron_webtest.log 2>&1
         """
     )
     parser.add_argument('--dry-run', action='store_true', help='Test endpoints without updating database')
