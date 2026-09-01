@@ -7,13 +7,13 @@ or manually by backend operators.
 
 Crontab Configuration Examples (Run every Monday at 02:00 UTC):
     # Option 1: Via Docker Compose (Recommended if running in containers)
-    0 2 * * 1 cd /path/to/askFDALabel_v5 && docker compose exec -T backend python cron_webtest.py >> /path/to/askFDALabel_v5/data/logs/cron_webtest.log 2>&1
+    0 2 * * 1 cd /compute001/lwu/Docker/FDALabel_v3 && docker compose exec -T backend python cron_webtest.py >> /compute001/lwu/Docker/FDALabel_v3/data/logs/cron_webtest.log 2>&1
 
     # Option 2: Via Docker container name directly
-    0 2 * * 1 docker exec -i fdalabel-v3-backend python cron_webtest.py >> /path/to/askFDALabel_v5/data/logs/cron_webtest.log 2>&1
+    0 2 * * 1 docker exec -i fdalabel-v3-backend python cron_webtest.py >> /compute001/lwu/Docker/FDALabel_v3/data/logs/cron_webtest.log 2>&1
 
     # Option 3: Directly on host with Python virtual environment
-    0 2 * * 1 cd /path/to/askFDALabel_v5 && /path/to/venv/bin/python backend/cron_webtest.py >> /path/to/askFDALabel_v5/data/logs/cron_webtest.log 2>&1
+    0 2 * * 1 cd /compute001/lwu/Docker/FDALabel_v3 && /compute001/lwu/Docker/FDALabel_v3/venv/bin/python backend/cron_webtest.py >> /compute001/lwu/Docker/FDALabel_v3/data/logs/cron_webtest.log 2>&1
 
 Features:
     - Auto-detects repository root and loads .env
