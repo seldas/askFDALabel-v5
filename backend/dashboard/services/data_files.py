@@ -15,22 +15,22 @@ from pathlib import Path
 FILE_TYPES = {
     'dailymed': {
         'label': 'DailyMed monthly update', 'filename': 'dailymed_monthly_update.zip',
-        'relative_dir': 'managed_updates/DailyMed', 'extensions': {'.zip'}, 'update_type': 'monthly_labeling',
+        'relative_dir': 'monthly_updates/DailyMed', 'extensions': {'.zip'}, 'update_type': 'monthly_labeling',
     },
     'pharmacologic_class': {
         'label': 'Pharmacologic class indexing', 'filename': 'pharmacologic_class_indexing_spl_files.zip',
-        'relative_dir': 'managed_updates/pharmacologic_class_indexing_spl_files', 'extensions': {'.zip'}, 'update_type': 'epc',
+        'relative_dir': 'monthly_updates/pharmacologic_class_indexing_spl_files', 'extensions': {'.zip'}, 'update_type': 'epc',
     },
     'meddra': {
-        'label': 'MedDRA', 'filename': 'meddra.zip', 'relative_dir': 'managed_updates/MedDRA',
+        'label': 'MedDRA', 'filename': 'meddra.zip', 'relative_dir': 'monthly_updates/MedDRA',
         'extensions': {'.zip'}, 'update_type': 'meddra',
     },
     'orangebook': {
-        'label': 'Orange Book', 'filename': 'EOBZIP.zip', 'relative_dir': 'managed_updates/OrangeBook',
+        'label': 'Orange Book', 'filename': 'EOBZIP.zip', 'relative_dir': 'monthly_updates/OrangeBook',
         'extensions': {'.zip'}, 'update_type': 'orangebook',
     },
     'askdrugtox': {
-        'label': 'AskDrugTox update', 'filename': 'askdrugtox_update.xlsx', 'relative_dir': 'managed_updates',
+        'label': 'AskDrugTox update', 'filename': 'askdrugtox_update.xlsx', 'relative_dir': 'monthly_updates',
         'extensions': {'.xlsx'}, 'update_type': 'drugtox',
     },
 }
@@ -90,8 +90,8 @@ def prepare_for_update(data_dir: str | Path, file_type: str) -> None:
     if not source.exists():
         raise FileNotFoundError(f'Missing uploaded file: {source.name}')
     if file_type == 'orangebook':
-        _safe_extract(source, root / 'managed_updates' / 'OrangeBook' / 'EOB_Latest')
+        _safe_extract(source, root / 'monthly_updates' / 'OrangeBook' / 'EOB_Latest')
     elif file_type == 'meddra':
-        _safe_extract(source, root / 'managed_updates' / 'MedDRA' / 'MedDRA_latest')
+        _safe_extract(source, root / 'monthly_updates' / 'MedDRA' / 'MedDRA_latest')
     elif file_type == 'pharmacologic_class':
-        _safe_extract(source, root / 'managed_updates' / 'pharmacologic_class_indexing_spl_files')
+        _safe_extract(source, root / 'monthly_updates' / 'pharmacologic_class_indexing_spl_files')

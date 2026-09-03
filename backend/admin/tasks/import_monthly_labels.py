@@ -25,7 +25,7 @@ def main():
                 task.message = 'Unpacking managed DailyMed monthly update...'
                 db.session.commit()
             root = Path(app.config['DATA_DIR'])
-            source_dir = root / 'managed_updates' / 'DailyMed'
+            source_dir = root / 'monthly_updates' / 'DailyMed'
             storage_dir = root / 'spl_storage'
             script = backend_dir / 'database' / 'scripts' / 'db_07_import_labels.py'
             subprocess.run([

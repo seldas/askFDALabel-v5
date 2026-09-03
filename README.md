@@ -162,8 +162,8 @@ archive/             Archived historical files (Documents, scripts, bookmarklets
 ## Prerequisites
 
 For the containerized stack:
-- Docker
-- Docker Compose / `docker compose`
+- Apptainer (default runtime on Linux servers)
+- Docker Compose / `docker compose` (optional compatibility runtime)
 
 For local development:
 - Python `3.12` recommended
@@ -234,19 +234,20 @@ The server can be started in **two straightforward ways**:
 
 ### Method 1: Using the Startup Script (Recommended)
 
-`start_server.py` reads your `.env`, automatically generates `docker-compose.yml`, prepares base images, and starts the container stack.
+`start_server.py` defaults to rootless Apptainer instances. It builds the backend and frontend SIF images when needed, starts Redis and optional local PostgreSQL instances, and binds host data into the app. Docker Compose remains available with `--runtime docker`.
 
 ```bash
-# 1. Development Mode (hot-reload for frontend & backend, ports 8841 and 8842 exposed)
+# 1. Development Mode (Apptainer default; ports 8841 and 8842 exposed)
 python start_server.py --mode dev
 
-# 2. Production Mode (Gunicorn workers, compiled Next.js, Nginx reverse proxy on port 80/443)
+# 2. Production Mode (Gunicorn workers and compiled Next.js)
 python start_server.py --mode prod
 ```
 
 **Useful flags for `start_server.py`:**
-- `--down`: Stop and clean up active containers (`python start_server.py --mode dev --down`)
-- `--build`: Rebuild Docker images during startup
+- `--down`: Stop active Apptainer instances (`python start_server.py --mode dev --down`)
+- `--build`: Rebuild SIF images during startup
+- `--runtime apptainer|docker`: Select runtime; defaults to `apptainer`
 - `--efficient`: Low-resource mode (fewer workers, reduced database connection limits)
 - `--local-db true|false`: Force local PostgreSQL container vs. external database
 - `--dry-run`: Generate `docker-compose.yml` without starting containers
@@ -254,9 +255,9 @@ python start_server.py --mode prod
 
 ---
 
-### Method 2: Using Docker Compose Directly
+### Docker Compose compatibility mode
 
-Once `docker-compose.yml` has been generated (either by running `start_server.py` or via `python start_server.py --dry-run`), you can manage the stack directly using standard Docker commands:
+Generate Compose explicitly with `python start_server.py --runtime docker --dry-run`, then manage it using standard Docker commands:
 
 ```bash
 # Start all services in the background

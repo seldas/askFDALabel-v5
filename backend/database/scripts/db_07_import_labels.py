@@ -521,7 +521,7 @@ def unpack_bulk_zips(downloads_dir, storage_dir, filter_type='human', replace_ex
 
 def load_orange_book():
     ob_dict = {}
-    ob_path = data_dir / 'managed_updates' / 'OrangeBook' / 'EOB_Latest' / 'products.txt'
+    ob_path = data_dir / 'monthly_updates' / 'OrangeBook' / 'EOB_Latest' / 'products.txt'
 
     if ob_path.exists():
         try:

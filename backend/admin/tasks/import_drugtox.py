@@ -56,7 +56,7 @@ def import_drugtox():
                 db.create_all()
 
             data_dir = Path(app.config['DATA_DIR'])
-            excel_path = data_dir / 'managed_updates' / 'askdrugtox_update.xlsx'
+            excel_path = data_dir / 'monthly_updates' / 'askdrugtox_update.xlsx'
             print(f"  [i] Looking for data in: {excel_path}")
             
             if not excel_path.exists():

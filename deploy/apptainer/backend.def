@@ -1,0 +1,21 @@
+Bootstrap: docker
+From: python:3.12-slim
+
+%files
+backend /app
+
+%environment
+    export PYTHONDONTWRITEBYTECODE=1
+    export PYTHONUNBUFFERED=1
+    export HOST=0.0.0.0
+    export BACKEND_PORT=8842
+
+%post
+    apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev curl && rm -rf /var/lib/apt/lists/*
+    pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r /app/requirements.txt
+
+%runscript
+    exec gunicorn --bind "0.0.0.0:${BACKEND_PORT:-8842}" --workers "${GUNICORN_WORKERS:-4}" --threads "${GUNICORN_THREADS:-8}" --worker-class gthread --timeout 600 app:app
+
+%apprun celery
+    exec celery -A celery_app.celery worker --loglevel=info --concurrency="${CELERY_CONCURRENCY:-4}"

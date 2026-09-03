@@ -123,7 +123,7 @@ def run_import():
                 db.session.commit()
                 db.create_all()
 
-            data_dir = Path(app.config['DATA_DIR']) / 'managed_updates' / 'MedDRA' / 'MedDRA_latest' / 'MedAscii'
+            data_dir = Path(app.config['DATA_DIR']) / 'monthly_updates' / 'MedDRA' / 'MedDRA_latest' / 'MedAscii'
             print(f"  [i] Looking for data in: {data_dir}")
             
             if not data_dir.exists():

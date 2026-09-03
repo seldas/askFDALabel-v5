@@ -5,6 +5,82 @@ import argparse
 import subprocess
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parent
+APPTAINER_DIR = ROOT / 'deploy' / 'apptainer'
+APPTAINER_IMAGES = APPTAINER_DIR / 'images'
+
+
+def _run(command, dry_run=False, check=True):
+    print(f"Running command: {' '.join(map(str, command))}")
+    if not dry_run:
+        subprocess.run(command, check=check)
+
+
+def run_apptainer(args, env_vars, local_db):
+    """Start rootless Apptainer instances using host-owned persistent data."""
+    if not args.dry_run:
+        try:
+            subprocess.run(['apptainer', '--version'], check=True, stdout=subprocess.DEVNULL)
+        except FileNotFoundError:
+            print("[ERROR] 'apptainer' was not found. Install Apptainer on the Linux host or use --runtime docker.")
+            sys.exit(1)
+
+    names = ['askfdalabel-frontend', 'askfdalabel-backend', 'askfdalabel-celery', 'askfdalabel-redis']
+    if local_db:
+        names.append('askfdalabel-db')
+    if args.down:
+        for name in names:
+            _run(['apptainer', 'instance', 'stop', name], args.dry_run, check=False)
+        return
+
+    APPTAINER_IMAGES.mkdir(parents=True, exist_ok=True)
+    backend_image = APPTAINER_IMAGES / 'askfdalabel-backend.sif'
+    frontend_image = APPTAINER_IMAGES / 'askfdalabel-frontend.sif'
+    if args.build or not backend_image.exists() or not frontend_image.exists():
+        _run(['apptainer', 'build', '--fakeroot', str(backend_image), str(APPTAINER_DIR / 'backend.def')], args.dry_run)
+        _run(['apptainer', 'build', '--fakeroot', str(frontend_image), str(APPTAINER_DIR / 'frontend.def')], args.dry_run)
+
+    monthly = ROOT / 'data' / 'monthly_updates'
+    monthly.mkdir(parents=True, exist_ok=True)
+    (monthly / 'archive').mkdir(exist_ok=True)
+    data_dir = ROOT / 'data'
+    data_dir.mkdir(exist_ok=True)
+    pg_data = ROOT / 'database' / 'pgdata'
+    if local_db:
+        pg_data.mkdir(parents=True, exist_ok=True)
+    # Both bind mounts are deliberate: /data keeps existing XML/storage paths
+    # working, while monthly_updates is an explicit durable host data contract.
+    data_binds = f'{data_dir}:/data,{monthly}:/data/monthly_updates'
+    runtime_env = os.environ.copy()
+    runtime_env.update(env_vars)
+    runtime_env.update({
+        'APPTAINERENV_FLASK_ENV': 'development' if args.mode == 'dev' else 'production',
+        'APPTAINERENV_BACKEND_PORT': '8842',
+        'APPTAINERENV_FRONTEND_PORT': '8841',
+        'APPTAINERENV_BACKEND_URL': 'http://127.0.0.1:8842',
+        'APPTAINERENV_CELERY_BROKER_URL': env_vars.get('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0'),
+        'APPTAINERENV_CELERY_RESULT_BACKEND': env_vars.get('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379/0'),
+        'APPTAINERENV_CELERY_CONCURRENCY': '1' if args.efficient else '4',
+        'APPTAINERENV_POSTGRES_DB': env_vars.get('PG_DATABASE', 'fdalabel-v3'),
+        'APPTAINERENV_POSTGRES_USER': env_vars.get('PG_USERNAME', env_vars.get('PG_USER', 'afd_user')),
+        'APPTAINERENV_POSTGRES_PASSWORD': env_vars.get('PG_PASSWORD', 'afd_password'),
+    })
+    old_env = os.environ.copy()
+    os.environ.update(runtime_env)
+    try:
+        if local_db:
+            _run(['apptainer', 'instance', 'start', '--bind', f'{pg_data}:/var/lib/postgresql/data',
+                  'docker://ankane/pgvector:latest', 'askfdalabel-db'], args.dry_run)
+        _run(['apptainer', 'instance', 'start', 'docker://redis:7-alpine', 'askfdalabel-redis'], args.dry_run)
+        _run(['apptainer', 'instance', 'start', '--bind', data_binds, str(backend_image), 'askfdalabel-backend'], args.dry_run)
+        _run(['apptainer', 'instance', 'start', '--app', 'celery', '--bind', data_binds, str(backend_image), 'askfdalabel-celery'], args.dry_run)
+        _run(['apptainer', 'instance', 'start', str(frontend_image), 'askfdalabel-frontend'], args.dry_run)
+    finally:
+        os.environ.clear(); os.environ.update(old_env)
+    print('\n[SUCCESS] AskFDALabel is running with Apptainer.')
+    print('          UI: http://localhost:8841/fdalabel-v3/')
+    print('          Persistent updates: data/monthly_updates/ (host-owned by the launching user)')
+
 def load_env(path=".env"):
     """Loads key-value pairs from a .env file."""
     env = {}
@@ -362,7 +438,11 @@ def check_and_prepare_image(image_name, base_image):
     return False
 
 def main():
-    parser = argparse.ArgumentParser(description="fdalabel-v3 Stack Orchestrator & Config Generator")
+    # Definition files and Docker compatibility paths are repository-relative.
+    os.chdir(ROOT)
+    parser = argparse.ArgumentParser(description="AskFDALabel stack orchestrator")
+    parser.add_argument("--runtime", choices=["apptainer", "docker"], default="apptainer",
+                        help="Runtime to use; Apptainer is the default and Docker Compose remains available explicitly")
     parser.add_argument("--mode", choices=["dev", "prod"], default="dev",
                         help="Deployment mode: 'dev' for local hot-reloaded development, 'prod' for production (default: 'dev')")
     parser.add_argument("--efficient", action="store_true",
@@ -402,6 +482,10 @@ def main():
             local_db_active = True # Default fallback
 
     include_nginx = args.nginx or (args.mode == "prod" and not args.rapid)
+
+    if args.runtime == 'apptainer':
+        run_apptainer(args, env_vars, local_db_active)
+        return
 
     print(f"Generating Docker Compose configuration...")
     print(f"  Mode:       {args.mode.upper()}")
