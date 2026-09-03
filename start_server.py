@@ -2,6 +2,7 @@
 import os
 import sys
 import argparse
+import re
 import subprocess
 from pathlib import Path
 
@@ -9,11 +10,53 @@ ROOT = Path(__file__).resolve().parent
 APPTAINER_DIR = ROOT / 'deploy' / 'apptainer'
 APPTAINER_IMAGES = APPTAINER_DIR / 'images'
 
+# Keep the Apptainer instance names aligned with Docker's long-standing
+# `container_name` values.  The askfdalabel-* names were used only by the
+# first Apptainer implementation and are retained below solely for migration.
+APPTAINER_INSTANCES = {
+    'frontend': 'fdalabel-v3-frontend',
+    'backend': 'fdalabel-v3-backend',
+    'celery': 'fdalabel-v3-celery',
+    'redis': 'fdalabel-v3-redis',
+    'db': 'fdalabel-v3-db',
+}
+LEGACY_APPTAINER_INSTANCES = {
+    service: f'askfdalabel-{service}'
+    for service in APPTAINER_INSTANCES
+}
+
 
 def _run(command, dry_run=False, check=True):
     print(f"Running command: {' '.join(map(str, command))}")
     if not dry_run:
         subprocess.run(command, check=check)
+
+
+def _apptainer_instance_exists(name):
+    """Return whether a named Apptainer instance is currently registered."""
+    result = subprocess.run(
+        ['apptainer', 'instance', 'list'],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0 and re.search(rf'(?<![\w-]){re.escape(name)}(?![\w-])', result.stdout) is not None
+
+
+def _start_apptainer_instance(command, name, args, restart_on_build=False):
+    """Start an instance once, reusing a healthy already-running instance."""
+    if args.dry_run:
+        _run(command, dry_run=True)
+        return
+
+    if _apptainer_instance_exists(name):
+        if restart_on_build and args.build:
+            print(f"[INFO] Replacing {name} because its image was rebuilt.")
+            _run(['apptainer', 'instance', 'stop', name], check=False)
+        else:
+            print(f"[INFO] Reusing existing Apptainer instance: {name}")
+            return
+    _run(command)
 
 
 def run_apptainer(args, env_vars, local_db):
@@ -25,12 +68,15 @@ def run_apptainer(args, env_vars, local_db):
             print("[ERROR] 'apptainer' was not found. Install Apptainer on the Linux host or use --runtime docker.")
             sys.exit(1)
 
-    names = ['askfdalabel-frontend', 'askfdalabel-backend', 'askfdalabel-celery', 'askfdalabel-redis']
+    services = ['frontend', 'backend', 'celery', 'redis']
     if local_db:
-        names.append('askfdalabel-db')
+        services.append('db')
     if args.down:
-        for name in names:
-            _run(['apptainer', 'instance', 'stop', name], args.dry_run, check=False)
+        # Also clean up the short-lived askfdalabel-* naming scheme used by
+        # the initial Apptainer launcher, so --down remains backward-compatible.
+        for service in services:
+            for name in (APPTAINER_INSTANCES[service], LEGACY_APPTAINER_INSTANCES[service]):
+                _run(['apptainer', 'instance', 'stop', name], args.dry_run, check=False)
         return
 
     APPTAINER_IMAGES.mkdir(parents=True, exist_ok=True)
@@ -68,13 +114,38 @@ def run_apptainer(args, env_vars, local_db):
     old_env = os.environ.copy()
     os.environ.update(runtime_env)
     try:
+        # An Apptainer instance lives beyond this script invocation.  Retire
+        # instances from the original naming scheme before launching the
+        # canonical fdalabel-v3-* names; host-mounted data is unaffected.
+        for service in services:
+            legacy_name = LEGACY_APPTAINER_INSTANCES[service]
+            if args.dry_run:
+                _run(['apptainer', 'instance', 'stop', legacy_name], dry_run=True, check=False)
+            elif _apptainer_instance_exists(legacy_name):
+                print(f"[INFO] Migrating legacy Apptainer instance: {legacy_name}")
+                _run(['apptainer', 'instance', 'stop', legacy_name], check=False)
         if local_db:
-            _run(['apptainer', 'instance', 'start', '--bind', f'{pg_data}:/var/lib/postgresql/data',
-                  'docker://ankane/pgvector:latest', 'askfdalabel-db'], args.dry_run)
-        _run(['apptainer', 'instance', 'start', 'docker://redis:7-alpine', 'askfdalabel-redis'], args.dry_run)
-        _run(['apptainer', 'instance', 'start', '--bind', data_binds, str(backend_image), 'askfdalabel-backend'], args.dry_run)
-        _run(['apptainer', 'instance', 'start', '--app', 'celery', '--bind', data_binds, str(backend_image), 'askfdalabel-celery'], args.dry_run)
-        _run(['apptainer', 'instance', 'start', str(frontend_image), 'askfdalabel-frontend'], args.dry_run)
+            _start_apptainer_instance(
+                ['apptainer', 'instance', 'start', '--bind', f'{pg_data}:/var/lib/postgresql/data',
+                 'docker://ankane/pgvector:latest', APPTAINER_INSTANCES['db']],
+                APPTAINER_INSTANCES['db'], args,
+            )
+        _start_apptainer_instance(
+            ['apptainer', 'instance', 'start', 'docker://redis:7-alpine', APPTAINER_INSTANCES['redis']],
+            APPTAINER_INSTANCES['redis'], args,
+        )
+        _start_apptainer_instance(
+            ['apptainer', 'instance', 'start', '--bind', data_binds, str(backend_image), APPTAINER_INSTANCES['backend']],
+            APPTAINER_INSTANCES['backend'], args, restart_on_build=True,
+        )
+        _start_apptainer_instance(
+            ['apptainer', 'instance', 'start', '--app', 'celery', '--bind', data_binds, str(backend_image), APPTAINER_INSTANCES['celery']],
+            APPTAINER_INSTANCES['celery'], args, restart_on_build=True,
+        )
+        _start_apptainer_instance(
+            ['apptainer', 'instance', 'start', str(frontend_image), APPTAINER_INSTANCES['frontend']],
+            APPTAINER_INSTANCES['frontend'], args, restart_on_build=True,
+        )
     finally:
         os.environ.clear(); os.environ.update(old_env)
     print('\n[SUCCESS] AskFDALabel is running with Apptainer.')
