@@ -450,7 +450,7 @@ def parse_spl_zip(zip_path):
         return None
 
 
-def unpack_bulk_zips(downloads_dir, storage_dir, filter_type='human'):
+def unpack_bulk_zips(downloads_dir, storage_dir, filter_type='human', replace_existing=False):
     """
     Phase 1: Unpack giant ZIP files from downloads_dir into storage_dir.
     """
@@ -491,7 +491,7 @@ def unpack_bulk_zips(downloads_dir, storage_dir, filter_type='human'):
 
     for zip_path in bulk_zips:
         zip_name = os.path.basename(zip_path)
-        if zip_name in processed:
+        if zip_name in processed and not replace_existing:
             print(f"Skipping already processed bulk ZIP: {zip_name}")
             continue
 
@@ -507,7 +507,7 @@ def unpack_bulk_zips(downloads_dir, storage_dir, filter_type='human'):
                 for nz_name in nested_zips:
                     inner_name = os.path.basename(nz_name)
                     out_path = storage_path / inner_name
-                    if not out_path.exists():
+                    if replace_existing or not out_path.exists():
                         with main_z.open(nz_name) as source, open(out_path, 'wb') as target:
                             target.write(source.read())
 
@@ -521,7 +521,7 @@ def unpack_bulk_zips(downloads_dir, storage_dir, filter_type='human'):
 
 def load_orange_book():
     ob_dict = {}
-    ob_path = data_dir / 'downloads' / 'OrangeBook' / 'EOB_Latest' / 'products.txt'
+    ob_path = data_dir / 'managed_updates' / 'OrangeBook' / 'EOB_Latest' / 'products.txt'
 
     if ob_path.exists():
         try:
@@ -896,12 +896,13 @@ def main():
     parser.add_argument("--workers", type=int, default=4, help="Number of worker processes")
     parser.add_argument("--force", action="store_true", help="Reparse and upsert all labels")
     parser.add_argument("--refresh-existing", action="store_true", help="Reparse and upsert existing spl_id values too")
+    parser.add_argument("--replace-existing-zips", action="store_true", help="Replace extracted ZIPs for a new monthly source archive")
 
     args = parser.parse_args()
 
     print("=== Phase 1: Unpacking Bulk ZIPs ===")
     if not args.skip_unpack:
-        unpack_bulk_zips(args.downloads_dir, args.storage_dir, args.filter)
+        unpack_bulk_zips(args.downloads_dir, args.storage_dir, args.filter, args.replace_existing_zips)
     else:
         print("Unpacking phase skipped.")
 

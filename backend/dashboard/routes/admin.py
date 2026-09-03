@@ -260,7 +260,7 @@ def trigger_db_update():
     db_type = data.get('type') # 'labeling', 'orangebook', 'drugtox', 'meddra'
     
     scripts = {
-        'labeling': 'admin/tasks/import_labels.py',
+        'monthly_labeling': 'admin/tasks/import_monthly_labels.py',
         'orangebook': 'admin/tasks/import_orangebook.py',
         'drugtox': 'admin/tasks/import_drugtox.py',
         'generate_drugtox': 'admin/tasks/generate_drugtox.py',
@@ -309,13 +309,7 @@ def trigger_db_update():
         # Pass --task-id to the script
         cmd = [venv_python, script_path, '--task-id', str(new_task.id)]
         
-        if db_type == 'labeling':
-            if data.get('skip_unpack', False):
-                cmd.append('--skip-unpack')
-            if data.get('archived', False):
-                cmd.append('--archived')
-            if data.get('force', False):
-                cmd.append('--force')
+        if db_type == 'monthly_labeling':
             if 'workers' in data:
                 cmd.extend(['--workers', str(data['workers'])])
         elif db_type == 'generate_drugtox':

@@ -103,7 +103,7 @@ def parse_indexing_zip(zip_path):
         return []
 
 def main():
-    indexing_dir = data_dir / "downloads" / "pharmacologic_class_indexing_spl_files"
+    indexing_dir = data_dir / "managed_updates" / "pharmacologic_class_indexing_spl_files"
     if not indexing_dir.exists():
         print(f"Directory not found: {indexing_dir}")
         return

@@ -791,11 +791,8 @@ export default function ManagementPage() {
     setPendingUpdateStats(null);
     try {
       const bodyPayload: any = { type, confirm_file_warning: true };
-      if (type === 'labeling') {
-        bodyPayload.skip_unpack = skipUnpack;
+      if (type === 'monthly_labeling') {
         bodyPayload.workers = workers;
-        bodyPayload.archived = archived;
-        bodyPayload.force = forceUpdate;
       } else if (type === 'generate_drugtox') {
         bodyPayload.local = useLocalDB;
       }
@@ -2500,7 +2497,7 @@ else:
 
                 <div className="update-grid">
                   {[
-                    { id: 'labeling', name: 'Drug Labeling', desc: 'Full SPL import from local disk' },
+                    { id: 'monthly_labeling', name: 'Monthly Label Update', desc: 'Incrementally import the uploaded DailyMed monthly update' },
                     { id: 'orangebook', name: 'Orange Book', desc: 'Approved Drug Products with Therapeutic Equivalence Evaluations' },
                     { id: 'epc', name: 'Pharmacologic Class Indexing', desc: 'Import EPC, MoA, and physiologic-effect indexing records' },
                     { id: 'drugtox', name: 'AskDrugTox', desc: 'Import the current AskDrugTox Excel update' },
@@ -2522,22 +2519,13 @@ else:
                         </button>
                       </div>
 
-                      {item.id === 'labeling' && (
+                      {item.id === 'monthly_labeling' && (
                         <div style={{ marginTop: '12px', padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid var(--afl-n-200)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           <div style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--afl-n-600)', marginBottom: '4px' }}>Configuration Options</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--afl-n-700)', cursor: 'pointer', userSelect: 'none' }}>
-                              <input type="checkbox" checked={skipUnpack} onChange={(e) => setSkipUnpack(e.target.checked)} style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: 'var(--afl-info-500)' }} />
-                              Skip Unpacking
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--afl-n-700)', cursor: 'pointer', userSelect: 'none' }}>
-                              <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: 'var(--afl-info-500)' }} />
-                              Process Archived (XMLs)
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--afl-n-700)', cursor: 'pointer', userSelect: 'none' }}>
-                              <input type="checkbox" checked={forceUpdate} onChange={(e) => setForceUpdate(e.target.checked)} style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: 'var(--afl-danger-500)' }} />
-                              <span style={{ color: forceUpdate ? 'var(--afl-danger-500)' : 'inherit', fontWeight: forceUpdate ? 700 : 400 }}>Force Overwrite</span>
-                            </label>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--afl-n-700)' }}>
+                              The uploaded monthly package is unpacked automatically and only new SPL versions are imported.
+                            </span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--afl-n-700)' }}>
                               <span>Workers:</span>
                               <select value={workers} onChange={(e) => setWorkers(Number(e.target.value))} style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--afl-n-300)', fontSize: '0.8rem', cursor: 'pointer' }}>
