@@ -15,10 +15,11 @@ APPTAINER_IMAGES = APPTAINER_DIR / 'images'
 # first Apptainer implementation and are retained below solely for migration.
 APPTAINER_INSTANCES = {
     'frontend': 'fdalabel-v3-frontend',
-    'backend': 'fdalabel-v3-backend',
-    'celery': 'fdalabel-v3-celery',
-    'redis': 'fdalabel-v3-redis',
-    'db': 'fdalabel-v3-db',
+    'backend':  'fdalabel-v3-backend',
+    'celery':   'fdalabel-v3-celery',
+    'redis':    'fdalabel-v3-redis',
+    'db':       'fdalabel-v3-db',
+    'nginx':    'fdalabel-v3-nginx',
 }
 LEGACY_APPTAINER_INSTANCES = {
     service: f'askfdalabel-{service}'
@@ -59,6 +60,15 @@ def _start_apptainer_instance(command, name, args, restart_on_build=False):
     _run(command)
 
 
+def _pull_oci_to_sif(source_url, sif_path, dry_run=False):
+    """Pull an OCI image and convert it to a local SIF file if not already present."""
+    if sif_path.exists() and not dry_run:
+        print(f"[INFO] Using cached SIF image: {sif_path}")
+        return
+    print(f"[INFO] Pulling {source_url} → {sif_path}")
+    _run(['apptainer', 'pull', '--force', str(sif_path), source_url], dry_run)
+
+
 def run_apptainer(args, env_vars, local_db):
     """Start rootless Apptainer instances using host-owned persistent data."""
     if not args.dry_run:
@@ -68,54 +78,113 @@ def run_apptainer(args, env_vars, local_db):
             print("[ERROR] 'apptainer' was not found. Install Apptainer on the Linux host or use --runtime docker.")
             sys.exit(1)
 
-    services = ['frontend', 'backend', 'celery', 'redis']
+    include_nginx = getattr(args, 'nginx', False) or (args.mode == 'prod' and not getattr(args, 'rapid', False))
+
+    services = ['redis', 'backend', 'celery', 'frontend']
     if local_db:
-        services.append('db')
+        services.insert(0, 'db')
+    if include_nginx:
+        services.append('nginx')
+
     if args.down:
-        # Also clean up the short-lived askfdalabel-* naming scheme used by
-        # the initial Apptainer launcher, so --down remains backward-compatible.
+        # Stop all known instances (both current and legacy naming schemes).
+        # Query the live instance list once so we only attempt to stop things
+        # that are actually running — avoids noisy "instance not found" errors.
+        result = subprocess.run(
+            ['apptainer', 'instance', 'list'],
+            check=False, capture_output=True, text=True,
+        )
+        running = result.stdout if result.returncode == 0 else ''
         for service in services:
             for name in (APPTAINER_INSTANCES[service], LEGACY_APPTAINER_INSTANCES[service]):
-                _run(['apptainer', 'instance', 'stop', name], args.dry_run, check=False)
+                if args.dry_run or re.search(rf'(?<![\w-]){re.escape(name)}(?![\w-])', running):
+                    _run(['apptainer', 'instance', 'stop', name], args.dry_run, check=False)
+                else:
+                    print(f"[INFO] Instance not running, skipping stop: {name}")
+        print('\n[SUCCESS] Apptainer instances stopped.')
         return
 
     APPTAINER_IMAGES.mkdir(parents=True, exist_ok=True)
-    backend_image = APPTAINER_IMAGES / 'askfdalabel-backend.sif'
-    frontend_image = APPTAINER_IMAGES / 'askfdalabel-frontend.sif'
+    backend_image  = APPTAINER_IMAGES / 'fdalabel-v3-backend.sif'
+    frontend_image = APPTAINER_IMAGES / 'fdalabel-v3-frontend.sif'
+    redis_image    = APPTAINER_IMAGES / 'fdalabel-v3-redis.sif'
+    db_image       = APPTAINER_IMAGES / 'fdalabel-v3-db.sif'
+    nginx_image    = APPTAINER_IMAGES / 'fdalabel-v3-nginx.sif'
+
+    def _build_sif(sif_path, def_path):
+        """Build a SIF image, always passing --force to overwrite without prompting."""
+        _run(['apptainer', 'build', '--fakeroot', '--force',
+              str(sif_path), str(def_path)], args.dry_run)
+
+    # --- Build or refresh custom .def images ---
     if args.build or not backend_image.exists() or not frontend_image.exists():
-        _run(['apptainer', 'build', '--fakeroot', str(backend_image), str(APPTAINER_DIR / 'backend.def')], args.dry_run)
-        _run(['apptainer', 'build', '--fakeroot', str(frontend_image), str(APPTAINER_DIR / 'frontend.def')], args.dry_run)
+        _build_sif(backend_image,  APPTAINER_DIR / 'backend.def')
+        _build_sif(frontend_image, APPTAINER_DIR / 'frontend.def')
+
+    # --- Pull third-party OCI images into local SIF files ---
+    _pull_oci_to_sif('docker://redis:7-alpine', redis_image, args.dry_run)
+    if local_db:
+        # Build the db SIF from our custom .def so that postgres runs as the
+        # host user (rootless), bypassing docker-entrypoint.sh / gosu.
+        if args.build or not db_image.exists():
+            _build_sif(db_image, APPTAINER_DIR / 'db.def')
+    if include_nginx:
+        # Build nginx SIF from our custom .def so %startscript runs nginx
+        # directly (rootless, no docker-entrypoint.sh, writable /tmp paths).
+        if args.build or not nginx_image.exists():
+            _build_sif(nginx_image, APPTAINER_DIR / 'nginx.def')
 
     monthly = ROOT / 'data' / 'monthly_updates'
     monthly.mkdir(parents=True, exist_ok=True)
     (monthly / 'archive').mkdir(exist_ok=True)
     data_dir = ROOT / 'data'
     data_dir.mkdir(exist_ok=True)
-    pg_data = ROOT / 'database' / 'pgdata'
+    # Use a separate pgdata directory for Apptainer — the existing database/pgdata
+    # was initialized by Docker (owned by uid 999 / postgres), which is inaccessible
+    # to the rootless Apptainer user.  The Apptainer db runs as the host user and
+    # needs its own data directory (owned by leihong.wu).
+    pg_data = ROOT / 'database' / 'pgdata_apptainer'
     if local_db:
         pg_data.mkdir(parents=True, exist_ok=True)
+
     # Both bind mounts are deliberate: /data keeps existing XML/storage paths
     # working, while monthly_updates is an explicit durable host data contract.
     data_binds = f'{data_dir}:/data,{monthly}:/data/monthly_updates'
+
+    # Resolve PG_* values individually so we can build a fully-expanded
+    # DATABASE_URL.  PG_HOST=db is the Docker service name; in Apptainer all
+    # services share the host network, so map it to 127.0.0.1.
+    pg_host = env_vars.get('PG_HOST', 'db')
+    if pg_host == 'db':
+        pg_host = '127.0.0.1'
+    pg_port     = env_vars.get('PG_PORT',     '5432')
+    pg_db       = env_vars.get('PG_DATABASE', 'fdalabel-v3')
+    pg_user     = env_vars.get('PG_USERNAME', env_vars.get('PG_USER', 'afd_user'))
+    pg_password = env_vars.get('PG_PASSWORD', 'afd_password')
+    database_url = f'postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}'
+
     runtime_env = os.environ.copy()
     runtime_env.update(env_vars)
     runtime_env.update({
-        'APPTAINERENV_FLASK_ENV': 'development' if args.mode == 'dev' else 'production',
-        'APPTAINERENV_BACKEND_PORT': '8842',
-        'APPTAINERENV_FRONTEND_PORT': '8841',
-        'APPTAINERENV_BACKEND_URL': 'http://127.0.0.1:8842',
-        'APPTAINERENV_CELERY_BROKER_URL': env_vars.get('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0'),
+        'APPTAINERENV_FLASK_ENV':             'development' if args.mode == 'dev' else 'production',
+        'APPTAINERENV_BACKEND_PORT':          '8842',
+        'APPTAINERENV_FRONTEND_PORT':         '8841',
+        'APPTAINERENV_BACKEND_URL':           'http://127.0.0.1:8842',
+        'APPTAINERENV_CELERY_BROKER_URL':     env_vars.get('CELERY_BROKER_URL',     'redis://127.0.0.1:6379/0'),
         'APPTAINERENV_CELERY_RESULT_BACKEND': env_vars.get('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379/0'),
-        'APPTAINERENV_CELERY_CONCURRENCY': '1' if args.efficient else '4',
-        'APPTAINERENV_POSTGRES_DB': env_vars.get('PG_DATABASE', 'fdalabel-v3'),
-        'APPTAINERENV_POSTGRES_USER': env_vars.get('PG_USERNAME', env_vars.get('PG_USER', 'afd_user')),
-        'APPTAINERENV_POSTGRES_PASSWORD': env_vars.get('PG_PASSWORD', 'afd_password'),
+        'APPTAINERENV_CELERY_CONCURRENCY':    '1' if args.efficient else '4',
+        'APPTAINERENV_DATABASE_URL':          database_url,
+        'APPTAINERENV_PG_HOST':               pg_host,
+        'APPTAINERENV_PG_PORT':               pg_port,
+        'APPTAINERENV_PG_DATABASE':           pg_db,
+        'APPTAINERENV_POSTGRES_DB':           pg_db,
+        'APPTAINERENV_POSTGRES_USER':         pg_user,
+        'APPTAINERENV_POSTGRES_PASSWORD':     pg_password,
     })
     old_env = os.environ.copy()
     os.environ.update(runtime_env)
     try:
-        # An Apptainer instance lives beyond this script invocation.  Retire
-        # instances from the original naming scheme before launching the
+        # Retire instances from the original naming scheme before launching the
         # canonical fdalabel-v3-* names; host-mounted data is unaffected.
         for service in services:
             legacy_name = LEGACY_APPTAINER_INSTANCES[service]
@@ -124,14 +193,21 @@ def run_apptainer(args, env_vars, local_db):
             elif _apptainer_instance_exists(legacy_name):
                 print(f"[INFO] Migrating legacy Apptainer instance: {legacy_name}")
                 _run(['apptainer', 'instance', 'stop', legacy_name], check=False)
+
         if local_db:
             _start_apptainer_instance(
-                ['apptainer', 'instance', 'start', '--bind', f'{pg_data}:/var/lib/postgresql/data',
-                 'docker://ankane/pgvector:latest', APPTAINER_INSTANCES['db']],
+                ['apptainer', 'instance', 'start',
+                 '--env', f'POSTGRES_USER={pg_user}',
+                 '--env', f'POSTGRES_PASSWORD={pg_password}',
+                 '--env', f'POSTGRES_DB={pg_db}',
+                 '--bind', f'{pg_data}:/var/lib/postgresql/data',
+                 str(db_image), APPTAINER_INSTANCES['db']],
                 APPTAINER_INSTANCES['db'], args,
             )
         _start_apptainer_instance(
-            ['apptainer', 'instance', 'start', 'docker://redis:7-alpine', APPTAINER_INSTANCES['redis']],
+            ['apptainer', 'instance', 'start',
+             str(redis_image), APPTAINER_INSTANCES['redis'],
+             '--bind', '127.0.0.1'],
             APPTAINER_INSTANCES['redis'], args,
         )
         _start_apptainer_instance(
@@ -146,10 +222,86 @@ def run_apptainer(args, env_vars, local_db):
             ['apptainer', 'instance', 'start', str(frontend_image), APPTAINER_INSTANCES['frontend']],
             APPTAINER_INSTANCES['frontend'], args, restart_on_build=True,
         )
+        if include_nginx:
+            nginx_dir = ROOT / 'deploy' / 'nginx'
+            cert = nginx_dir / 'cert.pem'
+            key  = nginx_dir / 'key.pem'
+
+            # Docker uses container DNS names ("backend", "frontend").  Apptainer
+            # shares the host network so we must replace those with 127.0.0.1.
+            # Generate patched copies under deploy/apptainer/nginx_generated/ so
+            # the originals (used by Docker) are never modified.
+            nginx_gen_dir = APPTAINER_DIR / 'nginx_generated'
+            nginx_gen_dir.mkdir(exist_ok=True)
+
+            for src_name, dst_name in [('default.conf', 'default.conf'),
+                                        ('ssl.conf.template', 'ssl.conf')]:
+                src = nginx_dir / src_name
+                dst = nginx_gen_dir / dst_name
+                content = src.read_text()
+                # Remap Docker service names to localhost
+                content = content.replace('http://backend:', 'http://127.0.0.1:')
+                content = content.replace('http://frontend:', 'http://127.0.0.1:')
+                # Use unprivileged ports (rootless Apptainer cannot bind <1024)
+                content = content.replace('listen 80;', 'listen 8080;')
+                content = content.replace('listen 443 ssl;', 'listen 8443 ssl;')
+                dst.write_text(content)
+
+            # Patch nginx.conf: remove 'user nginx' (rootless) and redirect
+            # pid/logs to /tmp which is writable in a rootless Apptainer container.
+            nginx_conf_dst = nginx_gen_dir / 'nginx.conf'
+            nginx_conf_dst.write_text(
+                'worker_processes  auto;\n'
+                'error_log  /tmp/nginx-error.log notice;\n'
+                'pid        /tmp/nginx.pid;\n'
+                'events {\n'
+                '    worker_connections  1024;\n'
+                '}\n'
+                'http {\n'
+                '    include       /etc/nginx/mime.types;\n'
+                '    default_type  application/octet-stream;\n'
+                '    log_format  main  \'$remote_addr - $remote_user [$time_local] "$request" \'\n'
+                '                     \'$status $body_bytes_sent "$http_referer" \'\n'
+                '                     \'"$http_user_agent" "$http_x_forwarded_for"\';\n'
+                '    access_log  /tmp/nginx-access.log  main;\n'
+                '    sendfile        on;\n'
+                '    keepalive_timeout  65;\n'
+                '    client_body_temp_path  /tmp/nginx-client-temp;\n'
+                '    proxy_temp_path        /tmp/nginx-proxy-temp;\n'
+                '    fastcgi_temp_path      /tmp/nginx-fastcgi-temp;\n'
+                '    uwsgi_temp_path        /tmp/nginx-uwsgi-temp;\n'
+                '    scgi_temp_path         /tmp/nginx-scgi-temp;\n'
+                '    include /etc/nginx/conf.d/*.conf;\n'
+                '}\n'
+            )
+
+            nginx_binds = (
+                f'{nginx_gen_dir}/nginx.conf:/etc/nginx/nginx.conf,'
+                f'{nginx_gen_dir}/default.conf:/etc/nginx/conf.d/default.conf,'
+                f'{nginx_gen_dir}/ssl.conf:/etc/nginx/conf.d/ssl.conf'
+            )
+            if cert.exists() and key.exists():
+                nginx_binds += (
+                    f',{cert}:/etc/nginx/certs/cert.pem'
+                    f',{key}:/etc/nginx/certs/key.pem'
+                )
+            _start_apptainer_instance(
+                ['apptainer', 'instance', 'start', '--bind', nginx_binds,
+                 str(nginx_image), APPTAINER_INSTANCES['nginx']],
+                APPTAINER_INSTANCES['nginx'], args, restart_on_build=True,
+            )
     finally:
         os.environ.clear(); os.environ.update(old_env)
+
+    host = env_vars.get('API_SERVER_HOST') or env_vars.get('NEXT_PUBLIC_API_SERVER_HOST') or 'localhost'
+    if include_nginx:
+        cert = ROOT / 'deploy' / 'nginx' / 'cert.pem'
+        scheme = 'https' if cert.exists() else 'http'
+        app_url = f'{scheme}://{host}/fdalabel-v3/'
+    else:
+        app_url = f'http://{host}:8841/fdalabel-v3/'
     print('\n[SUCCESS] AskFDALabel is running with Apptainer.')
-    print('          UI: http://localhost:8841/fdalabel-v3/')
+    print(f'          UI: {app_url}')
     print('          Persistent updates: data/monthly_updates/ (host-owned by the launching user)')
 
 def load_env(path=".env"):

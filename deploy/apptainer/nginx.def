@@ -1,0 +1,11 @@
+Bootstrap: docker
+From: nginx:stable-alpine
+
+%startscript
+    # Rootless nginx: no daemon, writable paths in /tmp
+    mkdir -p /tmp/nginx-client-temp \
+             /tmp/nginx-proxy-temp \
+             /tmp/nginx-fastcgi-temp \
+             /tmp/nginx-uwsgi-temp \
+             /tmp/nginx-scgi-temp
+    exec nginx -g "daemon off;"

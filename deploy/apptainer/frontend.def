@@ -5,7 +5,7 @@ From: node:22-bullseye-slim
 frontend /app
 
 %environment
-    export HOST=0.0.0.0
+    export HOST=127.0.0.1
     export FRONTEND_PORT=8841
     export BACKEND_URL=http://127.0.0.1:8842
 
@@ -13,6 +13,8 @@ frontend /app
     apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
     cd /app && npm ci && BACKEND_URL=http://127.0.0.1:8842 npm run build
 
+%startscript
+    cd /app && exec npm run start
+
 %runscript
-    cd /app
-    exec npm run start
+    cd /app && exec npm run start
