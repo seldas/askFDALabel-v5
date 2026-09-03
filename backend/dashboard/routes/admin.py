@@ -1,10 +1,14 @@
 import os
 import subprocess
 import sys
+import json
+import uuid
+from pathlib import Path
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from database import db, User, SystemTask, ROLES, ROLE_USER
 from dashboard.services.task_service import TaskService
+from dashboard.services.data_files import FILE_TYPES, archive_and_replace, file_status, prepare_for_update, spec
 from functools import wraps
 
 admin_bp = Blueprint('admin', __name__)
@@ -141,6 +145,113 @@ def delete_user(user_id):
 
 # --- Database Updates ---
 
+_FILE_TYPE_BY_UPDATE = {item['update_type']: key for key, item in FILE_TYPES.items()}
+
+
+def _upload_dir():
+    from flask import current_app
+    path = Path(current_app.config['DATA_DIR']) / 'uploads' / '.resumable'
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+@admin_bp.route('/data_files', methods=['GET'])
+@login_required
+@admin_required
+def list_data_files():
+    from flask import current_app
+    return jsonify({'success': True, 'files': [file_status(current_app.config['DATA_DIR'], key) for key in FILE_TYPES]})
+
+
+@admin_bp.route('/data_files/upload/init', methods=['POST'])
+@login_required
+@admin_required
+def init_data_file_upload():
+    from flask import current_app
+    data = request.get_json() or {}
+    file_type, size = data.get('type'), data.get('size')
+    try:
+        item = spec(file_type)
+        if not isinstance(size, int) or size <= 0 or size > 20 * 1024 ** 3:
+            raise ValueError('File size must be between 1 byte and 20 GB')
+        suffix = Path(str(data.get('name', ''))).suffix.lower()
+        if suffix not in item['extensions']:
+            raise ValueError(f"Expected {' or '.join(sorted(item['extensions']))} file")
+        folder = _upload_dir()
+        # Re-selecting the same file after interruption resumes its persisted
+        # partial upload rather than sending already received chunks again.
+        for old_meta_path in folder.glob('*.json'):
+            old_meta = json.loads(old_meta_path.read_text(encoding='utf-8'))
+            old_part = folder / f'{old_meta_path.stem}.part'
+            if old_meta.get('type') == file_type and old_meta.get('size') == size and old_part.is_file():
+                old_meta['received'] = min(old_meta.get('received', 0), old_part.stat().st_size)
+                old_meta_path.write_text(json.dumps(old_meta), encoding='utf-8')
+                return jsonify({'success': True, 'upload_id': old_meta_path.stem, 'received': old_meta['received']})
+        upload_id = uuid.uuid4().hex
+        meta = {'type': file_type, 'size': size, 'received': 0}
+        (folder / f'{upload_id}.json').write_text(json.dumps(meta), encoding='utf-8')
+        return jsonify({'success': True, 'upload_id': upload_id, 'received': 0})
+    except ValueError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+
+
+@admin_bp.route('/data_files/upload/<upload_id>/chunk', methods=['PUT'])
+@login_required
+@admin_required
+def upload_data_file_chunk(upload_id):
+    folder = _upload_dir()
+    meta_path = folder / f'{upload_id}.json'
+    if not meta_path.is_file():
+        return jsonify({'success': False, 'error': 'Upload session not found'}), 404
+    meta = json.loads(meta_path.read_text(encoding='utf-8'))
+    try:
+        offset = int(request.headers.get('X-Upload-Offset', '-1'))
+    except ValueError:
+        offset = -1
+    chunk = request.get_data(cache=False)
+    if offset != meta['received'] or not chunk or meta['received'] + len(chunk) > meta['size']:
+        return jsonify({'success': False, 'error': 'Invalid upload chunk offset or size', 'received': meta['received']}), 409
+    with open(folder / f'{upload_id}.part', 'ab') as stream:
+        stream.write(chunk)
+    meta['received'] += len(chunk)
+    meta_path.write_text(json.dumps(meta), encoding='utf-8')
+    return jsonify({'success': True, 'received': meta['received']})
+
+
+@admin_bp.route('/data_files/upload/<upload_id>/complete', methods=['POST'])
+@login_required
+@admin_required
+def complete_data_file_upload(upload_id):
+    from flask import current_app
+    folder, meta_path = _upload_dir(), _upload_dir() / f'{upload_id}.json'
+    if not meta_path.is_file():
+        return jsonify({'success': False, 'error': 'Upload session not found'}), 404
+    meta = json.loads(meta_path.read_text(encoding='utf-8'))
+    part = folder / f'{upload_id}.part'
+    if meta['received'] != meta['size'] or not part.is_file() or part.stat().st_size != meta['size']:
+        return jsonify({'success': False, 'error': 'Upload is incomplete', 'received': meta['received']}), 409
+    destination = archive_and_replace(current_app.config['DATA_DIR'], meta['type'], part)
+    meta_path.unlink(missing_ok=True)
+    return jsonify({'success': True, 'file': file_status(current_app.config['DATA_DIR'], meta['type']), 'path': str(destination)})
+
+
+@admin_bp.route('/update_preflight/<db_type>', methods=['GET'])
+@login_required
+@admin_required
+def update_preflight(db_type):
+    from flask import current_app
+    file_type = _FILE_TYPE_BY_UPDATE.get(db_type)
+    if not file_type:
+        return jsonify({'success': True, 'warning': None})
+    status = file_status(current_app.config['DATA_DIR'], file_type)
+    if status['exists'] and not status['stale']:
+        warning = None
+    elif not status['exists']:
+        warning = f"{status['label']} is missing. Upload a current file before updating."
+    else:
+        warning = f"{status['label']} is {status['age_days']} days old. Upload a current file before updating."
+    return jsonify({'success': True, 'file': status, 'warning': warning})
+
 @admin_bp.route('/update_db', methods=['POST'])
 @login_required
 @admin_required
@@ -153,11 +264,26 @@ def trigger_db_update():
         'orangebook': 'admin/tasks/import_orangebook.py',
         'drugtox': 'admin/tasks/import_drugtox.py',
         'generate_drugtox': 'admin/tasks/generate_drugtox.py',
-        'meddra': 'admin/tasks/import_meddra.py'
+        'meddra': 'admin/tasks/import_meddra.py',
+        'epc': 'admin/tasks/import_epc.py',
     }
 
     if db_type not in scripts:
         return jsonify({'success': False, 'error': 'Invalid database type'}), 400
+
+    file_type = _FILE_TYPE_BY_UPDATE.get(db_type)
+    if file_type:
+        from flask import current_app
+        source = file_status(current_app.config['DATA_DIR'], file_type)
+        if (not source['exists'] or source['stale']) and not data.get('confirm_file_warning'):
+            return jsonify({'success': False, 'requires_confirmation': True, 'file': source,
+                            'error': 'Source file is missing or older than one month'}), 409
+        if not source['exists']:
+            return jsonify({'success': False, 'error': 'Cannot update without the required uploaded source file'}), 400
+        try:
+            prepare_for_update(current_app.config['DATA_DIR'], file_type)
+        except Exception as exc:
+            return jsonify({'success': False, 'error': f'Could not prepare uploaded source file: {exc}'}), 400
 
     # Create a new SystemTask
     new_task = TaskService.create_task(

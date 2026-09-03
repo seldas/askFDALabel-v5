@@ -394,6 +394,56 @@ export default function ManagementPage() {
   const [archived, setArchived] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(false);
   const [useLocalDB, setUseLocalDB] = useState(false);
+  const [dataFiles, setDataFiles] = useState<any[]>([]);
+  const [uploadingFileType, setUploadingFileType] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+
+  const refreshDataFiles = async () => {
+    try {
+      const res = await fetch('/api/dashboard/admin/data_files');
+      const data = await res.json();
+      if (data.success) setDataFiles(data.files || []);
+    } catch (err) {
+      console.error('Unable to read managed data files', err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'database' && session?.is_admin) refreshDataFiles();
+  }, [activeTab, session?.is_admin]);
+
+  const uploadDataFile = async (fileType: string, file: File) => {
+    setUploadingFileType(fileType);
+    setUploadProgress({ ...uploadProgress, [fileType]: 0 });
+    try {
+      const init = await fetch('/api/dashboard/admin/data_files/upload/init', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: fileType, name: file.name, size: file.size }),
+      });
+      const initData = await init.json();
+      if (!initData.success) throw new Error(initData.error || 'Could not start upload');
+      const chunkSize = 10 * 1024 * 1024;
+      let offset = initData.received || 0;
+      while (offset < file.size) {
+        const chunk = file.slice(offset, Math.min(offset + chunkSize, file.size));
+        const part = await fetch(`/api/dashboard/admin/data_files/upload/${initData.upload_id}/chunk`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/octet-stream', 'X-Upload-Offset': String(offset) }, body: chunk,
+        });
+        const partData = await part.json();
+        if (!partData.success) throw new Error(partData.error || 'Upload interrupted');
+        offset = partData.received;
+        setUploadProgress(prev => ({ ...prev, [fileType]: Math.round((offset / file.size) * 100) }));
+      }
+      const complete = await fetch(`/api/dashboard/admin/data_files/upload/${initData.upload_id}/complete`, { method: 'POST' });
+      const completeData = await complete.json();
+      if (!completeData.success) throw new Error(completeData.error || 'Could not finish upload');
+      await refreshDataFiles();
+    } catch (err: any) {
+      alert(err.message || 'Upload failed. You can choose the file again to resume with a new upload session.');
+    } finally {
+      setUploadingFileType(null);
+    }
+  };
 
   // Token Usage state
   const [tokenUsage, setTokenUsage] = useState<any[]>([]);
@@ -707,6 +757,19 @@ export default function ManagementPage() {
     setLoadingStats(true);
     setPendingUpdateType(type);
     try {
+      const preflight = await fetch(`/api/dashboard/admin/update_preflight/${type}`);
+      const preflightData = await preflight.json();
+      if (preflightData.warning) {
+        if (!preflightData.file?.exists) {
+          alert(`${preflightData.warning}\n\nUpload the required file in Managed data files before starting this update.`);
+          setPendingUpdateType(null);
+          return;
+        }
+        if (!window.confirm(`${preflightData.warning}\n\nContinue with this local file?`)) {
+          setPendingUpdateType(null);
+          return;
+        }
+      }
       const res = await fetch(`/api/dashboard/admin/db_stats/${type}`);
       const data = await res.json();
       if (data.success) {
@@ -727,7 +790,7 @@ export default function ManagementPage() {
     setPendingUpdateType(null);
     setPendingUpdateStats(null);
     try {
-      const bodyPayload: any = { type };
+      const bodyPayload: any = { type, confirm_file_warning: true };
       if (type === 'labeling') {
         bodyPayload.skip_unpack = skipUnpack;
         bodyPayload.workers = workers;
@@ -2405,10 +2468,42 @@ else:
                   Manually trigger background synchronization with local source files (data/downloads).
                 </p>
 
+                <section style={{ marginBottom: '1.75rem', padding: '1rem', border: '1px solid var(--afl-n-200)', borderRadius: '10px', background: 'var(--afl-n-50)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'baseline', marginBottom: '6px' }}>
+                    <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--afl-n-800)' }}>Managed data files</h3>
+                    <button type="button" onClick={refreshDataFiles} className="btn-ghost" style={{ padding: '4px 9px', fontSize: '0.75rem' }}>Refresh</button>
+                  </div>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.78rem', color: 'var(--afl-n-500)', lineHeight: 1.45 }}>
+                    Upload is separate from database updates. Files are renamed automatically; an existing file is moved into an <code>archive</code> folder before replacement. Large files upload in 10 MB resumable chunks.
+                  </p>
+                  {[
+                    { type: 'dailymed', title: 'DailyMed monthly update', accept: '.zip', name: 'dailymed_monthly_update.zip' },
+                    { type: 'pharmacologic_class', title: 'Pharmacologic class indexing', accept: '.zip', name: 'pharmacologic_class_indexing_spl_files.zip' },
+                    { type: 'meddra', title: 'MedDRA', accept: '.zip', name: 'meddra.zip' },
+                    { type: 'orangebook', title: 'Orange Book (EOBZIP)', accept: '.zip', name: 'EOBZIP.zip' },
+                    { type: 'askdrugtox', title: 'AskDrugTox update', accept: '.xlsx', name: 'askdrugtox_update.xlsx' },
+                  ].map(item => {
+                    const status = dataFiles.find(file => file.type === item.type);
+                    const busy = uploadingFileType === item.type;
+                    return <div key={item.type} style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) minmax(180px, 1.4fr) auto', gap: '12px', alignItems: 'center', padding: '10px 0', borderTop: '1px solid var(--afl-n-200)' }}>
+                      <div><div style={{ fontWeight: 750, fontSize: '0.84rem', color: 'var(--afl-n-800)' }}>{item.title}</div><code style={{ fontSize: '0.7rem', color: 'var(--afl-n-500)' }}>{item.name}</code></div>
+                      <div style={{ fontSize: '0.75rem', color: status?.exists ? (status.stale ? '#b45309' : '#15803d') : '#b91c1c' }}>
+                        {busy ? `Uploading ${uploadProgress[item.type] || 0}%…` : status?.exists ? `${status.stale ? 'Older than one month' : 'Ready'} · ${(status.size / 1024 / 1024).toFixed(1)} MB · ${new Date(status.updated_at).toLocaleDateString()}` : 'No file uploaded'}
+                      </div>
+                      <label className="btn-ghost" style={{ padding: '6px 10px', fontSize: '0.75rem', cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                        {busy ? 'Uploading…' : 'Upload file'}
+                        <input type="file" accept={item.accept} disabled={busy} style={{ display: 'none' }} onChange={e => { const file = e.target.files?.[0]; if (file) uploadDataFile(item.type, file); e.currentTarget.value = ''; }} />
+                      </label>
+                    </div>;
+                  })}
+                </section>
+
                 <div className="update-grid">
                   {[
                     { id: 'labeling', name: 'Drug Labeling', desc: 'Full SPL import from local disk' },
                     { id: 'orangebook', name: 'Orange Book', desc: 'Approved Drug Products with Therapeutic Equivalence Evaluations' },
+                    { id: 'epc', name: 'Pharmacologic Class Indexing', desc: 'Import EPC, MoA, and physiologic-effect indexing records' },
+                    { id: 'drugtox', name: 'AskDrugTox', desc: 'Import the current AskDrugTox Excel update' },
                     { id: 'generate_drugtox', name: 'Generate DrugTox (AI)', desc: 'Dynamically generate DILI/DICT/DIRI for recently updated single-ingredient human Rx labels' },
                     { id: 'meddra', name: 'MedDRA', desc: 'Dictionary (SOC, HLT, etc.)' }
                   ].map(item => (
