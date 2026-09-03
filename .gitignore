@@ -65,3 +65,6 @@ backups/
 *.dump
 deploy/rapid_migration/*.tar
 deploy/rapid_migration/*.zip
+
+#apptainer
+deploy/**/*.sif

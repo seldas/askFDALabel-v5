@@ -14,8 +14,14 @@ backend /app
     apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev curl && rm -rf /var/lib/apt/lists/*
     pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r /app/requirements.txt
 
+%startscript
+    cd /app && exec gunicorn --bind "0.0.0.0:${BACKEND_PORT:-8842}" --workers "${GUNICORN_WORKERS:-4}" --threads "${GUNICORN_THREADS:-8}" --worker-class gthread --timeout 600 app:app
+
 %runscript
-    exec gunicorn --bind "0.0.0.0:${BACKEND_PORT:-8842}" --workers "${GUNICORN_WORKERS:-4}" --threads "${GUNICORN_THREADS:-8}" --worker-class gthread --timeout 600 app:app
+    cd /app && exec gunicorn --bind "0.0.0.0:${BACKEND_PORT:-8842}" --workers "${GUNICORN_WORKERS:-4}" --threads "${GUNICORN_THREADS:-8}" --worker-class gthread --timeout 600 app:app
 
 %apprun celery
-    exec celery -A celery_app.celery worker --loglevel=info --concurrency="${CELERY_CONCURRENCY:-4}"
+    cd /app && exec celery -A celery_app.celery worker --loglevel=info --concurrency="${CELERY_CONCURRENCY:-4}"
+
+%appstart celery
+    cd /app && exec celery -A celery_app.celery worker --loglevel=info --concurrency="${CELERY_CONCURRENCY:-4}"
