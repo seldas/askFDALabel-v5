@@ -6,7 +6,7 @@ from pathlib import Path
 
 backend_dir = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(backend_dir))
-from database import db, SystemTask
+from database import db, SystemTask, DatabaseUpdateLog
 from dashboard import create_app
 
 
@@ -25,10 +25,21 @@ def main():
                 db.session.commit()
             script = backend_dir / 'database' / 'scripts' / 'db_05_import_epc_indexing.py'
             result = subprocess.run([sys.executable, str(script)], cwd=str(backend_dir.parent), check=True)
+            now = datetime.utcnow()
             if task:
                 task.progress, task.status, task.message = 100, 'completed', 'Pharmacologic class indexing import complete.'
-                task.completed_at = datetime.utcnow()
+                task.completed_at = now
                 db.session.commit()
+            try:
+                db.session.add(DatabaseUpdateLog(
+                    db_type='epc',
+                    completed_at=now,
+                    status='completed',
+                    message='Pharmacologic class indexing import complete.'
+                ))
+                db.session.commit()
+            except Exception as log_err:
+                print(f"[WARN] Failed to write DatabaseUpdateLog: {log_err}")
             return result.returncode
         except Exception as exc:
             if task:

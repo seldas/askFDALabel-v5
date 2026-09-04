@@ -261,6 +261,7 @@ def trigger_db_update():
     
     scripts = {
         'monthly_labeling': 'admin/tasks/import_monthly_labels.py',
+        'labeling': 'admin/tasks/import_labels.py',
         'orangebook': 'admin/tasks/import_orangebook.py',
         'drugtox': 'admin/tasks/import_drugtox.py',
         'generate_drugtox': 'admin/tasks/generate_drugtox.py',
@@ -478,41 +479,78 @@ def get_all_token_usage_details():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+def _get_last_update_date(db_type_keys):
+    from database.models import DatabaseUpdateLog, SystemTask
+    try:
+        log = DatabaseUpdateLog.query.filter(
+            DatabaseUpdateLog.db_type.in_(db_type_keys),
+            DatabaseUpdateLog.status == 'completed'
+        ).order_by(DatabaseUpdateLog.completed_at.desc()).first()
+        if log and log.completed_at:
+            return log.completed_at.strftime('%Y-%m-%d %H:%M')
+    except Exception:
+        pass
+        
+    try:
+        task = SystemTask.query.filter(
+            SystemTask.task_type.in_(db_type_keys),
+            SystemTask.status == 'completed',
+            SystemTask.completed_at.isnot(None)
+        ).order_by(SystemTask.completed_at.desc()).first()
+        if task and task.completed_at:
+            return task.completed_at.strftime('%Y-%m-%d %H:%M')
+    except Exception:
+        pass
+        
+    return 'N/A'
+
 @admin_bp.route('/db_stats/<db_type>', methods=['GET'])
 @login_required
 @admin_required
 def get_db_stats(db_type):
     from database.models import DrugLabel, OrangeBook, DrugToxicity, MeddraSOC, MeddraPT, MeddraHLT, MeddraHLGT
-    from sqlalchemy import func
+    from sqlalchemy import func, text
     
     try:
         stats = {}
-        if db_type == 'labeling':
+        if db_type in ('labeling', 'monthly_labeling'):
             count = db.session.query(func.count(DrugLabel.spl_id)).scalar()
-            latest_date = db.session.query(func.max(DrugLabel.revised_date)).scalar()
+            latest_date = _get_last_update_date(['monthly_labeling', 'labeling'])
             stats = {'count': count, 'last_date': latest_date}
         elif db_type == 'orangebook':
             count = db.session.query(func.count(OrangeBook.id)).scalar()
-            latest_date = db.session.query(func.max(OrangeBook.approval_date)).scalar()
+            latest_date = _get_last_update_date(['orangebook'])
+            if latest_date == 'N/A':
+                latest_date = db.session.query(func.max(OrangeBook.approval_date)).scalar() or 'N/A'
             stats = {'count': count, 'last_date': latest_date}
-        elif db_type == 'drugtox' or db_type == 'generate_drugtox':
+        elif db_type in ('drugtox', 'generate_drugtox'):
             count = db.session.query(func.count(DrugToxicity.id)).scalar()
-            latest_date = "N/A"
+            latest_date = _get_last_update_date([db_type, 'drugtox', 'generate_drugtox'])
             stats = {'count': count, 'last_date': latest_date}
         elif db_type == 'meddra':
             soc_count = db.session.query(func.count(MeddraSOC.soc_code)).scalar()
             hlgt_count = db.session.query(func.count(MeddraHLGT.hlgt_code)).scalar()
             hlt_count = db.session.query(func.count(MeddraHLT.hlt_code)).scalar()
             pt_count = db.session.query(func.count(MeddraPT.pt_code)).scalar()
+            latest_date = _get_last_update_date(['meddra'])
             stats = {
                 'soc_count': soc_count,
                 'hlgt_count': hlgt_count,
                 'hlt_count': hlt_count,
                 'pt_count': pt_count,
-                'total_count': soc_count + hlgt_count + hlt_count + pt_count
+                'total_count': soc_count + hlgt_count + hlt_count + pt_count,
+                'last_date': latest_date
             }
+        elif db_type in ('epc', 'pharmacologic_class'):
+            count = 0
+            try:
+                count = db.session.execute(text("SELECT count(*) FROM labeling.substance_indexing")).scalar() or 0
+            except Exception:
+                pass
+            latest_date = _get_last_update_date(['epc', 'pharmacologic_class'])
+            stats = {'count': count, 'last_date': latest_date}
         else:
-            return jsonify({'success': False, 'error': 'Invalid db_type'}), 400
+            return jsonify({'success': False, 'error': f'Invalid db_type: {db_type}'}), 400
             
         return jsonify({'success': True, 'stats': stats})
     except Exception as e:

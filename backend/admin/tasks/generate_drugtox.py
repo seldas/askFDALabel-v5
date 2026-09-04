@@ -105,7 +105,19 @@ def update_progress(task_id, progress, message=None, status='processing'):
             if message: task.message = message
             task.status = status
             task.updated_at = datetime.now(ZoneInfo("America/Chicago")).replace(tzinfo=None)
-            if status == 'completed': task.completed_at = datetime.now(ZoneInfo("America/Chicago")).replace(tzinfo=None)
+            if status == 'completed':
+                now = datetime.now(ZoneInfo("America/Chicago")).replace(tzinfo=None)
+                task.completed_at = now
+                try:
+                    from database.models import DatabaseUpdateLog
+                    db.session.add(DatabaseUpdateLog(
+                        db_type='generate_drugtox',
+                        completed_at=now,
+                        status='completed',
+                        message=message or 'DrugTox generation complete.'
+                    ))
+                except Exception as log_err:
+                    print(f"[WARN] Failed to write DatabaseUpdateLog: {log_err}")
             db.session.commit()
     except Exception as e:
         print(f"Error updating progress: {e}")

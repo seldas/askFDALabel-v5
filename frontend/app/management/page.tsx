@@ -2723,6 +2723,10 @@ else:
                         <span>SOC Terms:</span>
                         <span style={{ fontWeight: 600 }}>{pendingUpdateStats.soc_count.toLocaleString()}</span>
                       </div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--afl-n-600)', display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem' }}>
+                        <span>Last Updated Date:</span>
+                        <span style={{ fontWeight: 600 }}>{pendingUpdateStats.last_date || 'N/A'}</span>
+                      </div>
                     </>
                   ) : (
                     <>
@@ -2731,7 +2735,7 @@ else:
                         <span style={{ fontWeight: 600 }}>{pendingUpdateStats.count?.toLocaleString() || 0}</span>
                       </div>
                       <div style={{ fontSize: '0.85rem', color: 'var(--afl-n-600)', display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem' }}>
-                        <span>Last Revised/Approved Date:</span>
+                        <span>Last Updated Date:</span>
                         <span style={{ fontWeight: 600 }}>{pendingUpdateStats.last_date || 'N/A'}</span>
                       </div>
                     </>

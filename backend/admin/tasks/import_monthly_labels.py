@@ -7,7 +7,7 @@ from pathlib import Path
 
 backend_dir = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(backend_dir))
-from database import db, SystemTask
+from database import db, SystemTask, DatabaseUpdateLog
 from dashboard import create_app
 
 
@@ -32,10 +32,21 @@ def main():
                 sys.executable, str(script), '--downloads-dir', str(source_dir),
                 '--storage-dir', str(storage_dir), '--workers', str(args.workers), '--replace-existing-zips',
             ], cwd=str(backend_dir.parent), check=True)
+            now = datetime.utcnow()
             if task:
                 task.progress, task.status = 100, 'completed'
-                task.message, task.completed_at = 'Monthly DailyMed update complete.', datetime.utcnow()
+                task.message, task.completed_at = 'Monthly DailyMed update complete.', now
                 db.session.commit()
+            try:
+                db.session.add(DatabaseUpdateLog(
+                    db_type='monthly_labeling',
+                    completed_at=now,
+                    status='completed',
+                    message='Monthly DailyMed update complete.'
+                ))
+                db.session.commit()
+            except Exception as log_err:
+                print(f"[WARN] Failed to write DatabaseUpdateLog: {log_err}")
         except Exception as exc:
             if task:
                 task.status, task.error_details = 'failed', str(exc)

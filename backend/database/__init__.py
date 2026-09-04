@@ -6,7 +6,7 @@ from .models import (
     MeddraSOC, MeddraHLGT, MeddraHLT, MeddraPT, MeddraLLT, MeddraMDHIER, MeddraSMQList, MeddraSMQContent,
     PgxBiomarker, PgxSynonym, PgxAssessment,
     ProjectAeReport, ProjectAeReportDetail,
-    AeAiAssessment, OrangeBook, SystemTask,
+    AeAiAssessment, OrangeBook, SystemTask, DatabaseUpdateLog,
     DrugLabel, ActiveIngredientMap, LabelMeddraProfile, LabelPvProfile, LabelPvFeedback, TokenUsage,
     SearchHistory, UserQueryHistory,
     ExaminePrompt, ExamineHistory,

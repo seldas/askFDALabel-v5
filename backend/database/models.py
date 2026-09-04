@@ -565,6 +565,14 @@ class SystemTask(db.Model):
     user = db.relationship('User', backref=db.backref('tasks', lazy=True))
     project = db.relationship('Project', backref=db.backref('tasks', lazy=True))
 
+class DatabaseUpdateLog(db.Model):
+    __tablename__ = 'database_update_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    db_type = db.Column(db.String(50), nullable=False, index=True)
+    completed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    status = db.Column(db.String(20), default='completed')
+    message = db.Column(db.String(255))
+
 class LabelMeddraProfile(db.Model):
     __tablename__ = 'label_meddra_profiles'
     id = db.Column(db.Integer, primary_key=True)
