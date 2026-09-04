@@ -105,11 +105,15 @@ def parse_indexing_zip(zip_path):
 def main():
     indexing_dir = data_dir / "monthly_updates" / "pharmacologic_class_indexing_spl_files"
     if not indexing_dir.exists():
-        print(f"Directory not found: {indexing_dir}")
-        return
+        fallback_dir = data_dir / "downloads" / "pharmacologic_class_indexing_spl_files"
+        if fallback_dir.exists():
+            indexing_dir = fallback_dir
+        else:
+            print(f"Directory not found: {indexing_dir}")
+            return
 
-    zip_files = list(indexing_dir.glob("*.zip"))
-    print(f"Found {len(zip_files)} indexing ZIP files.")
+    zip_files = list(indexing_dir.rglob("*.zip"))
+    print(f"Found {len(zip_files)} indexing ZIP files in {indexing_dir}.")
 
     # 1. Create table
     print("Creating indexing tables...")

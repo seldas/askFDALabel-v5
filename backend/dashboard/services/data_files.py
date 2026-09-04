@@ -83,6 +83,75 @@ def _safe_extract(source: Path, destination: Path) -> None:
         archive.extractall(destination)
 
 
+def _normalize_meddra_structure(dest: Path) -> None:
+    """Normalize extracted MedDRA files so that dest / 'MedAscii' contains the .asc files.
+
+    Handles:
+    - Case mismatch (e.g. medascii, Medascii, MEDASCII -> MedAscii)
+    - Nested folder inside the zip (e.g. MedDRA_latest/MedAscii, MedDRA_28_0_English/MedAscii)
+    - Root-level .asc files in the zip (no MedAscii folder)
+    """
+    target = dest / 'MedAscii'
+
+    # If target already exists and contains .asc files, nothing to do
+    if target.is_dir() and any(p.name.lower().endswith('.asc') for p in target.iterdir() if p.is_file()):
+        return
+
+    # Check 1: Direct child folder with case-insensitive name 'medascii'
+    for child in dest.iterdir():
+        if child.is_dir() and child.name.lower() == 'medascii':
+            if child.name != 'MedAscii':
+                if target.exists():
+                    shutil.rmtree(target, ignore_errors=True)
+                try:
+                    child.rename(target)
+                except Exception:
+                    shutil.copytree(child, target)
+            return
+
+    # Check 2: Recursive search for any folder containing 'soc.asc' or named 'medascii'
+    candidate_dir: Path | None = None
+    for p in dest.rglob('*'):
+        if p.is_file() and p.name.lower() == 'soc.asc':
+            candidate_dir = p.parent
+            break
+        elif p.is_dir() and p.name.lower() == 'medascii':
+            candidate_dir = p
+            break
+
+    if candidate_dir and candidate_dir.resolve() != target.resolve():
+        target.mkdir(parents=True, exist_ok=True)
+        for item in candidate_dir.iterdir():
+            if item.is_file() and item.name.lower().endswith('.asc'):
+                dest_file = target / item.name
+                if not dest_file.exists():
+                    shutil.copy2(item, dest_file)
+        return
+
+    # Check 3: Check if .asc files were extracted directly into dest
+    asc_files = [p for p in dest.iterdir() if p.is_file() and p.name.lower().endswith('.asc')]
+    if asc_files:
+        target.mkdir(parents=True, exist_ok=True)
+        for item in asc_files:
+            dest_file = target / item.name
+            if not dest_file.exists():
+                shutil.copy2(item, dest_file)
+
+
+def _normalize_orangebook_structure(dest: Path) -> None:
+    """Normalize extracted Orange Book files so that dest / 'products.txt' exists."""
+    target = dest / 'products.txt'
+    if target.is_file():
+        return
+
+    # Look for products.txt case-insensitively or recursively
+    for p in dest.rglob('*'):
+        if p.is_file() and p.name.lower() == 'products.txt':
+            if p.resolve() != target.resolve():
+                shutil.copy2(p, target)
+            return
+
+
 def prepare_for_update(data_dir: str | Path, file_type: str) -> None:
     """Materialise an uploaded archive at the paths used by existing importers."""
     root = Path(data_dir)
@@ -90,8 +159,12 @@ def prepare_for_update(data_dir: str | Path, file_type: str) -> None:
     if not source.exists():
         raise FileNotFoundError(f'Missing uploaded file: {source.name}')
     if file_type == 'orangebook':
-        _safe_extract(source, root / 'monthly_updates' / 'OrangeBook' / 'EOB_Latest')
+        dest = root / 'monthly_updates' / 'OrangeBook' / 'EOB_Latest'
+        _safe_extract(source, dest)
+        _normalize_orangebook_structure(dest)
     elif file_type == 'meddra':
-        _safe_extract(source, root / 'monthly_updates' / 'MedDRA' / 'MedDRA_latest')
+        dest = root / 'monthly_updates' / 'MedDRA' / 'MedDRA_latest'
+        _safe_extract(source, dest)
+        _normalize_meddra_structure(dest)
     elif file_type == 'pharmacologic_class':
         _safe_extract(source, root / 'monthly_updates' / 'pharmacologic_class_indexing_spl_files')

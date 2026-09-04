@@ -55,22 +55,85 @@ def parse_int(value):
     except ValueError:
         return None
 
+def find_case_insensitive_file(dir_path: Path, filename: str) -> Path | None:
+    direct = dir_path / filename
+    if direct.is_file():
+        return direct
+    fn_lower = filename.lower()
+    for item in dir_path.iterdir():
+        if item.is_file() and item.name.lower() == fn_lower:
+            return item
+    return None
+
+
+def resolve_meddra_data_dir(data_root: Path) -> Path:
+    """Finds the directory containing MedDRA ASCII files (.asc).
+    Supports:
+    - Standard path: monthly_updates/MedDRA/MedDRA_latest/MedAscii
+    - Case-insensitive folder names (e.g. medascii, MEDASCII)
+    - Nested folder structures (e.g. MedDRA_latest/MedDRA_28_0_English/MedAscii)
+    - Fallback paths in monthly_updates/MedDRA or downloads/MedDRA
+    """
+    candidates = [
+        data_root / 'monthly_updates' / 'MedDRA' / 'MedDRA_latest' / 'MedAscii',
+        data_root / 'monthly_updates' / 'MedDRA' / 'MedDRA_latest',
+        data_root / 'monthly_updates' / 'MedDRA',
+        data_root / 'downloads' / 'MedDRA' / 'MedDRA_latest' / 'MedAscii',
+        data_root / 'downloads' / 'MedDRA' / 'MedDRA_latest',
+        data_root / 'downloads' / 'MedDRA',
+        data_root / 'downloads',
+    ]
+
+    # 1. Direct check: candidate exists and contains soc.asc
+    for c in candidates:
+        if c.is_dir():
+            for f in c.iterdir():
+                if f.is_file() and f.name.lower() == 'soc.asc':
+                    return c
+
+    # 2. Check for child folder named 'medascii' (case-insensitive) under candidates
+    for c in candidates:
+        if c.is_dir():
+            for child in c.iterdir():
+                if child.is_dir() and child.name.lower() == 'medascii':
+                    if any(p.name.lower().endswith('.asc') for p in child.iterdir() if p.is_file()):
+                        return child
+
+    # 3. Recursive search under monthly_updates/MedDRA and downloads/MedDRA
+    search_roots = [
+        data_root / 'monthly_updates' / 'MedDRA',
+        data_root / 'downloads' / 'MedDRA',
+        data_root / 'downloads',
+    ]
+    for sr in search_roots:
+        if sr.is_dir():
+            for p in sr.rglob('*'):
+                if p.is_file() and p.name.lower() == 'soc.asc':
+                    return p.parent
+                if p.is_dir() and p.name.lower() == 'medascii':
+                    if any(f.name.lower().endswith('.asc') for f in p.iterdir() if f.is_file()):
+                        return p
+
+    return data_root / 'monthly_updates' / 'MedDRA' / 'MedDRA_latest' / 'MedAscii'
+
+
 def process_file(file_name, model_class, field_mapping, data_dir, task_id, start_prog, end_prog, batch_size=10000):
-    file_path = os.path.join(data_dir, file_name)
-    if not os.path.exists(file_path):
-        print(f"  [!] Skipping {file_name}: File not found")
+    matched = find_case_insensitive_file(Path(data_dir), file_name)
+    if not matched or not matched.exists():
+        print(f"  [!] Skipping {file_name}: File not found in {data_dir}")
         return
 
+    file_path = str(matched)
     table_name = model_class.__tablename__
-    print(f"  [+] Importing {file_name} into {table_name}...")
-    update_progress(task_id, start_prog, f"Importing {file_name}...")
+    print(f"  [+] Importing {matched.name} into {table_name}...")
+    update_progress(task_id, start_prog, f"Importing {matched.name}...")
     
     objects = []
     count = 0
     total_count = 0
     
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
             lines = f.readlines()
             total_lines = len(lines)
             
@@ -134,12 +197,13 @@ def run_import():
                 db.session.commit()
                 db.create_all()
 
-            data_dir = Path(app.config['DATA_DIR']) / 'monthly_updates' / 'MedDRA' / 'MedDRA_latest' / 'MedAscii'
+            data_root = Path(app.config['DATA_DIR'])
+            data_dir = resolve_meddra_data_dir(data_root)
             print(f"  [i] Looking for data in: {data_dir}")
             
-            if not data_dir.exists():
-                print(f"  [!] ERROR: Path does not exist!")
-                raise FileNotFoundError(f"MedDRA directory not found at {data_dir}")
+            if not data_dir.exists() or not any(p.name.lower().endswith('.asc') for p in data_dir.iterdir() if p.is_file()):
+                print(f"  [!] ERROR: Path does not exist or contains no MedDRA .asc files: {data_dir}")
+                raise FileNotFoundError(f"MedDRA directory not found or empty at {data_dir}")
 
             # Import steps (distributed progress 10% to 95%)
             steps = [

@@ -61,7 +61,26 @@ def import_orangebook():
                 db.session.commit()
 
             data_dir = Path(app.config['DATA_DIR'])
-            data_file = data_dir / 'monthly_updates' / 'OrangeBook' / 'EOB_Latest' / 'products.txt'
+            candidates = [
+                data_dir / 'monthly_updates' / 'OrangeBook' / 'EOB_Latest' / 'products.txt',
+                data_dir / 'downloads' / 'OrangeBook' / 'EOB_Latest' / 'products.txt',
+            ]
+            data_file = None
+            for c in candidates:
+                if c.is_file():
+                    data_file = c
+                    break
+            if not data_file:
+                for root_search in [data_dir / 'monthly_updates' / 'OrangeBook', data_dir / 'downloads' / 'OrangeBook']:
+                    if root_search.is_dir():
+                        for p in root_search.rglob('*'):
+                            if p.is_file() and p.name.lower() == 'products.txt':
+                                data_file = p
+                                break
+                    if data_file:
+                        break
+            if not data_file:
+                data_file = candidates[0]
             
             if not data_file.exists():
                 raise FileNotFoundError(f"Orange Book data not found at {data_file}")
