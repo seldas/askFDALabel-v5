@@ -12,13 +12,23 @@ backend /app
 
 %post
     apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev curl && rm -rf /var/lib/apt/lists/*
-    pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r /app/requirements.txt
+    pip install --upgrade pip && pip install -r /app/requirements.txt
 
 %startscript
-    cd /app && exec gunicorn --bind "127.0.0.1:${BACKEND_PORT:-8842}" --workers "${GUNICORN_WORKERS:-4}" --threads "${GUNICORN_THREADS:-8}" --worker-class gthread --timeout 600 app:app
+    cd /app
+    if [ "${FLASK_ENV:-production}" = "development" ]; then
+        exec gunicorn --bind "127.0.0.1:${BACKEND_PORT:-8842}" --workers "${GUNICORN_WORKERS:-2}" --threads "${GUNICORN_THREADS:-4}" --worker-class gthread --timeout 600 --reload app:app
+    else
+        exec gunicorn --bind "127.0.0.1:${BACKEND_PORT:-8842}" --workers "${GUNICORN_WORKERS:-4}" --threads "${GUNICORN_THREADS:-8}" --worker-class gthread --timeout 600 app:app
+    fi
 
 %runscript
-    cd /app && exec gunicorn --bind "127.0.0.1:${BACKEND_PORT:-8842}" --workers "${GUNICORN_WORKERS:-4}" --threads "${GUNICORN_THREADS:-8}" --worker-class gthread --timeout 600 app:app
+    cd /app
+    if [ "${FLASK_ENV:-production}" = "development" ]; then
+        exec gunicorn --bind "127.0.0.1:${BACKEND_PORT:-8842}" --workers "${GUNICORN_WORKERS:-2}" --threads "${GUNICORN_THREADS:-4}" --worker-class gthread --timeout 600 --reload app:app
+    else
+        exec gunicorn --bind "127.0.0.1:${BACKEND_PORT:-8842}" --workers "${GUNICORN_WORKERS:-4}" --threads "${GUNICORN_THREADS:-8}" --worker-class gthread --timeout 600 app:app
+    fi
 
 %apprun celery
     cd /app && exec celery -A celery_app.celery worker --loglevel=info --concurrency="${CELERY_CONCURRENCY:-4}"

@@ -167,6 +167,7 @@ def run_apptainer(args, env_vars, local_db):
     runtime_env.update(env_vars)
     runtime_env.update({
         'APPTAINERENV_FLASK_ENV':             'development' if args.mode == 'dev' else 'production',
+        'APPTAINERENV_NODE_ENV':              'development' if args.mode == 'dev' else 'production',
         'APPTAINERENV_BACKEND_PORT':          '8842',
         'APPTAINERENV_FRONTEND_PORT':         '8841',
         'APPTAINERENV_BACKEND_URL':           'http://127.0.0.1:8842',
@@ -210,16 +211,38 @@ def run_apptainer(args, env_vars, local_db):
              '--bind', '127.0.0.1'],
             APPTAINER_INSTANCES['redis'], args,
         )
+
+        backend_binds = [
+            f'{ROOT / "backend"}:/app',
+            f'{data_dir}:/data',
+            f'{monthly}:/data/monthly_updates',
+        ]
+        env_file = ROOT / '.env'
+        if env_file.exists():
+            backend_binds.append(f'{env_file}:/.env')
+        backend_bind_arg = ','.join(backend_binds)
+
         _start_apptainer_instance(
-            ['apptainer', 'instance', 'start', '--bind', data_binds, str(backend_image), APPTAINER_INSTANCES['backend']],
+            ['apptainer', 'instance', 'start', '--bind', backend_bind_arg, str(backend_image), APPTAINER_INSTANCES['backend']],
             APPTAINER_INSTANCES['backend'], args, restart_on_build=True,
         )
         _start_apptainer_instance(
-            ['apptainer', 'instance', 'start', '--app', 'celery', '--bind', data_binds, str(backend_image), APPTAINER_INSTANCES['celery']],
+            ['apptainer', 'instance', 'start', '--app', 'celery', '--bind', backend_bind_arg, str(backend_image), APPTAINER_INSTANCES['celery']],
             APPTAINER_INSTANCES['celery'], args, restart_on_build=True,
         )
+
+        frontend_binds = [
+            f'{ROOT / "frontend" / "public"}:/app/public',
+        ]
+        if args.mode == 'dev':
+            frontend_binds.append(f'{ROOT / "frontend" / "app"}:/app/app')
+            next_config = ROOT / 'frontend' / 'next.config.ts'
+            if next_config.exists():
+                frontend_binds.append(f'{next_config}:/app/next.config.ts')
+        frontend_bind_arg = ','.join(frontend_binds)
+
         _start_apptainer_instance(
-            ['apptainer', 'instance', 'start', str(frontend_image), APPTAINER_INSTANCES['frontend']],
+            ['apptainer', 'instance', 'start', '--bind', frontend_bind_arg, str(frontend_image), APPTAINER_INSTANCES['frontend']],
             APPTAINER_INSTANCES['frontend'], args, restart_on_build=True,
         )
         if include_nginx:

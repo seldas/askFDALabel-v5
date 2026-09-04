@@ -49,8 +49,9 @@ srun \
         fi
 
         module load apptainer
-        mkdir -p "${ASKFDALABEL_BUILD_TMPDIR}"
+        mkdir -p "${ASKFDALABEL_BUILD_TMPDIR}" "${ASKFDALABEL_BUILD_TMPDIR}/cache"
         export APPTAINER_TMPDIR="${ASKFDALABEL_BUILD_TMPDIR}"
+        export APPTAINER_CACHEDIR="${ASKFDALABEL_BUILD_TMPDIR}/cache"
 
         cd "${ASKFDALABEL_PROJECT_DIR}"
         exec python3 start_server.py --runtime apptainer "$@"

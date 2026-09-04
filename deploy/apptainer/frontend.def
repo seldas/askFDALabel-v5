@@ -14,7 +14,17 @@ frontend /app
     cd /app && npm ci && BACKEND_URL=http://127.0.0.1:8842 npm run build
 
 %startscript
-    cd /app && exec npm run start
+    cd /app
+    if [ "${NODE_ENV:-production}" = "development" ]; then
+        exec npm run dev -- -H 127.0.0.1 -p "${FRONTEND_PORT:-8841}"
+    else
+        exec npm run start -- -H 127.0.0.1 -p "${FRONTEND_PORT:-8841}"
+    fi
 
 %runscript
-    cd /app && exec npm run start
+    cd /app
+    if [ "${NODE_ENV:-production}" = "development" ]; then
+        exec npm run dev -- -H 127.0.0.1 -p "${FRONTEND_PORT:-8841}"
+    else
+        exec npm run start -- -H 127.0.0.1 -p "${FRONTEND_PORT:-8841}"
+    fi
