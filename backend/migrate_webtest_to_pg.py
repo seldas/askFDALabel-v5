@@ -1,7 +1,7 @@
 import os
 import sys
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 
 # We are in the backend directory, so we don't need to append '..'
 from app import create_unified_app as create_app
@@ -143,7 +143,7 @@ def migrate_unified(app_context):
                         url=url,
                         query_results=str(row.get('Query Results', '')),
                         delay=delay_val,
-                        query_date=record_dt or datetime.utcnow(),
+                        query_date=record_dt or datetime.now(timezone.utc).replace(tzinfo=None),
                         query_details=query_details,
                         count=str(count),
                         notes=notes_val

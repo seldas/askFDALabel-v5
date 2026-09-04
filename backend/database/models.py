@@ -1,8 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from .extensions import db
 from sqlalchemy.dialects.postgresql import CITEXT
+
+def utc_now():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 # --- Identity Models ---
 
@@ -18,7 +21,7 @@ class Project(db.Model):
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     share_code = db.Column(db.String(36), unique=True)
     display_order = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
 
     owner = db.relationship('User', backref=db.backref('owned_projects', lazy=True), foreign_keys=[owner_id])
     members = db.relationship('User', secondary=project_users, lazy='subquery',
@@ -159,7 +162,7 @@ class SearchHistory(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     title = db.Column(db.String(255), nullable=False)
     chat_data = db.Column(db.Text, nullable=False) # JSON string
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=utc_now)
 
     user = db.relationship('User', backref=db.backref('search_histories', lazy=True, cascade="all, delete-orphan"))
 
@@ -172,7 +175,7 @@ class UserQueryHistory(db.Model):
     query_json = db.Column(db.Text, nullable=True) # JSON string of query structure
     result_count = db.Column(db.Integer, default=0)
     target_db = db.Column(db.String(50), default='oracle')
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=utc_now)
 
     user = db.relationship('User', backref=db.backref('query_histories', lazy=True, cascade="all, delete-orphan"))
 
@@ -203,7 +206,7 @@ class Favorite(db.Model):
     source = db.Column(db.String(50))
     tag = db.Column(db.String(100), nullable=True)
 
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=utc_now)
 
 class Annotation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -214,7 +217,7 @@ class Annotation(db.Model):
     answer = db.Column(db.Text, nullable=False)
     keywords = db.Column(db.Text) # Stored as JSON string
     is_public = db.Column(db.Boolean, default=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=utc_now)
 
 class FavoriteComparison(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -222,7 +225,7 @@ class FavoriteComparison(db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True)
     set_ids = db.Column(db.Text, nullable=False) # JSON string of list of set_ids
     title = db.Column(db.String(255), nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=utc_now)
 
 class LabelAnnotation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -236,7 +239,7 @@ class LabelAnnotation(db.Model):
     annotation_type = db.Column(db.String(20), nullable=False)
     color = db.Column(db.String(20))
     comment = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
     
     user = db.relationship('User', backref=db.backref('label_annotations', lazy=True))
     project = db.relationship('Project', backref=db.backref('label_annotations', lazy=True, cascade="all, delete-orphan"))
@@ -246,7 +249,7 @@ class ComparisonSummary(db.Model):
     set_ids_hash = db.Column(db.String(64), unique=True, nullable=False)
     set_ids = db.Column(db.Text, nullable=False)
     summary_content = db.Column(db.Text, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=utc_now)
 
 # --- Pharmacology / Toxicity Models ---
 
@@ -321,7 +324,7 @@ class ProjectAeReport(db.Model):
     progress = db.Column(db.Integer, default=0) # 0 to 100
     total_labels = db.Column(db.Integer, default=0)
     processed_labels = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
     completed_at = db.Column(db.DateTime)
 
     project = db.relationship('Project', backref=db.backref('ae_reports', lazy=True, cascade="all, delete-orphan"))
@@ -468,7 +471,7 @@ class PgxBiomarker(db.Model):
     therapeutic_area = db.Column(db.String(255))
     biomarker_name = db.Column(db.String(255), nullable=False)
     labeling_sections = db.Column(db.Text)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=utc_now)
 
 class PgxSynonym(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -479,7 +482,7 @@ class PgxAssessment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     set_id = db.Column(db.String(100), unique=True, nullable=False)
     report_content = db.Column(db.Text, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=utc_now)
 
 # --- AI Assessment Models ---
 
@@ -490,7 +493,7 @@ class AeAiAssessment(db.Model):
     drug_name = db.Column(db.String(255), nullable=False)
     result_json = db.Column(db.Text, nullable=False) # Store as JSON string
     min_count = db.Column(db.Integer, default=10)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=utc_now)
 
 
 
@@ -558,8 +561,8 @@ class SystemTask(db.Model):
     message = db.Column(db.String(255))
     error_details = db.Column(db.Text)
     result_data = db.Column(db.Text) # JSON string for any task-specific output
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     completed_at = db.Column(db.DateTime)
 
     user = db.relationship('User', backref=db.backref('tasks', lazy=True))
@@ -569,7 +572,7 @@ class DatabaseUpdateLog(db.Model):
     __tablename__ = 'database_update_logs'
     id = db.Column(db.Integer, primary_key=True)
     db_type = db.Column(db.String(50), nullable=False, index=True)
-    completed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    completed_at = db.Column(db.DateTime, default=utc_now, nullable=False)
     status = db.Column(db.String(20), default='completed')
     message = db.Column(db.String(255))
 
@@ -579,7 +582,7 @@ class LabelMeddraProfile(db.Model):
     set_id = db.Column(db.String(100), index=True, nullable=False)
     section_loinc = db.Column(db.String(50), index=True, nullable=False)
     terms = db.Column(db.Text) # Stored as a comma-separated or JSON string
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
 
     __table_args__ = (
         db.UniqueConstraint('set_id', 'section_loinc', name='_set_section_uc'),
@@ -595,8 +598,8 @@ class LabelPvProfile(db.Model):
     active_ingredient = db.Column(db.String(255))
     label_format = db.Column(db.String(20)) # PLR, NON-PLR, OTC
     profile_data = db.Column(db.Text) # JSON string of extracted adverse events and summary
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     __table_args__ = (
         db.UniqueConstraint('set_id', name='_pv_profile_set_id_uc'),
@@ -615,8 +618,8 @@ class LabelPvFeedback(db.Model):
     feedback_type = db.Column(db.String(32), nullable=False) # 'is_ae' (reported real AE from leftovers), 'not_ae' (reported not AE from main table)
     comment = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(32), default='pending') # pending, reviewed, resolved
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     user = db.relationship('User', backref=db.backref('pv_feedbacks', lazy='dynamic'))
 
@@ -631,7 +634,7 @@ class TokenUsage(db.Model):
     input_tokens = db.Column(db.Integer, default=0)
     output_tokens = db.Column(db.Integer, default=0)
     total_tokens = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     user = db.relationship('User', backref=db.backref('token_usages', lazy='dynamic'))
 
@@ -655,7 +658,7 @@ class WebtestHistory(db.Model):
     url = db.Column(db.Text)
     query_results = db.Column(db.Text)
     delay = db.Column(db.Float)
-    query_date = db.Column(db.DateTime, default=datetime.utcnow)
+    query_date = db.Column(db.DateTime, default=utc_now)
     query_details = db.Column(db.Text)
     count = db.Column(db.String(50))
     notes = db.Column(db.Text)
@@ -675,7 +678,7 @@ class ExaminePrompt(db.Model):
     is_custom = db.Column(db.Boolean, default=False, nullable=False)
     set_id = db.Column(db.String(100), nullable=True, index=True)
     generic_name = db.Column(db.String(255), nullable=True, index=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
 
     histories = db.relationship('ExamineHistory', backref='prompt', lazy=True, foreign_keys='ExamineHistory.prompt_id')
 
@@ -690,7 +693,7 @@ class ExamineHistory(db.Model):
     generated_answer = db.Column(db.Text, nullable=False)
     model_used = db.Column(db.String(100), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
 
 class FeatureGate(db.Model):
@@ -717,5 +720,5 @@ class FeatureGate(db.Model):
     #: min_role because `guest` holds the 'user' role but must be excluded from
     #: anything storing per-account state.
     allow_guest = db.Column(db.Boolean, nullable=False, default=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     updated_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)

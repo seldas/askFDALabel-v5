@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app, send_file
 import os
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 import urllib3
 from flask_login import current_user
 import subprocess
@@ -119,7 +119,7 @@ def start_test():
     # Rate limiting: prevent rapid-fire triggering within 60s
     recent_task = SystemTask.query.filter(
         SystemTask.task_type == 'webtest',
-        SystemTask.completed_at >= (datetime.utcnow() - pd.Timedelta(seconds=60))
+        SystemTask.completed_at >= (datetime.now(timezone.utc).replace(tzinfo=None) - pd.Timedelta(seconds=60))
     ).first()
     if recent_task:
         return jsonify({

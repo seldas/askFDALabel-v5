@@ -395,10 +395,10 @@ def cancel_task(task_id):
 @login_required
 @admin_required
 def get_token_usage():
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
     from database.models import TokenUsage
     try:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         time_windows = {
             '1_day': now - timedelta(days=1),
             '7_days': now - timedelta(days=7),

@@ -30,7 +30,7 @@ import json
 import argparse
 import requests
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import urllib3
 
@@ -85,7 +85,7 @@ def update_system_task(task_id: int, progress: int, msg: str, status: str = None
             if status:
                 t.status = status
             if status == 'completed':
-                t.completed_at = datetime.utcnow()
+                t.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             if error:
                 t.error_details = str(error)
             if result_data:
@@ -97,7 +97,7 @@ def update_system_task(task_id: int, progress: int, msg: str, status: str = None
 
 def run_webtest_automation(dry_run: bool = False, force: bool = False, verbose: bool = False):
     """Executes the full webtest regression suite."""
-    start_ts = datetime.utcnow()
+    start_ts = datetime.now(timezone.utc).replace(tzinfo=None)
     print(f"[{start_ts.strftime('%Y-%m-%d %H:%M:%S UTC')}] === Starting Scheduled Webtest Automation ===")
     if dry_run:
         print("[INFO] DRY-RUN MODE: No database records will be modified.")
@@ -145,7 +145,7 @@ def run_webtest_automation(dry_run: bool = False, force: bool = False, verbose: 
         success_count = 0
         fail_count = 0
         total_delay = 0.0
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         for i, task in enumerate(tasks):
             url = task.url
@@ -247,7 +247,7 @@ def run_webtest_automation(dry_run: bool = False, force: bool = False, verbose: 
             time.sleep(0.3)
 
         avg_delay = round(total_delay / total_tasks, 2) if total_tasks > 0 else 0
-        total_time = round((datetime.utcnow() - start_ts).total_seconds(), 1)
+        total_time = round((datetime.now(timezone.utc).replace(tzinfo=None) - start_ts).total_seconds(), 1)
         summary = {
             'total_tasks': total_tasks,
             'success_count': success_count,

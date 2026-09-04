@@ -1,7 +1,7 @@
 """Tracked wrapper for the pharmacologic-class indexing importer."""
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 backend_dir = Path(__file__).resolve().parent.parent.parent
@@ -25,7 +25,7 @@ def main():
                 db.session.commit()
             script = backend_dir / 'database' / 'scripts' / 'db_05_import_epc_indexing.py'
             result = subprocess.run([sys.executable, str(script)], cwd=str(backend_dir.parent), check=True)
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             if task:
                 task.progress, task.status, task.message = 100, 'completed', 'Pharmacologic class indexing import complete.'
                 task.completed_at = now

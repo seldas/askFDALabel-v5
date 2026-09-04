@@ -4,7 +4,7 @@ import os
 import time
 import requests
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -71,7 +71,7 @@ def main():
                 'Accept': 'application/json, text/plain, */*'
             })
 
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
 
             for i, task in enumerate(tasks):
                 # Check for cancellation
@@ -165,7 +165,7 @@ def main():
                 t = SystemTask.query.get(args.task_id)
                 if t:
                     t.status = 'completed'
-                    t.completed_at = datetime.utcnow()
+                    t.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
                     db.session.commit()
 
         except Exception as e:

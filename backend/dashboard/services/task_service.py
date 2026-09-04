@@ -1,7 +1,7 @@
 import threading
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from database import db, SystemTask
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class TaskService:
         if status:
             task.status = status
             if status in ['completed', 'failed']:
-                task.completed_at = datetime.utcnow()
+                task.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         if result_data:
             task.result_data = json.dumps(result_data) if isinstance(result_data, (dict, list)) else result_data
         if error_details:

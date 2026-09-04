@@ -1,6 +1,6 @@
 import json
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from database import db, ComparisonSummary
 from dashboard.services.ai_handler import call_llm
 
@@ -87,7 +87,7 @@ def get_comparison_summary(user, set_ids, comparison_data, label_names, force_re
     existing = ComparisonSummary.query.filter_by(set_ids_hash=ids_hash).first()
     if existing:
         existing.summary_content = summary_content
-        existing.timestamp = datetime.utcnow()
+        existing.timestamp = datetime.now(timezone.utc).replace(tzinfo=None)
     else:
         new_summary = ComparisonSummary(
             set_ids_hash=ids_hash,

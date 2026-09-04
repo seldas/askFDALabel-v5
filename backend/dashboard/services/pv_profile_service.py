@@ -10,7 +10,7 @@ MedDRA hierarchy enrichment, and same-drug peer lookup.
 import json
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 try:
     import defusedxml.ElementTree as ET
 except ImportError:
@@ -1026,7 +1026,7 @@ class PVProfileService:
             profile_data['soc_summary'] = soc_summary
             profile_data['chart_data'] = chart_data
             profile_data['feedbacks'] = cls.get_feedbacks(set_id)
-            profile_data['updated_at'] = datetime.utcnow().isoformat() + 'Z'
+            profile_data['updated_at'] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z'
 
             # 7. Update database cache
             cached_row.profile_data = json.dumps(profile_data)
@@ -1138,7 +1138,7 @@ class PVProfileService:
                 'is_supported': False,
                 'status': 'no_safety_sections_found',
                 'message': 'No standard safety or adverse reaction sections (Boxed Warning, Warnings, Adverse Reactions, or OTC Drug Facts) were found in this labeling.',
-                'generated_at': datetime.utcnow().isoformat() + 'Z',
+                'generated_at': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z',
                 'cached': False,
                 'total_adverse_events': 0,
                 'severity_tier_defs': SEVERITY_TIERS,
@@ -1255,7 +1255,7 @@ class PVProfileService:
             'manufacturer_name': manufacturer,
             'effective_time': effective_time,
             'label_format': label_format,
-            'generated_at': datetime.utcnow().isoformat() + 'Z',
+            'generated_at': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z',
             'cached': False,
             'total_adverse_events': len(enriched_items),
             'severity_tier_defs': SEVERITY_TIERS,
@@ -1283,7 +1283,7 @@ class PVProfileService:
                 cached_entry.active_ingredient = active_ingredient
                 cached_entry.label_format = label_format
                 cached_entry.profile_data = json.dumps(profile_payload)
-                cached_entry.updated_at = datetime.utcnow()
+                cached_entry.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
             else:
                 cached_entry = LabelPvProfile(
                     set_id=set_id,

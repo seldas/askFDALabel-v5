@@ -2,7 +2,7 @@
 import argparse
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 backend_dir = Path(__file__).resolve().parent.parent.parent
@@ -32,7 +32,7 @@ def main():
                 sys.executable, str(script), '--downloads-dir', str(source_dir),
                 '--storage-dir', str(storage_dir), '--workers', str(args.workers), '--replace-existing-zips',
             ], cwd=str(backend_dir.parent), check=True)
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             if task:
                 task.progress, task.status = 100, 'completed'
                 task.message, task.completed_at = 'Monthly DailyMed update complete.', now

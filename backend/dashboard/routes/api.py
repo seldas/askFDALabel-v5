@@ -7,9 +7,13 @@ try:
     import defusedxml.ElementTree as ET
 except ImportError:
     import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 import hashlib
+
+def utc_now():
+    """Return naive datetime in UTC for compatibility with Postgres TIMESTAMP columns."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 from database import (
     db, User, Project, Favorite, FavoriteComparison, Annotation, 
@@ -700,7 +704,7 @@ def get_label_meddra_profile(set_id):
     profile_data = {
         'metadata': {
             'set_id': set_id,
-            'generated_at': datetime.utcnow().isoformat() + 'Z'
+            'generated_at': utc_now().isoformat() + 'Z'
         },
         'sections': [],
         'all_found_terms': []
@@ -960,7 +964,7 @@ def ai_compare_summary():
             existing = ComparisonSummary.query.filter_by(set_ids_hash=ids_hash).first()
             if existing:
                 existing.summary_content = response_text
-                existing.timestamp = datetime.utcnow()
+                existing.timestamp = utc_now()
             else:
                 new_summary = ComparisonSummary(
                     set_ids_hash=ids_hash,
@@ -1574,7 +1578,7 @@ def get_user_query_history():
             'query_json': q_json,
             'result_count': r.result_count,
             'target_db': r.target_db,
-            'timestamp': r.timestamp.isoformat() + 'Z' if r.timestamp else datetime.utcnow().isoformat() + 'Z'
+            'timestamp': r.timestamp.isoformat() + 'Z' if r.timestamp else utc_now().isoformat() + 'Z'
         })
     return jsonify({'history': res}), 200
 
@@ -1604,9 +1608,9 @@ def save_user_query_history():
         query_link=query_link
     ).order_by(UserQueryHistory.timestamp.desc()).first()
 
-    if recent and (datetime.utcnow() - recent.timestamp).total_seconds() < 10:
+    if recent and (utc_now() - recent.timestamp).total_seconds() < 10:
         recent.result_count = result_count
-        recent.timestamp = datetime.utcnow()
+        recent.timestamp = utc_now()
         db.session.commit()
         return jsonify({'success': True, 'id': recent.id, 'updated': True}), 200
 
@@ -1617,7 +1621,7 @@ def save_user_query_history():
         query_json=q_json_str,
         result_count=result_count,
         target_db=target_db,
-        timestamp=datetime.utcnow()
+        timestamp=utc_now()
     )
     db.session.add(record)
     db.session.commit()
@@ -1886,7 +1890,7 @@ def create_task_from_query():
     labels = data.get('labels') or []
 
     if not title:
-        title = f"Query Task - {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}"
+        title = f"Query Task - {utc_now().strftime('%Y-%m-%d %H:%M')}"
 
     if Project.query.filter_by(owner_id=current_user.id).count() >= 100:
         return jsonify({'error': 'Task limit reached (Max 100). Cannot create new task.'}), 403
@@ -2031,7 +2035,7 @@ def run_ae_report_generation(task_id, report_id, project_id, target_pt):
         if total_favs == 0:
             report.status = 'completed'
             report.progress = 100
-            report.completed_at = datetime.utcnow()
+            report.completed_at = utc_now()
             db.session.commit()
             TaskService.update_task(task_id, progress=100, status='completed', message="Completed (no labels in project)")
             return
@@ -2189,7 +2193,7 @@ def run_ae_report_generation(task_id, report_id, project_id, target_pt):
             db.session.add(detail)
 
         report.status = 'completed'
-        report.completed_at = datetime.utcnow()
+        report.completed_at = utc_now()
         report.progress = 100
         db.session.commit()
         TaskService.update_task(task_id, progress=100, status='completed', message=f"AE report generation complete for {target_pt}")
@@ -2561,7 +2565,7 @@ def export_ae_report_json(report_id):
             'report_id': report.id,
             'target_pt': report.target_pt,
             'project_title': report.project.title,
-            'generated_at': datetime.utcnow().isoformat() + 'Z',
+            'generated_at': utc_now().isoformat() + 'Z',
             'total_labels_analyzed': len(details)
         },
         'ai_instructions': ai_prompt,
@@ -2940,7 +2944,7 @@ def api_faers_ai_rematch():
         if existing:
             existing.result_json = json.dumps(result_list)
             existing.min_count = min_count
-            existing.timestamp = datetime.utcnow()
+            existing.timestamp = utc_now()
         else:
             new_assessment = AeAiAssessment(
                 set_id=set_id,
@@ -2953,7 +2957,7 @@ def api_faers_ai_rematch():
 
         return jsonify({
             'results': result_list,
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'timestamp': utc_now().isoformat() + 'Z',
             'min_count': min_count
         })
 
@@ -3175,9 +3179,8 @@ def run_assessment_logic(set_id, tox_type, prompt):
                 conclusion = "No"
 
             try:
-                from datetime import datetime
                 meta = extract_metadata_from_xml(xml_content) or {}
-                today_str = datetime.utcnow().strftime('%Y%m%d')
+                today_str = utc_now().strftime('%Y%m%d')
                 if provider == "elsa":
                     model_display = client.get('model_name') or os.getenv("ELSA_MODEL_NAME") or "CLAUDE_4_SONNET"
                 else:

@@ -1,7 +1,7 @@
 import os
 import sys
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from sqlalchemy import text
 
@@ -24,9 +24,9 @@ def update_progress(task_id, progress, message=None, status='processing'):
             task.progress = progress
             if message: task.message = message
             task.status = status
-            task.updated_at = datetime.utcnow()
+            task.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
             if status == 'completed':
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc).replace(tzinfo=None)
                 task.completed_at = now
                 try:
                     from database.models import DatabaseUpdateLog

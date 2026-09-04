@@ -1,6 +1,6 @@
 import logging
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from flashtext import KeywordProcessor
 from database import db, MeddraPT, MeddraLLT, LabelMeddraProfile
 
@@ -94,7 +94,7 @@ class MeddraMatcher:
             ).first()
             if existing:
                 existing.terms = json.dumps(terms)
-                existing.created_at = datetime.utcnow()
+                existing.created_at = datetime.now(timezone.utc).replace(tzinfo=None)
             else:
                 new_cache = LabelMeddraProfile(
                     set_id=set_id,
