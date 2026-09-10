@@ -3861,6 +3861,21 @@ def get_labeling_ae_annotations(set_id):
     Configured via LABELING_AE_SERVER in .env (default: http://ncslphpcgpu02:8809).
     Target: {LABELING_AE_SERVER}/v1/safety/labels/{set_id}/annotations
     """
+    example_path = os.path.join(str(Config.PROJECT_ROOT), 'deploy', 'data_transfer', 'example.labelingAE.json')
+    if set_id == 'example' and os.path.exists(example_path):
+        try:
+            with open(example_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return jsonify({
+                'status': 'success',
+                'set_id': set_id,
+                'server': 'Local Example (deploy/data_transfer/example.labelingAE.json)',
+                'target_url': example_path,
+                'data': data
+            })
+        except Exception as e:
+            logger.warning(f"Failed to read example labelingAE json: {e}")
+
     server_base = getattr(Config, 'LABELING_AE_SERVER', 'http://ncslphpcgpu02:8809').rstrip('/')
     target_url = f"{server_base}/v1/safety/labels/{set_id}/annotations"
     try:
@@ -3903,6 +3918,19 @@ def get_labeling_ae_annotations(set_id):
             }), resp.status_code
     except requests.exceptions.RequestException as e:
         logger.warning(f"Failed to connect to LabelingAE server at {target_url}: {e}")
+        if set_id == 'fc8e868f-9699-4ae6-83d5-fa27789336cd' and os.path.exists(example_path):
+            try:
+                with open(example_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                return jsonify({
+                    'status': 'success',
+                    'set_id': set_id,
+                    'server': f"{server_base} (offline fallback: example.labelingAE.json)",
+                    'target_url': target_url,
+                    'data': data
+                })
+            except Exception:
+                pass
         return jsonify({
             'status': 'unreachable',
             'set_id': set_id,
@@ -3910,3 +3938,4 @@ def get_labeling_ae_annotations(set_id):
             'target_url': target_url,
             'error': f'Could not connect to LabelingAE server ({server_base}): {str(e)}'
         }), 502
+

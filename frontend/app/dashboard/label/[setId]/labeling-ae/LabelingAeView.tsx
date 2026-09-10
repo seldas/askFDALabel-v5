@@ -18,72 +18,69 @@ interface ApiResponse {
   error?: string;
 }
 
-const SAMPLE_DEMO_DATA = {
+const INLINE_FALLBACK_DATA = {
   model_version: 'LabelingAE-v2.1',
   timestamp: new Date().toISOString(),
-  total_annotations: 8,
-  confidence_threshold: 0.85,
-  sections_analyzed: ['BOXED WARNING', 'WARNINGS AND PRECAUTIONS', 'ADVERSE REACTIONS'],
+  summary: {
+    annotation_count: 6,
+    meddra_adverse_reactions: 4,
+    rxbert_adverse_reactions: 2,
+    section_count: 3
+  },
   annotations: [
     {
-      id: 'ae-001',
+      id: 'ann_000001',
       term: 'Hepatotoxicity',
-      meddra_pt: 'Hepatic failure',
-      soc: 'Hepatobiliary disorders',
-      section: 'BOXED WARNING',
-      severity: 'Severe',
-      confidence: 0.98,
-      excerpt: 'Severe and sometimes fatal hepatotoxicity has occurred with this drug.'
+      display_classification: 'MedDRA Adverse Reaction',
+      coding: {
+        name: 'Hepatic failure',
+        code: '10019663',
+        soc_name: 'Hepatobiliary disorders'
+      },
+      section: {
+        observed_section_name: 'BOXED WARNING',
+        name: 'BOXED WARNING'
+      },
+      source: { annotator: 'meddra_exact_matcher' },
+      confidence: 1.0,
+      start: 120,
+      end: 134
     },
     {
-      id: 'ae-002',
+      id: 'ann_000002',
       term: 'QT Prolongation',
-      meddra_pt: 'Electrocardiogram QT prolonged',
-      soc: 'Cardiac disorders',
-      section: 'WARNINGS AND PRECAUTIONS',
-      severity: 'Moderate',
+      display_classification: 'RxBERT Adverse Reaction',
+      coding: {
+        name: 'Electrocardiogram QT prolonged',
+        code: '10014387',
+        soc_name: 'Cardiac disorders'
+      },
+      section: {
+        observed_section_name: '5 WARNINGS AND PRECAUTIONS',
+        name: 'WARNINGS AND PRECAUTIONS'
+      },
+      source: { annotator: 'rxb_ner' },
       confidence: 0.94,
-      excerpt: 'Patients should be monitored for QT prolongation and ventricular arrhythmias.'
+      start: 850,
+      end: 865
     },
     {
-      id: 'ae-003',
+      id: 'ann_000003',
       term: 'Nausea',
-      meddra_pt: 'Nausea',
-      soc: 'Gastrointestinal disorders',
-      section: 'ADVERSE REACTIONS',
-      severity: 'Mild',
-      confidence: 0.99,
-      excerpt: 'The most commonly reported adverse reaction was nausea occurring in 24% of patients.'
-    },
-    {
-      id: 'ae-004',
-      term: 'Headache',
-      meddra_pt: 'Headache',
-      soc: 'Nervous system disorders',
-      section: 'ADVERSE REACTIONS',
-      severity: 'Mild',
-      confidence: 0.97,
-      excerpt: 'Headache was reported in 18% of clinical trial participants.'
-    },
-    {
-      id: 'ae-005',
-      term: 'Thrombocytopenia',
-      meddra_pt: 'Platelet count decreased',
-      soc: 'Blood and lymphatic system disorders',
-      section: 'WARNINGS AND PRECAUTIONS',
-      severity: 'Moderate',
-      confidence: 0.91,
-      excerpt: 'Dose reduction is recommended in cases of persistent thrombocytopenia.'
-    },
-    {
-      id: 'ae-006',
-      term: 'Acute Kidney Injury',
-      meddra_pt: 'Renal failure acute',
-      soc: 'Renal and urinary disorders',
-      section: 'WARNINGS AND PRECAUTIONS',
-      severity: 'Severe',
-      confidence: 0.95,
-      excerpt: 'Cases of acute kidney injury requiring hemodialysis have been reported postmarketing.'
+      display_classification: 'MedDRA Adverse Reaction',
+      coding: {
+        name: 'Nausea',
+        code: '10028813',
+        soc_name: 'Gastrointestinal disorders'
+      },
+      section: {
+        observed_section_name: '6 ADVERSE REACTIONS',
+        name: 'ADVERSE REACTIONS'
+      },
+      source: { annotator: 'meddra_exact_matcher' },
+      confidence: 1.0,
+      start: 1420,
+      end: 1426
     }
   ]
 };
@@ -93,9 +90,13 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'smart' | 'json'>('smart');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedArrayKey, setSelectedArrayKey] = useState<string>('');
+  const [selectedArrayKey, setSelectedArrayKey] = useState<string>('annotations');
   const [copied, setCopied] = useState(false);
   const [isDemo, setIsDemo] = useState(false);
+
+  // Filters for annotations
+  const [selectedSocFilter, setSelectedSocFilter] = useState<string>('all');
+  const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
 
   const fetchAnnotations = useCallback(async () => {
     setLoading(true);
@@ -123,15 +124,36 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
     fetchAnnotations();
   }, [fetchAnnotations]);
 
-  const loadDemo = () => {
+  const loadDemo = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/dashboard/labeling_ae/example');
+      if (res.ok) {
+        const json = await res.json();
+        setResponse({
+          status: 'success',
+          set_id: setId,
+          server: 'Local Example (deploy/data_transfer/example.labelingAE.json)',
+          target_url: json.target_url,
+          data: json.data
+        });
+        setIsDemo(true);
+        setLoading(false);
+        return;
+      }
+    } catch {
+      // ignore
+    }
+
     setResponse({
       status: 'success',
       set_id: setId,
-      server: 'http://ncslphpcgpu02:8809 (Demo Preview)',
-      target_url: `http://ncslphpcgpu02:8809/v1/safety/labels/${setId}/annotations`,
-      data: SAMPLE_DEMO_DATA
+      server: 'Local Demo Fallback',
+      target_url: `demo://safety/labels/${setId}/annotations`,
+      data: INLINE_FALLBACK_DATA
     });
     setIsDemo(true);
+    setLoading(false);
   };
 
   const payload = response?.data;
@@ -162,12 +184,16 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
     return { arrayKeys: [], scalarEntries: [], rootArray: null };
   }, [payload]);
 
-  // Set default active array key
+  // Set default active array key (prioritize 'annotations' if present)
   useEffect(() => {
     if (rootArray) {
       setSelectedArrayKey('root');
-    } else if (arrayKeys.length > 0 && (!selectedArrayKey || !arrayKeys.includes(selectedArrayKey))) {
-      setSelectedArrayKey(arrayKeys[0]);
+    } else if (arrayKeys.length > 0) {
+      if (arrayKeys.includes('annotations')) {
+        setSelectedArrayKey('annotations');
+      } else if (!selectedArrayKey || !arrayKeys.includes(selectedArrayKey)) {
+        setSelectedArrayKey(arrayKeys[0]);
+      }
     }
   }, [arrayKeys, rootArray, selectedArrayKey]);
 
@@ -179,9 +205,32 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
     return Array.isArray(val) ? val : [];
   }, [payload, selectedArrayKey, rootArray]);
 
-  // Columns for the active collection
-  const columns = useMemo(() => {
-    if (!activeItems || activeItems.length === 0) return [];
+  // Distinct SOCs and Classifications for filter dropdowns if this is annotations
+  const isAnnotationCollection = selectedArrayKey === 'annotations' && activeItems.some((it) => it?.coding || it?.term);
+
+  const distinctSocs = useMemo(() => {
+    if (!isAnnotationCollection) return [];
+    const socs = new Set<string>();
+    activeItems.forEach((it) => {
+      const soc = it?.coding?.soc_name;
+      if (soc) socs.add(soc);
+    });
+    return Array.from(socs).sort();
+  }, [activeItems, isAnnotationCollection]);
+
+  const distinctClassifications = useMemo(() => {
+    if (!isAnnotationCollection) return [];
+    const classes = new Set<string>();
+    activeItems.forEach((it) => {
+      const cls = it?.display_classification || it?.classification || it?.safety_type;
+      if (cls) classes.add(cls);
+    });
+    return Array.from(classes).sort();
+  }, [activeItems, isAnnotationCollection]);
+
+  // Columns for generic collection
+  const genericColumns = useMemo(() => {
+    if (!activeItems || activeItems.length === 0 || isAnnotationCollection) return [];
     const colSet = new Set<string>();
     activeItems.slice(0, 50).forEach((item) => {
       if (item && typeof item === 'object') {
@@ -189,13 +238,24 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
       }
     });
     return Array.from(colSet);
-  }, [activeItems]);
+  }, [activeItems, isAnnotationCollection]);
 
-  // Filter items by search query
+  // Filter items by search query and dropdown filters
   const filteredItems = useMemo(() => {
-    if (!searchQuery.trim()) return activeItems;
+    let result = activeItems;
+
+    if (isAnnotationCollection) {
+      if (selectedSocFilter !== 'all') {
+        result = result.filter((it) => it?.coding?.soc_name === selectedSocFilter);
+      }
+      if (selectedClassFilter !== 'all') {
+        result = result.filter((it) => (it?.display_classification || it?.classification || it?.safety_type) === selectedClassFilter);
+      }
+    }
+
+    if (!searchQuery.trim()) return result;
     const q = searchQuery.toLowerCase();
-    return activeItems.filter((item) => {
+    return result.filter((item) => {
       if (item == null) return false;
       if (typeof item !== 'object') return String(item).toLowerCase().includes(q);
       return Object.values(item).some((v) =>
@@ -204,7 +264,7 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
           .includes(q)
       );
     });
-  }, [activeItems, searchQuery]);
+  }, [activeItems, searchQuery, isAnnotationCollection, selectedSocFilter, selectedClassFilter]);
 
   const handleCopyJson = () => {
     if (!payload) return;
@@ -214,6 +274,7 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
   };
 
   const drugTitle = labelMeta?.brand_name || labelMeta?.drug_name || setId;
+  const summary = payload?.summary;
 
   return (
     <div className="afl-ae-container">
@@ -225,7 +286,7 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
             <span className="afl-ae-beta-badge">beta</span>
             {isDemo && (
               <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#d97706', background: '#fef3c7', padding: '2px 8px', borderRadius: '6px' }}>
-                Preview Mode
+                Example Preview
               </span>
             )}
           </h2>
@@ -313,7 +374,7 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
                 className="afl-ae-btn afl-ae-btn--primary"
                 onClick={loadDemo}
               >
-                Load Demo / Preview Annotations
+                Load Example / Demo Annotations
               </button>
             </div>
           </div>
@@ -336,7 +397,7 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
               onClick={loadDemo}
               style={{ marginTop: '6px' }}
             >
-              Load Demo / Preview Annotations
+              Load Example / Demo Annotations
             </button>
           </div>
         </div>
@@ -358,32 +419,44 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
       {/* Data Visualization */}
       {!loading && payload && (
         <>
-          {/* Metrics summary cards */}
+          {/* Metrics summary row */}
           <div className="afl-ae-metrics">
             <div className="afl-ae-metric-card">
-              <div className="afl-ae-metric-card__label">Active Collection</div>
+              <div className="afl-ae-metric-card__label">Total Annotations</div>
               <div className="afl-ae-metric-card__value">
-                {activeItems.length}
+                {summary?.combined_adverse_reactions || summary?.annotation_count || activeItems.length}
               </div>
               <div className="afl-ae-metric-card__sub">
                 {selectedArrayKey || 'Items'}
               </div>
             </div>
 
-            <div className="afl-ae-metric-card">
-              <div className="afl-ae-metric-card__label">Total Fields</div>
-              <div className="afl-ae-metric-card__value">
-                {typeof payload === 'object' ? Object.keys(payload).length : 1}
+            {summary?.meddra_adverse_reactions != null && (
+              <div className="afl-ae-metric-card">
+                <div className="afl-ae-metric-card__label">MedDRA Reactions</div>
+                <div className="afl-ae-metric-card__value" style={{ color: '#2563eb' }}>
+                  {summary.meddra_adverse_reactions}
+                </div>
+                <div className="afl-ae-metric-card__sub">Exact & PT Matches</div>
               </div>
-              <div className="afl-ae-metric-card__sub">Top-level keys</div>
-            </div>
+            )}
+
+            {summary?.rxbert_adverse_reactions != null && (
+              <div className="afl-ae-metric-card">
+                <div className="afl-ae-metric-card__label">RxBERT Reactions</div>
+                <div className="afl-ae-metric-card__value" style={{ color: '#8b5cf6' }}>
+                  {summary.rxbert_adverse_reactions}
+                </div>
+                <div className="afl-ae-metric-card__sub">Model Predictions</div>
+              </div>
+            )}
 
             <div className="afl-ae-metric-card">
-              <div className="afl-ae-metric-card__label">Identified Collections</div>
+              <div className="afl-ae-metric-card__label">Sections Analyzed</div>
               <div className="afl-ae-metric-card__value">
-                {arrayKeys.length || (rootArray ? 1 : 0)}
+                {summary?.section_count || payload?.sections?.length || '—'}
               </div>
-              <div className="afl-ae-metric-card__sub">Array structures</div>
+              <div className="afl-ae-metric-card__sub">Safety Sections</div>
             </div>
 
             <div className="afl-ae-metric-card">
@@ -391,7 +464,7 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
               <div className="afl-ae-metric-card__value" style={{ fontSize: '0.9rem', fontFamily: 'monospace' }}>
                 {setId.slice(0, 14)}…
               </div>
-              <div className="afl-ae-metric-card__sub">Target label</div>
+              <div className="afl-ae-metric-card__sub">Target SPL</div>
             </div>
           </div>
 
@@ -399,7 +472,7 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
           {scalarEntries.length > 0 && (
             <div className="afl-ae-card">
               <div className="afl-ae-card__header">
-                <h3 className="afl-ae-card__title">Metadata & Parameters</h3>
+                <h3 className="afl-ae-card__title">Metadata & Processing Parameters</h3>
               </div>
               <div className="afl-ae-kv-grid">
                 {scalarEntries.map(([k, v]) => (
@@ -418,7 +491,7 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
               <div className="afl-ae-card__header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                   <h3 className="afl-ae-card__title">
-                    Extracted Annotations & Entities
+                    Extracted Safety Annotations
                   </h3>
 
                   {/* Switch between collections if multiple arrays exist */}
@@ -446,11 +519,39 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
                   )}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  {/* Classification Filter Dropdown */}
+                  {distinctClassifications.length > 1 && (
+                    <select
+                      value={selectedClassFilter}
+                      onChange={(e) => setSelectedClassFilter(e.target.value)}
+                      style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.78rem', background: '#ffffff' }}
+                    >
+                      <option value="all">All Classifications</option>
+                      {distinctClassifications.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  )}
+
+                  {/* SOC Filter Dropdown */}
+                  {distinctSocs.length > 1 && (
+                    <select
+                      value={selectedSocFilter}
+                      onChange={(e) => setSelectedSocFilter(e.target.value)}
+                      style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.78rem', background: '#ffffff', maxWidth: '200px' }}
+                    >
+                      <option value="all">All SOC Categories</option>
+                      {distinctSocs.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  )}
+
                   <input
                     type="text"
                     className="afl-ae-search-input"
-                    placeholder="Filter records…"
+                    placeholder="Search terms, SOC, section…"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -462,15 +563,108 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
 
               {activeItems.length === 0 ? (
                 <div style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
-                  No items found in this section.
+                  No items found in this collection.
                 </div>
-              ) : columns.length > 0 ? (
+              ) : isAnnotationCollection ? (
+                /* Tailored annotations table for the LabelingAE schema */
                 <div className="afl-ae-table-wrap">
                   <table className="afl-ae-table">
                     <thead>
                       <tr>
                         <th style={{ width: '40px' }}>#</th>
-                        {columns.map((col) => (
+                        <th>Extracted Term</th>
+                        <th>MedDRA PT</th>
+                        <th>System Organ Class (SOC)</th>
+                        <th>Observed Section</th>
+                        <th>Classification / Method</th>
+                        <th>Confidence</th>
+                        <th>Offsets</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredItems.map((item, idx) => {
+                        const ptName = item.coding?.name || item.term;
+                        const ptCode = item.coding?.code;
+                        const socName = item.coding?.soc_name || '—';
+                        const sectionName = item.section?.observed_section_name || item.section?.name || '—';
+                        const classification = item.display_classification || item.safety_type || '—';
+                        const annotator = item.source?.annotator;
+                        const isRxBert = classification.includes('RxBERT') || annotator?.includes('rxb');
+
+                        return (
+                          <tr key={item.id || idx}>
+                            <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
+                            <td>
+                              <strong style={{ color: '#0f172a', textTransform: 'capitalize' }}>
+                                {item.term}
+                              </strong>
+                            </td>
+                            <td>
+                              <div>
+                                <span style={{ fontWeight: 600, color: '#1e293b' }}>{ptName}</span>
+                                {ptCode && (
+                                  <span style={{ display: 'block', fontSize: '0.72rem', color: '#64748b', fontFamily: 'monospace' }}>
+                                    PT: {ptCode}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td>
+                              <span style={{ fontSize: '0.8rem', color: '#475569' }}>{socName}</span>
+                            </td>
+                            <td>
+                              <span
+                                style={{
+                                  fontSize: '0.76rem',
+                                  fontWeight: 600,
+                                  background: '#f1f5f9',
+                                  padding: '2px 8px',
+                                  borderRadius: '4px',
+                                  color: '#334155'
+                                }}
+                              >
+                                {sectionName}
+                              </span>
+                            </td>
+                            <td>
+                              <span
+                                style={{
+                                  display: 'inline-block',
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700,
+                                  background: isRxBert ? '#ede9fe' : '#dbeafe',
+                                  color: isRxBert ? '#6d28d9' : '#1d4ed8'
+                                }}
+                              >
+                                {classification}
+                              </span>
+                            </td>
+                            <td>
+                              <span style={{ fontWeight: 700, color: '#059669', fontSize: '0.82rem' }}>
+                                {typeof item.confidence === 'number'
+                                  ? `${(item.confidence * 100).toFixed(0)}%`
+                                  : '—'}
+                              </span>
+                            </td>
+                            <td style={{ fontFamily: 'monospace', fontSize: '0.74rem', color: '#64748b' }}>
+                              {item.start != null && item.end != null ? `[${item.start}, ${item.end}]` : '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : genericColumns.length > 0 ? (
+                /* Fallback generic table for any other collection (e.g. sections, tokens, etc.) */
+                <div className="afl-ae-table-wrap">
+                  <table className="afl-ae-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '40px' }}>#</th>
+                        {genericColumns.map((col) => (
                           <th key={col}>{col.replace(/_/g, ' ')}</th>
                         ))}
                       </tr>
@@ -479,7 +673,7 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
                       {filteredItems.map((item, idx) => (
                         <tr key={idx}>
                           <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
-                          {columns.map((col) => {
+                          {genericColumns.map((col) => {
                             const val = item?.[col];
                             return (
                               <td key={col}>
@@ -488,33 +682,6 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
                                 ) : typeof val === 'object' ? (
                                   <span className="afl-ae-tag">
                                     {JSON.stringify(val).slice(0, 40)}…
-                                  </span>
-                                ) : col.toLowerCase().includes('confidence') || col.toLowerCase().includes('score') ? (
-                                  <span style={{ fontWeight: 700, color: '#059669' }}>
-                                    {typeof val === 'number' ? `${(val * 100).toFixed(1)}%` : String(val)}
-                                  </span>
-                                ) : col.toLowerCase().includes('severity') ? (
-                                  <span
-                                    style={{
-                                      padding: '2px 6px',
-                                      borderRadius: '4px',
-                                      fontSize: '0.72rem',
-                                      fontWeight: 800,
-                                      background:
-                                        String(val).toLowerCase() === 'severe'
-                                          ? '#fee2e2'
-                                          : String(val).toLowerCase() === 'moderate'
-                                          ? '#fef3c7'
-                                          : '#ecfdf5',
-                                      color:
-                                        String(val).toLowerCase() === 'severe'
-                                          ? '#991b1b'
-                                          : String(val).toLowerCase() === 'moderate'
-                                          ? '#92400e'
-                                          : '#065f46'
-                                    }}
-                                  >
-                                    {String(val)}
                                   </span>
                                 ) : (
                                   <span>{String(val)}</span>
