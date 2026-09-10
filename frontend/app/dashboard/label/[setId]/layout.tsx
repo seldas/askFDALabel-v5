@@ -35,6 +35,7 @@ const SEGMENT_TO_TOOL: Record<string, string> = {
   deepdive: 'label-deepdive',
   ro2: 'label-ro2',
   'pv-profile': 'label-pv-profile',
+  'labeling-ae': 'label-labeling-ae',
 };
 
 export default function LabelLayout({

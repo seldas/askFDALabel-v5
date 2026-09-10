@@ -48,6 +48,9 @@ class Config:
     ELSA_MODEL_ID=os.getenv('ELSA_MODEL_ID','')
     ELSA_MODEL_NAME=os.getenv('ELSA_MODEL_NAME','')
 
+    # LabelingAE External Server
+    LABELING_AE_SERVER = os.getenv('LABELING_AE_SERVER', 'http://ncslphpcgpu02:8809')
+
     # Production Database Configuration
     DATABASE_URL = os.getenv("DATABASE_URL")
     if not DATABASE_URL:

@@ -3852,3 +3852,61 @@ def update_pv_profile_with_tags(set_id):
     except Exception as e:
         logger.exception(f"Error updating PV Profile with tags for {set_id}: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/labeling_ae/<set_id>', methods=['GET'])
+def get_labeling_ae_annotations(set_id):
+    """
+    Fetch external safety annotations for a given set_id from the LabelingAE server.
+    Configured via LABELING_AE_SERVER in .env (default: http://ncslphpcgpu02:8809).
+    Target: {LABELING_AE_SERVER}/v1/safety/labels/{set_id}/annotations
+    """
+    server_base = getattr(Config, 'LABELING_AE_SERVER', 'http://ncslphpcgpu02:8809').rstrip('/')
+    target_url = f"{server_base}/v1/safety/labels/{set_id}/annotations"
+    try:
+        resp = requests.get(target_url, timeout=12)
+        if resp.status_code == 200:
+            try:
+                data = resp.json()
+                return jsonify({
+                    'status': 'success',
+                    'set_id': set_id,
+                    'server': server_base,
+                    'target_url': target_url,
+                    'data': data
+                })
+            except Exception:
+                return jsonify({
+                    'status': 'error',
+                    'set_id': set_id,
+                    'server': server_base,
+                    'target_url': target_url,
+                    'error': 'Upstream response was not valid JSON',
+                    'raw_text': resp.text[:1000]
+                }), 502
+        elif resp.status_code == 404:
+            return jsonify({
+                'status': 'not_found',
+                'set_id': set_id,
+                'server': server_base,
+                'target_url': target_url,
+                'error': f'No annotations found for set_id {set_id} on LabelingAE server'
+            }), 404
+        else:
+            return jsonify({
+                'status': 'error',
+                'set_id': set_id,
+                'server': server_base,
+                'target_url': target_url,
+                'error': f'Upstream server returned HTTP {resp.status_code}',
+                'upstream_status': resp.status_code
+            }), resp.status_code
+    except requests.exceptions.RequestException as e:
+        logger.warning(f"Failed to connect to LabelingAE server at {target_url}: {e}")
+        return jsonify({
+            'status': 'unreachable',
+            'set_id': set_id,
+            'server': server_base,
+            'target_url': target_url,
+            'error': f'Could not connect to LabelingAE server ({server_base}): {str(e)}'
+        }), 502

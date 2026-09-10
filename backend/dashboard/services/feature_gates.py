@@ -214,6 +214,15 @@ FEATURE_CATALOG = [
         default_allow_guest=True,
     ),
     FeatureSpec(
+        key='tool_labeling_ae',
+        name='LabelingAE (beta)',
+        blurb='Server-based safety annotation and adverse event visualization.',
+        category='Product Toolbox',
+        enforced_at='Product Toolbox and /dashboard/label/[setId]/labeling-ae',
+        default_min_role=ROLE_USER,
+        default_allow_guest=True,
+    ),
+    FeatureSpec(
         key='tool_history_set_id',
         name='Archived Version Track',
         blurb='Track historical versions of this label in the local label database.',
