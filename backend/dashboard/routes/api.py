@@ -3857,6 +3857,34 @@ def update_pv_profile_with_tags(set_id):
         return jsonify({'error': str(e)}), 500
 
 
+@api_bp.route('/pv_profile/<set_id>/qc', methods=['POST'])
+def run_pv_profile_qc(set_id):
+    """
+    Executes the dual-agent QC workflow (Term Accuracy QC & Citation Verification QC)
+    for a given drug's PV Profile, persists the audit report and flags in DB,
+    and returns the updated profile data.
+    """
+    from dashboard.services.pv_profile_qc_service import PVProfileQCService
+    from flask_login import current_user
+
+    spl_id = request.args.get('spl_id')
+    user = current_user if current_user.is_authenticated else None
+
+    try:
+        result = PVProfileQCService.run_qc(
+            set_id=set_id,
+            spl_id=spl_id,
+            user=user
+        )
+        if isinstance(result, tuple) and len(result) == 2 and isinstance(result[1], int):
+            return jsonify(result[0]), result[1]
+
+        return jsonify(result)
+    except Exception as e:
+        logger.exception(f"Error running PV-Profile QC for {set_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @api_bp.route('/labeling_ae/<set_id>', methods=['GET'])
 def get_labeling_ae_annotations(set_id):
     """

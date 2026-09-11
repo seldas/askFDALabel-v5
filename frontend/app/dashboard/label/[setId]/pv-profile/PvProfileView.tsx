@@ -23,6 +23,15 @@ export interface PvOccurrence {
   drug_pct?: number | null;
 }
 
+export interface PvItemQc {
+  is_ambiguous: boolean;
+  term_valid?: boolean;
+  citation_valid?: boolean;
+  citation_status?: string;
+  flags?: string[];
+  note?: string;
+}
+
 export interface PvItem {
   term: string;
   meddra_pt: string;
@@ -44,6 +53,7 @@ export interface PvItem {
   excerpt: string;
   sections_present?: Array<{ tier: number; title: string }>;
   occurrences?: PvOccurrence[];
+  qc?: PvItemQc;
 }
 
 export interface PvLeftoverTerm {
@@ -55,6 +65,11 @@ export interface PvLeftoverTerm {
   section_name: string;
   status: string;
   reason: string;
+  qc?: {
+    is_ambiguous?: boolean;
+    should_be_ae?: boolean;
+    note?: string;
+  };
 }
 
 export interface PvPeer {
@@ -68,6 +83,16 @@ export interface PvPeer {
   dosage_form: string | null;
   is_rld: boolean;
   has_cached_profile: boolean;
+}
+
+export interface PvProfileQcSummary {
+  status: string; // 'completed' | 'pending'
+  completed_at?: string;
+  total_items_audited?: number;
+  ambiguous_items_count?: number;
+  total_leftovers_audited?: number;
+  ambiguous_leftovers_count?: number;
+  summary?: string;
 }
 
 export interface PvProfileData {
@@ -97,6 +122,7 @@ export interface PvProfileData {
   feedbacks?: Record<string, Array<{ id: number; term: string; feedback_type: string; comment?: string; status?: string }>>;
   harvested_sections: Array<{ code: string; title: string; severity_tier: number }>;
   peers: PvPeer[];
+  qc?: PvProfileQcSummary | null;
 }
 
 export default function PvProfileView({ setId, splId }: { setId: string; splId?: string | null }) {
@@ -116,6 +142,8 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [selectedTermsToApply, setSelectedTermsToApply] = useState<Set<string>>(new Set());
   const [updatingWithTags, setUpdatingWithTags] = useState(false);
+  const [runningQc, setRunningQc] = useState(false);
+  const isQcCompleted = Boolean(data?.qc && data.qc.status === 'completed');
 
   // UI state
   const [showChart, setShowChart] = useState(true);
@@ -223,6 +251,29 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
       alert(err instanceof Error ? err.message : String(err));
     } finally {
       setUpdatingWithTags(false);
+    }
+  };
+
+  // Trigger Two-Agent QC Workflow (Term Accuracy & Citation Verification)
+  const handleRunQc = async () => {
+    if (runningQc || generating) return;
+    setRunningQc(true);
+    try {
+      const url = `/api/dashboard/pv_profile/${encodeURIComponent(setId)}/qc${splId ? `?spl_id=${encodeURIComponent(splId)}` : ''}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || 'Failed to complete QC validation.');
+      }
+      const updatedData: PvProfileData = await res.json();
+      setData(updatedData);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRunningQc(false);
     }
   };
 
@@ -702,9 +753,31 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export CSV
           </button>
-          <button className="pv-btn pv-btn-primary" onClick={() => fetchProfile(true, true)} disabled={generating}>
-            {generating ? 'Re-analyzing...' : 'Re-analyze'}
-          </button>
+          {!isQcCompleted ? (
+            <button
+              type="button"
+              className="pv-btn pv-btn-qc-highlight"
+              onClick={handleRunQc}
+              disabled={runningQc || generating}
+              title="Run two-agent QC audit: verify AE term accuracy and citation grounding"
+            >
+              {runningQc ? (
+                <>
+                  <svg className="pv-spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="12"/></svg>
+                  <span>Running QC...</span>
+                </>
+              ) : (
+                <>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                  <span>Run QC Validation</span>
+                </>
+              )}
+            </button>
+          ) : (
+            <button className="pv-btn pv-btn-primary" onClick={() => fetchProfile(true, true)} disabled={generating}>
+              {generating ? 'Re-analyzing...' : 'Re-analyze'}
+            </button>
+          )}
           {isDevOrAdmin && (
             <button
               type="button"
@@ -1067,6 +1140,17 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                            {item.qc?.is_ambiguous && (
+                              <span
+                                className="pv-qc-flag"
+                                title={item.qc.note ? `QC Ambiguity Flag:\n${item.qc.note}` : 'QC Ambiguity Flag: Verification uncertain or context is ambiguous. Please manually check.'}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                                  <line x1="4" y1="22" x2="4" y2="15" />
+                                </svg>
+                              </span>
+                            )}
                             <button
                               type="button"
                               className={`pv-tag-btn ${feedbackMap[item.term.toLowerCase()] === 'not_ae' || feedbackMap[item.meddra_pt.toLowerCase()] === 'not_ae' ? 'active-not-ae' : ''}`}
@@ -1158,14 +1242,27 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                         <td style={{ color: '#475569' }}>{lt.soc_name}</td>
                         <td style={{ color: '#64748b' }}>{lt.section_name}</td>
                         <td style={{ textAlign: 'center' }}>
-                          <button
-                            type="button"
-                            className={`pv-tag-btn ${feedbackMap[lt.term.toLowerCase()] === 'is_ae' ? 'active-is-ae' : ''}`}
-                            title={feedbackMap[lt.term.toLowerCase()] === 'is_ae' ? 'Reported as Real AE by user. Click to undo.' : 'Report this candidate term as a Real AE'}
-                            onClick={() => handleToggleFeedback(lt.term, 'is_ae', lt)}
-                          >
-                            {feedbackMap[lt.term.toLowerCase()] === 'is_ae' ? '✓ Real AE' : '+ Tag as AE'}
-                          </button>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                            {lt.qc?.is_ambiguous && (
+                              <span
+                                className="pv-qc-flag pv-qc-flag-leftover"
+                                title={lt.qc.note ? `QC Ambiguity Flag:\n${lt.qc.note}` : 'QC Ambiguity Flag: Excluded candidate term flagged by QC for verification.'}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                                  <line x1="4" y1="22" x2="4" y2="15" />
+                                </svg>
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              className={`pv-tag-btn ${feedbackMap[lt.term.toLowerCase()] === 'is_ae' ? 'active-is-ae' : ''}`}
+                              title={feedbackMap[lt.term.toLowerCase()] === 'is_ae' ? 'Reported as Real AE by user. Click to undo.' : 'Report this candidate term as a Real AE'}
+                              onClick={() => handleToggleFeedback(lt.term, 'is_ae', lt)}
+                            >
+                              {feedbackMap[lt.term.toLowerCase()] === 'is_ae' ? '✓ Real AE' : '+ Tag as AE'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
