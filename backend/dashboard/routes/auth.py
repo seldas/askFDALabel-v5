@@ -2,7 +2,7 @@ import os
 import re
 from flask import Blueprint, request, jsonify
 from flask_login import login_user, login_required, logout_user, current_user
-from database import db, User, ROLE_USER
+from database import db, User, ROLE_USER, utc_now
 from dashboard.services import feature_gates
 from dashboard.services.rate_limiter import rate_limit
 import logging
@@ -35,6 +35,8 @@ def login():
         if hasattr(user, 'is_active') and getattr(user, 'is_active') is False:
             return jsonify({'success': False, 'error': 'Account has been deactivated. Please contact an administrator.'}), 401
             
+        user.last_login = utc_now()
+        db.session.commit()
         login_user(user)
         return jsonify({
             'success': True,

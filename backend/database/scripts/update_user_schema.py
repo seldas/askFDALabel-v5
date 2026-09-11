@@ -2,7 +2,6 @@
 from pathlib import Path
 import sys
 import os
-from dotenv import load_dotenv
 
 current_dir = Path(__file__).resolve().parent
 repo_root = current_dir
@@ -25,15 +24,24 @@ if os.path.exists('/data'):
 else:
     data_dir = repo_root / 'data'
 
-load_dotenv(dotenv_path=repo_root / '.env')
+try:
+    from dotenv import load_dotenv
+    load_dotenv(dotenv_path=repo_root / '.env')
+except ImportError:
+    env_file = repo_root / '.env'
+    if env_file.exists():
+        with open(env_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    k, v = line.split('=', 1)
+                    k = k.strip()
+                    v = v.strip().strip('"').strip("'")
+                    if k not in os.environ:
+                        os.environ[k] = v
 
-import os, re
+import re
 from sqlalchemy import text, create_engine
-
-# Add backend to path
-
-# Load environment variables
-load_dotenv(repo_root / '.env')
 
 def update_schema():
     print("=== Updating 'user' table schema ===")
@@ -47,13 +55,17 @@ def update_schema():
     engine = create_engine(db_url)
     
     columns_to_add = [
+        {"name": "role", "def": "VARCHAR(20) DEFAULT 'user'"},
+        {"name": "api_key", "def": "VARCHAR(64)"},
         {"name": "is_active", "def": "BOOLEAN DEFAULT TRUE"},
         {"name": "ai_provider", "def": "VARCHAR(20) DEFAULT 'gemini'"},
         {"name": "custom_gemini_key", "def": "VARCHAR(255)"},
         {"name": "openai_api_key", "def": "VARCHAR(255)"},
         {"name": "openai_base_url", "def": "VARCHAR(255)"},
         {"name": "openai_model_name", "def": "VARCHAR(100)"},
-        {"name": "ai_settings", "def": "TEXT"}
+        {"name": "ai_settings", "def": "TEXT"},
+        {"name": "created_at", "def": "TIMESTAMP WITHOUT TIME ZONE"},
+        {"name": "last_login", "def": "TIMESTAMP WITHOUT TIME ZONE"}
     ]
 
     try:
@@ -108,6 +120,16 @@ def update_schema():
                     print(f"Column '{col_name}' successfully added.")
                 else:
                     print(f"Column '{col_name}' already exists.")
+
+            # Backfill legacy users with created_at = '2026-01-01 00:00:00' where NULL
+            print("Checking for legacy users with NULL created_at...")
+            backfill_sql = text("UPDATE \"user\" SET created_at = '2026-01-01 00:00:00' WHERE created_at IS NULL;")
+            res = conn.execute(backfill_sql)
+            conn.commit()
+            if res.rowcount and res.rowcount > 0:
+                print(f"Successfully backfilled {res.rowcount} legacy user(s) with created_at = '2026-01-01 00:00:00'.")
+            else:
+                print("All users already have created_at set.")
                     
     except Exception as e:
         print(f"Error updating schema: {e}")

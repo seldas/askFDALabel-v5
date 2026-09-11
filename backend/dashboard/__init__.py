@@ -123,6 +123,15 @@ def ensure_user_schema():
             db.session.execute(text(
                 "UPDATE \"user\" SET role = 'admin' WHERE is_admin IS TRUE AND role = 'user';"
             ))
+            db.session.execute(text(
+                'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITHOUT TIME ZONE;'
+            ))
+            db.session.execute(text(
+                'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITHOUT TIME ZONE;'
+            ))
+            db.session.execute(text(
+                "UPDATE \"user\" SET created_at = '2026-01-01 00:00:00' WHERE created_at IS NULL;"
+            ))
             db.session.commit()
     except Exception as e:
         print(f"Schema check error (citext): {e}")

@@ -14,7 +14,8 @@ interface User {
   ai_provider: string;
   is_active?: boolean;
   api_key?: string;
-  created_at?: string;
+  created_at?: string | null;
+  last_login?: string | null;
 }
 
 export default function ManagementPage() {
@@ -23,6 +24,39 @@ export default function ManagementPage() {
 
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'user' | 'developer' | 'admin'>('all');
+  const [userStatusFilter, setUserStatusFilter] = useState<'all' | 'active' | 'deactivated'>('all');
+  const [userSortBy, setUserSortBy] = useState<'last_login_desc' | 'last_login_asc' | 'created_at_desc' | 'created_at_asc' | 'username_asc'>('last_login_desc');
+
+  const formatUserDate = (isoStr?: string | null) => {
+    if (!isoStr) return null;
+    try {
+      const normalized = isoStr.endsWith('Z') || isoStr.includes('+') ? isoStr : `${isoStr}Z`;
+      const d = new Date(normalized);
+      if (isNaN(d.getTime())) {
+        const d2 = new Date(isoStr);
+        if (isNaN(d2.getTime())) return isoStr;
+        return d2.toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+      return d.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return isoStr;
+    }
+  };
+
   const [activeTasks, setActiveTasks] = useState<Record<number, any>>({});
 
   const [selectedProvider, setSelectedProvider] = useState<string>('elsa');
@@ -1540,152 +1574,266 @@ export default function ManagementPage() {
                 </form>
                 )}
 
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1rem', marginTop: '1rem' }}>
+                  <div style={{ flex: '1 1 200px' }}>
+                    <input
+                      type="text"
+                      placeholder="Search by username..."
+                      value={userSearch}
+                      onChange={e => setUserSearch(e.target.value)}
+                      className="mgmt-input"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <select
+                    value={userRoleFilter}
+                    onChange={e => setUserRoleFilter(e.target.value as any)}
+                    className="mgmt-select"
+                    style={{ minWidth: '120px' }}
+                  >
+                    <option value="all">All Roles</option>
+                    <option value="user">User</option>
+                    <option value="developer">Developer</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <select
+                    value={userStatusFilter}
+                    onChange={e => setUserStatusFilter(e.target.value as any)}
+                    className="mgmt-select"
+                    style={{ minWidth: '130px' }}
+                  >
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="deactivated">Deactivated</option>
+                  </select>
+                  <select
+                    value={userSortBy}
+                    onChange={e => setUserSortBy(e.target.value as any)}
+                    className="mgmt-select"
+                    style={{ minWidth: '170px' }}
+                  >
+                    <option value="last_login_desc">Last Login (Newest)</option>
+                    <option value="last_login_asc">Last Login (Oldest)</option>
+                    <option value="created_at_desc">Created (Newest)</option>
+                    <option value="created_at_asc">Created (Oldest)</option>
+                    <option value="username_asc">Username (A-Z)</option>
+                  </select>
+                </div>
+
                 <div className="user-table-wrapper">
                   <table className="user-table">
                     <thead>
                       <tr>
                         <th>Username</th>
                         <th>Role</th>
+                        <th>Created</th>
+                        <th>Last Login</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {users.filter(u => session?.is_admin || u.id === session?.id).map(user => (
-                        <tr key={user.id} style={{ opacity: user.is_active === false ? 0.6 : 1 }}>
-                          <td>
-                            <div style={{ fontWeight: 700, color: 'var(--afl-n-800)' }}>{user.username}</div>
-                            {user.is_active === false && (
-                              <span style={{ fontSize: '0.65rem', background: 'var(--afl-danger-100)', color: 'var(--afl-danger-500)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>DEACTIVATED</span>
-                            )}
-                          </td>
-                          <td>
-                            <select
-                              value={user.role ?? (user.is_admin ? 'admin' : 'user')}
-                              onChange={e => handleUpdateRole(user.id, e.target.value)}
-                              className="mgmt-select"
-                              disabled={user.is_active === false || !session?.is_admin}
-                              title="Developer is User plus the labeling-database switch"
-                            >
-                              <option value="user">User</option>
-                              <option value="developer">Developer</option>
-                              <option value="admin">Admin</option>
-                            </select>
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <button
-                                onClick={() => { setEditingUserId(user.id); setEditPassword(''); }}
-                                className="btn-ghost"
-                                disabled={user.is_active === false}
+                      {(() => {
+                        const filtered = users
+                          .filter(u => session?.is_admin || u.id === session?.id)
+                          .filter(u => {
+                            if (userSearch.trim()) {
+                              const q = userSearch.toLowerCase();
+                              if (!u.username.toLowerCase().includes(q)) return false;
+                            }
+                            if (userRoleFilter !== 'all') {
+                              const r = u.role ?? (u.is_admin ? 'admin' : 'user');
+                              if (r !== userRoleFilter) return false;
+                            }
+                            if (userStatusFilter === 'active' && u.is_active === false) return false;
+                            if (userStatusFilter === 'deactivated' && u.is_active !== false) return false;
+                            return true;
+                          })
+                          .sort((a, b) => {
+                            if (userSortBy === 'username_asc') {
+                              return a.username.localeCompare(b.username);
+                            }
+                            if (userSortBy === 'created_at_desc') {
+                              return (b.created_at || '').localeCompare(a.created_at || '');
+                            }
+                            if (userSortBy === 'created_at_asc') {
+                              return (a.created_at || '').localeCompare(b.created_at || '');
+                            }
+                            if (userSortBy === 'last_login_asc') {
+                              if (!a.last_login && !b.last_login) return 0;
+                              if (!a.last_login) return 1;
+                              if (!b.last_login) return -1;
+                              return a.last_login.localeCompare(b.last_login);
+                            }
+                            // default: last_login_desc
+                            if (!a.last_login && !b.last_login) return (b.created_at || '').localeCompare(a.created_at || '');
+                            if (!a.last_login) return 1;
+                            if (!b.last_login) return -1;
+                            return b.last_login.localeCompare(a.last_login);
+                          });
+
+                        if (filtered.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--afl-n-400)' }}>
+                                No users found matching filters.
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return filtered.map(user => (
+                          <tr key={user.id} style={{ opacity: user.is_active === false ? 0.6 : 1 }}>
+                            <td>
+                              <div style={{ fontWeight: 700, color: 'var(--afl-n-800)' }}>{user.username}</div>
+                              {user.is_active === false && (
+                                <span style={{ fontSize: '0.65rem', background: 'var(--afl-danger-100)', color: 'var(--afl-danger-500)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>DEACTIVATED</span>
+                              )}
+                            </td>
+                            <td>
+                              <select
+                                value={user.role ?? (user.is_admin ? 'admin' : 'user')}
+                                onChange={e => handleUpdateRole(user.id, e.target.value)}
+                                className="mgmt-select"
+                                disabled={user.is_active === false || !session?.is_admin}
+                                title="Developer is User plus the labeling-database switch"
                               >
-                                Password
-                              </button>
-                              {session?.is_admin && (
+                                <option value="user">User</option>
+                                <option value="developer">Developer</option>
+                                <option value="admin">Admin</option>
+                              </select>
+                            </td>
+                            <td>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--afl-n-600)', whiteSpace: 'nowrap' }}>
+                                {formatUserDate(user.created_at) || '—'}
+                              </span>
+                            </td>
+                            <td>
+                              {user.last_login ? (
+                                <span style={{ fontSize: '0.8rem', color: 'var(--afl-n-700)', whiteSpace: 'nowrap' }}>
+                                  {formatUserDate(user.last_login)}
+                                </span>
+                              ) : (
+                                <span style={{ fontSize: '0.8rem', color: 'var(--afl-n-400)', fontStyle: 'italic' }}>
+                                  Never
+                                </span>
+                              )}
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '8px' }}>
                                 <button
-                                  onClick={() => {
-                                    if (editingUserModelId === user.id) {
-                                      setEditingUserModelId(null);
-                                    } else {
-                                      setEditingUserModelId(user.id);
-                                      setSelectedUserModelProvider(user.ai_provider || 'elsa');
-                                    }
-                                  }}
+                                  onClick={() => { setEditingUserId(user.id); setEditPassword(''); }}
                                   className="btn-ghost"
                                   disabled={user.is_active === false}
                                 >
-                                  AI Model ({user.ai_provider?.toUpperCase() || 'ELSA'})
+                                  Password
                                 </button>
-                              )}
-                              {session?.is_admin && (
-                                <>
-                                  {user.is_active !== false ? (
-                                    <button
-                                      onClick={() => handleToggleActive(user.id, false)}
-                                      className="btn-ghost"
-                                      style={{ color: 'var(--afl-warn-700)', borderColor: 'var(--afl-warn-500)', backgroundColor: 'var(--afl-warn-50)' }}
-                                    >
-                                      Deactivate
-                                    </button>
-                                  ) : (
-                                    <>
+                                {session?.is_admin && (
+                                  <button
+                                    onClick={() => {
+                                      if (editingUserModelId === user.id) {
+                                        setEditingUserModelId(null);
+                                      } else {
+                                        setEditingUserModelId(user.id);
+                                        setSelectedUserModelProvider(user.ai_provider || 'elsa');
+                                      }
+                                    }}
+                                    className="btn-ghost"
+                                    disabled={user.is_active === false}
+                                  >
+                                    AI Model ({user.ai_provider?.toUpperCase() || 'ELSA'})
+                                  </button>
+                                )}
+                                {session?.is_admin && (
+                                  <>
+                                    {user.is_active !== false ? (
                                       <button
-                                        onClick={() => handleToggleActive(user.id, true)}
+                                        onClick={() => handleToggleActive(user.id, false)}
                                         className="btn-ghost"
-                                        style={{ color: 'var(--afl-success-700)', borderColor: 'var(--afl-success-500)', backgroundColor: 'var(--afl-success-50)' }}
+                                        style={{ color: 'var(--afl-warn-700)', borderColor: 'var(--afl-warn-500)', backgroundColor: 'var(--afl-warn-50)' }}
                                       >
-                                        Reactivate
+                                        Deactivate
                                       </button>
-                                      <button
-                                        onClick={() => handleDeleteUser(user.id)}
-                                        className="btn-danger-ghost"
-                                      >
-                                        Delete
-                                      </button>
-                                    </>
-                                  )}
-                                </>
+                                    ) : (
+                                      <>
+                                        <button
+                                          onClick={() => handleToggleActive(user.id, true)}
+                                          className="btn-ghost"
+                                          style={{ color: 'var(--afl-success-700)', borderColor: 'var(--afl-success-500)', backgroundColor: 'var(--afl-success-50)' }}
+                                        >
+                                          Reactivate
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteUser(user.id)}
+                                          className="btn-danger-ghost"
+                                        >
+                                          Delete
+                                        </button>
+                                      </>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                              {editingUserId === user.id && (
+                                <div style={{ marginTop: '8px', display: 'flex', gap: '5px' }}>
+                                  <input
+                                    type="password"
+                                    placeholder="New password"
+                                    value={editPassword}
+                                    onChange={e => setEditPassword(e.target.value)}
+                                    className="mgmt-input-sm"
+                                  />
+                                  <button onClick={() => handleChangePassword(user.id)} className="btn-primary-sm">Save</button>
+                                </div>
                               )}
-                            </div>
-                            {editingUserId === user.id && (
-                              <div style={{ marginTop: '8px', display: 'flex', gap: '5px' }}>
-                                <input
-                                  type="password"
-                                  placeholder="New password"
-                                  value={editPassword}
-                                  onChange={e => setEditPassword(e.target.value)}
-                                  className="mgmt-input-sm"
-                                />
-                                <button onClick={() => handleChangePassword(user.id)} className="btn-primary-sm">Save</button>
-                              </div>
-                            )}
-                            {editingUserModelId === user.id && (
-                              <div style={{ 
-                                  marginTop: '8px', 
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  gap: '8px',
-                                  background: 'var(--afl-n-50)',
-                                  padding: '8px 12px',
-                                  borderRadius: '8px',
-                                  border: '1px solid var(--afl-n-200)',
-                                  maxWidth: 'fit-content'
-                              }}>
-                                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>
-                                  Set Model:
-                                </span>
-                                <select
-                                  value={selectedUserModelProvider}
-                                  onChange={e => setSelectedUserModelProvider(e.target.value)}
-                                  className="mgmt-select-sm"
-                                  style={{ 
-                                      padding: '2px 6px', 
-                                      borderRadius: '4px', 
-                                      border: '1px solid var(--afl-n-300)',
-                                      fontSize: '0.75rem',
-                                      fontWeight: 600,
-                                      background: 'white'
-                                  }}
-                                >
-                                  <option value="elsa">ELSA</option>
-                                  {!session?.is_internal && (!session?.allowed_ai_providers || session.allowed_ai_providers.includes('gemini')) && (
-                                    <option value="gemini">Gemini</option>
-                                  )}
-                                  <option value="vllm">vLLM</option>
-                                  <option value="ollama">Ollama</option>
-                                </select>
-                                <button 
-                                  onClick={() => handleSaveUserModel(user.id, selectedUserModelProvider)} 
-                                  className="btn-primary-sm"
-                                  style={{ fontSize: '0.7rem', padding: '4px 10px', minHeight: 'auto' }}
-                                  disabled={savingUserModel}
-                                >
-                                  {savingUserModel ? 'Saving...' : 'Save'}
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                              {editingUserModelId === user.id && (
+                                <div style={{ 
+                                    marginTop: '8px', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '8px',
+                                    background: 'var(--afl-n-50)',
+                                    padding: '8px 12px',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--afl-n-200)',
+                                    maxWidth: 'fit-content'
+                                }}>
+                                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>
+                                    Set Model:
+                                  </span>
+                                  <select
+                                    value={selectedUserModelProvider}
+                                    onChange={e => setSelectedUserModelProvider(e.target.value)}
+                                    className="mgmt-select-sm"
+                                    style={{ 
+                                        padding: '2px 6px', 
+                                        borderRadius: '4px', 
+                                        border: '1px solid var(--afl-n-300)',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 600,
+                                        background: 'white'
+                                    }}
+                                  >
+                                    <option value="elsa">ELSA</option>
+                                    {!session?.is_internal && (!session?.allowed_ai_providers || session.allowed_ai_providers.includes('gemini')) && (
+                                      <option value="gemini">Gemini</option>
+                                    )}
+                                    <option value="vllm">vLLM</option>
+                                    <option value="ollama">Ollama</option>
+                                  </select>
+                                  <button 
+                                    onClick={() => handleSaveUserModel(user.id, selectedUserModelProvider)} 
+                                    className="btn-primary-sm"
+                                    style={{ fontSize: '0.7rem', padding: '4px 10px', minHeight: 'auto' }}
+                                    disabled={savingUserModel}
+                                  >
+                                    {savingUserModel ? 'Saving...' : 'Save'}
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ));
+                      })()}
                     </tbody>
                   </table>
                 </div>

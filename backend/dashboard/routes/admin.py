@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
-from database import db, User, SystemTask, ROLES, ROLE_USER
+from database import db, User, SystemTask, ROLES, ROLE_USER, utc_now
 from dashboard.services.task_service import TaskService
 from dashboard.services.data_files import FILE_TYPES, archive_and_replace, file_status, prepare_for_update, spec
 from functools import wraps
@@ -38,7 +38,9 @@ def get_users():
             'can_select_db': u.can_select_database,
             'has_developer_access': u.has_developer_access,
             'ai_provider': u.ai_provider,
-            'is_active': getattr(u, 'is_active', True)
+            'is_active': getattr(u, 'is_active', True),
+            'created_at': u.created_at.isoformat() if getattr(u, 'created_at', None) else None,
+            'last_login': u.last_login.isoformat() if getattr(u, 'last_login', None) else None
         } for u in users]
     })
 
@@ -63,7 +65,7 @@ def create_user():
     if User.query.filter(db.func.lower(User.username) == username.lower()).first():
         return jsonify({'success': False, 'error': 'Username already exists'}), 400
 
-    new_user = User(username=username)
+    new_user = User(username=username, created_at=utc_now())
     new_user.set_role(role)
     new_user.set_password(password)
     db.session.add(new_user)
