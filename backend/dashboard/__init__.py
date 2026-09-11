@@ -72,6 +72,7 @@ def create_app(config_class=Config):
             except Exception as e:
                 print(f"Error initializing database extension/schema: {e}")
                 db.session.rollback()
+        ensure_user_pk()
         db.create_all()
         ensure_user_schema()
         migrate_projects()
@@ -80,6 +81,55 @@ def create_app(config_class=Config):
         check_meddra_data()
 
     return app
+
+def ensure_user_pk():
+    """Ensure user table has a PRIMARY KEY or UNIQUE constraint on id before create_all runs."""
+    try:
+        from sqlalchemy import text
+        dialect = db.engine.dialect.name
+        if dialect == 'postgresql':
+            exists = db.session.execute(text("""
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.tables 
+                    WHERE table_schema = current_schema() AND table_name = 'user'
+                );
+            """)).scalar()
+            if not exists:
+                return
+
+            has_pk_or_uniq = db.session.execute(text("""
+                SELECT c.conname
+                FROM pg_constraint c
+                JOIN pg_class t ON c.conrelid = t.oid
+                JOIN pg_namespace n ON t.relnamespace = n.oid
+                JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(c.conkey)
+                WHERE n.nspname = current_schema()
+                  AND t.relname = 'user'
+                  AND c.contype IN ('p', 'u')
+                  AND a.attname = 'id';
+            """)).fetchone()
+
+            if not has_pk_or_uniq:
+                print("[User] 'user' table is missing PRIMARY KEY or UNIQUE constraint on 'id'. Adding it now...")
+                db.session.execute(text('ALTER TABLE "user" ALTER COLUMN id SET NOT NULL;'))
+                has_pk = db.session.execute(text("""
+                    SELECT c.conname
+                    FROM pg_constraint c
+                    JOIN pg_class t ON c.conrelid = t.oid
+                    JOIN pg_namespace n ON t.relnamespace = n.oid
+                    WHERE n.nspname = current_schema()
+                      AND t.relname = 'user'
+                      AND c.contype = 'p';
+                """)).scalar()
+                if not has_pk:
+                    db.session.execute(text('ALTER TABLE "user" ADD CONSTRAINT user_pkey PRIMARY KEY (id);'))
+                else:
+                    db.session.execute(text('ALTER TABLE "user" ADD CONSTRAINT user_id_key UNIQUE (id);'))
+                db.session.commit()
+                print("[User] Successfully repaired 'user' table constraint on 'id'.")
+    except Exception as e:
+        print(f"[User] Note ensuring user pk constraint: {e}")
+        db.session.rollback()
 
 def ensure_user_schema():
     """Ensure user table has citext for username and columns are up to date."""

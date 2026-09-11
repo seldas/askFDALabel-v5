@@ -70,6 +70,168 @@ def get_pg_type(column):
     
     return type_str
 
+def ensure_core_constraints(engine):
+    """
+    Validates and ensures that referenced core tables (especially public."user")
+    have a PRIMARY KEY or UNIQUE constraint on their primary key columns
+    BEFORE db.metadata.create_all() attempts to create foreign keys referencing them.
+    This prevents PostgreSQL error:
+    "there is no unique constraint matching given keys for referenced table 'user'"
+    """
+    core_tables = [
+        ('public', 'user', 'id'),
+        ('public', 'project', 'id'),
+        ('public', 'examine_prompts', 'id'),
+    ]
+
+    try:
+        with engine.connect() as conn:
+            for schema_name, table_name, pk_col in core_tables:
+                # 1. Check if table exists
+                check_table = text("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM information_schema.tables 
+                        WHERE table_schema = :schema AND table_name = :table
+                    );
+                """)
+                exists = conn.execute(check_table, {"schema": schema_name, "table": table_name}).scalar()
+                if not exists:
+                    continue
+
+                # 2. Check if column exists
+                check_col = text("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_schema = :schema AND table_name = :table AND column_name = :col
+                    );
+                """)
+                col_exists = conn.execute(check_col, {"schema": schema_name, "table": table_name, "col": pk_col}).scalar()
+                if not col_exists:
+                    continue
+
+                # 3. Check if a PK or UNIQUE constraint covers pk_col
+                check_constraint = text("""
+                    SELECT c.conname, c.contype
+                    FROM pg_constraint c
+                    JOIN pg_class t ON c.conrelid = t.oid
+                    JOIN pg_namespace n ON t.relnamespace = n.oid
+                    JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(c.conkey)
+                    WHERE n.nspname = :schema
+                      AND t.relname = :table
+                      AND c.contype IN ('p', 'u')
+                      AND a.attname = :col;
+                """)
+                constraints = conn.execute(check_constraint, {
+                    "schema": schema_name, 
+                    "table": table_name, 
+                    "col": pk_col
+                }).fetchall()
+
+                if constraints:
+                    continue
+
+                print(f"  [*] Table '{schema_name}.{table_name}' exists but is missing PRIMARY KEY / UNIQUE constraint on '{pk_col}'. Repairing...")
+
+                # Clean up NULLs if any
+                null_count = conn.execute(text(f"""
+                    SELECT COUNT(*) FROM "{schema_name}"."{table_name}" WHERE "{pk_col}" IS NULL;
+                """)).scalar() or 0
+                if null_count > 0:
+                    print(f"      Repairing {null_count} row(s) with NULL {pk_col} in {schema_name}.{table_name}...")
+                    conn.execute(text(f"""
+                        WITH max_val AS (
+                            SELECT COALESCE(MAX("{pk_col}"), 0) AS m 
+                            FROM "{schema_name}"."{table_name}" 
+                            WHERE "{pk_col}" IS NOT NULL
+                        ),
+                        numbered AS (
+                            SELECT ctid, ROW_NUMBER() OVER () as rnum 
+                            FROM "{schema_name}"."{table_name}" 
+                            WHERE "{pk_col}" IS NULL
+                        )
+                        UPDATE "{schema_name}"."{table_name}" t
+                        SET "{pk_col}" = max_val.m + numbered.rnum
+                        FROM numbered, max_val
+                        WHERE t.ctid = numbered.ctid;
+                    """))
+                    conn.commit()
+
+                # Clean up duplicates if any
+                dup_count = conn.execute(text(f"""
+                    SELECT COUNT(*) FROM (
+                        SELECT "{pk_col}" FROM "{schema_name}"."{table_name}" 
+                        GROUP BY "{pk_col}" HAVING COUNT(*) > 1
+                    ) sub;
+                """)).scalar() or 0
+                if dup_count > 0:
+                    print(f"      Repairing duplicate {pk_col} values in {schema_name}.{table_name}...")
+                    conn.execute(text(f"""
+                        WITH duplicates AS (
+                            SELECT ctid, "{pk_col}", ROW_NUMBER() OVER (PARTITION BY "{pk_col}" ORDER BY ctid) as rn
+                            FROM "{schema_name}"."{table_name}"
+                        ),
+                        max_val AS (SELECT COALESCE(MAX("{pk_col}"), 0) AS m FROM "{schema_name}"."{table_name}"),
+                        to_update AS (
+                            SELECT ctid, ROW_NUMBER() OVER () as offset_val
+                            FROM duplicates
+                            WHERE rn > 1
+                        )
+                        UPDATE "{schema_name}"."{table_name}" t
+                        SET "{pk_col}" = max_val.m + to_update.offset_val
+                        FROM to_update, max_val
+                        WHERE t.ctid = to_update.ctid;
+                    """))
+                    conn.commit()
+
+                # Ensure NOT NULL
+                try:
+                    conn.execute(text(f'ALTER TABLE "{schema_name}"."{table_name}" ALTER COLUMN "{pk_col}" SET NOT NULL;'))
+                    conn.commit()
+                except Exception as e:
+                    print(f"      [!] Note on setting NOT NULL: {e}")
+                    conn.rollback()
+
+                # Check if table already has another primary key
+                has_any_pk = conn.execute(text("""
+                    SELECT c.conname
+                    FROM pg_constraint c
+                    JOIN pg_class t ON c.conrelid = t.oid
+                    JOIN pg_namespace n ON t.relnamespace = n.oid
+                    WHERE n.nspname = :schema
+                      AND t.relname = :table
+                      AND c.contype = 'p';
+                """), {"schema": schema_name, "table": table_name}).scalar()
+
+                try:
+                    if not has_any_pk:
+                        pk_name = f"{table_name}_pkey"
+                        conn.execute(text(f'ALTER TABLE "{schema_name}"."{table_name}" ADD CONSTRAINT "{pk_name}" PRIMARY KEY ("{pk_col}");'))
+                        print(f"      [+] Added PRIMARY KEY constraint '{pk_name}' on {schema_name}.{table_name}({pk_col}).")
+                    else:
+                        uniq_name = f"{table_name}_{pk_col}_key"
+                        conn.execute(text(f'ALTER TABLE "{schema_name}"."{table_name}" ADD CONSTRAINT "{uniq_name}" UNIQUE ("{pk_col}");'))
+                        print(f"      [+] Added UNIQUE constraint '{uniq_name}' on {schema_name}.{table_name}({pk_col}).")
+                    conn.commit()
+                except Exception as e:
+                    print(f"      [!] Error adding PK/UNIQUE constraint to {schema_name}.{table_name}: {e}")
+                    conn.rollback()
+
+                # Sync sequence if exists
+                try:
+                    seq_res = conn.execute(text(f"""
+                        SELECT pg_get_serial_sequence('"{schema_name}"."{table_name}"', '{pk_col}');
+                    """)).scalar()
+                    if seq_res:
+                        conn.execute(text(f"""
+                            SELECT setval(:seq, COALESCE((SELECT MAX("{pk_col}") FROM "{schema_name}"."{table_name}"), 0) + 1, false);
+                        """), {"seq": seq_res})
+                        conn.commit()
+                except Exception:
+                    pass
+
+    except Exception as e:
+        print(f"  [!] Note during constraint validation: {e}")
+
 def sync_schema():
     print("=== Database Schema Sync Tool (Targetable) ===")
     
@@ -126,6 +288,10 @@ def sync_schema():
             
     engine = create_engine(db_url)
     
+    # 0. Pre-validate constraints on referenced tables (e.g. 'user' primary key)
+    print("[0/2] Validating core table constraints (e.g. 'user' primary key)...")
+    ensure_core_constraints(engine)
+
     # 1. Create missing tables
     print("[1/2] Creating missing tables...")
     db.metadata.create_all(engine)
