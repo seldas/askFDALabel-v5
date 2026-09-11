@@ -58,6 +58,7 @@ data.tar.gz
 data.tar
 backend/webtest/history/History_Testing_Template_11152022.xlsx
 deploy/*.tar.gz
+deploy/rapid_migration/*.tar.gz
 docker-compose.yml
 
 ./archive/
