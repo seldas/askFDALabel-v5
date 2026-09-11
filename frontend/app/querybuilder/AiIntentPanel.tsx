@@ -251,22 +251,22 @@ export function AiIntentPanel({
       aria-label="Natural Language Query Assistant"
       style={{
         borderRadius: '10px',
-        border: '1px solid #cbd5e1',
-        borderTop: '3px solid #002e5d',
-        background: '#ffffff',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-        padding: '20px 22px',
-        marginBottom: '18px',
+        border: '1px solid #bfdbfe',
+        borderTop: '4px solid #002e5d',
+        background: 'linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%)',
+        boxShadow: '0 4px 16px -2px rgba(0, 46, 93, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.03)',
+        padding: '22px 24px',
+        marginBottom: '20px',
         position: 'relative',
       }}
     >
       <div className="fdl-ai__head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '9px', flexWrap: 'wrap' }}>
             <div
               style={{
-                width: '26px',
-                height: '26px',
+                width: '30px',
+                height: '30px',
                 borderRadius: '6px',
                 background: '#002e5d',
                 color: '#ffffff',
@@ -274,11 +274,12 @@ export function AiIntentPanel({
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
+                boxShadow: '0 2px 5px rgba(0, 46, 93, 0.25)',
               }}
             >
-              <AssistantIcon size={15} />
+              <AssistantIcon size={16} />
             </div>
-            <h2 className="fdl-ai__title" style={{ fontSize: '1.15rem', color: '#0f172a', fontWeight: 800, margin: 0 }}>
+            <h2 className="fdl-ai__title" style={{ fontSize: '1.2rem', color: '#002e5d', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>
               Query Assistant
             </h2>
             <span
@@ -287,18 +288,17 @@ export function AiIntentPanel({
                 fontWeight: 700,
                 textTransform: 'uppercase',
                 letterSpacing: '0.04em',
-                background: '#e0f2fe',
-                color: '#0369a1',
-                border: '1px solid #bae6fd',
+                background: '#002e5d',
+                color: '#ffffff',
                 padding: '2px 8px',
                 borderRadius: '4px',
               }}
             >
-              Natural Language to Criteria
+              Natural Language Console
             </span>
           </div>
           {!isFolded && (
-            <p className="fdl-ai__lede" style={{ color: '#64748b', fontSize: '0.84rem', marginTop: '6px', lineHeight: 1.45, maxWidth: '960px' }}>
+            <p className="fdl-ai__lede" style={{ color: '#475569', fontSize: '0.84rem', marginTop: '6px', lineHeight: 1.45, maxWidth: '960px' }}>
               Enter clinical intent, active ingredients, application categories, or MedDRA adverse events in plain English. The query assistant maps terminology and translates your input into structured criteria below for verification before execution.
             </p>
           )}
@@ -308,7 +308,7 @@ export function AiIntentPanel({
           type="button"
           onClick={() => setIsFolded(!isFolded)}
           style={{
-            background: '#f8fafc',
+            background: '#ffffff',
             color: '#334155',
             border: '1px solid #cbd5e1',
             borderRadius: '6px',
@@ -321,6 +321,7 @@ export function AiIntentPanel({
             gap: '6px',
             transition: 'all 0.15s ease',
             whiteSpace: 'nowrap',
+            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
           }}
         >
           <span>{isFolded ? 'Expand Assistant' : 'Collapse'}</span>
@@ -330,7 +331,7 @@ export function AiIntentPanel({
 
       {!isFolded && (
         <>
-          <div className="fdl-ai__field" style={{ marginTop: '14px', display: 'flex', gap: '10px' }}>
+          <div className="fdl-ai__field" style={{ marginTop: '16px', display: 'flex', gap: '10px' }}>
             <textarea
               className="fdl-ai__input"
               rows={2}
@@ -346,9 +347,12 @@ export function AiIntentPanel({
               }}
               style={{
                 borderRadius: '6px',
-                borderColor: '#cbd5e1',
-                padding: '8px 12px',
-                fontSize: '0.88rem',
+                borderColor: '#94a3b8',
+                background: '#ffffff',
+                padding: '10px 14px',
+                fontSize: '0.9rem',
+                boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.04)',
+                lineHeight: 1.45,
               }}
             />
             <button
@@ -357,7 +361,7 @@ export function AiIntentPanel({
               disabled={disabled || busy || !intent.trim()}
               onClick={() => translate(intent)}
               style={{
-                minWidth: busy ? '160px' : '130px',
+                minWidth: busy ? '160px' : '136px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -366,27 +370,29 @@ export function AiIntentPanel({
                 borderColor: '#005a96',
                 color: '#ffffff',
                 fontWeight: 700,
+                fontSize: '0.88rem',
                 borderRadius: '6px',
-                boxShadow: 'none',
+                boxShadow: '0 2px 6px rgba(0, 113, 188, 0.25)',
+                transition: 'all 0.15s ease',
               }}
             >
               {busy ? (
                 <>
-                  <SpinnerIcon size={15} />
+                  <SpinnerIcon size={16} />
                   <span>Parsing ({formatElapsed(elapsedSeconds)})</span>
                 </>
               ) : (
                 <>
-                  <AssistantIcon size={15} />
+                  <AssistantIcon size={16} />
                   <span>Build Criteria</span>
                 </>
               )}
             </button>
           </div>
 
-          <div className="fdl-ai__examples" style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Examples:
+          <div className="fdl-ai__examples" style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#002e5d', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Suggested Queries:
             </span>
             {EXAMPLES.map((ex) => (
               <button
@@ -401,12 +407,15 @@ export function AiIntentPanel({
                 title={ex.prompt}
                 style={{
                   fontSize: '0.8rem',
-                  color: '#0284c7',
+                  color: '#005ea2',
                   textDecoration: 'none',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  padding: '3px 9px',
-                  borderRadius: '4px',
+                  background: '#ffffff',
+                  border: '1px solid #bfdbfe',
+                  padding: '3px 10px',
+                  borderRadius: '14px',
+                  fontWeight: 600,
+                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
+                  transition: 'all 0.15s ease',
                 }}
               >
                 {ex.display}
