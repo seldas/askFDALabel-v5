@@ -28,6 +28,7 @@ export default function ManagementPage() {
   const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'user' | 'developer' | 'admin'>('all');
   const [userStatusFilter, setUserStatusFilter] = useState<'all' | 'active' | 'deactivated'>('all');
   const [userSortBy, setUserSortBy] = useState<'last_login_desc' | 'last_login_asc' | 'created_at_desc' | 'created_at_asc' | 'username_asc'>('last_login_desc');
+  const [managingUser, setManagingUser] = useState<User | null>(null);
 
   const formatUserDate = (isoStr?: string | null) => {
     if (!isoStr) return null;
@@ -1624,11 +1625,10 @@ export default function ManagementPage() {
                   <table className="user-table">
                     <thead>
                       <tr>
-                        <th>Username</th>
-                        <th>Role</th>
-                        <th>Created</th>
-                        <th>Last Login</th>
-                        <th>Actions</th>
+                        <th style={{ width: '38%' }}>User</th>
+                        <th style={{ width: '24%' }}>Role</th>
+                        <th style={{ width: '24%' }}>Last Login</th>
+                        <th style={{ width: '14%', textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1674,7 +1674,7 @@ export default function ManagementPage() {
                         if (filtered.length === 0) {
                           return (
                             <tr>
-                              <td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--afl-n-400)' }}>
+                              <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: 'var(--afl-n-400)' }}>
                                 No users found matching filters.
                               </td>
                             </tr>
@@ -1684,10 +1684,13 @@ export default function ManagementPage() {
                         return filtered.map(user => (
                           <tr key={user.id} style={{ opacity: user.is_active === false ? 0.6 : 1 }}>
                             <td>
-                              <div style={{ fontWeight: 700, color: 'var(--afl-n-800)' }}>{user.username}</div>
+                              <div style={{ fontWeight: 700, color: 'var(--afl-n-800)', fontSize: '0.9rem' }}>{user.username}</div>
                               {user.is_active === false && (
-                                <span style={{ fontSize: '0.65rem', background: 'var(--afl-danger-100)', color: 'var(--afl-danger-500)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>DEACTIVATED</span>
+                                <span style={{ fontSize: '0.65rem', background: 'var(--afl-danger-100)', color: 'var(--afl-danger-500)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, marginTop: '2px', display: 'inline-block' }}>DEACTIVATED</span>
                               )}
+                              <div style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)', marginTop: '2px' }}>
+                                Joined {formatUserDate(user.created_at) || '—'}
+                              </div>
                             </td>
                             <td>
                               <select
@@ -1696,6 +1699,7 @@ export default function ManagementPage() {
                                 className="mgmt-select"
                                 disabled={user.is_active === false || !session?.is_admin}
                                 title="Developer is User plus the labeling-database switch"
+                                style={{ width: '100%', maxWidth: '140px' }}
                               >
                                 <option value="user">User</option>
                                 <option value="developer">Developer</option>
@@ -1703,133 +1707,28 @@ export default function ManagementPage() {
                               </select>
                             </td>
                             <td>
-                              <span style={{ fontSize: '0.8rem', color: 'var(--afl-n-600)', whiteSpace: 'nowrap' }}>
-                                {formatUserDate(user.created_at) || '—'}
-                              </span>
-                            </td>
-                            <td>
                               {user.last_login ? (
-                                <span style={{ fontSize: '0.8rem', color: 'var(--afl-n-700)', whiteSpace: 'nowrap' }}>
+                                <span style={{ fontSize: '0.85rem', color: 'var(--afl-n-700)', whiteSpace: 'nowrap' }}>
                                   {formatUserDate(user.last_login)}
                                 </span>
                               ) : (
-                                <span style={{ fontSize: '0.8rem', color: 'var(--afl-n-400)', fontStyle: 'italic' }}>
+                                <span style={{ fontSize: '0.85rem', color: 'var(--afl-n-400)', fontStyle: 'italic' }}>
                                   Never
                                 </span>
                               )}
                             </td>
-                            <td>
-                              <div style={{ display: 'flex', gap: '8px' }}>
-                                <button
-                                  onClick={() => { setEditingUserId(user.id); setEditPassword(''); }}
-                                  className="btn-ghost"
-                                  disabled={user.is_active === false}
-                                >
-                                  Password
-                                </button>
-                                {session?.is_admin && (
-                                  <button
-                                    onClick={() => {
-                                      if (editingUserModelId === user.id) {
-                                        setEditingUserModelId(null);
-                                      } else {
-                                        setEditingUserModelId(user.id);
-                                        setSelectedUserModelProvider(user.ai_provider || 'elsa');
-                                      }
-                                    }}
-                                    className="btn-ghost"
-                                    disabled={user.is_active === false}
-                                  >
-                                    AI Model ({user.ai_provider?.toUpperCase() || 'ELSA'})
-                                  </button>
-                                )}
-                                {session?.is_admin && (
-                                  <>
-                                    {user.is_active !== false ? (
-                                      <button
-                                        onClick={() => handleToggleActive(user.id, false)}
-                                        className="btn-ghost"
-                                        style={{ color: 'var(--afl-warn-700)', borderColor: 'var(--afl-warn-500)', backgroundColor: 'var(--afl-warn-50)' }}
-                                      >
-                                        Deactivate
-                                      </button>
-                                    ) : (
-                                      <>
-                                        <button
-                                          onClick={() => handleToggleActive(user.id, true)}
-                                          className="btn-ghost"
-                                          style={{ color: 'var(--afl-success-700)', borderColor: 'var(--afl-success-500)', backgroundColor: 'var(--afl-success-50)' }}
-                                        >
-                                          Reactivate
-                                        </button>
-                                        <button
-                                          onClick={() => handleDeleteUser(user.id)}
-                                          className="btn-danger-ghost"
-                                        >
-                                          Delete
-                                        </button>
-                                      </>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                              {editingUserId === user.id && (
-                                <div style={{ marginTop: '8px', display: 'flex', gap: '5px' }}>
-                                  <input
-                                    type="password"
-                                    placeholder="New password"
-                                    value={editPassword}
-                                    onChange={e => setEditPassword(e.target.value)}
-                                    className="mgmt-input-sm"
-                                  />
-                                  <button onClick={() => handleChangePassword(user.id)} className="btn-primary-sm">Save</button>
-                                </div>
-                              )}
-                              {editingUserModelId === user.id && (
-                                <div style={{ 
-                                    marginTop: '8px', 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: '8px',
-                                    background: 'var(--afl-n-50)',
-                                    padding: '8px 12px',
-                                    borderRadius: '8px',
-                                    border: '1px solid var(--afl-n-200)',
-                                    maxWidth: 'fit-content'
-                                }}>
-                                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>
-                                    Set Model:
-                                  </span>
-                                  <select
-                                    value={selectedUserModelProvider}
-                                    onChange={e => setSelectedUserModelProvider(e.target.value)}
-                                    className="mgmt-select-sm"
-                                    style={{ 
-                                        padding: '2px 6px', 
-                                        borderRadius: '4px', 
-                                        border: '1px solid var(--afl-n-300)',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 600,
-                                        background: 'white'
-                                    }}
-                                  >
-                                    <option value="elsa">ELSA</option>
-                                    {!session?.is_internal && (!session?.allowed_ai_providers || session.allowed_ai_providers.includes('gemini')) && (
-                                      <option value="gemini">Gemini</option>
-                                    )}
-                                    <option value="vllm">vLLM</option>
-                                    <option value="ollama">Ollama</option>
-                                  </select>
-                                  <button 
-                                    onClick={() => handleSaveUserModel(user.id, selectedUserModelProvider)} 
-                                    className="btn-primary-sm"
-                                    style={{ fontSize: '0.7rem', padding: '4px 10px', minHeight: 'auto' }}
-                                    disabled={savingUserModel}
-                                  >
-                                    {savingUserModel ? 'Saving...' : 'Save'}
-                                  </button>
-                                </div>
-                              )}
+                            <td style={{ textAlign: 'right' }}>
+                              <button
+                                onClick={() => {
+                                  setManagingUser(user);
+                                  setEditPassword('');
+                                  setSelectedUserModelProvider(user.ai_provider || 'elsa');
+                                }}
+                                className="btn-ghost"
+                                style={{ padding: '6px 14px', fontWeight: 600, fontSize: '0.8rem' }}
+                              >
+                                Manage
+                              </button>
                             </td>
                           </tr>
                         ));
@@ -3223,6 +3122,145 @@ else:
             </div>
             <div style={{ padding: '16px 24px', borderTop: '1px solid var(--afl-n-200)', display: 'flex', justifyContent: 'flex-end', background: 'var(--afl-n-50)', borderRadius: '0 0 16px 16px' }}>
               <button onClick={() => setIsTokenModalOpen(false)} className="btn-primary">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Manage User Modal */}
+      {managingUser && (
+        <div className="modal-overlay" onClick={() => setManagingUser(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px', width: '90%', padding: '2rem', borderRadius: '16px', background: 'white' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', borderBottom: '1px solid var(--afl-n-200)', paddingBottom: '1rem' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--afl-n-900)', fontWeight: 800 }}>
+                  Manage Account: {managingUser.username}
+                </h3>
+                <div style={{ fontSize: '0.8rem', color: 'var(--afl-n-500)', marginTop: '4px' }}>
+                  Role: <strong style={{ textTransform: 'capitalize' }}>{managingUser.role || (managingUser.is_admin ? 'Admin' : 'User')}</strong>
+                  {' • '}
+                  Joined: {formatUserDate(managingUser.created_at) || '—'}
+                </div>
+              </div>
+              <button 
+                onClick={() => setManagingUser(null)} 
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--afl-n-400)', padding: '4px 8px' }}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Password Section */}
+              <div style={{ background: 'var(--afl-n-50)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--afl-n-200)' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-800)', marginBottom: '0.5rem' }}>
+                  Reset Password
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="password"
+                    placeholder="Enter new password"
+                    value={editPassword}
+                    onChange={e => setEditPassword(e.target.value)}
+                    className="mgmt-input"
+                    disabled={managingUser.is_active === false}
+                  />
+                  <button
+                    onClick={async () => {
+                      await handleChangePassword(managingUser.id);
+                    }}
+                    className="btn-primary"
+                    disabled={!editPassword || managingUser.is_active === false}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+
+              {/* AI Model Section (Admin Only) */}
+              {session?.is_admin && (
+                <div style={{ background: 'var(--afl-n-50)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--afl-n-200)' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-800)', marginBottom: '0.5rem' }}>
+                    Assigned Model Provider
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <select
+                      value={selectedUserModelProvider}
+                      onChange={e => setSelectedUserModelProvider(e.target.value)}
+                      className="mgmt-select"
+                      style={{ flex: 1 }}
+                      disabled={managingUser.is_active === false}
+                    >
+                      <option value="elsa">ELSA</option>
+                      {!session?.is_internal && (!session?.allowed_ai_providers || session.allowed_ai_providers.includes('gemini')) && (
+                        <option value="gemini">Gemini</option>
+                      )}
+                      <option value="vllm">vLLM</option>
+                      <option value="ollama">Ollama</option>
+                    </select>
+                    <button
+                      onClick={async () => {
+                        await handleSaveUserModel(managingUser.id, selectedUserModelProvider);
+                        setManagingUser(prev => prev ? { ...prev, ai_provider: selectedUserModelProvider } : null);
+                      }}
+                      className="btn-primary"
+                      disabled={savingUserModel || managingUser.is_active === false}
+                    >
+                      {savingUserModel ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Account Status / Danger Zone (Admin Only) */}
+              {session?.is_admin && (
+                <div style={{ borderTop: '1px solid var(--afl-n-200)', paddingTop: '1rem' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-800)', marginBottom: '0.75rem' }}>
+                    Account Status
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                    {managingUser.is_active !== false ? (
+                      <button
+                        onClick={async () => {
+                          await handleToggleActive(managingUser.id, false);
+                          setManagingUser(null);
+                        }}
+                        className="btn-ghost"
+                        style={{ color: 'var(--afl-warn-700)', borderColor: 'var(--afl-warn-500)', backgroundColor: 'var(--afl-warn-50)' }}
+                      >
+                        Deactivate Account
+                      </button>
+                    ) : (
+                      <button
+                        onClick={async () => {
+                          await handleToggleActive(managingUser.id, true);
+                          setManagingUser(null);
+                        }}
+                        className="btn-ghost"
+                        style={{ color: 'var(--afl-success-700)', borderColor: 'var(--afl-success-500)', backgroundColor: 'var(--afl-success-50)' }}
+                      >
+                        Reactivate Account
+                      </button>
+                    )}
+
+                    <button
+                      onClick={async () => {
+                        await handleDeleteUser(managingUser.id);
+                        setManagingUser(null);
+                      }}
+                      className="btn-danger-ghost"
+                    >
+                      Delete User
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid var(--afl-n-100)', paddingTop: '1rem' }}>
+              <button onClick={() => setManagingUser(null)} className="btn-primary" style={{ minWidth: '100px' }}>
+                Done
+              </button>
             </div>
           </div>
         </div>
