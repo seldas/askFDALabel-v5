@@ -3057,9 +3057,6 @@ def generic_assessment_route(set_id, tox_type, pt_terms, prompt, keyword_check_f
     })
 
 def run_assessment_logic(set_id, tox_type, prompt):
-    # Always retrieve label XML from the local Postgres DB / ZIP storage.
-    # Do NOT fall back to Oracle or DailyMed — the drugtox pipeline is
-    # exclusively built on the local labeling.sum_spl / spl_xml data.
     from database import db as _db
     from sqlalchemy import text as _text
 
@@ -3071,13 +3068,17 @@ def run_assessment_logic(set_id, tox_type, prompt):
         ).fetchone()
         if row:
             spl_id = row[0]
+        else:
+            meta = get_label_metadata(set_id)
+            if meta and meta.get('spl_id'):
+                spl_id = meta.get('spl_id')
     except Exception as _e:
         logger.warning(f"Could not resolve spl_id for {set_id}: {_e}")
 
-    xml_content = get_label_xml(set_id, spl_id=spl_id, force_local=True, local_only=True)
+    xml_content = get_label_xml(set_id, spl_id=spl_id)
     if not xml_content:
-        return jsonify({'error': "Could not retrieve label XML from local database. "
-                                 "Ensure the label has been imported into the local storage."}), 404
+        return jsonify({'error': "Could not retrieve label XML. "
+                                 "Ensure the label exists in local storage or configured database."}), 404
 
     try:
         ns = {'v3': 'urn:hl7-org:v3'}

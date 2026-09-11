@@ -690,6 +690,32 @@ def get_drug_detail(setid):
         d["AI_Summary"] = None
         return jsonify(d)
 
+    # Fall back to configured label metadata (supporting Oracle)
+    try:
+        from dashboard.services.fda_client import get_label_metadata
+        meta = get_label_metadata(setid)
+        if meta:
+            return jsonify({
+                "SETID": meta.get("set_id") or setid,
+                "Trade_Name": meta.get("brand_name") or "Unknown Drug",
+                "Generic_Proper_Names": meta.get("generic_name") or "Unknown Generic",
+                "Toxicity_Class": "Not Assessed",
+                "Author_Organization": meta.get("manufacturer_name") or "Unknown",
+                "Tox_Type": tox_type or "",
+                "SPL_Effective_Time": (str(meta.get("effective_time") or "")).replace("-", ""),
+                "is_historical": 0,
+                "endpoint": tox_type,
+                "Routes": meta.get("routes"),
+                "Dosage_Form": meta.get("dosage_forms"),
+                "Application_Number": meta.get("application_number"),
+                "Is_RLD": meta.get("is_rld"),
+                "Is_RS": meta.get("is_rs"),
+                "Doc_Type": meta.get("labeling_type"),
+                "AI_Summary": None,
+            })
+    except Exception as meta_err:
+        logger.warning("Could not fetch metadata fallback for %s: %s", setid, meta_err)
+
     return jsonify({"error": "Not found"}), 404
 
 
