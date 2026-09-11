@@ -18,6 +18,18 @@ interface User {
   last_login?: string | null;
 }
 
+interface AdminApiKey {
+  user_id: number;
+  username: string;
+  role: string;
+  is_active: boolean;
+  has_api_key: boolean;
+  api_key: string | null;
+  api_key_masked: string | null;
+  created_at: string | null;
+  last_used_at: string | null;
+}
+
 export default function ManagementPage() {
   const { session, loading: sessionLoading, updateAiProvider, refreshSession } = useUser();
   const router = useRouter();
@@ -29,6 +41,16 @@ export default function ManagementPage() {
   const [userStatusFilter, setUserStatusFilter] = useState<'all' | 'active' | 'deactivated'>('all');
   const [userSortBy, setUserSortBy] = useState<'last_login_desc' | 'last_login_asc' | 'created_at_desc' | 'created_at_asc' | 'username_asc'>('last_login_desc');
   const [managingUser, setManagingUser] = useState<User | null>(null);
+
+  // Admin API Keys state
+  const [adminApiKeys, setAdminApiKeys] = useState<AdminApiKey[]>([]);
+  const [loadingAdminApiKeys, setLoadingAdminApiKeys] = useState(false);
+  const [adminKeySearch, setAdminKeySearch] = useState('');
+  const [adminKeyFilter, setAdminKeyFilter] = useState<'all' | 'active' | 'never_used' | 'no_key'>('all');
+  const [adminKeySortBy, setAdminKeySortBy] = useState<'last_used_desc' | 'last_used_asc' | 'created_at_desc' | 'created_at_asc' | 'username_asc'>('last_used_desc');
+  const [revealedKeys, setRevealedKeys] = useState<Record<number, boolean>>({});
+  const [copiedKeyUserId, setCopiedKeyUserId] = useState<number | null>(null);
+  const [actionInProgressUserId, setActionInProgressUserId] = useState<number | null>(null);
 
   const formatUserDate = (isoStr?: string | null) => {
     if (!isoStr) return null;
@@ -252,6 +274,73 @@ export default function ManagementPage() {
     navigator.clipboard.writeText(apiKey);
     setCopiedKey(true);
     setTimeout(() => setCopiedKey(false), 2000);
+  };
+
+  const fetchAdminApiKeys = async () => {
+    setLoadingAdminApiKeys(true);
+    try {
+      const res = await fetch('/api/dashboard/admin/api_keys');
+      const data = await res.json();
+      if (data.success) {
+        setAdminApiKeys(data.keys || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch admin API keys', err);
+    } finally {
+      setLoadingAdminApiKeys(false);
+    }
+  };
+
+  const handleAdminGenerateKey = async (userId: number, username: string) => {
+    if (!window.confirm(`Generate or rotate API key for user "${username}"? Any existing key will be invalidated immediately.`)) return;
+    setActionInProgressUserId(userId);
+    try {
+      const res = await fetch(`/api/dashboard/admin/api_keys/${userId}/generate`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchAdminApiKeys();
+      } else {
+        alert(data.error || 'Failed to generate API key');
+      }
+    } catch (err) {
+      console.error('Error generating API key', err);
+      alert('Error generating API key');
+    } finally {
+      setActionInProgressUserId(null);
+    }
+  };
+
+  const handleAdminRevokeKey = async (userId: number, username: string) => {
+    if (!window.confirm(`Are you sure you want to revoke the API key for user "${username}"? Their REST API calls will fail immediately.`)) return;
+    setActionInProgressUserId(userId);
+    try {
+      const res = await fetch(`/api/dashboard/admin/api_keys/${userId}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchAdminApiKeys();
+      } else {
+        alert(data.error || 'Failed to revoke API key');
+      }
+    } catch (err) {
+      console.error('Error revoking API key', err);
+      alert('Error revoking API key');
+    } finally {
+      setActionInProgressUserId(null);
+    }
+  };
+
+  const handleCopyKey = (key: string, userId: number) => {
+    navigator.clipboard.writeText(key);
+    setCopiedKeyUserId(userId);
+    setTimeout(() => setCopiedKeyUserId(null), 2000);
+  };
+
+  const toggleRevealKey = (userId: number) => {
+    setRevealedKeys(prev => ({ ...prev, [userId]: !prev[userId] }));
   };
 
   const [pendingUpdateType, setPendingUpdateType] = useState<string | null>(null);
@@ -585,6 +674,7 @@ export default function ManagementPage() {
         fetchUsers();
         fetchTokenUsage();
         fetchAllTokenDetails();
+        fetchAdminApiKeys();
       } else {
         setUsers([{
           id: session.id || 0,
@@ -600,6 +690,12 @@ export default function ManagementPage() {
       }
     }
   }, [session]);
+
+  useEffect(() => {
+    if (activeTab === 'apimanagement' && session?.is_admin) {
+      fetchAdminApiKeys();
+    }
+  }, [activeTab, session?.is_admin]);
 
   const fetchTokenUsage = async () => {
     setLoadingTokenUsage(true);
@@ -1111,6 +1207,20 @@ export default function ManagementPage() {
               </svg>
               API Key
             </button>
+            {session?.is_admin && (
+              <button
+                className={`sidebar-tab ${activeTab === 'apimanagement' ? 'active' : ''}`}
+                onClick={() => setActiveTab('apimanagement')}
+                disabled={session?.username?.toLowerCase() === 'guest'}
+                style={{ opacity: session?.username?.toLowerCase() === 'guest' ? 0.5 : 1, cursor: session?.username?.toLowerCase() === 'guest' ? 'not-allowed' : 'pointer' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                API Management
+              </button>
+            )}
             <button
               className={`sidebar-tab ${activeTab === 'tokens' ? 'active' : ''}`}
               onClick={() => setActiveTab('tokens')}
@@ -2114,6 +2224,290 @@ else:
     print("Generate here:", err.get("pv_profile_tool_url"))`}
                       </pre>
                     </div>
+                  </div>
+                </section>
+              </div>
+            )}
+
+            {activeTab === 'apimanagement' && session?.is_admin && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <section className="mgmt-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <div>
+                      <h2 className="section-title" style={{ margin: 0 }}>API Key Management</h2>
+                      <p style={{ color: 'var(--afl-n-500)', fontSize: '0.9rem', margin: '4px 0 0' }}>
+                        Monitor active REST API keys across all users, track last used dates, and rotate or revoke keys.
+                      </p>
+                    </div>
+                    <button
+                      onClick={fetchAdminApiKeys}
+                      className="btn-ghost"
+                      style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+                      disabled={loadingAdminApiKeys}
+                    >
+                      {loadingAdminApiKeys ? 'Refreshing...' : 'Refresh'}
+                    </button>
+                  </div>
+
+                  {/* Summary Metric Cards */}
+                  {(() => {
+                    const now = new Date().getTime();
+                    const past24hMs = 24 * 60 * 60 * 1000;
+                    const isRecent = (isoStr: string | null | undefined, windowMs: number) => {
+                      if (!isoStr) return false;
+                      const t = new Date(isoStr.endsWith('Z') || isoStr.includes('+') ? isoStr : `${isoStr}Z`).getTime();
+                      return !isNaN(t) && (now - t) <= windowMs;
+                    };
+
+                    const activeCount = adminApiKeys.filter(k => k.has_api_key && k.is_active !== false).length;
+                    const past24hCount = adminApiKeys.filter(k => isRecent(k.last_used_at, past24hMs)).length;
+                    const neverUsedCount = adminApiKeys.filter(k => k.has_api_key && !k.last_used_at).length;
+                    const noKeyCount = adminApiKeys.filter(k => !k.has_api_key).length;
+
+                    return (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                        <div style={{ background: 'var(--afl-n-50)', border: '1px solid var(--afl-n-200)', borderRadius: '10px', padding: '1rem' }}>
+                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--afl-n-500)', letterSpacing: '0.05em' }}>Active Keys</div>
+                          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--afl-n-900)', marginTop: '4px' }}>{activeCount}</div>
+                        </div>
+                        <div style={{ background: 'var(--afl-n-50)', border: '1px solid var(--afl-n-200)', borderRadius: '10px', padding: '1rem' }}>
+                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--afl-n-500)', letterSpacing: '0.05em' }}>Used Past 24h</div>
+                          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--afl-success-700)', marginTop: '4px' }}>{past24hCount}</div>
+                        </div>
+                        <div style={{ background: 'var(--afl-n-50)', border: '1px solid var(--afl-n-200)', borderRadius: '10px', padding: '1rem' }}>
+                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--afl-n-500)', letterSpacing: '0.05em' }}>Never Used</div>
+                          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--afl-warn-700)', marginTop: '4px' }}>{neverUsedCount}</div>
+                        </div>
+                        <div style={{ background: 'var(--afl-n-50)', border: '1px solid var(--afl-n-200)', borderRadius: '10px', padding: '1rem' }}>
+                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--afl-n-500)', letterSpacing: '0.05em' }}>No Key Issued</div>
+                          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--afl-n-600)', marginTop: '4px' }}>{noKeyCount}</div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Search, Filter & Sort Toolbar */}
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                    <div style={{ flex: '1 1 200px' }}>
+                      <input
+                        type="text"
+                        placeholder="Search by username or key..."
+                        value={adminKeySearch}
+                        onChange={e => setAdminKeySearch(e.target.value)}
+                        className="mgmt-input"
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <select
+                      value={adminKeyFilter}
+                      onChange={e => setAdminKeyFilter(e.target.value as any)}
+                      className="mgmt-select"
+                      style={{ minWidth: '130px' }}
+                    >
+                      <option value="all">All Keys</option>
+                      <option value="active">Active Only</option>
+                      <option value="never_used">Never Used</option>
+                      <option value="no_key">No Key</option>
+                    </select>
+                    <select
+                      value={adminKeySortBy}
+                      onChange={e => setAdminKeySortBy(e.target.value as any)}
+                      className="mgmt-select"
+                      style={{ minWidth: '170px' }}
+                    >
+                      <option value="last_used_desc">Last Used (Newest)</option>
+                      <option value="last_used_asc">Last Used (Oldest)</option>
+                      <option value="created_at_desc">Generated (Newest)</option>
+                      <option value="created_at_asc">Generated (Oldest)</option>
+                      <option value="username_asc">Username (A-Z)</option>
+                    </select>
+                  </div>
+
+                  {/* API Keys Table */}
+                  <div className="user-table-wrapper">
+                    <table className="user-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '28%' }}>User</th>
+                          <th style={{ width: '36%' }}>API Key</th>
+                          <th style={{ width: '22%' }}>Activity</th>
+                          <th style={{ width: '14%', textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const filtered = adminApiKeys
+                            .filter(k => {
+                              if (adminKeySearch.trim()) {
+                                const q = adminKeySearch.toLowerCase();
+                                const matchUser = k.username.toLowerCase().includes(q);
+                                const matchKey = k.api_key && k.api_key.toLowerCase().includes(q);
+                                if (!matchUser && !matchKey) return false;
+                              }
+                              if (adminKeyFilter === 'active') {
+                                if (!k.has_api_key || k.is_active === false) return false;
+                              } else if (adminKeyFilter === 'never_used') {
+                                if (!k.has_api_key || k.last_used_at) return false;
+                              } else if (adminKeyFilter === 'no_key') {
+                                if (k.has_api_key) return false;
+                              }
+                              return true;
+                            })
+                            .sort((a, b) => {
+                              if (adminKeySortBy === 'username_asc') {
+                                return a.username.localeCompare(b.username);
+                              }
+                              if (adminKeySortBy === 'created_at_desc') {
+                                return (b.created_at || '').localeCompare(a.created_at || '');
+                              }
+                              if (adminKeySortBy === 'created_at_asc') {
+                                return (a.created_at || '').localeCompare(b.created_at || '');
+                              }
+                              if (adminKeySortBy === 'last_used_asc') {
+                                if (!a.last_used_at && !b.last_used_at) return 0;
+                                if (!a.last_used_at) return 1;
+                                if (!b.last_used_at) return -1;
+                                return a.last_used_at.localeCompare(b.last_used_at);
+                              }
+                              // default: last_used_desc
+                              if (!a.last_used_at && !b.last_used_at) return (b.created_at || '').localeCompare(a.created_at || '');
+                              if (!a.last_used_at) return 1;
+                              if (!b.last_used_at) return -1;
+                              return b.last_used_at.localeCompare(a.last_used_at);
+                            });
+
+                          if (filtered.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: 'var(--afl-n-400)' }}>
+                                  No API keys found matching filters.
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          return filtered.map(k => {
+                            const isRevealed = Boolean(revealedKeys[k.user_id]);
+                            const isCopied = copiedKeyUserId === k.user_id;
+                            const isBusy = actionInProgressUserId === k.user_id;
+
+                            return (
+                              <tr key={k.user_id} style={{ opacity: k.is_active === false ? 0.6 : 1 }}>
+                                <td>
+                                  <div style={{ fontWeight: 700, color: 'var(--afl-n-800)', fontSize: '0.9rem' }}>
+                                    {k.username}
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--afl-n-500)', textTransform: 'capitalize' }}>
+                                      {k.role}
+                                    </span>
+                                    {k.is_active === false && (
+                                      <span style={{ fontSize: '0.65rem', background: 'var(--afl-danger-100)', color: 'var(--afl-danger-500)', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>
+                                        DEACTIVATED
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td>
+                                  {k.has_api_key && k.api_key ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <code style={{
+                                        fontFamily: 'monospace',
+                                        fontSize: '0.8rem',
+                                        background: 'var(--afl-n-100)',
+                                        padding: '4px 8px',
+                                        borderRadius: '4px',
+                                        color: 'var(--afl-n-800)',
+                                        maxWidth: '220px',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
+                                      }}>
+                                        {isRevealed ? k.api_key : k.api_key_masked}
+                                      </code>
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleRevealKey(k.user_id)}
+                                        className="btn-ghost"
+                                        style={{ padding: '2px 6px', fontSize: '0.7rem' }}
+                                        title={isRevealed ? 'Mask key' : 'Reveal full key'}
+                                      >
+                                        {isRevealed ? 'Hide' : 'Show'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopyKey(k.api_key!, k.user_id)}
+                                        className="btn-ghost"
+                                        style={{ padding: '2px 6px', fontSize: '0.7rem' }}
+                                      >
+                                        {isCopied ? 'Copied!' : 'Copy'}
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span style={{ color: 'var(--afl-n-400)', fontStyle: 'italic', fontSize: '0.85rem' }}>
+                                      No key generated
+                                    </span>
+                                  )}
+                                </td>
+                                <td>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)' }}>
+                                    Generated: {formatUserDate(k.created_at) || '—'}
+                                  </div>
+                                  <div style={{ fontSize: '0.8rem', marginTop: '2px' }}>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)' }}>Last used: </span>
+                                    {k.last_used_at ? (
+                                      <span style={{ fontWeight: 600, color: 'var(--afl-n-800)', whiteSpace: 'nowrap' }}>
+                                        {formatUserDate(k.last_used_at)}
+                                      </span>
+                                    ) : (
+                                      <span style={{ color: 'var(--afl-n-400)', fontStyle: 'italic' }}>Never</span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td style={{ textAlign: 'right' }}>
+                                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                    {k.has_api_key ? (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleAdminGenerateKey(k.user_id, k.username)}
+                                          className="btn-ghost"
+                                          disabled={isBusy || k.is_active === false}
+                                          style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                          title="Rotate and issue a new API key"
+                                        >
+                                          {isBusy ? '...' : 'Rotate'}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleAdminRevokeKey(k.user_id, k.username)}
+                                          className="btn-danger-ghost"
+                                          disabled={isBusy}
+                                          style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                          title="Revoke and invalidate API key"
+                                        >
+                                          Revoke
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleAdminGenerateKey(k.user_id, k.username)}
+                                        className="btn-primary-sm"
+                                        disabled={isBusy || k.is_active === false}
+                                        style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                                      >
+                                        {isBusy ? '...' : 'Generate'}
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
+                      </tbody>
+                    </table>
                   </div>
                 </section>
               </div>

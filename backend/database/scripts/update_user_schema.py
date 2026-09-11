@@ -65,7 +65,9 @@ def update_schema():
         {"name": "openai_model_name", "def": "VARCHAR(100)"},
         {"name": "ai_settings", "def": "TEXT"},
         {"name": "created_at", "def": "TIMESTAMP WITHOUT TIME ZONE"},
-        {"name": "last_login", "def": "TIMESTAMP WITHOUT TIME ZONE"}
+        {"name": "last_login", "def": "TIMESTAMP WITHOUT TIME ZONE"},
+        {"name": "api_key_created_at", "def": "TIMESTAMP WITHOUT TIME ZONE"},
+        {"name": "api_key_last_used", "def": "TIMESTAMP WITHOUT TIME ZONE"}
     ]
 
     try:
@@ -130,6 +132,16 @@ def update_schema():
                 print(f"Successfully backfilled {res.rowcount} legacy user(s) with created_at = '2026-01-01 00:00:00'.")
             else:
                 print("All users already have created_at set.")
+
+            # Backfill legacy active api keys with api_key_created_at = '2026-01-01 00:00:00' where NULL
+            print("Checking for existing API keys with NULL api_key_created_at...")
+            backfill_keys_sql = text("UPDATE \"user\" SET api_key_created_at = '2026-01-01 00:00:00' WHERE api_key IS NOT NULL AND api_key_created_at IS NULL;")
+            res_keys = conn.execute(backfill_keys_sql)
+            conn.commit()
+            if res_keys.rowcount and res_keys.rowcount > 0:
+                print(f"Successfully backfilled {res_keys.rowcount} API key(s) with api_key_created_at = '2026-01-01 00:00:00'.")
+            else:
+                print("All existing API keys already have api_key_created_at set.")
                     
     except Exception as e:
         print(f"Error updating schema: {e}")

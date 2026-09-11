@@ -132,6 +132,15 @@ def ensure_user_schema():
             db.session.execute(text(
                 "UPDATE \"user\" SET created_at = '2026-01-01 00:00:00' WHERE created_at IS NULL;"
             ))
+            db.session.execute(text(
+                'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS api_key_created_at TIMESTAMP WITHOUT TIME ZONE;'
+            ))
+            db.session.execute(text(
+                'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS api_key_last_used TIMESTAMP WITHOUT TIME ZONE;'
+            ))
+            db.session.execute(text(
+                "UPDATE \"user\" SET api_key_created_at = '2026-01-01 00:00:00' WHERE api_key IS NOT NULL AND api_key_created_at IS NULL;"
+            ))
             db.session.commit()
     except Exception as e:
         print(f"Schema check error (citext): {e}")

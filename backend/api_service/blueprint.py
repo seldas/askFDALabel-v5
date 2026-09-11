@@ -27,7 +27,7 @@ except ImportError:
     import xml.etree.ElementTree as ET
 
 from dashboard.services.fdalabel_db import FDALabelDBService
-from database import db, User, LabelPvProfile
+from database import db, User, LabelPvProfile, utc_now
 from labelquery.oracle_compiler import (
     BASE_TABLE_HUMAN,
     compile_oracle_query,
@@ -64,6 +64,11 @@ def _extract_api_user():
     if api_key:
         user = User.query.filter_by(api_key=api_key).first()
         if user and getattr(user, 'is_active', True) is not False:
+            try:
+                user.api_key_last_used = utc_now()
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
             return user
 
     # Fallback to session user if logged in

@@ -140,11 +140,14 @@ class User(UserMixin, db.Model):
     openai_model_name = db.Column(db.String(100), nullable=True)
     ai_settings = db.Column(db.Text, nullable=True)
     api_key = db.Column(db.String(64), unique=True, index=True, nullable=True)
+    api_key_created_at = db.Column(db.DateTime, nullable=True)
+    api_key_last_used = db.Column(db.DateTime, nullable=True)
 
     def generate_api_key(self):
         """Generates a new secure API key for REST API access."""
         import secrets
         self.api_key = f"afl_live_{secrets.token_hex(24)}"
+        self.api_key_created_at = utc_now()
         return self.api_key
     
     favorites = db.relationship('Favorite', backref='user', lazy=True)

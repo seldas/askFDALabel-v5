@@ -252,6 +252,8 @@ def revoke_api_key():
         return jsonify({'error': 'Guest accounts do not have API keys.'}), 403
     
     current_user.api_key = None
+    current_user.api_key_created_at = None
+    current_user.api_key_last_used = None
     db.session.commit()
     return jsonify({
         'success': True,

@@ -602,3 +602,68 @@ def update_feature_gate(key):
         'success': True,
         'features': feature_gates.admin_view(),
     })
+
+
+# --- API Key Management ---
+
+@admin_bp.route('/api_keys', methods=['GET'])
+@login_required
+@admin_required
+def get_all_api_keys():
+    """Returns all users with their API key status, creation and last-used timestamps."""
+    users = User.query.order_by(User.id.asc()).all()
+    keys = []
+    for u in users:
+        key_val = getattr(u, 'api_key', None)
+        masked = f"{key_val[:10]}...{key_val[-4:]}" if key_val and len(key_val) >= 14 else (key_val if key_val else None)
+        keys.append({
+            'user_id': u.id,
+            'username': u.username,
+            'role': u.effective_role,
+            'is_active': getattr(u, 'is_active', True),
+            'has_api_key': bool(key_val),
+            'api_key': key_val,
+            'api_key_masked': masked,
+            'created_at': u.api_key_created_at.isoformat() if getattr(u, 'api_key_created_at', None) else None,
+            'last_used_at': u.api_key_last_used.isoformat() if getattr(u, 'api_key_last_used', None) else None,
+        })
+    return jsonify({
+        'success': True,
+        'keys': keys
+    })
+
+
+@admin_bp.route('/api_keys/<int:user_id>/generate', methods=['POST'])
+@login_required
+@admin_required
+def admin_generate_api_key(user_id):
+    """Generates / rotates an API key for a specified user."""
+    user = User.query.get_or_404(user_id)
+    if user.is_guest:
+        return jsonify({'success': False, 'error': 'Cannot generate API keys for guest accounts.'}), 400
+    
+    new_key = user.generate_api_key()
+    user.api_key_created_at = utc_now()
+    user.api_key_last_used = None
+    db.session.commit()
+    return jsonify({
+        'success': True,
+        'api_key': new_key,
+        'message': f'API key generated for user {user.username}.'
+    })
+
+
+@admin_bp.route('/api_keys/<int:user_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def admin_revoke_api_key(user_id):
+    """Revokes the API key for a specified user."""
+    user = User.query.get_or_404(user_id)
+    user.api_key = None
+    user.api_key_created_at = None
+    user.api_key_last_used = None
+    db.session.commit()
+    return jsonify({
+        'success': True,
+        'message': f'API key revoked for user {user.username}.'
+    })
