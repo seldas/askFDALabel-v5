@@ -92,41 +92,46 @@ export default function SidebarFilters({
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Helper to retrieve criterion from first group of draftQuery
-  const getGroup = () => draftQuery.groups[0] || { uid: 'g1', criteria: [] };
-
+  // Helper to retrieve criterion from draftQuery across groups
   const getCriterion = (type: CriterionType): Criterion | undefined => {
-    return getGroup().criteria.find((c) => c.type === type);
+    for (const group of draftQuery.groups) {
+      const found = group.criteria.find((c) => c.type === type);
+      if (found) return found;
+    }
+    return undefined;
   };
 
   const updateCriterion = useCallback(
     (type: CriterionType, valueUpdater: (prevValue: Record<string, any>) => Record<string, any>) => {
       setDraftQuery((prev) => {
-        const g = prev.groups[0] || { uid: 'g1', criteria: [] };
-        const existingIndex = g.criteria.findIndex((c) => c.type === type);
-        let updatedCriteria = [...g.criteria];
+        const groups = prev.groups.length > 0 ? prev.groups : [{ uid: 'g1', criteria: [] }];
+        const updatedGroups = groups.map((g) => {
+          const existingIndex = g.criteria.findIndex((c) => c.type === type);
+          let updatedCriteria = [...g.criteria];
 
-        if (existingIndex >= 0) {
-          const existing = g.criteria[existingIndex];
-          const nextValue = valueUpdater(existing.value as Record<string, any>);
-          const updatedCriterion = { ...existing, value: nextValue };
+          if (existingIndex >= 0) {
+            const existing = g.criteria[existingIndex];
+            const nextValue = valueUpdater(existing.value as Record<string, any>);
+            const updatedCriterion = { ...existing, value: nextValue };
 
-          if (isCriterionEmpty(updatedCriterion)) {
-            updatedCriteria.splice(existingIndex, 1);
+            if (isCriterionEmpty(updatedCriterion)) {
+              updatedCriteria.splice(existingIndex, 1);
+            } else {
+              updatedCriteria[existingIndex] = updatedCriterion;
+            }
           } else {
-            updatedCriteria[existingIndex] = updatedCriterion;
-          }
-        } else {
-          const fresh = makeCriterion(type);
-          const nextValue = valueUpdater(fresh.value as Record<string, any>);
-          const newCriterion = { ...fresh, value: nextValue };
+            const fresh = makeCriterion(type);
+            const nextValue = valueUpdater(fresh.value as Record<string, any>);
+            const newCriterion = { ...fresh, value: nextValue };
 
-          if (!isCriterionEmpty(newCriterion)) {
-            updatedCriteria.push(newCriterion);
+            if (!isCriterionEmpty(newCriterion)) {
+              updatedCriteria.push(newCriterion);
+            }
           }
-        }
 
-        const updatedGroups = [{ ...g, criteria: updatedCriteria }, ...prev.groups.slice(1)];
+          return { ...g, criteria: updatedCriteria };
+        });
+
         return { groups: updatedGroups };
       });
     },
@@ -498,16 +503,14 @@ export default function SidebarFilters({
 
         {/* 2. Standalone Labeling Format Panel */}
         {/*
-          FORMAT_GROUP (PLR / non-PLR) is only classified on the CDER-CBER
-          Oracle rollup (DGV_SUM_RX_SPL) -- see oracle_compiler._compile_labeling_type.
-          Local Postgres and the "FDA ver." Oracle scope (SUM_SPL) have no such
-          column, so the panel is folded shut and unclickable there rather than
-          left open to a filter that silently does nothing.
+          FORMAT_GROUP (PLR / non-PLR) is classified on CDER-CBER Oracle rollup
+          and derived from doc_type on local Postgres. It is only unclassified
+          on the full "FDA ver." Oracle scope (SUM_SPL).
         */}
         {(() => {
-          const labelingFormatSupported = targetDb === 'oracle';
+          const labelingFormatSupported = targetDb !== 'oracle_all';
           const labelingFormatReason =
-            'Labeling Format (PLR / non-PLR) is only classified for the CDER-CBER Oracle database and is not available here.';
+            'Labeling Format (PLR / non-PLR) is only classified for CDER-CBER labels and is not available for the All FDA scope.';
           const isOpen = labelingFormatSupported && openSections.labelingFormat;
           return (
             <div

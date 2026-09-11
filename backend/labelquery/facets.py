@@ -55,7 +55,7 @@ _MAX_SPLIT_PARTS = 20
 # byte-identical to what the old Python tally emitted.
 FACET_SCALARS = [
     ('labelingFormat', 'plr', 'plr', 'PLR Format',
-     "doc_type ILIKE '%%plr%%'",
+     "doc_type ILIKE '%%plr%%' AND doc_type NOT ILIKE '%%non-plr%%'",
      "m.FORMAT_GROUP = 1"),
     ('labelingFormat', 'non_plr', 'non_plr', 'non-PLR Format',
      "doc_type ILIKE '%%non-plr%%'",

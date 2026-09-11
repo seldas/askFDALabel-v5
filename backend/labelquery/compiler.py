@@ -241,6 +241,23 @@ def _c_value_list(criterion, key, bag, warnings):
     )
 
 
+def _c_labeling_type(value, bag, warnings):
+    val_clause = _c_value_list(value, 'labelingType', bag, warnings)
+    plr = str(value.get('plr') or value.get('formatGroup') or 'all').lower()
+    plr_clause = None
+    if plr in ('plr', '1'):
+        plr_clause = "(s.doc_type ILIKE '%plr%' AND s.doc_type NOT ILIKE '%non-plr%')"
+    elif plr in ('non_plr', 'non-plr', '2'):
+        plr_clause = "s.doc_type ILIKE '%non-plr%'"
+    elif plr in ('unclassified', 'other', '3'):
+        plr_clause = "(s.doc_type NOT ILIKE '%plr%')"
+
+    clauses = [c for c in (val_clause, plr_clause) if c]
+    if not clauses:
+        return None
+    return '(' + ' AND '.join(clauses) + ')'
+
+
 def _c_product_name(criterion, bag, warnings):
     field = criterion.get('field') or 'any'
     op = criterion.get('op') or 'contains'
@@ -484,10 +501,7 @@ def _compile_criterion(criterion, bag, warnings, expand_meddra, capabilities):
     value = criterion.get('value') or {}
 
     if ctype == 'labelingType':
-        plr = str(value.get('plr') or value.get('formatGroup') or 'all').lower()
-        if plr in ('plr', 'non_plr', 'non-plr', '1', '2'):
-            warnings.append('PLR / non-PLR format filtering is optimized for Oracle CDER-CBER database.')
-        return _c_value_list(value, 'labelingType', bag, warnings)
+        return _c_labeling_type(value, bag, warnings)
     if ctype == 'applicationType':
         return _c_application_type(value, bag, warnings)
     if ctype in _LIST_COLUMNS:
