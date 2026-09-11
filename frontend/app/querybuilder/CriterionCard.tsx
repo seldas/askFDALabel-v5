@@ -20,6 +20,16 @@ import {
   unsupportedReason,
 } from './types';
 
+function AlertIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
 export interface OptionLists {
   labelingTypes: Option[];
   applicationTypes: Option[];
@@ -385,7 +395,8 @@ export function CriterionCard({
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                   <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    ⚠️ Verification Required: <em>&ldquo;{v.text}&rdquo;</em>
+                    <AlertIcon size={14} />
+                    <span>Verification Required: <em>&ldquo;{v.text}&rdquo;</em></span>
                   </span>
                   <span style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 600 }}>
                     Selection required for exact match
@@ -484,7 +495,7 @@ export function CriterionCard({
                   <span>
                     Select from auto-complete suggestions to confirm the standardized product name.
                     <span style={{ display: 'block', marginTop: '2px', color: '#0369a1', fontWeight: 600 }}>
-                      💡 Tip: Change match type to &ldquo;contains&rdquo; or &ldquo;starts with&rdquo; to allow flexible matching without confirmation.
+                      Tip: Change match type to &ldquo;contains&rdquo; or &ldquo;starts with&rdquo; to allow flexible matching without confirmation.
                     </span>
                   </span>
                 )
@@ -539,7 +550,9 @@ export function CriterionCard({
                   gap: '6px',
                 }}
               >
-                <span>⚠️</span>
+                <span style={{ flexShrink: 0, marginTop: '2px', color: '#b45309' }}>
+                  <AlertIcon size={14} />
+                </span>
                 <span>
                   <strong>Generic Word Warning:</strong> Full-text search for common/generic words
                   like &ldquo;{v.text}&rdquo; matches almost all drug labels and is restricted to prevent slow query execution. Please search for a specific medical term, condition, or multi-word phrase.
@@ -627,7 +640,9 @@ export function CriterionCard({
                   gap: '6px',
                 }}
               >
-                <span>⚠️</span>
+                <span style={{ flexShrink: 0, marginTop: '2px', color: '#b45309' }}>
+                  <AlertIcon size={14} />
+                </span>
                 <span>
                   <strong>Generic Word Warning:</strong> Section text search for common/generic words
                   like &ldquo;{v.text}&rdquo; matches almost all drug labels and is restricted to prevent slow query execution. Please search for a specific medical term, condition, or multi-word phrase.
@@ -863,7 +878,8 @@ export function CriterionCard({
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                   <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    ⚠️ Verification Required for MedDRA Term(s)
+                    <AlertIcon size={14} />
+                    <span>Verification Required for MedDRA Term(s)</span>
                   </span>
                   <span style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 600 }}>
                     Select standardized PT below to enable search
@@ -914,7 +930,9 @@ export function CriterionCard({
                   gap: '6px',
                 }}
               >
-                <span>⚠️</span>
+                <span style={{ flexShrink: 0, marginTop: '2px', color: '#b45309' }}>
+                  <AlertIcon size={14} />
+                </span>
                 <span>
                   <strong>Higher MedDRA Level Disabled:</strong> Searches above Preferred Term (PT) level (such as {String(v.level).toUpperCase()}) are disabled to prevent query timeouts. Please select Preferred Term (PT) or Lowest Level Term (LLT).
                 </span>

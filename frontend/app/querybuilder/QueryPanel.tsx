@@ -26,6 +26,41 @@ import {
   unsupportedReason,
 } from './types';
 
+function LockIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+function ChevronUpIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="18 15 12 9 6 15" />
+    </svg>
+  );
+}
+
+function AlertIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
 export function QueryPanel({
   query,
   onChange,
@@ -139,15 +174,16 @@ export function QueryPanel({
                                 color: '#92400e',
                                 border: '1px solid #f59e0b',
                                 padding: '2px 8px',
-                                borderRadius: '10px',
+                                borderRadius: '4px',
                                 fontSize: '0.75rem',
-                                fontWeight: 700,
+                                fontWeight: 600,
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '4px',
+                                gap: '5px',
                               }}
                             >
-                              ⚠️ Unavailable for Local DB (Ignored)
+                              <AlertIcon size={12} />
+                              <span>Unavailable for Local DB (Ignored)</span>
                             </span>
                           )}
                         </h3>
@@ -168,15 +204,19 @@ export function QueryPanel({
                       ) : (
                         <span className="fdl-active-tag fdl-active-tag--none">Optional</span>
                       )}
-                      <span className="fdl-collapse-arrow">{isSectionDisabled ? '🔒' : isCollapsed ? '▼' : '▲'}</span>
+                      <span className="fdl-collapse-arrow" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {isSectionDisabled ? <LockIcon size={12} /> : isCollapsed ? <ChevronDownIcon size={12} /> : <ChevronUpIcon size={12} />}
+                      </span>
                     </div>
                   </header>
 
                   {!isCollapsed && (
                     <div className="fdl-step-body">
                       {sec.id === 'textMatch' && hasAdvancedSearch && (
-                        <div className="fdl-advanced-warning">
-                          <span className="fdl-advanced-warning-icon">⚠️</span>
+                        <div className="fdl-advanced-warning" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                          <span className="fdl-advanced-warning-icon" style={{ flexShrink: 0, marginTop: '2px', color: '#b45309' }}>
+                            <AlertIcon size={15} />
+                          </span>
                           <div>
                             <strong>Advanced Search Active:</strong> Advanced search supports regular expressions, exact span matching with braces <code>{'{...}'}</code> (e.g., <code>{'{NDA}'}</code>), wildcards (<code>*</code>, <code>?</code>, <code>%</code>, <code>.</code>), and boolean operators (<code>AND</code>, <code>OR</code>, <code>NOT</code>). Ensure syntax rules and backslash escapes (<code>\</code>) are followed to avoid unexpected search results.
                           </div>

@@ -534,15 +534,23 @@
   background: var(--afl-bg-hover);
 }
 
-/* ---- AI intent panel ------------------------------------------------------ */
+/* ---- Query Assistant intent panel ---------------------------------------- */
+
+@keyframes fdl-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 .fdl-ai {
   background: var(--afl-bg-surface);
-  border: 1px solid var(--afl-border);
-  border-top: 3px solid transparent;
-  border-image: var(--afl-ai-grad) 1;
-  border-radius: var(--afl-radius-lg);
-  box-shadow: var(--afl-shadow-sm);
+  border: 1px solid #cbd5e1;
+  border-top: 3px solid #002e5d;
+  border-radius: var(--afl-radius-md);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   padding: var(--afl-space-5);
   display: flex;
   flex-direction: column;
@@ -1547,84 +1555,84 @@
   border-radius: 8px;
   background: #ffffff;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
-  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.15s ease;
 }
 
-/* Step 1: Market & Categorical Filters (Classic Sapphire Blue) */
+/* Step 1: Market & Categorical Filters */
 .fdl-step-section--step-1 {
-  border-color: #bfdbfe;
+  border-color: #cbd5e1;
 }
 
 .fdl-step-section--step-1 .fdl-step-header {
-  background: linear-gradient(135deg, #f0f7ff 0%, #eff6ff 100%);
-  border-bottom: 1px solid #dbeafe;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .fdl-step-section--step-1 .fdl-step-badge {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  background: #002e5d;
 }
 
 .fdl-step-section--step-1 .fdl-step-title {
-  color: #1e3a8a;
+  color: #0f172a;
 }
 
 .fdl-step-section--step-1 .fdl-active-tag--highlight {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
 }
 
-/* Step 2: Product Names & Identifiers (Sleek Ocean / Teal-Blue) */
+/* Step 2: Product Names & Identifiers */
 .fdl-step-section--step-2 {
-  border-color: #bae6fd;
+  border-color: #cbd5e1;
 }
 
 .fdl-step-section--step-2 .fdl-step-header {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border-bottom: 1px solid #bae6fd;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .fdl-step-section--step-2 .fdl-step-badge {
-  background: linear-gradient(135deg, #0284c7, #0369a1);
-  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+  background: #002e5d;
 }
 
 .fdl-step-section--step-2 .fdl-step-title {
-  color: #0c4a6e;
+  color: #0f172a;
 }
 
 .fdl-step-section--step-2 .fdl-active-tag--highlight {
   background: #e0f2fe;
-  color: #0284c7;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
 }
 
-/* Step 3: Labeling Text & Clinical Match (Refined Indigo-Blue) */
+/* Step 3: Labeling Text & Clinical Match */
 .fdl-step-section--step-3 {
-  border-color: #c7d2fe;
+  border-color: #cbd5e1;
 }
 
 .fdl-step-section--step-3 .fdl-step-header {
-  background: linear-gradient(135deg, #f5f3ff 0%, #e0e7ff 100%);
-  border-bottom: 1px solid #c7d2fe;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .fdl-step-section--step-3 .fdl-step-badge {
-  background: linear-gradient(135deg, #4f46e5, #4338ca);
-  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+  background: #002e5d;
 }
 
 .fdl-step-section--step-3 .fdl-step-title {
-  color: #1e1b4b;
+  color: #0f172a;
 }
 
 .fdl-step-section--step-3 .fdl-active-tag--highlight {
-  background: #e0e7ff;
-  color: #4338ca;
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
 }
 
 .fdl-step-section:hover {
-  border-color: #cbd5e1;
+  border-color: #94a3b8;
 }
 
 .fdl-step-section.is-collapsed {
@@ -1657,15 +1665,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: #002e5d;
   color: #ffffff;
-  font-weight: 800;
-  font-size: 0.82rem;
+  font-weight: 700;
+  font-size: 0.8rem;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
 }
 
 .fdl-step-header__titles {
@@ -2599,22 +2606,22 @@
 }
 
 /* ---------------------------------------------------------------------------
-   AI pre-filters — the categorical picks /translate read out of the
-   description, offered as tick boxes rather than folded into the query. The
-   same list renders inside the AI panel and under the criteria cards, so the
-   two variants differ only in their frame.
+   Post-query / Categorical pre-filters — the categorical picks /translate
+   read out of the description, offered as tick boxes rather than folded into
+   the query. The same list renders inside the assistant panel and under the
+   criteria cards.
    --------------------------------------------------------------------------- */
 
 .fdl-prefilters {
   margin-top: 14px;
   padding: 12px 14px;
-  border: 1px solid #c7d2fe;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #f5f3ff 0%, #eef2ff 100%);
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
 }
 
 .fdl-prefilters--panel {
-  margin: 18px 0 0;
+  margin: 16px 0 0;
 }
 
 .fdl-prefilters__head {
@@ -2627,13 +2634,13 @@
 
 .fdl-prefilters__title {
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #4f46e5;
-  background: #e0e7ff;
-  padding: 3px 9px;
-  border-radius: 12px;
+  color: #002e5d;
+  background: #e2e8f0;
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 .fdl-prefilters__lede {
@@ -2644,84 +2651,87 @@
 .fdl-prefilters__count {
   margin-left: auto;
   font-size: 0.78rem;
-  font-weight: 700;
-  color: #4338ca;
+  font-weight: 600;
+  color: #334155;
   white-space: nowrap;
 }
 
 .fdl-prefilters__all {
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  border: 1px solid #cbd5e1;
   background: #ffffff;
-  color: #4f46e5;
-  border-radius: 8px;
-  padding: 3px 10px;
-  font-size: 0.76rem;
-  font-weight: 700;
+  color: #334155;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .fdl-prefilters__all:hover {
-  background: #eef2ff;
+  background: #f1f5f9;
+  border-color: #94a3b8;
 }
 
 .fdl-prefilters__chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .fdl-prefilter {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 11px 5px 8px;
+  padding: 4px 10px 4px 8px;
   border: 1px solid #cbd5e1;
-  border-radius: 999px;
+  border-radius: 4px;
   background: #ffffff;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .fdl-prefilter:hover {
-  border-color: #a5b4fc;
+  border-color: #0071bc;
 }
 
 .fdl-prefilter.is-on {
-  border-color: #6366f1;
-  background: #eef2ff;
+  border-color: #0071bc;
+  background: #f0f7ff;
 }
 
 .fdl-prefilter input {
-  accent-color: #4f46e5;
+  accent-color: #0071bc;
   cursor: pointer;
   margin: 0;
 }
 
 .fdl-prefilter__type {
   font-size: 0.68rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: #64748b;
 }
 
 .fdl-prefilter.is-on .fdl-prefilter__type {
-  color: #4f46e5;
+  color: #0071bc;
 }
 
 .fdl-prefilter__label {
-  font-weight: 700;
+  font-weight: 600;
   color: #0f172a;
 }
 
 /* Unchecked reads as "offered, not applied" rather than as a live filter. */
 .fdl-prefilter:not(.is-on) .fdl-prefilter__label {
   color: #64748b;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .fdl-active-tag--prefilter {
-  background: #e0e7ff;
-  color: #4338ca;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
 }

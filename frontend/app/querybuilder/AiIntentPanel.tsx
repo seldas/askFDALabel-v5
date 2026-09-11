@@ -14,6 +14,87 @@ import type { LabelQuery, PreFilter, TargetDb } from './types';
 import { fromWire, fromWirePrefilters } from './types';
 import { PreFilterChips } from './PreFilterChips';
 
+/* Clean SVG icons for professional scientific workbench */
+function AssistantIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      <path d="m11 8 1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z" />
+    </svg>
+  );
+}
+
+function SpinnerIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'fdl-spin 1s linear infinite' }} aria-hidden="true">
+      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+    </svg>
+  );
+}
+
+function ClockIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+
+function CheckIcon({ size = 15 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function AlertIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
+function InfoIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="16" x2="12" y2="12" />
+      <line x1="12" y1="8" x2="12.01" y2="8" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+function ChevronUpIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="18 15 12 9 6 15" />
+    </svg>
+  );
+}
+
+function CloseIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
 const EXAMPLES = [
   {
     category: 'Multiple SET-IDs',
@@ -23,7 +104,7 @@ const EXAMPLES = [
   {
     category: 'Drug Name + Typo',
     prompt: 'Lipitor or Metfomin with oral route',
-    display: 'Drug combination with typo ("Lipitor or Metfomin with oral route")',
+    display: 'Drug combination ("Lipitor or Metfomin with oral route")',
   },
   {
     category: 'MedDRA Safety',
@@ -40,7 +121,7 @@ function formatElapsed(sec: number): string {
 }
 
 function getLiveStatusText(sec: number): string {
-  if (sec < 6) return 'Analyzing clinical intent and extracting relevant entities…';
+  if (sec < 6) return 'Analyzing clinical intent and extracting entities…';
   if (sec < 16) return 'Mapping drug names, active moieties & marketing categories…';
   if (sec < 28) return 'Searching MedDRA adverse event hierarchy & pharmacologic classes…';
   return 'Structuring FDA label search criteria & compiling query…';
@@ -167,28 +248,58 @@ export function AiIntentPanel({
   return (
     <section 
       className="fdl-ai" 
-      aria-label="Build a query from a description"
+      aria-label="Natural Language Query Assistant"
       style={{
-        borderRadius: '16px',
-        border: '2px solid transparent',
-        backgroundImage: 'linear-gradient(#ffffff, #ffffff), linear-gradient(135deg, #a855f7 0%, #3b82f6 50%, #06b6d4 100%)',
-        backgroundOrigin: 'border-box',
-        backgroundClip: 'padding-box, border-box',
-        boxShadow: '0 12px 36px -6px rgba(99, 102, 241, 0.18)',
-        padding: '24px',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        marginBottom: '20px',
+        borderRadius: '10px',
+        border: '1px solid #cbd5e1',
+        borderTop: '3px solid #002e5d',
+        background: '#ffffff',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+        padding: '20px 22px',
+        marginBottom: '18px',
         position: 'relative',
       }}
     >
-      <div className="fdl-ai__head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+      <div className="fdl-ai__head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h2 className="fdl-ai__title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.25rem', color: '#0f172a', fontWeight: 800 }}>
-            AskFDALabel - Describe what you are looking for
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div
+              style={{
+                width: '26px',
+                height: '26px',
+                borderRadius: '6px',
+                background: '#002e5d',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <AssistantIcon size={15} />
+            </div>
+            <h2 className="fdl-ai__title" style={{ fontSize: '1.15rem', color: '#0f172a', fontWeight: 800, margin: 0 }}>
+              Query Assistant
+            </h2>
+            <span
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                background: '#e0f2fe',
+                color: '#0369a1',
+                border: '1px solid #bae6fd',
+                padding: '2px 8px',
+                borderRadius: '4px',
+              }}
+            >
+              Natural Language to Criteria
+            </span>
+          </div>
           {!isFolded && (
-            <p className="fdl-ai__lede" style={{ color: '#64748b', fontSize: '0.88rem', marginTop: '4px' }}>
-              Plain English is converted into product names, identifiers, or section text criteria. Categorical filters (routes, forms, market status, application types) come back as tick boxes below — checked ones are applied to the results after the main query runs.
+            <p className="fdl-ai__lede" style={{ color: '#64748b', fontSize: '0.84rem', marginTop: '6px', lineHeight: 1.45, maxWidth: '960px' }}>
+              Enter clinical intent, active ingredients, application categories, or MedDRA adverse events in plain English. The query assistant maps terminology and translates your input into structured criteria below for verification before execution.
             </p>
           )}
         </div>
@@ -197,35 +308,35 @@ export function AiIntentPanel({
           type="button"
           onClick={() => setIsFolded(!isFolded)}
           style={{
-            background: 'rgba(99, 102, 241, 0.08)',
-            color: '#4f46e5',
-            border: '1px solid rgba(99, 102, 241, 0.25)',
-            borderRadius: '8px',
-            padding: '6px 14px',
-            fontSize: '0.85rem',
-            fontWeight: 800,
+            background: '#f8fafc',
+            color: '#334155',
+            border: '1px solid #cbd5e1',
+            borderRadius: '6px',
+            padding: '5px 12px',
+            fontSize: '0.8rem',
+            fontWeight: 600,
             cursor: 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
-            transition: 'all 0.2s ease',
-            whiteSpace: 'nowrap'
+            transition: 'all 0.15s ease',
+            whiteSpace: 'nowrap',
           }}
         >
-          <span>{isFolded ? 'Expand' : 'Fold'}</span>
-          <span style={{ fontSize: '0.75rem' }}>{isFolded ? '▼' : '▲'}</span>
+          <span>{isFolded ? 'Expand Assistant' : 'Collapse'}</span>
+          {isFolded ? <ChevronDownIcon /> : <ChevronUpIcon />}
         </button>
       </div>
 
       {!isFolded && (
         <>
-          <div className="fdl-ai__field" style={{ marginTop: '16px' }}>
+          <div className="fdl-ai__field" style={{ marginTop: '14px', display: 'flex', gap: '10px' }}>
             <textarea
               className="fdl-ai__input"
               rows={2}
               value={intent}
               disabled={disabled || busy}
-              placeholder="e.g. Lipitor or Metfomin oral, or paste multiple SET-IDs, or Metformin with Boxed Warning lactic acidosis..."
+              placeholder="e.g. Lipitor or Metformin with oral route, or paste multiple SET-IDs, or Metformin with Boxed Warning lactic acidosis..."
               onChange={(e) => setIntent(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -233,20 +344,50 @@ export function AiIntentPanel({
                   translate(intent);
                 }
               }}
+              style={{
+                borderRadius: '6px',
+                borderColor: '#cbd5e1',
+                padding: '8px 12px',
+                fontSize: '0.88rem',
+              }}
             />
             <button
               type="button"
               className="fdl-btn fdl-btn--ai"
               disabled={disabled || busy || !intent.trim()}
               onClick={() => translate(intent)}
-              style={{ minWidth: busy ? '140px' : '110px' }}
+              style={{
+                minWidth: busy ? '160px' : '130px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                background: '#0071bc',
+                borderColor: '#005a96',
+                color: '#ffffff',
+                fontWeight: 700,
+                borderRadius: '6px',
+                boxShadow: 'none',
+              }}
             >
-              {busy ? `Building… (${formatElapsed(elapsedSeconds)})` : 'Build query'}
+              {busy ? (
+                <>
+                  <SpinnerIcon size={15} />
+                  <span>Parsing ({formatElapsed(elapsedSeconds)})</span>
+                </>
+              ) : (
+                <>
+                  <AssistantIcon size={15} />
+                  <span>Build Criteria</span>
+                </>
+              )}
             </button>
           </div>
 
-          <div className="fdl-ai__examples" style={{ marginTop: '12px' }}>
-            <span className="fdl-ai__exlabel">Try:</span>
+          <div className="fdl-ai__examples" style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Examples:
+            </span>
             {EXAMPLES.map((ex) => (
               <button
                 key={ex.prompt}
@@ -258,6 +399,15 @@ export function AiIntentPanel({
                   translate(ex.prompt);
                 }}
                 title={ex.prompt}
+                style={{
+                  fontSize: '0.8rem',
+                  color: '#0284c7',
+                  textDecoration: 'none',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  padding: '3px 9px',
+                  borderRadius: '4px',
+                }}
               >
                 {ex.display}
               </button>
@@ -266,63 +416,61 @@ export function AiIntentPanel({
         </>
       )}
 
-      {/* Live progress indicator with timer when building query */}
+      {/* Clean, professional progress indicator when building query */}
       {busy && (
         <div
           style={{
-            marginTop: '16px',
-            background: 'linear-gradient(135deg, #f5f3ff 0%, #eff6ff 100%)',
-            border: '1px solid #c7d2fe',
-            borderRadius: '12px',
-            padding: '16px 20px',
+            marginTop: '14px',
+            background: '#f8fafc',
+            border: '1px solid #cbd5e1',
+            borderLeft: '4px solid #0071bc',
+            borderRadius: '6px',
+            padding: '12px 16px',
             display: 'flex',
             alignItems: 'center',
-            gap: '16px',
-            boxShadow: '0 4px 14px rgba(99, 102, 241, 0.1)',
-            animation: 'ai-glow-pulse 2s infinite',
+            gap: '14px',
           }}
         >
           <div
             style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #6366f1 0%, #3b82f6 100%)',
+              width: '32px',
+              height: '32px',
+              borderRadius: '6px',
+              background: '#e0f2fe',
+              color: '#0071bc',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#ffffff',
-              fontSize: '1.2rem',
               flexShrink: 0,
-              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
             }}
           >
-            🤖
+            <SpinnerIcon size={18} />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', flexWrap: 'wrap', gap: '8px' }}>
-              <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#3730a3', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>AI Query Translation in Progress…</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px', flexWrap: 'wrap', gap: '8px' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>
+                Translating Query to Structured Criteria…
               </span>
               <span
                 style={{
                   fontFamily: 'ui-monospace, monospace',
-                  fontSize: '0.84rem',
-                  fontWeight: 800,
-                  color: '#4338ca',
-                  background: '#e0e7ff',
-                  padding: '3px 10px',
-                  borderRadius: '8px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  color: '#334155',
+                  background: '#f1f5f9',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  border: '1px solid #e2e8f0',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '5px',
-                  border: '1px solid #c7d2fe',
                 }}
               >
-                ⏱️ Elapsed: {formatElapsed(elapsedSeconds)}
+                <ClockIcon size={13} />
+                <span>Elapsed: {formatElapsed(elapsedSeconds)}</span>
               </span>
             </div>
-            <div style={{ fontSize: '0.82rem', color: '#4b5563', lineHeight: 1.4 }}>
+            <div style={{ fontSize: '0.8rem', color: '#475569', lineHeight: 1.4 }}>
               {getLiveStatusText(elapsedSeconds)}
             </div>
           </div>
@@ -333,37 +481,36 @@ export function AiIntentPanel({
         <div
           className="fdl-ai-applied-intent"
           style={{
-            marginTop: isFolded ? '8px' : '14px',
-            padding: '10px 14px',
-            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-            border: '1px solid #cbd5e1',
-            borderRadius: '10px',
+            marginTop: isFolded ? '8px' : '12px',
+            padding: '7px 12px',
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '6px',
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
+            gap: '8px',
             fontSize: '0.82rem',
           }}
         >
           <span
             style={{
-              fontWeight: 800,
-              color: '#4f46e5',
-              fontSize: '0.72rem',
+              fontWeight: 700,
+              color: '#002e5d',
+              fontSize: '0.7rem',
               letterSpacing: '0.04em',
               textTransform: 'uppercase',
               flexShrink: 0,
-              background: '#e0e7ff',
-              padding: '3px 9px',
-              borderRadius: '12px',
+              background: '#e2e8f0',
+              padding: '2px 7px',
+              borderRadius: '4px',
             }}
           >
-            Active AI Query Prompt
+            Active Intent
           </span>
           <span
             style={{
-              color: '#0f172a',
+              color: '#334155',
               fontWeight: 600,
-              fontStyle: 'italic',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -387,32 +534,35 @@ export function AiIntentPanel({
         </p>
       ) : null}
 
-      {/* Prominent AI Search Translation & Formulation Summary Card */}
+      {/* Structured Query Translation Audit Trail Panel */}
       {notes.length > 0 && (
         <div
           className="fdl-ai-response-card"
           style={{
-            marginTop: '16px',
-            background: 'linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%)',
-            border: '1px solid #86efac',
-            borderRadius: '14px',
-            padding: '16px 20px',
-            boxShadow: '0 4px 16px rgba(22, 163, 74, 0.08)',
+            marginTop: '14px',
+            background: '#ffffff',
+            border: '1px solid #cbd5e1',
+            borderTop: '3px solid #059669',
+            borderRadius: '6px',
+            padding: '14px 16px',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px solid #dcfce7', paddingBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px solid #f1f5f9', flexWrap: 'wrap', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.2rem' }}>✨</span>
-              <h3 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: '#166534', letterSpacing: '-0.01em' }}>
-                AI Search Translation Summary
+              <div style={{ color: '#059669', display: 'flex', alignItems: 'center' }}>
+                <CheckIcon size={16} />
+              </div>
+              <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, color: '#0f172a' }}>
+                Query Translation & Entity Mapping Audit
               </h3>
             </div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#15803d', background: '#dcfce7', padding: '3px 9px', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
-              ✓ Search Criteria Configured Below
+            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#047857', background: '#ecfdf5', padding: '2px 8px', borderRadius: '4px', border: '1px solid #a7f3d0' }}>
+              Criteria Configured Below
             </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {notes.map((n, idx) => {
               const isWarn = n.toLowerCase().includes('warning') || n.toLowerCase().includes('not available') || n.toLowerCase().includes('omitted');
               return (
@@ -421,82 +571,76 @@ export function AiIntentPanel({
                   style={{
                     display: 'flex',
                     alignItems: 'flex-start',
-                    gap: '10px',
-                    backgroundColor: isWarn ? '#fffbeb' : '#ffffff',
+                    gap: '8px',
+                    backgroundColor: isWarn ? '#fffbeb' : '#f8fafc',
                     border: isWarn ? '1px solid #fde68a' : '1px solid #e2e8f0',
-                    borderRadius: '10px',
-                    padding: '10px 14px',
-                    color: isWarn ? '#92400e' : '#1e293b',
-                    fontSize: '0.88rem',
-                    lineHeight: 1.5,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                    borderRadius: '5px',
+                    padding: '8px 12px',
+                    color: isWarn ? '#92400e' : '#334155',
+                    fontSize: '0.82rem',
+                    lineHeight: 1.45,
                   }}
                 >
-                  <span style={{ fontSize: '1.05rem', flexShrink: 0, marginTop: '1px' }}>
-                    {isWarn ? '⚠️' : '💡'}
+                  <span style={{ flexShrink: 0, marginTop: '2px', color: isWarn ? '#b45309' : '#0284c7' }}>
+                    {isWarn ? <AlertIcon size={14} /> : <InfoIcon size={14} />}
                   </span>
                   <div style={{ flex: 1 }}>
-                    <span style={{ fontWeight: isWarn ? 700 : 500 }}>{n.replace(/^⚠️\s*/, '')}</span>
+                    <span style={{ fontWeight: isWarn ? 600 : 500 }}>{n.replace(/^⚠️\s*/, '')}</span>
                   </div>
                 </div>
               );
             })}
           </div>
 
-          <p style={{ margin: '10px 0 0 0', fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span>👇</span>
-            <span>Check and modify the populated criteria cards below before clicking <strong>Search Labels »</strong>.</span>
+          <p style={{ margin: '8px 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+            Review the populated criteria in the cards below before clicking <strong>Search Labels »</strong>.
           </p>
         </div>
       )}
 
-      {/* Customized 3-second completion toast popup summarizing duration */}
+      {/* Restrained completion toast popup */}
       {completionToast && (
         <div
           role="status"
           aria-live="polite"
           style={{
             position: 'fixed',
-            bottom: '28px',
-            right: '28px',
+            bottom: '24px',
+            right: '24px',
             zIndex: 10000,
             background: '#0f172a',
             color: '#ffffff',
-            borderRadius: '14px',
-            padding: '14px 20px',
-            boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.15)',
+            borderRadius: '6px',
+            padding: '10px 14px',
+            boxShadow: '0 8px 24px -4px rgba(0, 0, 0, 0.25)',
             display: 'flex',
             alignItems: 'center',
-            gap: '14px',
-            animation: 'fdl-toast-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-            maxWidth: '420px',
+            gap: '12px',
+            fontSize: '0.82rem',
+            animation: 'fdl-toast-slide-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            maxWidth: '380px',
+            border: '1px solid #334155',
           }}
         >
           <div
             style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              color: '#10b981',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.2rem',
               flexShrink: 0,
-              boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)',
             }}
           >
-            ⏱️
+            <CheckIcon size={16} />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>Query Built Successfully</span>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, background: '#10b981', color: '#ffffff', padding: '1px 7px', borderRadius: '10px' }}>
-                in {completionToast.duration}
+            <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>Criteria Configured</span>
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, background: '#1e293b', color: '#94a3b8', padding: '1px 6px', borderRadius: '4px', border: '1px solid #334155' }}>
+                {completionToast.duration}
               </span>
             </div>
-            <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '2px' }}>
-              Search criteria populated in the panel below.
+            <div style={{ fontSize: '0.76rem', color: '#94a3b8', marginTop: '1px' }}>
+              Search criteria populated in panel below.
             </div>
           </div>
           <button
@@ -507,13 +651,15 @@ export function AiIntentPanel({
               border: 'none',
               color: '#94a3b8',
               cursor: 'pointer',
-              fontSize: '1.1rem',
-              padding: '2px 6px',
+              fontSize: '1rem',
+              padding: '2px 4px',
               lineHeight: 1,
+              display: 'flex',
+              alignItems: 'center',
             }}
             aria-label="Close notification"
           >
-            ✕
+            <CloseIcon size={13} />
           </button>
         </div>
       )}

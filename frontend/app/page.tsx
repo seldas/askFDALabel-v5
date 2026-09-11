@@ -49,6 +49,16 @@ import {
 } from './querybuilder/types';
 import './querybuilder/querybuilder.css';
 
+function AlertIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
 const LAST_QUERY_KEY = 'afl.labelquery.last';
 
 const EMPTY_OPTIONS: OptionLists = {
@@ -291,16 +301,17 @@ function HomePage() {
               backgroundColor: '#fef3c7',
               color: '#92400e',
               border: '1px solid #f59e0b',
-              padding: '4px 10px',
-              borderRadius: '8px',
-              fontSize: '0.8rem',
-              fontWeight: 700,
+              padding: '3px 9px',
+              borderRadius: '5px',
+              fontSize: '0.78rem',
+              fontWeight: 600,
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '4px',
+              gap: '5px',
             }}
           >
-            ⚠️ Please confirm name(s) / MedDRA term(s)
+            <AlertIcon size={13} />
+            <span>Please confirm name(s) / MedDRA term(s)</span>
           </span>
         )}
         {hasCommonFullText && (
@@ -309,16 +320,17 @@ function HomePage() {
               backgroundColor: '#fef3c7',
               color: '#92400e',
               border: '1px solid #f59e0b',
-              padding: '4px 10px',
-              borderRadius: '8px',
-              fontSize: '0.8rem',
-              fontWeight: 700,
+              padding: '3px 9px',
+              borderRadius: '5px',
+              fontSize: '0.78rem',
+              fontWeight: 600,
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '4px',
+              gap: '5px',
             }}
           >
-            ⚠️ Please refine common full-text term(s)
+            <AlertIcon size={13} />
+            <span>Please refine common full-text term(s)</span>
           </span>
         )}
         {hasHigherMeddra && (
@@ -327,16 +339,17 @@ function HomePage() {
               backgroundColor: '#fef3c7',
               color: '#92400e',
               border: '1px solid #f59e0b',
-              padding: '4px 10px',
-              borderRadius: '8px',
-              fontSize: '0.8rem',
-              fontWeight: 700,
+              padding: '3px 9px',
+              borderRadius: '5px',
+              fontSize: '0.78rem',
+              fontWeight: 600,
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '4px',
+              gap: '5px',
             }}
           >
-            ⚠️ MedDRA levels above PT are disabled (use PT/LLT)
+            <AlertIcon size={13} />
+            <span>MedDRA levels above PT are disabled (use PT/LLT)</span>
           </span>
         )}
       </div>
