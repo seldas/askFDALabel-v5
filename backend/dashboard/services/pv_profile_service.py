@@ -1026,6 +1026,7 @@ class PVProfileService:
             profile_data['soc_summary'] = soc_summary
             profile_data['chart_data'] = chart_data
             profile_data['feedbacks'] = cls.get_feedbacks(set_id)
+            profile_data['qc'] = None  # Invalidate previous QC after incorporating reviewer tags
             profile_data['updated_at'] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z'
 
             # 7. Update database cache
