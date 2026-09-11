@@ -200,12 +200,14 @@ export function applySocHighlight(root: HTMLElement, targetSoc: string): void {
 }
 
 /**
- * Clears SOC highlights across the entire document.
+ * Clears SOC highlights and focus highlights across the entire document.
  */
 export function clearSocHighlight(root: HTMLElement): void {
   if (!root) return;
   const elements = root.querySelectorAll<HTMLElement>('.meddra-soc-highlight');
   elements.forEach((el) => el.classList.remove('meddra-soc-highlight'));
+  const focusElements = root.querySelectorAll<HTMLElement>('.meddra-focus-highlight');
+  focusElements.forEach((el) => el.classList.remove('meddra-focus-highlight'));
 }
 
 /**
@@ -214,16 +216,13 @@ export function clearSocHighlight(root: HTMLElement): void {
 export function scrollToTermElement(element: HTMLElement): void {
   if (!element) return;
 
-  // Scroll into view
   element.scrollIntoView({
     behavior: 'smooth',
     block: 'center',
     inline: 'nearest',
   });
 
-  // Apply brief focus pulse
   element.classList.remove('meddra-term-focused');
-  // Trigger reflow to restart animation if already applied
   void element.offsetWidth;
   element.classList.add('meddra-term-focused');
 
@@ -233,11 +232,107 @@ export function scrollToTermElement(element: HTMLElement): void {
 }
 
 /**
- * Attaches a modern, clean implementation of window.loadMeddraStatistics
- * so the AEs modal (#meddra-stats-modal) continues to work without needing legacy faers.js.
+ * Focuses/picks a MedDRA term in the document with vivid highlight, closes modal, and scrolls to it.
+ */
+export function focusMeddraTerm(term: string): void {
+  const lowerTerm = term.trim().toLowerCase();
+  const allSignals = Array.from(document.querySelectorAll<HTMLElement>('.meddra-term-base'));
+  let firstMatch: HTMLElement | null = null;
+  let targetSoc: string | null = null;
+
+  for (const el of allSignals) {
+    const elTerm = (el.getAttribute('data-term') || el.textContent || '').trim().toLowerCase();
+    if (elTerm === lowerTerm) {
+      el.classList.add('meddra-focus-highlight');
+      if (!firstMatch) {
+        firstMatch = el;
+        targetSoc = el.getAttribute('data-soc');
+      }
+    } else {
+      el.classList.remove('meddra-focus-highlight');
+    }
+  }
+
+  if (!firstMatch) {
+    // Fallback: substring matching
+    for (const el of allSignals) {
+      const elText = (el.textContent || '').trim().toLowerCase();
+      if (elText.includes(lowerTerm)) {
+        el.classList.add('meddra-focus-highlight');
+        if (!firstMatch) {
+          firstMatch = el;
+          targetSoc = el.getAttribute('data-soc');
+        }
+      }
+    }
+  }
+
+  if (firstMatch) {
+    // Close AE stats modal
+    const modal = document.getElementById('meddra-stats-modal');
+    if (modal) modal.style.display = 'none';
+
+    // Dispatch event so label view and left navigation sync to this SOC
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('meddra:focus-term', {
+          detail: { term, soc: targetSoc },
+        })
+      );
+    }
+
+    // Scroll smoothly to the first matching element
+    const matchEl: HTMLElement = firstMatch;
+    setTimeout(() => {
+      matchEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 60);
+  } else {
+    alert(`Could not find "${term}" in the visible label text.`);
+  }
+}
+
+if (typeof window !== 'undefined') {
+  (window as any).focusMeddraTerm = focusMeddraTerm;
+}
+
+export const MEDDRA_SOC_ABBREV: Record<string, string> = {
+  'Blood and lymphatic system disorders': 'BLOOD',
+  'Cardiac disorders': 'CARD',
+  'Congenital, familial and genetic disorders': 'CONG',
+  'Ear and labyrinth disorders': 'EAR',
+  'Endocrine disorders': 'ENDO',
+  'Eye disorders': 'EYE',
+  'Gastrointestinal disorders': 'GAST',
+  'General disorders and administration site conditions': 'GENRL',
+  'Hepatobiliary disorders': 'HEPAT',
+  'Immune system disorders': 'IMMUN',
+  'Infections and infestations': 'INFEC',
+  'Injury, poisoning and procedural complications': 'INJ&P',
+  'Investigations': 'INV',
+  'Metabolism and nutrition disorders': 'METAB',
+  'Musculoskeletal and connective tissue disorders': 'MUSC',
+  'Neoplasms benign, malignant and unspecified (incl cysts and polyps)': 'NEOPL',
+  'Nervous system disorders': 'NERV',
+  'Pregnancy, puerperium and perinatal conditions': 'PREG',
+  'Product issues': 'PROD',
+  'Psychiatric disorders': 'PSYCH',
+  'Renal and urinary disorders': 'RENAL',
+  'Reproductive system and breast disorders': 'REPRO',
+  'Respiratory, thoracic and mediastinal disorders': 'RESP',
+  'Skin and subcutaneous tissue disorders': 'SKIN',
+  'Social circumstances': 'SOCCI',
+  'Surgical and medical procedures': 'SURG',
+  'Vascular disorders': 'VASC',
+};
+
+/**
+ * Attaches a modern implementation of window.loadMeddraStatistics
+ * with full interactive bar chart drilldown and MedDRA term picking.
  */
 export function setupMeddraStatistics(pvData: any): void {
   if (typeof window === 'undefined') return;
+
+  (window as any).focusMeddraTerm = focusMeddraTerm;
 
   (window as any).loadMeddraStatistics = function () {
     const modalBody = document.getElementById('meddra-stats-body');
@@ -255,27 +350,61 @@ export function setupMeddraStatistics(pvData: any): void {
       return;
     }
 
-    const socCounts: Record<string, number> = {};
-    const uniqueTerms = new Set<string>();
+    interface SocStat {
+      socName: string;
+      socAbbrev: string;
+      count: number;
+      terms: Record<string, Set<string>>;
+    }
+
+    const socStatsMap: Record<string, SocStat> = {};
 
     pvData.items.forEach((item: any) => {
       const pt = (item.meddra_pt || '').trim();
-      const soc = (item.soc_name || 'General disorders and administration site conditions').trim();
+      const socName = (item.soc_name || 'General disorders and administration site conditions').trim();
+      const socAbbrev = (item.soc_abbrev || '').trim() || MEDDRA_SOC_ABBREV[socName] || socName.slice(0, 5).toUpperCase();
 
-      if (pt && !uniqueTerms.has(pt.toLowerCase())) {
-        uniqueTerms.add(pt.toLowerCase());
-        socCounts[soc] = (socCounts[soc] || 0) + 1;
+      if (pt) {
+        if (!socStatsMap[socName]) {
+          socStatsMap[socName] = {
+            socName,
+            socAbbrev,
+            count: 0,
+            terms: {},
+          };
+        }
+
+        const stat = socStatsMap[socName];
+        if (!stat.terms[pt]) {
+          stat.terms[pt] = new Set<string>();
+          stat.count += 1;
+        }
+
+        if (Array.isArray(item.occurrences) && item.occurrences.length > 0) {
+          item.occurrences.forEach((occ: any) => {
+            if (occ.section_title) stat.terms[pt].add(occ.section_title);
+          });
+        } else if (item.section_name) {
+          stat.terms[pt].add(item.section_name);
+        }
       }
     });
 
-    const labels = Object.keys(socCounts).sort((a, b) => socCounts[b] - socCounts[a]);
-    const counts = labels.map((l) => socCounts[l]);
-    const colors = labels.map((_, i) => `hsl(${(i * 360) / Math.max(labels.length, 1)}, 70%, 60%)`);
-    const borderColors = labels.map((_, i) => `hsl(${(i * 360) / Math.max(labels.length, 1)}, 70%, 40%)`);
+    const sortedStats = Object.values(socStatsMap).sort((a, b) => b.count - a.count);
+    const xTickLabels = sortedStats.map((s) => s.socAbbrev);
+    const counts = sortedStats.map((s) => s.count);
+    const totalSignals = sortedStats.reduce((sum, s) => sum + s.count, 0);
+
+    const colors = sortedStats.map((_, i) => `hsl(${(i * 360) / Math.max(sortedStats.length, 1)}, 70%, 60%)`);
+    const borderColors = sortedStats.map((_, i) => `hsl(${(i * 360) / Math.max(sortedStats.length, 1)}, 70%, 40%)`);
 
     modalBody.innerHTML = `
-      <div style="height: 340px; width: 100%;">
+      <div style="height: 320px; width: 100%;">
         <canvas id="meddraStatsChart"></canvas>
+      </div>
+      <div id="meddra-drilldown-container" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0; display: none;">
+        <h4 id="drilldown-title" style="margin: 0 0 14px 0; color: #6f42c1; font-size: 1.1rem; font-weight: 700; border-bottom: 2px solid #8b5cf6; padding-bottom: 8px;"></h4>
+        <div id="meddra-drilldown-list" style="display: flex; gap: 8px;"></div>
       </div>
     `;
 
@@ -291,10 +420,79 @@ export function setupMeddraStatistics(pvData: any): void {
     const existing = Chart.getChart(canvas);
     if (existing) existing.destroy();
 
-    new Chart(canvas.getContext('2d'), {
+    function showDrillDown(socName: string, termsObj: Record<string, Set<string>>, socAbbrev: string) {
+      const container = document.getElementById('meddra-drilldown-container');
+      const title = document.getElementById('drilldown-title');
+      const list = document.getElementById('meddra-drilldown-list');
+      if (!container || !title || !list) return;
+
+      container.style.display = 'block';
+      const sortedTerms = Object.keys(termsObj).sort();
+      const termCount = sortedTerms.length;
+
+      title.textContent = `${socName} [${socAbbrev}] (${termCount} terms — click any term to locate in document)`;
+
+      list.innerHTML = '';
+      const isDense = termCount > 5;
+
+      if (isDense) {
+        list.style.flexDirection = 'row';
+        list.style.flexWrap = 'wrap';
+        list.style.gap = '8px';
+      } else {
+        list.style.flexDirection = 'column';
+        list.style.flexWrap = 'nowrap';
+        list.style.gap = '4px';
+      }
+
+      sortedTerms.forEach((term) => {
+        const sections = Array.from(termsObj[term] || []).sort();
+        const sectionText = sections.length > 0 ? ` (in: ${sections.join(', ')})` : '';
+        const displayTerm = term.charAt(0).toUpperCase() + term.slice(1);
+
+        const itemDiv = document.createElement('div');
+        itemDiv.style.fontFamily = 'inherit';
+        itemDiv.style.cursor = 'pointer';
+        itemDiv.style.transition = 'all 0.15s ease';
+
+        if (isDense) {
+          itemDiv.style.background = '#ffffff';
+          itemDiv.style.border = '1px solid #cbd5e1';
+          itemDiv.style.borderRadius = '20px';
+          itemDiv.style.padding = '5px 12px';
+          itemDiv.style.fontSize = '0.85rem';
+          itemDiv.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+          itemDiv.innerHTML = `<strong style="color: #1e293b;">${displayTerm}</strong><span style="color: #64748b; font-size: 0.75rem; margin-left: 6px;">${sectionText}</span>`;
+        } else {
+          itemDiv.style.fontSize = '0.9rem';
+          itemDiv.style.padding = '8px 12px';
+          itemDiv.style.borderRadius = '6px';
+          itemDiv.style.border = '1px solid #e2e8f0';
+          itemDiv.style.background = '#f8fafc';
+          itemDiv.innerHTML = `<strong style="color: #1e293b;">${displayTerm}</strong><span style="color: #64748b; font-size: 0.8rem; margin-left: 8px;">${sectionText}</span>`;
+        }
+
+        itemDiv.onmouseover = () => {
+          itemDiv.style.borderColor = '#8b5cf6';
+          itemDiv.style.backgroundColor = '#f5f3ff';
+        };
+        itemDiv.onmouseout = () => {
+          itemDiv.style.borderColor = isDense ? '#cbd5e1' : '#e2e8f0';
+          itemDiv.style.backgroundColor = isDense ? '#ffffff' : '#f8fafc';
+        };
+
+        itemDiv.onclick = () => focusMeddraTerm(term);
+
+        list.appendChild(itemDiv);
+      });
+
+      container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    const chartInstance = new Chart(canvas.getContext('2d'), {
       type: 'bar',
       data: {
-        labels,
+        labels: xTickLabels,
         datasets: [
           {
             label: 'Adverse Events',
@@ -312,21 +510,55 @@ export function setupMeddraStatistics(pvData: any): void {
           legend: { display: false },
           title: {
             display: true,
-            text: `Verified Adverse Events: ${uniqueTerms.size} signals across ${labels.length} Organ Systems`,
+            text: `Verified Adverse Events: ${totalSignals} signals across ${sortedStats.length} Organ Systems (Click any bar to drill down)`,
+          },
+          tooltip: {
+            callbacks: {
+              title: function (items: any[]) {
+                const idx = items[0].dataIndex;
+                const stat = sortedStats[idx];
+                return stat ? `${stat.socName} (${stat.socAbbrev})` : items[0].label;
+              },
+              label: function (context: any) {
+                return ` Adverse Events: ${context.parsed.y} terms`;
+              },
+            },
           },
         },
         scales: {
-          y: { beginAtZero: true },
-          x: {
+          y: {
+            beginAtZero: true,
             ticks: {
-              maxRotation: 45,
-              minRotation: 45,
-              font: { size: 10 },
+              stepSize: 1,
             },
           },
+          x: {
+            ticks: {
+              autoSkip: false,
+              maxRotation: sortedStats.length > 12 ? 45 : 0,
+              minRotation: 0,
+              font: {
+                size: 11,
+                weight: '700',
+              },
+              color: '#334155',
+            },
+          },
+        },
+        onClick: (e: any) => {
+          const points = chartInstance.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
+          if (points && points.length > 0) {
+            const index = points[0].index;
+            const selectedStat = sortedStats[index];
+            if (selectedStat) {
+              showDrillDown(selectedStat.socName, selectedStat.terms, selectedStat.socAbbrev);
+            }
+          }
         },
       },
     });
   };
 }
+
+
 

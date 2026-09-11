@@ -323,6 +323,10 @@ export default function LabelView({
       if (!target) return;
 
       e.stopPropagation();
+
+      // Clear any prior focus highlight from AE stats modal
+      viewport.querySelectorAll('.meddra-focus-highlight').forEach((el) => el.classList.remove('meddra-focus-highlight'));
+
       const clickedSoc = target.getAttribute('data-soc');
       if (!clickedSoc || clickedSoc === 'Unknown') return;
 
@@ -347,6 +351,29 @@ export default function LabelView({
     viewport.addEventListener('click', handleViewportClick);
     return () => viewport.removeEventListener('click', handleViewportClick);
   }, [activeSoc, tocCollapsed, setTocCollapsed]);
+
+  // Sync when a term is picked/focused from the AE stats modal
+  useEffect(() => {
+    const handleFocusTermEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ term: string; soc?: string | null }>;
+      const { term, soc } = customEvent.detail || {};
+      if (soc && soc !== 'Unknown') {
+        setActiveSoc(soc);
+        setActiveTermName(term);
+        setActiveTermOccurIndex(0);
+        if (labelViewRef.current) {
+          applySocHighlight(labelViewRef.current, soc);
+        }
+        setNavTab('soc');
+        if (tocCollapsed) {
+          setTocCollapsed(false);
+        }
+      }
+    };
+
+    window.addEventListener('meddra:focus-term', handleFocusTermEvent);
+    return () => window.removeEventListener('meddra:focus-term', handleFocusTermEvent);
+  }, [tocCollapsed, setTocCollapsed]);
 
   return (
     <div id="label-view" className={`tab-content ${activeTab === 'label-view' ? 'active' : ''} ${(data.openfda_status === 'Archived' || data.is_latest === false) ? 'archived-theme' : ''}`} style={{ 
