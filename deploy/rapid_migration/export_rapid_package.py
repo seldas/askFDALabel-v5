@@ -189,8 +189,10 @@ def export_mounted_files(target_dir):
         ".env.rapid.template",
         "AGENTS.md",
         "README.md",
+        "data/sync_schema.py",
         "deploy/rapid_migration/restore_db.py",
         "deploy/rapid_migration/dump_db.py",
+        "deploy/rapid_migration/import_rapid_package.py",
         "deploy/rapid_migration/README.md",
     ]
     dirs = [
@@ -200,7 +202,7 @@ def export_mounted_files(target_dir):
         "backend/webtest/history",
         "frontend/public",
     ]
-    archive_files(zip_path, files, dirs, exclude_patterns=["*.pyc", "__pycache__", ".DS_Store", "Thumbs.db"])
+    archive_files(zip_path, files, dirs, exclude_patterns=["*.pyc", "__pycache__", ".DS_Store", "Thumbs.db", ".env", "*.env"])
     print(f"[SUCCESS] Created config archive: {zip_path}")
 
 def export_data_folder(target_dir):

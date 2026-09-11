@@ -58,25 +58,31 @@ def load_docker_images(source_dir):
     print("[SUCCESS] All Docker images loaded successfully.")
 
 def unzip_archive(zip_path, dest_dir, exclude_filenames=None):
-    """Unzips a zip file into dest_dir, overwriting existing files except excluded ones."""
+    """Unzips a zip file into dest_dir, overwriting existing files except excluded ones (such as .env)."""
     if not zip_path.exists():
         print(f"[ERROR] Zip archive not found: {zip_path}")
         sys.exit(1)
 
     exclude_set = set(exclude_filenames or [".env"])
-    print(f"[UNZIP] Extracting {zip_path.name} to {dest_dir} (overwriting existing files)...")
+    exclude_set.add(".env")
+    print(f"[UNZIP] Extracting {zip_path.name} to {dest_dir} (overwriting existing files, protecting .env)...")
     dest_dir.mkdir(parents=True, exist_ok=True)
     
     with zipfile.ZipFile(zip_path, "r") as zf:
         for member in zf.infolist():
-            # Skip excluded files (such as .env to protect environment settings)
             member_name = Path(member.filename).name
-            if member.filename in exclude_set or member_name in exclude_set:
+            # Skip excluded files (such as .env to protect environment settings)
+            if member.filename in exclude_set or member_name in exclude_set or member_name == ".env":
                 print(f"  - Skipped protected file: {member.filename}")
                 continue
 
-            # Extract member explicitly to support overwrite
+            # Extra safeguard: never overwrite an existing .env file
             target_path = dest_dir / member.filename
+            if target_path.name == ".env" and target_path.exists():
+                print(f"  - Preserved existing file from overwrite: {target_path}")
+                continue
+
+            # Extract member explicitly to support overwrite
             if member.is_dir():
                 target_path.mkdir(parents=True, exist_ok=True)
             else:
