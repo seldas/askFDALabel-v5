@@ -1367,22 +1367,154 @@ html {
   margin-bottom: 1.5em;
 }
 
-/* Base MedDRA Highlight (Pre-FAERS) */
+/* Base MedDRA Highlight - Clean, no dashed underline */
 .meddra-term-base {
     background-color: transparent; 
-    border-bottom: 2px dashed #339af0 !important; /* Blue Dashed */
+    border-bottom: none !important; /* Cancelled dashed underline per user request */
     cursor: pointer;
     display: inline;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
 .meddra-term-base:hover {
-    background-color: #f3f0ff !important; /* Very Light Purple on hover */
+    background-color: #fef9c3 !important; /* Subtle soft yellow preview on hover */
+    border-radius: 2px;
 }
 
+/* SOC Group Highlight - Soft Warm Yellow */
 .meddra-soc-highlight {
-    background-color: var(--afl-info-50) !important;
-    border-bottom: 2px solid #339af0 !important;
-    border-radius: 4px;
+    background-color: #fef08a !important; /* Soft warm yellow */
+    color: #1e293b !important;
+    border-bottom: none !important;
+    border-radius: 3px;
+    padding: 1px 3px;
+    box-shadow: 0 0 0 1px rgba(234, 179, 8, 0.4);
+    transition: all 0.2s ease;
+}
+.meddra-soc-highlight:hover {
+    background-color: #fde047 !important; /* Slightly deeper yellow on hover */
+}
+
+/* Focused term pulse when navigating from side panel */
+.meddra-term-focused {
+    animation: meddraPulseRing 2s ease;
+    outline: 2px solid #ca8a04 !important;
+    outline-offset: 1px;
+}
+@keyframes meddraPulseRing {
+    0% {
+        box-shadow: 0 0 0 0 rgba(202, 138, 4, 0.7);
+        background-color: #fde047 !important;
+    }
+    50% {
+        box-shadow: 0 0 0 6px rgba(202, 138, 4, 0);
+        background-color: #fde047 !important;
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(202, 138, 4, 0);
+        background-color: #fef08a !important;
+    }
+}
+
+/* --- Left Navigation Panel ToC / SoC Toggle & Lists --- */
+.nav-tab-toggle-bar {
+    display: flex;
+    align-items: center;
+    background: var(--afl-n-100);
+    padding: 3px;
+    border-radius: 8px;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.nav-tab-toggle-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--afl-n-600);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 5px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+
+.nav-tab-toggle-btn:hover {
+    color: var(--afl-n-900);
+}
+
+.nav-tab-toggle-btn.active {
+    background: white;
+    color: var(--afl-n-900);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.nav-tab-badge {
+    font-size: 0.65rem;
+    padding: 1px 5px;
+    border-radius: 10px;
+    background: var(--afl-n-200);
+    color: var(--afl-n-700);
+    font-weight: 700;
+}
+
+.nav-tab-toggle-btn.active .nav-tab-badge {
+    background: #fef08a;
+    color: #854d0e;
+}
+
+.soc-group-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--afl-n-700);
+    transition: all 0.15s ease;
+    margin-bottom: 3px;
+    border: 1px solid transparent;
+}
+
+.soc-group-item:hover {
+    background: var(--afl-n-50);
+    color: var(--afl-n-900);
+}
+
+.soc-group-item.active {
+    background: #fefce8;
+    color: #713f12;
+    border-color: #fef08a;
+    font-weight: 600;
+}
+
+.soc-term-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--afl-n-800);
+    transition: all 0.15s ease;
+    margin-bottom: 2px;
+}
+
+.soc-term-row:hover {
+    background: #fef9c3;
+    color: #713f12;
+}
+
+.soc-term-row.focused {
+    background: #fef08a;
+    color: #713f12;
+    font-weight: 700;
 }
 
 /* Active Highlight from Stats Window - Vivid Pink/Purple */

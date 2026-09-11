@@ -4,6 +4,14 @@ import { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react';
 import { Section, LabelData, TOCItem } from './types';
 import { useLabel } from './LabelContext';
 import Link from 'next/link';
+import {
+  scanAndHighlightMeddraTerms,
+  applySocHighlight,
+  clearSocHighlight,
+  scrollToTermElement,
+  setupMeddraStatistics,
+  SocCatalog
+} from './meddraHighlight';
 
 const SectionComponent = memo(function SectionComponent({ section }: { section: Section }) {
   return (
@@ -82,7 +90,8 @@ export default function LabelView({
   setTocCollapsed,
   expandedSections,
   toggleSection,
-  TOCItemComponent
+  TOCItemComponent,
+  pvProfileData
 }: { 
   data: LabelData; 
   activeTab: string;
@@ -91,9 +100,15 @@ export default function LabelView({
   expandedSections: Set<string>;
   toggleSection: (id: string) => void;
   TOCItemComponent: any;
+  pvProfileData?: any;
 }) {
   const { headerCollapsed, setHeaderCollapsed } = useLabel();
   const [currentIndex, setCurrentIndex] = useState(0); // 0-based index of sections
+  const [navTab, setNavTab] = useState<'toc' | 'soc'>('toc');
+  const [activeSoc, setActiveSoc] = useState<string | null>(null);
+  const [socCatalog, setSocCatalog] = useState<SocCatalog>({});
+  const [activeTermName, setActiveTermName] = useState<string | null>(null);
+  const [activeTermOccurIndex, setActiveTermOccurIndex] = useState<number>(0);
   const labelViewRef = useRef<HTMLDivElement>(null);
   const disableScrollObserver = useRef(false);
 
@@ -282,18 +297,56 @@ export default function LabelView({
     return () => observer.disconnect();
   }, [sections.length, activeTab]);
 
-  // Re-apply MedDRA highlights after render
+  // Scan and highlight MedDRA terms when PV-profile data is available
   useEffect(() => {
-    if (activeTab === 'label-view') {
-        // Use a slight delay to ensure React has finished DOM updates
-        const timer = setTimeout(() => {
-            if ((window as any).reapplyMeddraHighlights) {
-                (window as any).reapplyMeddraHighlights();
-            }
-        }, 100); 
-        return () => clearTimeout(timer);
+    if (activeTab === 'label-view' && labelViewRef.current && pvProfileData?.items?.length) {
+      setupMeddraStatistics(pvProfileData);
+      const timer = setTimeout(() => {
+        if (!labelViewRef.current) return;
+        const catalog = scanAndHighlightMeddraTerms(labelViewRef.current, pvProfileData.items);
+        setSocCatalog(catalog);
+        if (activeSoc) {
+          applySocHighlight(labelViewRef.current, activeSoc);
+        }
+      }, 150);
+      return () => clearTimeout(timer);
     }
-  }, [activeTab, sections, currentIndex]);
+  }, [activeTab, pvProfileData, sections.length]);
+
+  // Delegated click handler on label viewport for MedDRA terms
+  useEffect(() => {
+    const viewport = labelViewRef.current;
+    if (!viewport) return;
+
+    const handleViewportClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement)?.closest('.meddra-term-base') as HTMLElement | null;
+      if (!target) return;
+
+      e.stopPropagation();
+      const clickedSoc = target.getAttribute('data-soc');
+      if (!clickedSoc || clickedSoc === 'Unknown') return;
+
+      if (activeSoc === clickedSoc) {
+        // Toggle OFF if already highlighted
+        clearSocHighlight(viewport);
+        setActiveSoc(null);
+        setActiveTermName(null);
+      } else {
+        // Activate new SOC highlight
+        setActiveSoc(clickedSoc);
+        setActiveTermName(target.getAttribute('data-term') || null);
+        setActiveTermOccurIndex(0);
+        applySocHighlight(viewport, clickedSoc);
+        setNavTab('soc');
+        if (tocCollapsed) {
+          setTocCollapsed(false);
+        }
+      }
+    };
+
+    viewport.addEventListener('click', handleViewportClick);
+    return () => viewport.removeEventListener('click', handleViewportClick);
+  }, [activeSoc, tocCollapsed, setTocCollapsed]);
 
   return (
     <div id="label-view" className={`tab-content ${activeTab === 'label-view' ? 'active' : ''} ${(data.openfda_status === 'Archived' || data.is_latest === false) ? 'archived-theme' : ''}`} style={{ 
@@ -305,7 +358,7 @@ export default function LabelView({
       marginTop: '0px'
     }}>
         
-        {/* TOC Panel */}
+        {/* Navigation Sidebar (ToC / SoC) */}
         <div id="toc-panel" className={`toc-side-panel-inline ${tocCollapsed ? 'collapsed' : ''}`} style={{ 
           width: tocCollapsed ? '0' : '300px', 
           height: '100%',
@@ -319,26 +372,50 @@ export default function LabelView({
           flexDirection: 'column',
           transition: 'all 0.3s ease'
         }}>
-          <div className="toc-box" style={{ padding: '20px 15px', flex: 1, overflowY: 'auto' }}>
+          <div className="toc-box" style={{ padding: '16px 14px', flex: 1, overflowY: 'auto' }}>
+            {/* Top Header: ToC / SoC Segmented Toggle + Close Button */}
             <div className="toc-header" style={{ 
-              marginBottom: '16px', 
+              marginBottom: '12px', 
               display: 'flex', 
-              justifyContent: 'center', 
               alignItems: 'center',
-              paddingBottom: '12px',
-              borderBottom: '1px solid var(--afl-n-100)',
-              position: 'relative'
+              justifyContent: 'space-between',
+              gap: '8px',
+              paddingBottom: '10px',
+              borderBottom: '1px solid var(--afl-n-100)'
             }}>
-              <h2 style={{ 
-                fontSize: '0.75rem', 
-                fontWeight: 700, 
-                textTransform: 'uppercase', 
-                letterSpacing: '0.05em', 
-                color: 'var(--afl-n-500)', 
-                margin: 0 
-              }}>
-                Table of Contents
-              </h2>
+              <div className="nav-tab-toggle-bar" style={{ flex: 1, margin: 0 }}>
+                <button 
+                  type="button"
+                  className={`nav-tab-toggle-btn ${navTab === 'toc' ? 'active' : ''}`}
+                  onClick={() => setNavTab('toc')}
+                  title="Document Table of Contents"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <line x1="8" y1="6" x2="21" y2="6"></line>
+                    <line x1="8" y1="12" x2="21" y2="12"></line>
+                    <line x1="8" y1="18" x2="21" y2="18"></line>
+                    <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                    <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                    <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                  </svg>
+                  <span>ToC</span>
+                </button>
+                <button 
+                  type="button"
+                  className={`nav-tab-toggle-btn ${navTab === 'soc' ? 'active' : ''}`}
+                  onClick={() => setNavTab('soc')}
+                  title="MedDRA System Organ Classes"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                  </svg>
+                  <span>SoC</span>
+                  {Object.keys(socCatalog).length > 0 && (
+                    <span className="nav-tab-badge">{Object.keys(socCatalog).length}</span>
+                  )}
+                </button>
+              </div>
+
               <button 
                 onClick={() => setTocCollapsed(true)} 
                 style={{ 
@@ -348,34 +425,193 @@ export default function LabelView({
                   cursor: 'pointer', 
                   color: 'var(--afl-n-400)', 
                   fontSize: '0.75rem',
-                  width: '24px',
-                  height: '24px',
+                  width: '26px',
+                  height: '26px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   transition: 'all 0.2s ease',
-                  position: 'absolute',
-                  right: '0'
+                  flexShrink: 0
                 }}
                 className="toc-close-btn"
+                title="Collapse sidebar"
               >
                 ✕
               </button>
             </div>
-            {data.table_of_contents && data.table_of_contents.length > 0 ? (
-              <ol className="toc-list">
-                {data.table_of_contents.map((item: TOCItem) => (
-                  <TOCItemComponent 
-                    key={item.id} 
-                    item={item} 
-                    expandedSections={expandedSections}
-                    toggleSection={toggleSection}
-                    activeSectionId={sections[currentIndex]?.id}
-                  />
-                ))}
-              </ol>
+
+            {/* Panel Body: ToC or SoC */}
+            {navTab === 'toc' ? (
+              data.table_of_contents && data.table_of_contents.length > 0 ? (
+                <ol className="toc-list">
+                  {data.table_of_contents.map((item: TOCItem) => (
+                    <TOCItemComponent 
+                      key={item.id} 
+                      item={item} 
+                      expandedSections={expandedSections}
+                      toggleSection={toggleSection}
+                      activeSectionId={sections[currentIndex]?.id}
+                    />
+                  ))}
+                </ol>
+              ) : (
+                <p style={{ fontSize: '0.8rem', color: 'var(--afl-n-400)' }}>No TOC available.</p>
+              )
             ) : (
-              <p style={{ fontSize: '0.8rem', color: 'var(--afl-n-400)' }}>No TOC available.</p>
+              /* SoC Navigation View */
+              <div>
+                {activeSoc && socCatalog[activeSoc] ? (
+                  <div>
+                    <div style={{ marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px solid var(--afl-n-100)' }}>
+                      <button
+                        onClick={() => {
+                          if (labelViewRef.current) clearSocHighlight(labelViewRef.current);
+                          setActiveSoc(null);
+                          setActiveTermName(null);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--afl-primary-600)',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          padding: 0,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          marginBottom: '8px'
+                        }}
+                      >
+                        ← All Organ Classes
+                      </button>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                        <div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--afl-n-900)', lineHeight: '1.3' }}>
+                            {activeSoc}
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--afl-n-500)', marginTop: '2px' }}>
+                            {socCatalog[activeSoc].totalOccurrences} occurrences &middot; {socCatalog[activeSoc].terms.length} terms
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (labelViewRef.current) clearSocHighlight(labelViewRef.current);
+                            setActiveSoc(null);
+                            setActiveTermName(null);
+                          }}
+                          title="Cancel highlight"
+                          style={{
+                            background: '#fef08a',
+                            border: '1px solid #fde047',
+                            color: '#854d0e',
+                            borderRadius: '4px',
+                            padding: '2px 6px',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            flexShrink: 0
+                          }}
+                        >
+                          ✕ Clear
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      {socCatalog[activeSoc].terms.map((termItem) => {
+                        const isFocused = activeTermName === termItem.term;
+                        return (
+                          <div
+                            key={termItem.term}
+                            className={`soc-term-row ${isFocused ? 'focused' : ''}`}
+                            onClick={() => {
+                              const isSame = activeTermName === termItem.term;
+                              const nextIdx = isSame ? (activeTermOccurIndex + 1) % termItem.elements.length : 0;
+                              setActiveTermName(termItem.term);
+                              setActiveTermOccurIndex(nextIdx);
+                              if (termItem.elements[nextIdx]) {
+                                scrollToTermElement(termItem.elements[nextIdx]);
+                              }
+                            }}
+                            title={`Click to locate in document (${termItem.count} occurrences)`}
+                          >
+                            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '6px' }}>
+                              {termItem.term}
+                            </span>
+                            <span style={{ 
+                              fontSize: '0.7rem', 
+                              fontWeight: 700, 
+                              padding: '1px 6px', 
+                              borderRadius: '10px', 
+                              background: isFocused ? '#fde047' : 'var(--afl-n-200)',
+                              color: isFocused ? '#854d0e' : 'var(--afl-n-700)',
+                              flexShrink: 0
+                            }}>
+                              {isFocused ? `${activeTermOccurIndex + 1}/${termItem.count}` : `${termItem.count}x`}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  /* No SoC active: display list of all available SOCs */
+                  <div>
+                    <div style={{ marginBottom: '10px' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--afl-n-500)', letterSpacing: '0.05em' }}>
+                        System Organ Classes
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--afl-n-500)', marginTop: '2px' }}>
+                        Select an organ class to highlight its terms in the label:
+                      </div>
+                    </div>
+
+                    {Object.keys(socCatalog).length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        {Object.values(socCatalog).map((group) => (
+                          <div
+                            key={group.socName}
+                            className="soc-group-item"
+                            onClick={() => {
+                              setActiveSoc(group.socName);
+                              setActiveTermName(null);
+                              setActiveTermOccurIndex(0);
+                              if (labelViewRef.current) {
+                                applySocHighlight(labelViewRef.current, group.socName);
+                              }
+                            }}
+                            title={`Highlight all ${group.totalOccurrences} terms for ${group.socName}`}
+                          >
+                            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>
+                              {group.socName}
+                            </span>
+                            <span style={{
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              padding: '1px 6px',
+                              borderRadius: '10px',
+                              background: 'var(--afl-n-200)',
+                              color: 'var(--afl-n-700)',
+                              flexShrink: 0
+                            }}>
+                              {group.totalOccurrences}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ padding: '24px 10px', textAlign: 'center', color: 'var(--afl-n-400)', fontSize: '0.8rem' }}>
+                        <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>📋</div>
+                        <div style={{ fontWeight: 600 }}>No Adverse Event scan found</div>
+                        <div style={{ fontSize: '0.72rem', marginTop: '4px', color: 'var(--afl-n-400)' }}>
+                          Run PV-Profile in Toolbox to scan and index MedDRA terms for this label.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

@@ -1397,41 +1397,7 @@ window.initFaers = function() {
         }
     }
 
-    // --- MedDRA SOC Highlighting Logic (Delegated) ---
-    document.addEventListener('click', (e) => {
-        const target = e.target;
-        
-        // 1. Check if we clicked a MedDRA term
-        if (target && target.classList && target.classList.contains('meddra-term-base')) {
-            e.stopPropagation();
-            
-            const targetSoc = target.getAttribute('data-soc');
-            const allMeddra = document.querySelectorAll('.meddra-term-base');
-            
-            // Toggle behavior: if this one is already highlighted as part of a SOC group, clear all
-            const wasHighlighted = target.classList.contains('meddra-soc-highlight');
-            
-            // Always clear first
-            allMeddra.forEach(el => el.classList.remove('meddra-soc-highlight'));
-            
-            // If it wasn't highlighted, and we have a valid SOC, highlight the group
-            if (!wasHighlighted && targetSoc && targetSoc !== 'Unknown') {
-                console.log(`Highlighting MedDRA SOC group: ${targetSoc}`);
-                allMeddra.forEach(el => {
-                    if (el.getAttribute('data-soc') === targetSoc) {
-                        el.classList.add('meddra-soc-highlight');
-                    }
-                });
-            }
-            return;
-        }
-
-        // 2. Clicked outside: Clear all MedDRA SOC highlights
-        const activeHighlights = document.querySelectorAll('.meddra-soc-highlight');
-        if (activeHighlights.length > 0) {
-            activeHighlights.forEach(el => el.classList.remove('meddra-soc-highlight'));
-        }
-    });
+    // --- MedDRA SOC Highlighting Logic has been superseded by React implementation in label.tsx & meddraHighlight.ts ---
 
     window.loadMeddraStatistics = function() {
         const modalBody = document.getElementById('meddra-stats-body');

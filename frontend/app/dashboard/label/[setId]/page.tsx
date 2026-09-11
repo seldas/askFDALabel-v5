@@ -424,6 +424,7 @@ function LabelContent() {
 
   // PV-Profile verification state: AEs button and highlights are only enabled when ready
   const [pvProfileReady, setPvProfileReady] = useState<boolean | null>(null);
+  const [pvProfileData, setPvProfileData] = useState<any>(null);
 
   useEffect(() => {
     if (!setId) return;
@@ -434,32 +435,20 @@ function LabelContent() {
         if (!isMounted) return;
         const isReady = Boolean(pvData && pvData.has_record && Array.isArray(pvData.items) && pvData.items.length > 0);
         setPvProfileReady(isReady);
+        setPvProfileData(pvData);
         if (typeof window !== 'undefined') {
           (window as any).pvProfileData = pvData;
-          if (isReady && (window as any).loadMeddraScan) {
-            (window as any).loadMeddraScan(setId);
-          }
         }
       })
       .catch(() => {
-        if (isMounted) setPvProfileReady(false);
+        if (isMounted) {
+          setPvProfileReady(false);
+          setPvProfileData(null);
+        }
       });
     return () => {
       isMounted = false;
     };
-  }, [setId]);
-
-  /*
-   * Legacy script loading is handled by <LegacyBridge> in the render below.
-   * It replaces a 100ms setInterval that polled for five window.init* globals
-   * and gave up after 50 attempts, plus the manual reset of the window caches
-   * those scripts leak between labels.
-   */
-  const handleLegacyReady = useCallback(() => {
-    const win = window as any;
-    if (win.loadMeddraScan) {
-      win.loadMeddraScan(setId);
-    }
   }, [setId]);
 
   /*
@@ -958,7 +947,7 @@ function LabelContent() {
             an activeTab check, so every tool's scripts and effects ran on
             every view.
           */}
-          <LabelView data={data} activeTab={activeTab} tocCollapsed={tocCollapsed} setTocCollapsed={setTocCollapsed} expandedSections={expandedSections} toggleSection={toggleSection} TOCItemComponent={TOCItemComponent} />
+          <LabelView data={data} activeTab={activeTab} tocCollapsed={tocCollapsed} setTocCollapsed={setTocCollapsed} expandedSections={expandedSections} toggleSection={toggleSection} TOCItemComponent={TOCItemComponent} pvProfileData={pvProfileData} />
       </div>
 
       {/* Product Specifications Modal Dialog */}
@@ -1011,7 +1000,7 @@ function LabelContent() {
       */}
       <LegacyBridge
         resetKey={setId}
-        scripts={['chart', 'marked', 'utils', 'ui', 'favorites', 'session', 'chat', 'annotations', 'faers']}
+        scripts={['chart', 'marked', 'utils', 'ui', 'favorites', 'session', 'chat', 'annotations']}
         globals={{
           currentSetId: data.set_id,
           currentDrugName: data.faers_drug_name,
@@ -1022,8 +1011,7 @@ function LabelContent() {
           currentUserId: data.user_id ?? null,
           savedAnnotations: data.saved_annotations,
         }}
-        init={['initUI', 'initFaers', 'initChat', 'initAnnotations']}
-        onReady={handleLegacyReady}
+        init={['initUI', 'initChat', 'initAnnotations']}
       />
 
 
