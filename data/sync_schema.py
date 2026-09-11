@@ -86,6 +86,15 @@ def ensure_core_constraints(engine):
 
     try:
         with engine.connect() as conn:
+            # 0. Ensure required extension and schema exist
+            try:
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS citext;"))
+                conn.execute(text("CREATE SCHEMA IF NOT EXISTS labeling;"))
+                conn.commit()
+            except Exception as e:
+                print(f"  [!] Note creating citext extension or labeling schema: {e}")
+                conn.rollback()
+
             for schema_name, table_name, pk_col in core_tables:
                 # 1. Check if table exists
                 check_table = text("""
