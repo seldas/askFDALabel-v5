@@ -3275,11 +3275,13 @@ def api_pgx_assess(set_id):
         user_obj = current_user._get_current_object() if current_user.is_authenticated else None
         result = run_pgx_assessment(set_id, user=user_obj, force_refresh=force_refresh)
         if 'error' in result:
-            return jsonify({'error': result['error']}), 500
+            err_msg = result['error']
+            status_code = 404 if ('not found' in err_msg.lower() or 'could not retrieve' in err_msg.lower()) else 500
+            return jsonify({'error': err_msg}), status_code
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Critical error in api_pgx_assess: {e}")
-        return jsonify({'error': 'Internal Server Error during PGx assessment'}), 500
+        logger.exception(f"Critical error in api_pgx_assess for set_id={set_id}: {e}")
+        return jsonify({'error': f'Internal Server Error during PGx assessment: {str(e)}'}), 500
 
 
 @api_bp.route('/tasks/<int:task_id>', methods=['GET'])
