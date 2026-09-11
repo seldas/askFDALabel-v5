@@ -65,7 +65,7 @@ def _pull_oci_to_sif(source_url, sif_path, dry_run=False):
     if sif_path.exists() and not dry_run:
         print(f"[INFO] Using cached SIF image: {sif_path}")
         return
-    print(f"[INFO] Pulling {source_url} → {sif_path}")
+    print(f"[INFO] Pulling {source_url} -> {sif_path}")
     _run(['apptainer', 'pull', '--force', str(sif_path), source_url], dry_run)
 
 
@@ -481,6 +481,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
     backend_volumes.extend([
         "./data:/data",
         "./deploy:/deploy",
+        "./backend/database/scripts:/app/database/scripts",
         "./backend/webtest/results:/app/webtest/results",
         "./backend/webtest/history:/app/webtest/history"
     ])
@@ -529,7 +530,10 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
     celery_volumes = []
     if mode == "dev":
         celery_volumes.append("./backend:/app")
-    celery_volumes.append("./data:/data")
+    celery_volumes.extend([
+        "./data:/data",
+        "./backend/database/scripts:/app/database/scripts"
+    ])
 
     concurrency = 1 if efficient else 4
     celery_service = {

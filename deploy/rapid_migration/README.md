@@ -12,8 +12,7 @@ Generated archives:
   - `image_frontend.tar.gz`: `fdalabel-v3-frontend:latest`
   - `image_redis.tar.gz`: `fdalabel-v3-redis:latest`
   - `image_nginx.tar.gz`: `fdalabel-v3-nginx:latest` (Optional, with `--all-images`)
-  - `image_db.tar.gz`: `fdalabel-v3-db:latest` (Optional, with `--all-images`)
-- `rapid_files.zip`: Configuration scripts (`start_server.py`, `.env.template`, `.env.rapid.template`, `restore_db.py`, `dump_db.py`), Nginx configurations, webtest folders, and public assets (note: `.env` is deliberately excluded to protect target environment configuration).
+- `rapid_files.zip`: Configuration scripts (`start_server.py`, `.env.template`, `.env.rapid.template`, `restore_db.py`, `dump_db.py`), database scripts (`backend/database/scripts`), Nginx configurations, webtest folders, and public assets (note: `.env` is deliberately excluded to protect target environment configuration).
 - `data.zip`: (Optional) Contents of the `data/` directory.
 
 ---

@@ -195,6 +195,7 @@ def export_mounted_files(target_dir):
     ]
     dirs = [
         "deploy/nginx",
+        "backend/database/scripts",
         "backend/webtest/results",
         "backend/webtest/history",
         "frontend/public",
