@@ -1141,15 +1141,20 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                         <td style={{ textAlign: 'center' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
                             {item.qc?.is_ambiguous && (
-                              <span
+                              <button
+                                type="button"
                                 className="pv-qc-flag"
-                                title={item.qc.note ? `QC Ambiguity Flag:\n${item.qc.note}` : 'QC Ambiguity Flag: Verification uncertain or context is ambiguous. Please manually check.'}
+                                title="Click to view QC explanation in details drawer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveDrawerItem(item);
+                                }}
                               >
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                   <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
                                   <line x1="4" y1="22" x2="4" y2="15" />
                                 </svg>
-                              </span>
+                              </button>
                             )}
                             <button
                               type="button"
@@ -1244,15 +1249,48 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                         <td style={{ textAlign: 'center' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
                             {lt.qc?.is_ambiguous && (
-                              <span
+                              <button
+                                type="button"
                                 className="pv-qc-flag pv-qc-flag-leftover"
-                                title={lt.qc.note ? `QC Ambiguity Flag:\n${lt.qc.note}` : 'QC Ambiguity Flag: Excluded candidate term flagged by QC for verification.'}
+                                title="Click to view QC explanation in details drawer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveDrawerItem({
+                                    term: lt.term,
+                                    meddra_pt: lt.meddra_pt || lt.term,
+                                    meddra_pt_code: lt.meddra_pt_code,
+                                    soc_name: lt.soc_name,
+                                    soc_code: lt.soc_code,
+                                    severity_tier: 5,
+                                    section_name: lt.section_name,
+                                    is_quantitative: false,
+                                    drug_frequency_text: 'Candidate Excluded',
+                                    drug_min_pct: null,
+                                    drug_max_pct: null,
+                                    placebo_frequency_text: 'N/A',
+                                    placebo_pct: null,
+                                    risk_difference_pct: null,
+                                    frequency_category: 'not_quantified',
+                                    excerpt: lt.reason || 'Candidate excluded from adverse reactions.',
+                                    occurrences: [{
+                                      tier: 5,
+                                      section_title: lt.section_name,
+                                      excerpt: lt.reason ? `Extraction exclusion note: ${lt.reason}` : `Found in ${lt.section_name}`,
+                                      drug_pct: null
+                                    }],
+                                    qc: {
+                                      is_ambiguous: Boolean(lt.qc?.is_ambiguous),
+                                      flags: ['Excluded Candidate Review'],
+                                      note: lt.qc?.note || 'Candidate term excluded by extraction, but flagged by QC as potentially relevant for review.'
+                                    }
+                                  });
+                                }}
                               >
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                   <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
                                   <line x1="4" y1="22" x2="4" y2="15" />
                                 </svg>
-                              </span>
+                              </button>
                             )}
                             <button
                               type="button"
@@ -1317,6 +1355,46 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                   </div>
                 </div>
               </div>
+
+              {/* Quality Control (QC) Findings & Ambiguity Explanation */}
+              {activeDrawerItem.qc && (
+                <div className={`pv-drawer-qc-box ${activeDrawerItem.qc.is_ambiguous ? 'pv-drawer-qc-ambiguous' : 'pv-drawer-qc-verified'}`}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                    <span className="pv-drawer-section-title" style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                        <line x1="4" y1="22" x2="4" y2="15" />
+                      </svg>
+                      Quality Control (QC) Evaluation
+                    </span>
+                    {activeDrawerItem.qc.is_ambiguous ? (
+                      <span className="pv-qc-drawer-badge pv-qc-badge-ambiguous">
+                        Manual Review Flag
+                      </span>
+                    ) : (
+                      <span className="pv-qc-drawer-badge pv-qc-badge-verified">
+                        QC Verified
+                      </span>
+                    )}
+                  </div>
+
+                  {activeDrawerItem.qc.flags && activeDrawerItem.qc.flags.length > 0 && (
+                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
+                      {activeDrawerItem.qc.flags.map((flag, fIdx) => (
+                        <span key={`qc-flag-${fIdx}`} className="pv-qc-drawer-flag-tag">
+                          {flag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="pv-drawer-qc-note">
+                    {activeDrawerItem.qc.note || (activeDrawerItem.qc.is_ambiguous
+                      ? 'QC detected clinical ambiguity or citation context issues for this item. Manual review of the excerpt below is advised.'
+                      : 'Verified by Term QC and Citation Grounding QC agents.')}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
