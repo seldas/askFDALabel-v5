@@ -126,6 +126,9 @@ DATA_EXCLUDE_PATTERNS = [
     "cache",
     "data/cache",
     "data/cache/*",
+    "spl_cache",
+    "data/spl_cache",
+    "data/spl_cache/*",
     "data/downloads/*.tmp",
     "data/downloads/tmp*",
     "data/downloads/temp*",
@@ -193,6 +196,7 @@ def export_mounted_files(target_dir):
         "deploy/rapid_migration/restore_db.py",
         "deploy/rapid_migration/dump_db.py",
         "deploy/rapid_migration/import_rapid_package.py",
+        "deploy/rapid_migration/export_rapid_package.py",
         "deploy/rapid_migration/README.md",
     ]
     dirs = [

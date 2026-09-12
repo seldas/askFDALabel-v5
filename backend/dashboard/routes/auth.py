@@ -24,7 +24,7 @@ def login():
     if not data:
         return jsonify({'success': False, 'error': 'Missing JSON data'}), 400
 
-    username = (data.get('username') or '').strip()
+    username = (data.get('username') or '').strip().lower()
     password = data.get('password')
 
     if not username or not password:
@@ -66,7 +66,7 @@ def register():
     if not data:
         return jsonify({'success': False, 'error': 'Missing JSON data'}), 400
 
-    username = data.get('username', '').strip()
+    username = (data.get('username') or '').strip().lower()
     password = data.get('password')
     
     if not username:

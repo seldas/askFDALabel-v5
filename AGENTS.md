@@ -65,7 +65,7 @@ python backend/database/scripts/db_11_import_dili_reference.py   # DILI Rule-of-
 
 ### Testing and linting — there is none
 
-No pytest, no jest/vitest, no test config anywhere in `backend/` or `frontend/`. The only `test_*.py` files live under `archive/scripts/` and are dead. **There is no way to run a test suite in this repo.** Verify changes by exercising the running app.
+No pytest, no jest/vitest, no test config anywhere in `backend/` or `frontend/`. **There is no automated test suite in this repo.** Verify changes by exercising the running app.
 
 `npm run lint` maps to `next lint`, which Next 16 removed, and ESLint is not in `devDependencies` — the script fails. Don't cite it as a check.
 
@@ -203,7 +203,7 @@ Which Postgres and whether Oracle is reachable are runtime settings —
 
 ## Repo conventions and known cruft
 
-- `archive/` is reference-only dead code — legacy scripts, old migrations, completed design notes. Never wire it into runtime code, and don't treat files there as current.
+- `documents/` is the master documentation hub; historical and deprecated features are cataloged under `documents/archived/`.
 - `backend/drugtox/prev_code/` is superseded.
 - The `backend/` root holds one-off operational scripts (`inspect_db.py`, `inspect_db2.py`, `cleanup_db.py`, `cleanup_tasks.py`, `check_queries.py`, `reset_drugtox.py`, `migrate_webtest_to_pg.py`, `update_versions.py`) plus `patch_export.py` at the repo root. These are not part of the app.
 - `backend/requirements.txt` lists `fastapi`, `uvicorn`, and `python-multipart`; nothing imports them.

@@ -49,7 +49,7 @@ def get_users():
 @admin_required
 def create_user():
     data = request.get_json()
-    username = (data.get('username') or '').strip()
+    username = (data.get('username') or '').strip().lower()
     password = data.get('password')
     # `role` is authoritative; `is_admin` is still honoured so an older client
     # that only knows the boolean keeps working.
@@ -96,7 +96,7 @@ def update_user(user_id):
     if 'password' in data and data['password']:
         user.set_password(data['password'])
     if 'username' in data:
-        new_username = (data['username'] or '').strip()
+        new_username = (data['username'] or '').strip().lower()
         if new_username:
             existing = User.query.filter(db.func.lower(User.username) == new_username.lower(), User.id != user_id).first()
             if existing:

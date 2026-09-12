@@ -1,375 +1,234 @@
-# AskFDALabel
+# AskFDALabel (v5)
 
-AskFDALabel is a full-stack FDA labeling intelligence suite. It combines a Next.js frontend, a unified Flask backend, PostgreSQL storage, and optional Oracle/internal FDALabel connectivity to support label search, criteria-based querying, AI-assisted analysis, toxicology workflows, device intelligence, pharmacovigilance profiling, and validation tooling.
+AskFDALabel is an enterprise-grade FDA drug and device labeling intelligence suite. Combining a modern Next.js frontend, a unified Flask modular backend, high-performance PostgreSQL storage, and optional Oracle/CDER-CBER enterprise connectivity, AskFDALabel enables deep label search, multi-criteria querying, automated pharmacovigilance profiling, toxicology assessment, medical device discovery, and regression validation tooling.
 
-The authoritative implementation lives in `frontend/`, `backend/`, and the database models under `backend/database/`.
+> **Master Documentation**: Comprehensive architecture, module specifications, operations runbooks, and historical archives are consolidated in the [`documents/`](documents/README.md) directory.
 
-## What the suite includes
+---
 
-### Global AI search (`/search`)
-A grounded label-search workspace backed by the `backend/search` blueprint. The current search stack is DB-first routing — `_classify_query()` labels the input (`uuid` | `ndc` | `appnum` | `keyword` | `general`) and routes it down one of four paths:
-- DB multi-result and single-result lookup (XML read from disk, then AI-summarised)
-- AI fallback and conversational chat (`/api/search/chat`, `/api/search/refine_chat`)
-- keyword-based retrieval with AI answer composition
-- export helpers for filtered result sets
+## Key Modules & Platform Capabilities
 
-### Criteria Query Builder (`/querybuilder`)
-A structured, step-by-step label search workspace backed by `backend/labelquery/`. It exposes:
-- a criteria panel grouped into three logical steps: Market & Categorical Filters, Product Names & Identifiers, and Labeling Text & Clinical Match
-- AI Natural Language Intent Engine (`/api/labelquery/translate`) — translates free-text intent into a criteria tree for user review and editing before any query runs
-- live query execution with pagination, sorting, and export to Excel (`/api/labelquery/execute`)
-- autocomplete and dropdown options for product names, identifiers, MedDRA terms, EPC classes, routes, dosage forms, and more
-- Oracle and PostgreSQL query compilation with Late Materialization and Key-Only Paging for large result sets
-- sidebar facet counts that stay steady across filter changes
-- role-gated SQL-summary view (developer/admin only)
+| Module | Route / Path | Core Description | Documentation |
+| :--- | :--- | :--- | :--- |
+| **Global AI Search** | `/search` | DB-first decision routing (`uuid`, `ndc`, `appnum`, `keyword`, `general`), XML disk extraction, and conversational synthesis. | [Search & Discovery](documents/modules/search_and_discovery.md) |
+| **Criteria Query Builder** | `/querybuilder` | 3-step structured filter builder, AI natural language intent compiler, Late Materialization, and Excel export. | [Query Builder Docs](documents/modules/local_query_builder.md) |
+| **Adverse Events & MedDRA** | `/labeling-ae` | In-situ SPL XML clinical text rendering with hierarchical MedDRA (SOC/HLGT/HLT/PT/LLT) multi-color keyword highlighting. | [Labeling AE & MedDRA](documents/modules/labeling_ae_and_meddra.md) |
+| **PV Profile & QC** | `/pv-profile` | SIDER 4.1-style adverse event evidence grid, user tagging, manual reconciliation, and automated rule-based QC verification. | [PV Profile & QC](documents/modules/pv_profile_and_qc.md) |
+| **Label Comparison** | `/labelcomp` | Side-by-side structured multi-label diff (up to 4 labels), section-level alignment, and AI change summaries. | [Label Comparison](documents/modules/label_comparison.md) |
+| **askDrugTox** | `/drugtox` | Toxicology intelligence: DILI Rule-of-Two, DICT, DIRI, chemical structure viewer, and FAERS signal correlation. | [askDrugTox](documents/modules/drugtox.md) |
+| **Device Intelligence** | `/device` | openFDA medical device discovery: 510(k), PMA, recall enforcement, MAUDE adverse events, and IFU comparisons. | [Device Intelligence](documents/modules/device_intelligence.md) |
+| **Chemical Structure Search** | `/chemsearch` | Exact, substructure, and Tanimoto similarity chemical structure querying with interactive 2D structure drawing. | [DrugTox & Chem](documents/modules/drugtox.md) |
+| **Local Query** | `/localquery` | 11-dimension Boolean criteria compiler, raw SQL execution, random sampling, and bulk Excel export. | [Local Query Builder](documents/modules/local_query_builder.md) |
+| **RESTful API Service** | `/api/v1` | Token-authenticated (`afl_live_`) programmatic query interface with structured JSON responses and pagination. | [System Overview](documents/architecture/system_overview.md) |
+| **Web Validation Tool** | `/webtest` | Automated regression test engine executing batch query suites against official FDA web endpoints. | [WebTest Validation](documents/modules/webtest_validation.md) |
+| **System Management** | `/management` | Administration portal for users, RBAC, feature gates, API keys, and background Celery task monitoring. | [Feature Gates & RBAC](documents/operations/feature_gates_and_rbac.md) |
 
-### Task dashboard (`/dashboard`)
-The dashboard is the main label review workspace. It supports:
-- importing FDALabel Excel exports
-- uploading SPL XML or ZIP files for local comparison
-- searching labels and opening label detail views
-- organizing labels and saved comparisons into tasks
-- label annotations and saved notes
-- AI chat and compare summaries
-- deep-dive analysis endpoints
-- FAERS-based adverse-event workflows and AI rematching
-- MedDRA label scans and profile lookups
-- PGx, DILI, DICT, and DIRI assessment endpoints
-- PV-Profile (pharmacovigilance adverse event profile — SIDER 4.1-style clinical evidence grid with user tagging and manual update workflow)
-- Rule of Two DILI reference lookup (Chen 2013 published dataset)
-- auto-folding sticky label-view header with pinned tool buttons
-- admin-only user and database maintenance features
+---
 
-### Label comparison (`/labelcomp`)
-A side-by-side comparison workspace for up to four labels, with support for:
-- selecting labels from tasks
-- adding labels by `set_id`
-- uploading local SPL files
-- highlighted section-level differences
-- AI-generated comparison summaries
-- saving comparisons back into tasks
+## Documentation Hub
 
-### askDrugTox (`/drugtox`)
-A dedicated toxicology module for browsing harmonized toxicity records. The current backend exposes:
-- dataset statistics
-- filtered drug browsing
-- discrepancy analysis
-- latest RLD lookup
-- per-drug history and market context
-- company portfolio and company-level toxicity summaries
-
-### Device intelligence (`/device`)
-A device-focused module backed by openFDA endpoints. It provides:
-- 510(k) and PMA search
-- device metadata lookup
-- MAUDE event summaries
-- recall and enforcement summaries
-- AI comparison of device IFU content
-
-### Chemical Structure Search (`/chemsearch`)
-A standalone chemical structure search page backed by `backend/chemsearch/`. It accepts a SMILES or InChI string with a match mode (exact / substructure / similarity) and an optional Tanimoto threshold, then returns matching drug labels from the shared results table.
-
-### Local query (`/localquery`)
-A lightweight query and export surface for the local labeling database. It supports:
-- quick search by brand, generic, `set_id`, or application number
-- autocomplete
-- random label sampling
-- export to Excel for task list import or offline review
-
-### RESTful API service (`/api/v1`)
-A structured, API-key-authenticated REST interface to the Oracle CDER-CBER labeling database (`backend/api_service/`). It supports:
-- full-text search across SPL sections
-- filtering by product name, application number, NDC, Set ID, UNII, labeling types, dosage forms, routes, EPC classes, and more
-- standard JSON responses with pagination and metadata
-- API key authentication via `X-API-Key` header, `Authorization: Bearer` header, or `?api_key=` query parameter
-- users generate and manage their own API keys from the management panel (`/management`)
-
-### User Guide & Wiki (`/wiki`)
-An in-app user guidance center with instant search, FAQ accordions, and workflow guides for every major tool and feature.
-
-### Web validation tool (`/webtest`)
-An internal regression and probing tool for FDALabel web endpoints. It works with Excel templates, stores history, and records timing and count-based checks under `backend/webtest/`.  
-This function is designed for FDALabel website auto testing, as required by a specific user group.
-
-### Supporting utilities
-The repo also includes:
-- an admin/management page for users, API keys, feature gates, and database update tasks
-- an optional nginx reverse proxy under `deploy/nginx/`
-
-## Architecture at a glance
-
-### Frontend
-- Next.js `16.1.6`
-- React `19`
-- MUI-based application UI
-- app-router pages under `frontend/app/`
-- default app base path: `/fdalabel-v3`
-
-### Backend
-- Flask application assembled in `backend/app.py`
-- dashboard app factory in `backend/dashboard/__init__.py`
-- blueprints registered at:
-  - `/api/dashboard`
-  - `/api/search`
-  - `/api/drugtox`
-  - `/api/labelcomp`
-  - `/api/device`
-  - `/api/localquery`
-  - `/api/labelquery`
-  - `/api/chemsearch`
-  - `/api/webtest`
-  - `/api/v1` (RESTful API service)
-
-### Data layer
-- PostgreSQL is the primary runtime database
-- the `labeling` schema stores SPL label metadata; label bodies are read from SPL XML on disk via `sum_spl.local_path`
-- label text search was removed; `pg_trgm` trigram indexes over name and category columns serve the criteria builder
-- public-schema tables store users, tasks, favorites, reports, MedDRA, PGx, DrugTox, PV-Profiles, system tasks, and API keys
-- optional Oracle connectivity is supported through `FDALabelDBService` (CDER-CBER Oracle DB used by the criteria builder and API service)
-
-### AI and external data sources
-- Gemini via `google-genai`
-- OpenAI-compatible endpoints for internal Llama or similar services
-- Elsa integration for internal FDA workflows
-- openFDA for FAERS and device data
-- SPL ZIP ingestion for label content
-- Orange Book, MedDRA, PGx, and DrugTox import pipelines
-
-### Security and production hardening
-- `defusedxml` for safe SPL XML parsing (XML entity defusing)
-- rate limiting and security headers on backend routes
-- DB connection pool resilience with overflow and health checks
-- API key authentication for the RESTful API service (`afl_live_` prefixed tokens)
-- AI engine change restricted to admin/developer users in the UI
-
-## Repository layout
+All developer and operator documentation is centralized under [`documents/`](documents/README.md):
 
 ```text
-backend/             Flask app, blueprints, services, models, migrations
-  api_service/       RESTful API service (v1) with API-key auth
-  chemsearch/        Chemical structure search blueprint
-  labelquery/        Criteria query builder (PostgreSQL + Oracle compilers)
-frontend/            Next.js app-router frontend
-  app/querybuilder/  Criteria query builder UI
-  app/chemsearch/    Chemical structure search page
-  app/wiki/          User Guide & Wiki
-data/                Runtime data, downloads, SPL storage, uploads
-deploy/nginx/        Optional reverse proxy for /fdalabel-v3 and /fdalabel-v3_api
-backend/webtest/     Validation templates, history, and results
-archive/             Archived historical files (Documents, scripts, bookmarklets, legacy code)
+documents/
+├── README.md                              # Master Documentation Hub & Navigation
+├── architecture/
+│   ├── system_overview.md                 # System architecture, topology, & deployment model
+│   ├── backend_architecture.md            # Flask app factory, blueprints, Celery, AI routing
+│   ├── frontend_architecture.md           # Next.js 16 App Router, central tool registry, FetchPrefix
+│   ├── database_architecture.md           # Dual-schema PostgreSQL, GIN pg_trgm, model schemas
+│   └── label_storage_and_cache.md         # SPL XML storage cascade, caching, atomic disk writes
+├── modules/
+│   ├── search_and_discovery.md            # DB-first query classifier and search workspace
+│   ├── labeling_ae_and_meddra.md          # Adverse events SPL view & MedDRA highlighting
+│   ├── pv_profile_and_qc.md               # Pharmacovigilance safety profile & automated QC engine
+│   ├── label_comparison.md                # Multi-label structured diff & AI synthesis
+│   ├── drugtox.md                         # Toxicology assessment & chemical structure search
+│   ├── device_intelligence.md             # openFDA 510(k), PMA, MAUDE, and IFU analysis
+│   ├── local_query_builder.md             # Criteria query builder & Boolean SQL compiler
+│   └── webtest_validation.md              # FDA endpoint automated regression test harness
+├── operations/
+│   ├── server_management.md               # start_server.py orchestrator & container runtimes
+│   ├── environment_configuration.md       # Exhaustive .env configuration reference
+│   ├── database_initialization.md         # Numbered database setup and ingestion runbook
+│   ├── rapid_migration_guide.md           # Zero-downtime packaging, dump, restore, & deployment
+│   ├── feature_gates_and_rbac.md          # Role-based access control & dynamic runtime gates
+│   └── oracle_fdalabel_reference.md       # Oracle CDER-CBER schema mapping & SQL compilers
+└── archived/
+    ├── README.md                          # Deprecation index and architectural evolution notes
+    ├── full_text_and_vector_search.md     # Deprecation of TSVECTOR full_search_vector & semantic core
+    └── legacy_sqlite_architecture.md      # Deprecation of early afd.db monolithic SQLite storage
 ```
 
-## Prerequisites
+---
 
-For the containerized stack:
-- Apptainer (default runtime on Linux servers)
-- Docker Compose / `docker compose` (optional compatibility runtime)
+## Repository Layout
 
-For local development:
-- Python `3.12` recommended
-- Node.js `22` recommended
-- PostgreSQL
-
-## Environment configuration
-
-Create a root `.env` file before starting the app. A template file `.env.template.txt` is provided in the repository root.
-
-A few important notes before you copy values:
-- the running code reads `GEMINI_API_KEY` (with a backward-compatibility fallback to `GOOGLE_API_KEY` if set)
-- `DATABASE_URL` is required by the backend; `backend/dashboard/config.py` raises `ValueError` at import time if it is unset
-
-A minimal local `.env` usually looks like this:
-
-```env
-# Core runtime
-LOCAL-PG=true
-PG_HOST=db
-PG_PORT=5432
-PG_DATABASE=fdalabel-v3
-PG_USERNAME=afd_user
-PG_PASSWORD=afd_password
-DATABASE_URL=postgresql://${PG_USERNAME}:${PG_PASSWORD}@${PG_HOST}:${PG_PORT}/${PG_DATABASE}
-
-LOCAL_QUERY=True
-SECRET_KEY=change-me
-
-# Ports
-HOST=0.0.0.0
-BACKEND_PORT=8842
-FRONTEND_PORT=8841
-
-# Frontend path helpers
-NEXT_PUBLIC_API_BASE=/fdalabel-v3_api
-NEXT_PUBLIC_APP_BASE=/fdalabel-v3
-NEXT_PUBLIC_DASHBOARD_BASE=/fdalabel-v3
-
-# AI providers
-GEMINI_API_KEY=
-OPENFDA_API_KEY=
-ELSA_API_NAME=
-ELSA_API_KEY=
-ELSA_MODEL_ID=
-LLM_URL=
-LLM_KEY=
-LLM_MODEL=meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8
+```text
+├── backend/                               # Flask application, blueprints, services, database models
+│   ├── dashboard/                         # Base dashboard app, config, auth, and API routes
+│   ├── search/                            # DB-first search blueprint and chat endpoints
+│   ├── labelquery/                        # Criteria query builder (PostgreSQL & Oracle compilers)
+│   ├── drugtox/                           # Drug toxicity assessment and FAERS integration
+│   ├── device/                            # openFDA device intelligence blueprint
+│   ├── localquery/                        # Direct SQL and criteria local query blueprint
+│   ├── chemsearch/                        # Chemical structure search blueprint
+│   ├── api_service/                       # Programmatic RESTful API (v1) with API key auth
+│   ├── webtest/                           # Web validation harness and regression suite
+│   ├── admin/tasks/                       # Asynchronous Celery task implementations
+│   └── database/scripts/                  # Numbered database setup & maintenance runbook
+├── frontend/                              # Next.js 16 (App Router) frontend application
+│   ├── app/                               # Route handlers, module pages, layout, and global providers
+│   └── public/                            # Static assets and vendor JavaScript libraries
+├── documents/                             # Centralized technical documentation hub
+├── deploy/                                # Deployment orchestration, Nginx configs, and rapid tooling
+├── data/                                  # Local runtime storage (SPL XML files, uploads, caches)
+├── start_server.py                        # Unified container orchestrator (Apptainer / Docker)
+└── docker-compose.yml                     # Standard multi-container compose configuration
 ```
 
-Optional Oracle/internal FDALabel settings:
+---
 
-```env
-FDALabel_HOST=
-FDALabel_PORT=1521
-FDALabel_SERVICE=
-FDALabel_USER=
-FDALabel_PASSWORD=
-```
+## Architecture at a Glance
 
-Routing note:
-- the suite uses standardized path-prefix handling. For most deployments (including local development), keep `NEXT_PUBLIC_API_BASE=/fdalabel-v3_api` and `NEXT_PUBLIC_APP_BASE=/fdalabel-v3`.
-- `next.config.ts` and `FetchPrefix.tsx` ensure these paths work correctly whether running behind nginx or during direct local development.
+### Frontend
+- **Framework**: Next.js 16 (App Router) & React 19.
+- **UI Components**: Material UI (MUI v6) with Tailwind CSS styling.
+- **Routing & Base Paths**: Mounted at `/fdalabel-v3` with runtime transparent rewriting via `FetchPrefix.tsx`.
+- **Tool Registry**: Declarative catalog at `frontend/app/platform/registry.ts`.
 
-## Starting the Application
+### Backend
+- **Framework**: Python 3.12 Flask unified modular application (`backend/app.py`).
+- **Asynchronous Tasks**: Celery worker backed by Redis for long-running batch ingestion and exports.
+- **AI Routing**: Multi-provider client abstraction supporting Google Gemini, Elsa (FDA internal), and OpenAI-compatible endpoints (vLLM, Ollama, Llama).
+- **Security**: XML external entity protection (`defusedxml`), rate limiting, lowercase username normalization, and bearer API tokens.
 
-The server can be started in **two straightforward ways**:
+### Data Layer
+- **PostgreSQL**: Dual-schema design:
+  - `labeling` schema: SPL label metadata (`sum_spl`), pharmacologic classes (`epc_map`), active ingredients (`active_ingredients_map`), indexed with GIN `pg_trgm`.
+  - `public` schema: Application entities (users, tasks, favorites, MedDRA hierarchy, DrugTox, PV-Profiles, system tasks, API keys).
+- **Disk Storage**: Unpacked SPL XML files stored in `data/spl_storage/` and `data/spl_storage_archived/`, with automatic persistent caching for Oracle fetches in `data/spl_cache/`.
+- **Oracle (Optional)**: Enterprise CDER-CBER database connection for live FDA production label queries.
 
-### Method 1: Using the Startup Script (Recommended)
+---
 
-`start_server.py` defaults to rootless Apptainer instances. It builds the backend and frontend SIF images when needed, starts Redis and optional local PostgreSQL instances, and binds host data into the app. Docker Compose remains available with `--runtime docker`.
+## Quick Start
+
+### 1. Prerequisites
+- **Python**: 3.11+ (3.12 recommended)
+- **Node.js**: 20+ (22 recommended)
+- **PostgreSQL**: 15+
+- **Redis**: 7+ (required for Celery task processing)
+- **Container Runtimes (Optional)**: Apptainer or Docker / Docker Compose
+
+### 2. Environment Configuration
+
+Copy the template environment configuration to `.env` in the repository root:
 
 ```bash
-# 1. Development Mode (Apptainer default; ports 8841 and 8842 exposed)
+cp .env.template.txt .env
+```
+
+Ensure `DATABASE_URL` and essential API keys (e.g. `GEMINI_API_KEY`) are set. For complete environment variable documentation, see the [Environment Configuration Guide](documents/operations/environment_configuration.md).
+
+### 3. Launching with `start_server.py` (Recommended)
+
+`start_server.py` orchestrates the backend, frontend, database, and Redis instances:
+
+```bash
+# Development Mode (Hot-reload, ports 8841 [web] and 8842 [api])
 python start_server.py --mode dev
 
-# 2. Production Mode (Gunicorn workers and compiled Next.js)
+# Production Mode (Optimized production build with Nginx proxy on :80/:443)
 python start_server.py --mode prod
+
+# Stop running instances
+python start_server.py --mode dev --down
 ```
 
-**Useful flags for `start_server.py`:**
-- `--down`: Stop active Apptainer instances (`python start_server.py --mode dev --down`)
-- `--build`: Rebuild SIF images during startup
-- `--runtime apptainer|docker`: Select runtime; defaults to `apptainer`
-- `--efficient`: Low-resource mode (fewer workers, reduced database connection limits)
-- `--local-db true|false`: Force local PostgreSQL container vs. external database
-- `--dry-run`: Generate `docker-compose.yml` without starting containers
-- `--rapid`: Rapid migration mode — implies prod, no nginx, remote DB by default (useful for quick environment restores)
+**Common flags:**
+- `--runtime apptainer|docker`: Select container runtime (defaults to Apptainer on Linux, Docker on Windows).
+- `--efficient`: Run in low-resource mode with reduced workers and database connection limits.
+- `--local-db true|false`: Run a local PostgreSQL container or connect to an external server.
+- `--rapid`: Production mode without Nginx, pre-configured for remote database connections.
 
----
-
-### Docker Compose compatibility mode
-
-Generate Compose explicitly with `python start_server.py --runtime docker --dry-run`, then manage it using standard Docker commands:
+#### Standard Docker Compose:
+Once generated via `python start_server.py --runtime docker --dry-run`, standard Docker commands work directly:
 
 ```bash
-# Start all services in the background
-docker compose up -d
+docker compose up -d       # Start all services in background
+docker compose logs -f     # Tail live logs
+docker compose down        # Stop all containers
+```
 
-# View live container logs
-docker compose logs -f
+- **Web Application URL**: `http://localhost:8841/fdalabel-v3/` (dev) or `http://localhost/fdalabel-v3/` (prod).
+- **Backend Health Check**: `http://localhost:8842/health`.
 
-# Stop all services
-docker compose down
+### 4. Asynchronous Task Worker (Celery)
+
+For admin imports, MedDRA processing, and long-running batch tasks, start the Celery worker from the `backend/` directory:
+
+```bash
+# Windows
+cd backend && celery -A celery_app.celery worker --loglevel=info --pool=solo
+
+# Linux / macOS
+cd backend && celery -A celery_app.celery worker --loglevel=info
 ```
 
 ---
 
-### Accessing the Application
+## Database Setup Runbook
 
-- **Development Mode**: `http://localhost:8841/fdalabel-v3/` (Backend API: `http://localhost:8842/health`)
-- **Production Mode**: `http://localhost/fdalabel-v3/` (proxied via Nginx)
+The database initialization scripts are numbered, idempotent, and executed from the repository root:
 
-## Database Initialization and Maintenance
+```bash
+# 1. Initialize SPL labeling schema and trigram GIN indexes
+python backend/database/scripts/db_02_init_labeling_schema.py
 
-The application uses a two-schema layout in PostgreSQL (`public` and `labeling`). Follow these steps to initialize a **new** system or update an **existing** one. All scripts are idempotent and will safely update schema/columns if the database already exists.
+# 2. Initialize application public schema tables
+python backend/database/scripts/db_03_init_public_schema.py
 
-### Step-by-Step Initialization
-Run these from the repo root with your virtual environment activated:
+# 3. Import FDA Orange Book reference data (RLD/RS tracking)
+python backend/database/scripts/db_04_import_orange_book.py
 
-1. **Initialize Labeling Schema**: Creates the `labeling` tables and the `pg_trgm` trigram indexes the criteria builder needs.
-   ```bash
-   python backend/database/scripts/db_02_init_labeling_schema.py
-   ```
-2. **Initialize Public Schema**: Creates application tables (users, tasks, PV-Profiles, API keys, etc.) via SQLAlchemy.
-   ```bash
-   python backend/database/scripts/db_03_init_public_schema.py
-   ```
-3. **Import Orange Book**: Essential for identifying RLD/RS labels.
-   ```bash
-   python backend/database/scripts/db_04_import_orange_book.py
-   ```
-4. **Import EPC Indexing**: Required for the Deep Dive "Pharmacologic Class" analysis and criteria builder facets.
-   ```bash
-   python backend/database/scripts/db_05_import_epc_indexing.py
-   ```
-5. **Create Admin User**: Sets up the initial login (default: admin / 1986414).
-   ```bash
-   python backend/database/scripts/db_06_create_admin.py
-   ```
-6. **Import Labels**: Syncs SPL files from storage to the database.
-   ```bash
-   # Add --force to re-process and update UNII/EPC for existing labels
-   python backend/database/scripts/db_07_import_labels.py --force --skip-unpack
-   ```
-7. **Import DILI Reference Set** (optional): Loads the Chen 2013 Rule-of-Two reference data.
-   ```bash
-   python backend/database/scripts/db_11_import_dili_reference.py
-   ```
+# 4. Import Established Pharmacologic Class (EPC) indexing
+python backend/database/scripts/db_05_import_epc_indexing.py
 
-*(Note: a database created before full-text search was removed should be migrated once with `python backend/database/scripts/db_12_drop_fulltext_search.py`, which drops `labeling.spl_sections`, `sum_spl.full_search_vector`, and their GIN indexes.)*
+# 5. Create default administrator account (admin / 1986414)
+python backend/database/scripts/db_06_create_admin.py
 
-## Data and maintenance workflows
+# 6. Ingest SPL label packages from storage
+python backend/database/scripts/db_07_import_labels.py --force --skip-unpack
 
-### Label data ingestion
-Relevant paths and scripts:
-- SPL ZIP storage: `data/spl_storage/`
-- uploads and temporary imports: `data/uploads/`
-- PostgreSQL initialization: `backend/database/scripts/` (See Step-by-Step above)
-- Main importer: `backend/database/scripts/db_07_import_labels.py`
+# 7. Import DILI Rule-of-Two reference dataset (optional)
+python backend/database/scripts/db_11_import_dili_reference.py
+```
 
-### Reference and enrichment datasets
-- Orange Book import: `backend/database/scripts/db_04_import_orange_book.py`
-- MedDRA import: `backend/admin/tasks/import_meddra.py`
-- DrugTox import: `backend/admin/tasks/import_drugtox.py`
-- EPC Indexing: `backend/database/scripts/db_05_import_epc_indexing.py`
-- DILI reference set: `backend/database/scripts/db_11_import_dili_reference.py`
+For full details on reference datasets and migrations, review the [Database Initialization Guide](documents/operations/database_initialization.md).
 
-### Validation assets
-- Web test templates: `backend/webtest/*.xlsx`
-- Web test history: `backend/webtest/history/`
-- Web test results: `backend/webtest/results/`
+---
 
-## Authentication and administration
+## Rapid Migration & Backup Tooling
 
-The dashboard includes built-in user authentication and admin-only maintenance endpoints.
+To migrate AskFDALabel instances across environments (e.g. local dev to remote staging) without re-importing 700k+ labels:
 
-Admin capabilities currently include:
-- user creation, deletion, and role management
-- password updates
-- API key generation and revocation per user
-- feature gate management (enable/disable tools per role at runtime without a restart)
-- Product Toolbox access control subpanel
-- long-running database update tasks with progress polling and task logs
+```bash
+# Export configuration, user data, and database dumps into an archive
+python export_rapid_package.py --output /path/to/backup.tar.gz
 
-The admin UI is exposed in the frontend under `/management`, and the corresponding backend routes live under `/api/dashboard/admin`.
+# Import archive package onto the target machine
+python import_rapid_package.py --package /path/to/backup.tar.gz
 
-### Feature gates
-Access to individual tools is controlled by `FEATURE_CATALOG` in `backend/dashboard/services/feature_gates.py`. Admins can change per-tool minimum role and guest access from the management panel at runtime. Adding a new tool is a catalog entry — never a migration.
+# Database dump and restore utilities
+python dump_db.py --output data/db_dump.sql
+python restore_db.py --input data/db_dump.sql
+```
 
-## Archives and Historical Documentation
+For full disaster recovery and migration workflows, refer to the [Rapid Migration Guide](documents/operations/rapid_migration_guide.md).
 
-To keep the repository clean, older planning ideas, legacy scripts, and old documentation have been consolidated under the `archive/` directory:
-- `archive/Documents/`: Historical database and system architecture design files.
-- `archive/scripts/`: Legacy migration, test, and utility scripts.
-- `archive/idea/`: Historical design notes and completed writeups.
+---
 
-These files are preserved for reference only and are not active or required for running the current application.
+## License & Disclaimer
 
-## Known implementation notes
-
-- The backend loads environment variables from the repo-root `.env`.
-- The frontend expects the backend under `/api/*` in direct development, and under `/fdalabel-v3_api/*` when routed through nginx.
-- The application creates required data directories on startup.
-- MedDRA-dependent features will run with reduced detail if MedDRA tables have not been populated.
-- The criteria builder and RESTful API service target the Oracle CDER-CBER DB; the PostgreSQL path is used as a local fallback. Some Oracle-specific query optimisations (Late Materialization, Key-Only Paging) are only active against Oracle.
-- Some functionality becomes richer when Oracle/internal FDALabel access is available, but the suite is designed to run in PostgreSQL-only mode as well.
-- `EnvService` reads `/data/config/env_settings.json` (a Docker-only path); on local dev it silently falls back to `DEFAULT_CONFIG`.
-- There is no DailyMed fallback for label resolution. A label this deployment cannot serve returns a 404 with links to DailyMed and public FDALabel.
+AskFDALabel is developed for scientific research, regulatory science, and labeling intelligence exploration. All drug labeling data and product identifiers are sourced from official FDA and NLM DailyMed public releases.

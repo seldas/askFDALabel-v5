@@ -68,11 +68,10 @@ def create_app(config_class=Config):
                     time.sleep(retry_interval)
 
             try:
-                db.session.execute(text("CREATE EXTENSION IF NOT EXISTS citext"))
                 db.session.execute(text("CREATE SCHEMA IF NOT EXISTS labeling"))
                 db.session.commit()
             except Exception as e:
-                print(f"Error initializing database extension/schema: {e}")
+                print(f"Error initializing labeling schema: {e}")
                 db.session.rollback()
         ensure_user_pk()
         db.create_all()
@@ -134,14 +133,11 @@ def ensure_user_pk():
         db.session.rollback()
 
 def ensure_user_schema():
-    """Ensure user table has citext for username and columns are up to date."""
+    """Ensure user table columns are up to date and username is lowercase varchar."""
     try:
         from sqlalchemy import text
         dialect = db.engine.dialect.name
         if dialect == 'postgresql':
-            db.session.execute(text("CREATE EXTENSION IF NOT EXISTS citext;"))
-            db.session.commit()
-            
             type_sql = text("""
                 SELECT udt_name 
                 FROM information_schema.columns 
@@ -150,12 +146,16 @@ def ensure_user_schema():
                   AND table_schema = current_schema();
             """)
             type_res = db.session.execute(type_sql).fetchone()
-            if type_res and type_res[0].lower() != 'citext':
-                print("Updating 'username' column in 'user' table to 'citext' type for case-insensitivity...")
-                alter_type_sql = text('ALTER TABLE "user" ALTER COLUMN username TYPE citext;')
+            if type_res and type_res[0].lower() == 'citext':
+                print("Migrating 'username' column in 'user' table from 'citext' to 'varchar(100)'...")
+                alter_type_sql = text('ALTER TABLE "user" ALTER COLUMN username TYPE VARCHAR(100);')
                 db.session.execute(alter_type_sql)
                 db.session.commit()
-                print("'username' column successfully altered to 'citext'.")
+                print("'username' column successfully altered to 'varchar(100)'.")
+
+            # Ensure all existing usernames are lowercased
+            db.session.execute(text('UPDATE "user" SET username = LOWER(username);'))
+            db.session.commit()
 
             # `role` postdates the table, and db.create_all() only creates
             # missing tables -- it never adds a column to one that exists. Add
@@ -195,7 +195,7 @@ def ensure_user_schema():
             ))
             db.session.commit()
     except Exception as e:
-        print(f"Schema check error (citext): {e}")
+        print(f"Schema check error (user): {e}")
         db.session.rollback()
 
 def seed_feature_gate_rows():

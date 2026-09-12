@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from .extensions import db
-from sqlalchemy.dialects.postgresql import CITEXT
 
 def utc_now():
     return datetime.now(timezone.utc).replace(tzinfo=None)
@@ -57,7 +56,7 @@ GUEST_USERNAME = 'guest'
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(CITEXT, unique=True, nullable=False)
+    username = db.Column(db.String(100), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
 
     # `role` is the source of truth. `is_admin` is kept in lockstep with it by
@@ -99,10 +98,10 @@ class User(UserMixin, db.Model):
 
         Query history and preferences are disabled for it -- both are per-user
         state on a row every anonymous visitor shares, so one visitor would be
-        reading and overwriting another's. `username` is CITEXT, so this
-        comparison is already case-insensitive.
+        reading and overwriting another's. `username` is stored in lowercase,
+        so this comparison is case-insensitive.
         """
-        return (self.username or '') == GUEST_USERNAME
+        return (self.username or '').lower() == GUEST_USERNAME
 
     @property
     def has_developer_access(self):

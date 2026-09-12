@@ -75,12 +75,8 @@ def update_schema():
             dialect_name = engine.dialect.name
             print(f"Database dialect: {dialect_name}")
             
-            # PostgreSQL-specific case-insensitive usernames upgrade
+            # Ensure username column is standard varchar(100) and lowercased
             if dialect_name == 'postgresql':
-                print("PostgreSQL detected. Ensuring 'citext' extension exists...")
-                conn.execute(text("CREATE EXTENSION IF NOT EXISTS citext;"))
-                conn.commit()
-                
                 # Check udt_name of username column in current schema
                 type_sql = text("""
                     SELECT udt_name 
@@ -90,14 +86,15 @@ def update_schema():
                       AND table_schema = current_schema();
                 """)
                 type_res = conn.execute(type_sql).fetchone()
-                if type_res and type_res[0].lower() != 'citext':
-                    print("Updating 'username' column to 'citext' type for case-insensitivity...")
-                    alter_type_sql = text("ALTER TABLE \"user\" ALTER COLUMN username TYPE citext;")
+                if type_res and type_res[0].lower() == 'citext':
+                    print("Migrating 'username' column from 'citext' to 'varchar(100)'...")
+                    alter_type_sql = text("ALTER TABLE \"user\" ALTER COLUMN username TYPE VARCHAR(100);")
                     conn.execute(alter_type_sql)
                     conn.commit()
-                    print("'username' column successfully altered to 'citext'.")
-                else:
-                    print("'username' column is already 'citext' or column not found.")
+                    print("'username' column successfully altered to 'varchar(100)'.")
+
+                conn.execute(text('UPDATE "user" SET username = LOWER(username);'))
+                conn.commit()
             
             # Handle additional columns dynamically
             for col in columns_to_add:
