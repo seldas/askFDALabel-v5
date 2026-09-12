@@ -941,34 +941,92 @@ class FDALabelDBService:
             conn.close()
 
     @classmethod
+    def _get_cache_dir(cls):
+        """Returns the absolute path to the local SPL XML cache directory."""
+        try:
+            cache_dir = current_app.config.get('SPL_CACHE_DIR')
+            if cache_dir and isinstance(cache_dir, (str, os.PathLike)):
+                return os.path.abspath(cache_dir)
+        except Exception:
+            pass
+        try:
+            from dashboard.config import Config
+            if Config.SPL_CACHE_DIR and isinstance(Config.SPL_CACHE_DIR, (str, os.PathLike)):
+                return os.path.abspath(Config.SPL_CACHE_DIR)
+        except Exception:
+            pass
+        return os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'spl_cache'))
+
+    @classmethod
+    def _read_cache_file(cls, spl_id):
+        """Read one SPL XML from local cache by spl_id, returning (xml, full_path) or (None, None)."""
+        if not spl_id:
+            return None, None
+        cache_dir = cls._get_cache_dir()
+        if not cache_dir:
+            return None, None
+        cache_file = os.path.join(cache_dir, f"{spl_id}.xml")
+        if not os.path.exists(cache_file):
+            return None, None
+        try:
+            with open(cache_file, 'r', encoding='utf-8', errors='replace') as f:
+                return f.read(), cache_file
+        except Exception as e:
+            logger.error('Error reading cached SPL %s: %s', cache_file, e)
+            return None, None
+
+    @classmethod
+    def _write_cache_file(cls, spl_id, xml):
+        """Safely write SPL XML to local cache by spl_id using atomic replace."""
+        if not spl_id or not xml:
+            return None
+        cache_dir = cls._get_cache_dir()
+        if not cache_dir:
+            return None
+        try:
+            os.makedirs(cache_dir, exist_ok=True)
+            cache_file = os.path.join(cache_dir, f"{spl_id}.xml")
+            temp_file = os.path.join(cache_dir, f"{spl_id}.xml.tmp.{os.getpid()}_{random.randint(1000, 9999)}")
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                f.write(xml)
+            os.replace(temp_file, cache_file)
+            logger.info("Cached SPL XML for spl_id=%s to %s", spl_id, cache_file)
+            return cache_file
+        except Exception as e:
+            logger.warning("Failed to cache SPL XML for spl_id=%s: %s", spl_id, e)
+            return None
+
+    @classmethod
     def _oracle_xml(cls, set_id, spl_id=None):
-        """druglabel.spl.spl_xml for this labeling, or None."""
+        """druglabel.spl.spl_xml for this labeling, or (None, None). Returns (xml, resolved_spl_id)."""
         conn = cls.get_oracle_connection()
         if not conn:
-            return None
+            return None, None
         try:
             cursor = conn.cursor()
             if spl_id:
                 cursor.execute(
-                    'SELECT s.spl_xml FROM druglabel.spl s '
+                    'SELECT s.spl_xml, l.spl_guid FROM druglabel.spl s '
                     'JOIN druglabel.sum_spl l ON s.set_id = l.set_id '
                     'WHERE l.spl_guid = :sid',
                     {'sid': spl_id},
                 )
                 row = cursor.fetchone()
                 if row:
-                    return cls._decode_oracle_xml(row[0])
+                    return cls._decode_oracle_xml(row[0]), row[1] or spl_id
             cursor.execute(
-                'SELECT s.spl_xml FROM druglabel.spl s '
+                'SELECT s.spl_xml, l.spl_guid FROM druglabel.spl s '
                 'JOIN druglabel.sum_spl l ON s.set_id = l.set_id '
                 'WHERE l.set_id = :sid ORDER BY l.eff_time DESC',
                 {'sid': set_id},
             )
             row = cursor.fetchone()
-            return cls._decode_oracle_xml(row[0]) if row else None
+            if row:
+                return cls._decode_oracle_xml(row[0]), row[1]
+            return None, None
         except Exception as e:
             logger.error('Oracle SPL lookup failed for %s: %s', set_id, e)
-            return None
+            return None, None
         finally:
             try:
                 conn.close()
@@ -991,7 +1049,7 @@ class FDALabelDBService:
         Find the SPL XML, reporting where it came from.
 
         Returns (xml, source). `source` is None when nothing was found;
-        otherwise a dict with `origin` ('local-file' | 'oracle'), the `spl_id`
+        otherwise a dict with `origin` ('local-file' | 'cache' | 'oracle'), the `spl_id`
         actually served, and `version_substituted` when that is not the
         version the caller asked for.
 
@@ -1000,25 +1058,56 @@ class FDALabelDBService:
         if not set_id and not spl_id:
             return None, None
 
+        # 1. Candidate rows from local PostgreSQL (storage files or cache)
         for row in cls._local_rows(set_id, spl_id):
+            candidate_spl_id = row.get('spl_id')
+            # 1a. Check primary local storage (ZIP or XML)
             xml = cls._read_local_file(row.get('local_path'), row.get('set_id') or set_id)
             if xml:
                 return xml, {
                     'origin': 'local-file',
-                    'spl_id': row.get('spl_id'),
-                    'set_id': row.get('set_id'),
+                    'spl_id': candidate_spl_id,
+                    'set_id': row.get('set_id') or set_id,
                     'local_path': row.get('local_path'),
-                    'version_substituted': bool(spl_id and row.get('spl_id') != spl_id),
+                    'version_substituted': bool(spl_id and candidate_spl_id != spl_id),
+                }
+            # 1b. Check local cache by candidate_spl_id
+            if candidate_spl_id:
+                cached_xml, cache_file = cls._read_cache_file(candidate_spl_id)
+                if cached_xml:
+                    return cached_xml, {
+                        'origin': 'cache',
+                        'spl_id': candidate_spl_id,
+                        'set_id': row.get('set_id') or set_id,
+                        'local_path': cache_file,
+                        'version_substituted': bool(spl_id and candidate_spl_id != spl_id),
+                    }
+
+        # 2. If spl_id was explicitly requested, check local cache directly
+        if spl_id:
+            cached_xml, cache_file = cls._read_cache_file(spl_id)
+            if cached_xml:
+                return cached_xml, {
+                    'origin': 'cache',
+                    'spl_id': spl_id,
+                    'set_id': set_id,
+                    'local_path': cache_file,
+                    'version_substituted': False,
                 }
 
         if force_local:
             return None, None
 
-        xml = cls._oracle_xml(set_id, spl_id=spl_id)
+        # 3. Fallback to Oracle
+        xml, resolved_spl_id = cls._oracle_xml(set_id, spl_id=spl_id)
         if xml:
+            final_spl_id = resolved_spl_id or spl_id
+            if final_spl_id:
+                cls._write_cache_file(final_spl_id, xml)
+
             return xml, {
                 'origin': 'oracle',
-                'spl_id': spl_id,
+                'spl_id': final_spl_id,
                 'set_id': set_id,
                 'local_path': None,
                 'version_substituted': False,

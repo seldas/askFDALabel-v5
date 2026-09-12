@@ -36,6 +36,8 @@ def create_app(config_class=Config):
     # Ensure data directories exist
     os.makedirs(app.config["DATA_DIR"], exist_ok=True)
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+    if app.config.get("SPL_CACHE_DIR"):
+        os.makedirs(app.config["SPL_CACHE_DIR"], exist_ok=True)
 
     @login_manager.user_loader
     def load_user(user_id):

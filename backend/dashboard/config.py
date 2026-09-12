@@ -131,6 +131,7 @@ class Config:
     
     SPL_STORAGE_DIR = os.path.join(DATA_DIR, 'spl_storage')
     SPL_STORAGE_DIR_ARCHIVED = os.path.join(DATA_DIR, 'spl_storage_archived')
+    SPL_CACHE_DIR = os.path.join(DATA_DIR, 'spl_cache')
 
     FDALabel_HOST = os.getenv('FDALabel_HOST') or os.getenv('FDALabel_SERV') or 'ncsvmscidevl03.fda.gov'
     FDALabel_PORT = os.getenv('FDALabel_PORT', '1521')
