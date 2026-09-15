@@ -11,6 +11,7 @@
  */
 
 import Link from 'next/link';
+import { createPortal } from 'react-dom';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useCapabilities } from '../platform/capabilities';
 import { labelRoute } from '../platform/context';
@@ -305,6 +306,7 @@ function StickyXScrollbar({
  */
 export interface RowContext {
   targetDb?: TargetDb;
+  onOpenText?: (label: string, value: string) => void;
 }
 
 export interface ColumnDef {
@@ -319,6 +321,53 @@ export interface ColumnDef {
   initiallyHidden?: boolean;
 }
 
+function CellValue({ label, value, onOpen }: { label: string; value: string; onOpen?: (label: string, value: string) => void }) {
+  const isLong = value.length > 72;
+  if (!isLong) return <span>{value}</span>;
+  return <button type="button" className="fdl-cell-overflow" onClick={(event) => { event.stopPropagation(); onOpen?.(label, value); }} aria-label={`View full ${label}`}>{value}</button>;
+}
+
+function textColumn(key: string, header: string, sort: string | undefined, value: (row: LabelRow) => string, flags: Partial<ColumnDef> = {}): ColumnDef {
+  return { key, header, sort, ...flags, render: (row, ctx) => <CellValue label={header} value={value(row)} onOpen={ctx.onOpenText} /> };
+}
+
+function DetailInspector({ row, onClose }: { row: LabelRow | null; onClose: () => void }) {
+  if (!row) return null;
+  const facts: Array<[string, string]> = [
+    ['Trade name', joined(row.product_names) || '—'],
+    ['Generic name', joined(row.generic_names) || '—'],
+    ['Active ingredients', joined(row.active_ingredients) || '—'],
+    ['Ingredient UNII', row.active_uniis || '—'],
+    ['NDC code', joined(row.ndc_codes) || '—'],
+    ['Application no.', joined(row.appr_num) || '—'],
+    ['Labeler', row.manufacturer || '—'],
+    ['Marketing category', joined(row.market_categories) || '—'],
+    ['Dosage form', joined(row.dosage_forms) || '—'],
+    ['Route', joined(row.routes) || '—'],
+    ['Pharmacologic class', joined(row.epc) || '—'],
+    ['SPL revised', (row.revised_date || '').replace(/-/g, '/') || '—'],
+  ];
+  return (
+    <aside className="fdl-detail-inspector" aria-label="Selected label details">
+      <header className="fdl-detail-inspector__head">
+        <button type="button" className="fdl-detail-inspector__close" onClick={onClose} aria-label="Close label details">×</button>
+        <span className="fdl-detail-inspector__eyebrow">Selected label</span>
+        <h2>{joined(row.product_names) || 'Unbranded Product'}</h2>
+        <p>{joined(row.generic_names)}</p>
+      </header>
+      <div className="fdl-detail-inspector__badges">
+        {row.doc_type ? <span className="fdl-badge">{row.doc_type}</span> : null}
+        {row.market_categories ? <span className="fdl-badge">{row.market_categories}</span> : null}
+        {row.is_rld ? <span className="fdl-badge">RLD</span> : null}
+      </div>
+      <dl className="fdl-detail-inspector__facts">
+        {facts.map(([label, value]) => <Fragment key={label}><dt>{label}</dt><dd>{value}</dd></Fragment>)}
+      </dl>
+      <footer className="fdl-detail-inspector__ids"><span>Set ID</span><code>{row.set_id}</code><span>SPL ID</span><code>{row.spl_id}</code></footer>
+    </aside>
+  );
+}
+
 const LINKS_COLUMN: ColumnDef = {
   key: 'links',
   header: 'Links',
@@ -330,7 +379,7 @@ const TRADE_NAME: ColumnDef = {
   header: 'Trade Name',
   sort: 'product',
   strong: true,
-  render: (row) => joined(row.product_names),
+  render: (row, ctx) => <CellValue label="Trade Name" value={joined(row.product_names)} onOpen={ctx.onOpenText} />,
 };
 
 const GENERIC_NAME: ColumnDef = {
@@ -338,7 +387,7 @@ const GENERIC_NAME: ColumnDef = {
   header: 'Generic/Proper Name(s)',
   sort: 'generic',
   accent: true,
-  render: (row) => joined(row.generic_names),
+  render: (row, ctx) => <CellValue label="Generic/Proper Name(s)" value={joined(row.generic_names)} onOpen={ctx.onOpenText} />,
 };
 
 const SPL_DATE: ColumnDef = {
@@ -350,24 +399,9 @@ const SPL_DATE: ColumnDef = {
 
 const BASIC_COLUMNS: ColumnDef[] = [
   LINKS_COLUMN,
-  {
-    key: 'market',
-    header: 'Marketing Category',
-    sort: 'market_category',
-    render: (row) => joined(row.market_categories),
-  },
-  {
-    key: 'dosage',
-    header: 'Dosage Form(s)',
-    sort: 'dosage_form',
-    render: (row) => joined(row.dosage_forms),
-  },
-  {
-    key: 'route',
-    header: 'Route(s) of Administration',
-    sort: 'route',
-    render: (row) => joined(row.routes),
-  },
+  textColumn('market', 'Marketing Category', 'market_category', (row) => joined(row.market_categories)),
+  textColumn('dosage', 'Dosage Form(s)', 'dosage_form', (row) => joined(row.dosage_forms)),
+  textColumn('route', 'Route(s) of Administration', 'route', (row) => joined(row.routes)),
   TRADE_NAME,
   GENERIC_NAME,
   SPL_DATE,
@@ -496,6 +530,7 @@ export function ResultsTable({
   onSort,
   extraColumns,
   targetDb,
+  controlsTargetId,
 }: {
   rows: LabelRow[];
   view: ResultView;
@@ -508,6 +543,8 @@ export function ResultsTable({
    * deployment the per-row SPL link opens; omitted, links go to CDER-CBER.
    */
   targetDb?: TargetDb;
+  /** Optional host beside the view switch for table-level display controls. */
+  controlsTargetId?: string;
 }) {
   const baseColumns = view === 'expanded' ? EXPANDED_COLUMNS : BASIC_COLUMNS;
   const allColumns = extraColumns && extraColumns.length > 0
@@ -519,10 +556,13 @@ export function ResultsTable({
     ),
   );
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+  const [fullText, setFullText] = useState<{ label: string; value: string } | null>(null);
   const [colPickerOpen, setColPickerOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const visibleColumns = allColumns.filter((c) => !hiddenColumns[c.key]);
+  const selectedRow = rows.find((row) => (row.spl_id || row.set_id) === selectedRowId) || null;
 
   const toggleColumn = (key: string) => {
     setHiddenColumns((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -536,8 +576,7 @@ export function ResultsTable({
     setHiddenColumns({});
   };
 
-  return (
-    <div className="fdl-results-container">
+  const columnControl = (
       <div className="fdl-table-toolbar">
         <div className="fdl-colpicker-wrap">
           <button
@@ -572,8 +611,20 @@ export function ResultsTable({
           ) : null}
         </div>
       </div>
+  );
+  const controlsHost = typeof document !== 'undefined' && controlsTargetId
+    ? document.getElementById(controlsTargetId)
+    : null;
+
+  return (
+    <div className="fdl-results-container">
+      {controlsHost ? createPortal(columnControl, controlsHost) : columnControl}
 
       <div className="fdl-tablescroll">
+        <StickyXScrollbar
+          targetRef={scrollRef}
+          signature={`${view}:${visibleColumns.length}:${rows.length}`}
+        />
         <div className="fdl-tablewrap" ref={scrollRef}>
           <table className="fdl-table">
             <thead>
@@ -611,18 +662,18 @@ export function ResultsTable({
             <tbody>
               {rows.map((row) => {
                 const rowId = row.spl_id || row.set_id;
-                const isExpanded = Boolean(expandedRows[rowId]);
+                const isExpanded = view === 'basic' && Boolean(expandedRows[rowId]);
                 return (
                   <Fragment key={rowId}>
                     <tr
                       className={`fdl-tr ${isExpanded ? 'fdl-tr--expanded' : ''}`}
-                      onClick={() => toggleRow(rowId)}
+                      onClick={() => view === 'expanded' ? setSelectedRowId(rowId) : toggleRow(rowId)}
                       style={{ cursor: 'pointer' }}
                     >
                       <td
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleRow(rowId);
+                          view === 'expanded' ? setSelectedRowId(rowId) : toggleRow(rowId);
                         }}
                       >
                         <button
@@ -630,7 +681,7 @@ export function ResultsTable({
                           className={`fdl-tr-expand-btn ${isExpanded ? 'active' : ''}`}
                           title={isExpanded ? 'Collapse drug card' : 'Expand drug card'}
                         >
-                          {isExpanded ? '▼' : '▶'}
+                          {view === 'expanded' ? ((selectedRowId === rowId) ? '●' : '›') : (isExpanded ? '▼' : '▶')}
                         </button>
                       </td>
                       {visibleColumns.map((column) => (
@@ -644,7 +695,7 @@ export function ResultsTable({
                                 : undefined
                           }
                         >
-                          {column.render(row, { targetDb })}
+                          {column.render(row, { targetDb, onOpenText: (label, value) => setFullText({ label, value }) })}
                         </td>
                       ))}
                     </tr>
@@ -799,11 +850,17 @@ export function ResultsTable({
             </tbody>
           </table>
         </div>
-        <StickyXScrollbar
-          targetRef={scrollRef}
-          signature={`${view}:${visibleColumns.length}:${rows.length}`}
-        />
       </div>
+      {view === 'expanded' ? <DetailInspector row={selectedRow} onClose={() => setSelectedRowId(null)} /> : null}
+      {fullText ? (
+        <div className="fdl-text-dialog-backdrop" role="presentation" onClick={() => setFullText(null)}>
+          <section className="fdl-text-dialog" role="dialog" aria-modal="true" aria-label={fullText.label} onClick={(event) => event.stopPropagation()}>
+            <header><div><span>Full field value</span><h2>{fullText.label}</h2></div><button type="button" onClick={() => setFullText(null)} aria-label="Close full text">×</button></header>
+            <pre>{fullText.value}</pre>
+            <footer><button type="button" className="fdl-btn fdl-btn--quiet" onClick={() => navigator.clipboard?.writeText(fullText.value)}>Copy text</button><button type="button" className="fdl-btn fdl-btn--search" onClick={() => setFullText(null)}>Close</button></footer>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -250,11 +250,11 @@ export function AiIntentPanel({
       className="fdl-ai" 
       aria-label="Natural Language Query Assistant"
       style={{
-        borderRadius: '10px',
-        border: '1px solid #bfdbfe',
-        borderTop: '4px solid #002e5d',
-        background: 'linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%)',
-        boxShadow: '0 4px 16px -2px rgba(0, 46, 93, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.03)',
+        borderRadius: '0',
+        border: '1px solid #b8c8d7',
+        borderTop: '3px solid #071f3d',
+        background: '#ffffff',
+        boxShadow: 'none',
         padding: '22px 24px',
         marginBottom: '20px',
         position: 'relative',
@@ -267,14 +267,14 @@ export function AiIntentPanel({
               style={{
                 width: '30px',
                 height: '30px',
-                borderRadius: '6px',
+                borderRadius: '2px',
                 background: '#002e5d',
                 color: '#ffffff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
-                boxShadow: '0 2px 5px rgba(0, 46, 93, 0.25)',
+                boxShadow: 'none',
               }}
             >
               <AssistantIcon size={16} />
@@ -291,7 +291,7 @@ export function AiIntentPanel({
                 background: '#002e5d',
                 color: '#ffffff',
                 padding: '2px 8px',
-                borderRadius: '4px',
+                borderRadius: '2px',
               }}
             >
               Natural Language Console
@@ -311,7 +311,7 @@ export function AiIntentPanel({
             background: '#ffffff',
             color: '#334155',
             border: '1px solid #cbd5e1',
-            borderRadius: '6px',
+            borderRadius: '2px',
             padding: '5px 12px',
             fontSize: '0.8rem',
             fontWeight: 600,
@@ -321,7 +321,7 @@ export function AiIntentPanel({
             gap: '6px',
             transition: 'all 0.15s ease',
             whiteSpace: 'nowrap',
-            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+            boxShadow: 'none',
           }}
         >
           <span>{isFolded ? 'Expand Assistant' : 'Collapse'}</span>
@@ -346,12 +346,12 @@ export function AiIntentPanel({
                 }
               }}
               style={{
-                borderRadius: '6px',
+                borderRadius: '2px',
                 borderColor: '#94a3b8',
                 background: '#ffffff',
                 padding: '10px 14px',
                 fontSize: '0.9rem',
-                boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.04)',
+                boxShadow: 'none',
                 lineHeight: 1.45,
               }}
             />
@@ -371,8 +371,8 @@ export function AiIntentPanel({
                 color: '#ffffff',
                 fontWeight: 700,
                 fontSize: '0.88rem',
-                borderRadius: '6px',
-                boxShadow: '0 2px 6px rgba(0, 113, 188, 0.25)',
+                borderRadius: '2px',
+                boxShadow: 'none',
                 transition: 'all 0.15s ease',
               }}
             >
@@ -412,9 +412,9 @@ export function AiIntentPanel({
                   background: '#ffffff',
                   border: '1px solid #bfdbfe',
                   padding: '3px 10px',
-                  borderRadius: '14px',
+                  borderRadius: '2px',
                   fontWeight: 600,
-                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
+                  boxShadow: 'none',
                   transition: 'all 0.15s ease',
                 }}
               >

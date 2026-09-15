@@ -1,0 +1,435 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.62);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.modal {
+  width: min(980px, 96vw);
+  max-height: min(84vh, 860px);
+  background: var(--afl-n-0);
+  border-radius: 18px;
+  border: 1px solid var(--afl-n-200);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--afl-n-100);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--afl-n-50);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.headerIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(2, 132, 199, 0.1);
+  border: 1px solid rgba(2, 132, 199, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+
+.headerText {
+  min-width: 0;
+}
+
+.title {
+  font-weight: 950;
+  color: var(--afl-n-900);
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subtitle {
+  font-size: 0.82rem;
+  color: var(--afl-n-500);
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.dot {
+  margin: 0 8px;
+  color: var(--afl-n-300);
+}
+
+.closeBtn {
+  border: 1px solid var(--afl-n-200);
+  background: var(--afl-n-0);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--afl-n-600);
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-weight: 900;
+}
+
+.body {
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.loadingRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 6px;
+}
+
+.loadingText {
+  font-weight: 800;
+  color: var(--afl-n-700);
+}
+
+.errorBox {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--afl-danger-50);
+  border: 1px solid var(--afl-danger-100);
+  color: #991b1b;
+  font-weight: 800;
+}
+
+.sectionIntro {
+  margin-bottom: 10px;
+}
+
+.sectionKicker {
+  font-size: 0.72rem;
+  font-weight: 950;
+  color: var(--afl-n-500);
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+}
+
+.sectionHeadline {
+  font-size: 1.05rem;
+  font-weight: 950;
+  color: var(--afl-n-900);
+  margin-top: 4px;
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.kpiCard {
+  border: 1px solid var(--afl-n-200);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: var(--afl-n-0);
+}
+
+.kpiLabel {
+  font-size: 0.70rem;
+  font-weight: 950;
+  color: var(--afl-n-500);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.kpiValue {
+  font-size: 1.75rem;
+  font-weight: 950;
+  color: var(--afl-n-900);
+  margin-top: 6px;
+}
+
+.kpiSubValue {
+  font-size: 0.98rem;
+  font-weight: 950;
+  color: var(--afl-n-900);
+  margin-top: 10px;
+}
+
+.to {
+  color: var(--afl-n-400);
+  margin: 0 6px;
+}
+
+.panel {
+  border: 1px solid var(--afl-n-200);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--afl-n-0);
+  margin-bottom: 12px;
+}
+
+.panelHeader {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--afl-n-100);
+  background: #fbfdff;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.panelKicker {
+  font-size: 0.75rem;
+  font-weight: 950;
+  color: var(--afl-n-500);
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+}
+
+.panelTitle {
+  font-size: 0.95rem;
+  font-weight: 950;
+  color: var(--afl-n-900);
+  margin-top: 2px;
+}
+
+.panelMeta {
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: var(--afl-n-700);
+}
+
+.panelBody {
+  padding: 12px 14px;
+}
+
+.chartWrap {
+  width: 100%;
+  height: 260px;
+  border: 1px solid var(--afl-n-200);
+  border-radius: 14px;
+  background: var(--afl-n-0);
+  padding: 8px;
+}
+
+.canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.methodsNote {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--afl-n-500);
+  font-weight: 750;
+}
+
+.chartStatus {
+  color: var(--afl-n-400);
+  font-weight: 800;
+}
+
+.emptyState {
+  padding: 12px;
+  color: var(--afl-n-400);
+  font-style: italic;
+  font-weight: 800;
+}
+
+.twoCol {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .twoCol {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bucketGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.bucketGrid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.bucketCard {
+  border: 1px solid var(--afl-n-200);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: var(--afl-n-0);
+}
+
+.bucketLabel {
+  font-size: 0.70rem;
+  font-weight: 950;
+  color: var(--afl-n-500);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.bucketValue {
+  font-size: 1.2rem;
+  font-weight: 950;
+  color: var(--afl-n-900);
+  margin-top: 6px;
+}
+
+.limitedBadge {
+  font-size: 0.75rem;
+  font-weight: 900;
+  color: #92400e;
+  background: var(--afl-warn-50);
+  border: 1px solid #fef3c7;
+  padding: 6px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rankList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rankRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--afl-n-100);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: var(--afl-n-0);
+}
+
+.rankLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.rankBadge {
+  width: 26px;
+  height: 26px;
+  border-radius: 10px;
+  background: var(--afl-n-100);
+  border: 1px solid var(--afl-n-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 950;
+  color: var(--afl-n-700);
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
+
+.rankName {
+  font-weight: 900;
+  color: var(--afl-n-900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rankCount {
+  font-weight: 950;
+  color: var(--afl-n-900);
+}
+
+.footerHint {
+  margin-top: 14px;
+  font-size: 0.78rem;
+  color: var(--afl-n-400);
+  font-weight: 800;
+}
+
+.badgeBlock {
+  margin-top: 10px;
+  border-top: 1px solid var(--afl-n-100);
+  padding-top: 10px;
+}
+
+.badgeKicker {
+  font-size: 0.72rem;
+  font-weight: 950;
+  color: var(--afl-n-500);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.badgeLines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.miniBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--afl-n-200);
+  background: var(--afl-n-50);
+  cursor: default;
+  user-select: none;
+}
+
+.miniBadgeRank {
+  font-size: 0.72rem;
+  font-weight: 950;
+  color: var(--afl-n-500);
+}
+
+.miniBadgeInitials {
+  width: 28px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--afl-n-200);
+  background: var(--afl-n-0);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 950;
+  color: var(--afl-n-900);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
+.badgeHint {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--afl-n-500);
+  font-weight: 750;
+}

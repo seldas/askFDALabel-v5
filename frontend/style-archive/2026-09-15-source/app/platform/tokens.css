@@ -1,0 +1,152 @@
+/*
+ * askFDALabel v5 — design tokens
+ *
+ * Federal-scientific workstation tokens. Existing --afl-* names remain so
+ * page components can inherit the updated visual system without changing
+ * their behavior or information architecture.
+ *
+ * NOTE: tokens are light-mode only for now. globals.css declares a
+ * prefers-color-scheme:dark block, but ~1300 inline styles hardcode light
+ * colors, so the app does not actually honor dark mode. Introducing dark
+ * tokens before those styles migrate would produce a half-dark UI.
+ */
+
+:root {
+  /* ---- Neutral ramp (slate) ------------------------------------------- */
+  --afl-n-0:   #ffffff;
+  --afl-n-50:  #f3f6f8;
+  --afl-n-100: #edf4fa;
+  --afl-n-200: #d7e0e7;
+  --afl-n-300: #b8c8d7;
+  --afl-n-400: #8494a2;
+  --afl-n-500: #5e6e7c;
+  --afl-n-600: #405361;
+  --afl-n-700: #273843;
+  --afl-n-800: #132332;
+  --afl-n-900: #071f3d;
+
+  /* ---- Accent (indigo) ------------------------------------------------- */
+  --afl-a-50:  #edf4fa;
+  --afl-a-100: #dcecf8;
+  --afl-a-500: #0071bc;
+  --afl-a-600: #0759a5;
+  --afl-a-700: #064b8d;
+
+  /* ---- Status ---------------------------------------------------------- */
+  --afl-info-50:    #edf4fa;
+  --afl-info-500:   #0071bc;
+  --afl-info-700:   #0759a5;
+  --afl-success-50:  #edf7f0;
+  --afl-success-500: #2d7a4c;
+  --afl-success-700: #1f5b37;
+  --afl-warn-50:    #fff8e6;
+  --afl-warn-500:   #a86500;
+  --afl-warn-700:   #7a4900;
+  --afl-danger-50:  #fff1f1;
+  --afl-danger-100: #f7d2d2;
+  --afl-danger-500: #b50909;
+  --afl-danger-700: #8d0000;
+
+  /* ---- AI surfaces (the purple/blue gradient used for AI-badged tools) -- */
+  --afl-ai-from: #dcecf8;
+  --afl-ai-to:   #edf4fa;
+  --afl-ai-grad: linear-gradient(135deg, var(--afl-ai-from) 0%, var(--afl-ai-to) 100%);
+
+  /* ---- Government chrome (existing --fda-* kept as aliases below) ------- */
+  --afl-gov-navy:  #071f3d;
+  --afl-gov-blue:  #0071bc;
+  --afl-gov-tint:  #dcecf8;
+  --afl-gov-grey:  #f3f6f8;
+  --afl-gov-line:  #b8c8d7;
+
+  /* ---- Semantic roles -------------------------------------------------- */
+  --afl-bg-page:      var(--afl-n-50);
+  --afl-bg-surface:   var(--afl-n-0);
+  --afl-bg-sunken:    var(--afl-n-100);
+  --afl-bg-hover:     var(--afl-n-50);
+
+  --afl-text-primary:   var(--afl-n-900);
+  --afl-text-secondary: var(--afl-n-500);
+  --afl-text-muted:     var(--afl-n-400);
+  --afl-text-inverse:   var(--afl-n-0);
+  --afl-text-link:      var(--afl-a-500);
+
+  --afl-border:        var(--afl-n-200);
+  --afl-border-strong: var(--afl-n-300);
+  --afl-focus-ring:    var(--afl-a-500);
+
+  /* ---- Space (4px base) ------------------------------------------------ */
+  --afl-space-1: 0.25rem;
+  --afl-space-2: 0.5rem;
+  --afl-space-3: 0.75rem;
+  --afl-space-4: 1rem;
+  --afl-space-5: 1.5rem;
+  --afl-space-6: 2rem;
+  --afl-space-7: 3rem;
+  --afl-space-8: 4rem;
+
+  /* ---- Radius ---------------------------------------------------------- */
+  --afl-radius-sm:   2px;
+  --afl-radius-md:   2px;
+  --afl-radius-lg:   3px;
+  --afl-radius-xl:   4px;
+  --afl-radius-pill: 999px;
+
+  /* ---- Typography ------------------------------------------------------ */
+  /* Font stacks are defined on `body` below, not here — see the note there. */
+
+  --afl-text-xs:  0.75rem;
+  --afl-text-sm:  0.85rem;
+  --afl-text-md:  0.95rem;
+  --afl-text-lg:  1.1rem;
+  --afl-text-xl:  1.25rem;
+  --afl-text-2xl: 1.5rem;
+  --afl-text-3xl: 2.25rem;
+
+  --afl-weight-normal:   400;
+  --afl-weight-medium:   600;
+  --afl-weight-bold:     700;
+  --afl-weight-heavy:    800;
+  --afl-weight-black:    900;
+
+  --afl-leading-tight: 1.25;
+  --afl-leading-normal: 1.5;
+
+  /* ---- Elevation ------------------------------------------------------- */
+  --afl-shadow-xs: 0 1px 2px rgba(7, 31, 61, 0.05);
+  --afl-shadow-sm: none;
+  --afl-shadow-md: 0 4px 12px rgba(7, 31, 61, 0.14);
+  --afl-shadow-lg: 0 10px 20px rgba(7, 31, 61, 0.16);
+
+  /* ---- Motion ---------------------------------------------------------- */
+  --afl-transition: 0.2s ease;
+
+  /* ---- Layout ---------------------------------------------------------- */
+  --afl-container-max: 1200px;
+  --afl-header-height: 72px;
+
+  /* The pre-existing --fda-* variables intentionally stay defined in
+   * globals.css. They are overridden there inside a prefers-color-scheme:dark
+   * block; redefining them here would silently win or lose on import order. */
+}
+
+/*
+ * Font tokens live on `body`, not `:root`.
+ *
+ * next/font exposes Inter and Geist Mono as --font-inter / --font-geist-mono
+ * through classNames that layout.tsx applies to <body>. Referencing them from
+ * :root would make the var() invalid at computed-value time and the token would
+ * resolve to an empty string.
+ */
+body {
+  --afl-font-sans: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont,
+                   'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --afl-font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo,
+                   Consolas, monospace;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --afl-transition: 0s;
+  }
+}

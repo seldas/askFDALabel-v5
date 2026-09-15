@@ -1,0 +1,25 @@
+/* Label reader workspace: source document identity and clinical evidence. */
+.afl-label-shell { background: var(--fdl-canvas) !important; }
+.afl-label-shell__inner { max-width: 1440px !important; padding: 18px 24px 30px !important; }
+.afl-label-crumbs { margin-bottom: 10px !important; color: var(--fdl-muted) !important; font-family: var(--fdl-font-mono) !important; }
+.afl-label-identity { border: 1px solid var(--fdl-line) !important; border-top: 4px solid var(--fdl-navy-800) !important; border-radius: 0 !important; box-shadow: none !important; padding: 20px !important; margin-bottom: 12px !important; background: #fff !important; }
+.afl-label-identity--stale { border-top-color: #8b6500 !important; background: #fffdf7 !important; }
+.afl-label-identity__title { color: var(--fdl-navy-950) !important; font-size: clamp(1.4rem, 2.8vw, 2.1rem) !important; letter-spacing: -.02em !important; }
+.afl-label-identity__generic { color: var(--fdl-muted) !important; }
+.afl-label-identity__facts, .label-meta-grid { border-top-color: var(--fdl-line) !important; gap: 16px !important; }
+.afl-label-fact__label, .meta-item > span:first-child { color: var(--fdl-muted) !important; font-family: var(--fdl-font-mono) !important; letter-spacing: .05em !important; }
+.afl-label-fact__value, .meta-item > span:not(:first-child) { color: var(--fdl-ink) !important; }
+.afl-label-alert { border-radius: 0 !important; box-shadow: none !important; }
+.afl-sticky-header-bar { border: 1px solid var(--fdl-line) !important; border-top: 3px solid var(--fdl-blue-600) !important; border-radius: 0 !important; box-shadow: none !important; padding: 9px 13px !important; margin-bottom: 12px !important; }
+.afl-sticky-header-bar.is-collapsed { border-color: var(--fdl-line-strong) !important; box-shadow: none !important; }
+.afl-sticky-line1 { border-bottom-color: var(--fdl-line-soft) !important; }
+.afl-collapse-toggle-btn { color: var(--fdl-blue-700) !important; border-color: var(--fdl-line-strong) !important; border-radius: 2px !important; background: var(--fdl-blue-050) !important; }
+.spl-content { color: var(--fdl-ink) !important; font-family: Georgia, 'Times New Roman', serif !important; line-height: 1.75 !important; }
+.spl-content h2 { color: var(--fdl-navy-950) !important; border-bottom-color: var(--fdl-line) !important; }
+.spl-content h3 { color: var(--fdl-navy-800) !important; border-left-color: var(--fdl-blue-600) !important; }
+.spl-content a { color: var(--fdl-blue-700) !important; }
+.spl-table-wrapper { border-radius: 0 !important; border-color: var(--fdl-line) !important; box-shadow: none !important; }
+.spl-content .spl-table thead th, .spl-table-wrapper .spl-table thead th { background: var(--fdl-blue-050) !important; color: var(--fdl-navy-950) !important; border-color: var(--fdl-line) !important; }
+.spl-content .spl-table tbody td, .spl-table-wrapper .spl-table tbody td { border-color: var(--fdl-line-soft) !important; }
+.spl-content .spl-table tbody tr:nth-child(even), .spl-table-wrapper .spl-table tbody tr:nth-child(even) { background: #f8fafc !important; }
+@media (max-width: 700px) { .afl-label-shell__inner { padding: 12px !important; } .afl-label-identity { padding: 14px !important; } }

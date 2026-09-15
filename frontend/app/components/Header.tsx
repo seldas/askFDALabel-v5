@@ -222,10 +222,10 @@ export default function Header({
             fontSize: '0.65rem',
             fontWeight: 700,
             textTransform: 'uppercase',
-            backgroundColor: 'rgba(239, 68, 68, 0.2)',
-            color: '#f87171',
+            backgroundColor: '#dcecf8',
+            color: '#0759a5',
             padding: '2px 8px',
-            borderRadius: '12px',
+            borderRadius: '2px',
             lineHeight: '1.2',
             letterSpacing: '0.05em'
           }}>
@@ -393,12 +393,12 @@ export default function Header({
                       <div className="dropdown-title" style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span>LabelChat</span>
                         <span style={{
-                          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                          color: '#ffffff',
+                          background: '#dcecf8',
+                          color: '#0759a5',
                           fontSize: '0.6rem',
                           fontWeight: 800,
                           padding: '1px 5px',
-                          borderRadius: '4px',
+                          borderRadius: '2px',
                           letterSpacing: '0.05em',
                           lineHeight: 1.2,
                           display: 'inline-block'
@@ -464,7 +464,7 @@ export default function Header({
                 <button 
                   className={cx('dropdown-trigger header-chip', activeDropdown === 'tasks' && 'active')} 
                   onClick={() => setActiveDropdown(activeDropdown === 'tasks' ? null : 'tasks')}
-                  style={{ background: '#eef2ff', color: '#6366f1', border: '1px solid #e0e7ff' }}
+                  style={{ background: '#edf4fa', color: '#0759a5', border: '1px solid #b8c8d7' }}
                 >
                   <span className="pulse-dot"></span>
                   <span style={{ fontWeight: 800 }}>{totalActiveTasks} Active Task{totalActiveTasks > 1 ? 's' : ''}</span>
@@ -484,11 +484,11 @@ export default function Header({
                             <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {getTaskLabel(task)}
                             </div>
-                            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#6366f1' }}>{task.progress}%</div>
+                            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#0759a5' }}>{task.progress}%</div>
                           </div>
                           <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '6px' }}>{getTaskProjectLabel(task)}</div>
-                          <div style={{ width: '100%', height: '4px', background: '#eef2ff', borderRadius: '2px', overflow: 'hidden', marginBottom: '8px' }}>
-                            <div style={{ width: `${task.progress}%`, height: '100%', background: '#6366f1', transition: 'width 0.3s ease' }} />
+                          <div style={{ width: '100%', height: '4px', background: '#dcecf8', borderRadius: '0', overflow: 'hidden', marginBottom: '8px' }}>
+                            <div style={{ width: `${task.progress}%`, height: '100%', background: '#0071bc', transition: 'width 0.3s ease' }} />
                           </div>
                           <div style={{ display: 'flex', gap: '8px' }}>
                             <button
@@ -638,7 +638,7 @@ export default function Header({
               backgroundColor: '#ffffff',
               boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
               border: '1px solid #e2e8f0',
-              borderRadius: '16px',
+              borderRadius: '0',
               textAlign: 'center'
             }}>
               <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
@@ -647,10 +647,10 @@ export default function Header({
                   fontSize: '0.65rem', 
                   fontWeight: 700, 
                   textTransform: 'uppercase', 
-                  backgroundColor: '#fee2e2', 
-                  color: '#dc2626', 
+                  backgroundColor: '#dcecf8',
+                  color: '#0759a5',
                   padding: '2px 8px', 
-                  borderRadius: '12px',
+                  borderRadius: '2px',
                   lineHeight: '1.2',
                   letterSpacing: '0.05em'
                 }}>
@@ -725,119 +725,6 @@ export default function Header({
         </div>
 
       </div>
-      <style jsx>{`
-        @keyframes modalEnter {
-          from { opacity: 0; transform: scale(0.95) translateY(10px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-
-        .ai-option-card {
-          width: 100%;
-          padding: 1rem 1.25rem;
-          border-radius: 12px;
-          border: 2px solid #f1f5f9;
-          background: white;
-          text-align: left;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          color: #1e293b;
-        }
-
-        .ai-option-card:hover {
-          border-color: #cbd5e1;
-          background: #f8fafc;
-        }
-
-        .ai-option-card.selected {
-          border-color: #6366f1;
-          background: #f5f3ff;
-          color: #4338ca;
-        }
-
-        .pulse-dot {
-          width: 8px;
-          height: 8px;
-          background-color: #6366f1;
-          border-radius: 50%;
-          display: inline-block;
-          margin-right: 8px;
-          box-shadow: 0 0 0 rgba(99, 102, 241, 0.4);
-          animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-          0% {
-            box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
-          }
-          70% {
-            box-shadow: 0 0 0 10px rgba(99, 102, 241, 0);
-          }
-          100% {
-            box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
-          }
-        }
-
-        .header-controls {
-          display: flex !important;
-          align-items: center !important;
-          gap: 8px !important;
-        }
-
-        .custom-dropdown {
-          position: relative !important;
-          display: inline-flex !important;
-          align-items: center !important;
-          vertical-align: middle !important;
-          margin: 0 !important;
-          padding: 0 !important;
-        }
-
-        .header-chip {
-          height: 36px !important;
-          display: inline-flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          padding: 0 14px !important;
-          border-radius: 10px !important;
-          border: 1px solid rgba(255, 255, 255, 0.25) !important;
-          background: rgba(255, 255, 255, 0.08) !important;
-          color: #ffffff !important;
-          font-size: 0.88rem !important;
-          font-weight: 700 !important;
-          cursor: pointer !important;
-          transition: all 0.2s ease !important;
-          box-sizing: border-box !important;
-          line-height: 1 !important;
-          margin: 0 !important;
-          vertical-align: middle !important;
-        }
-
-        .header-chip:hover {
-          background-color: rgba(255, 255, 255, 0.2) !important;
-          border-color: rgba(255, 255, 255, 0.4) !important;
-          color: #ffffff !important;
-        }
-
-        .header-chip.active {
-          background-color: #ffffff !important;
-          color: #0f172a !important;
-          border-color: #ffffff !important;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-        }
-
-        .header-chip.active span,
-        .header-chip.active .caret,
-        .header-chip.active svg {
-          color: #0f172a !important;
-          stroke: #0f172a !important;
-        }
-
-        .header-updates-btn:hover, .header-updates-btn.active {
-          background-color: rgba(255, 255, 255, 0.2) !important;
-          color: white !important;
-          border-color: rgba(255, 255, 255, 0.3) !important;
-        }
-      `}</style>
     </header>
 
       {/* Log Modal */}

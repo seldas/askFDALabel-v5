@@ -1,0 +1,25 @@
+/* Dashboard workspace: task rail, active project canvas, and evidence table. */
+.dashboard-container { background: var(--fdl-canvas); color: var(--fdl-ink); }
+.dashboard-layout { display: grid !important; grid-template-columns: 276px minmax(0, 1fr); max-width: 1440px; min-height: calc(100vh - 72px); margin: 0 auto; border-left: 1px solid var(--fdl-line); border-right: 1px solid var(--fdl-line); }
+.dashboard-sidebar { background: var(--fdl-paper); border-right: 1px solid var(--fdl-line); box-shadow: none !important; }
+.workspace-header { padding: 18px 18px 12px !important; border-top: 4px solid var(--fdl-navy-800); border-bottom: 1px solid var(--fdl-line); background: #fff; }
+.dash-sidebar-heading, .dash-hero-title { color: var(--fdl-navy-950) !important; }
+.dash-import-toggle, .dash-mode-tab, .dash-pager-btn, .dash-row-delete, .dash-tag-add { border-radius: 2px !important; box-shadow: none !important; }
+.dash-import-panel { border: 1px solid var(--fdl-line) !important; border-radius: 0 !important; box-shadow: none !important; background: #fff !important; }
+.dash-project-card { border: 1px solid var(--fdl-line) !important; border-radius: 0 !important; box-shadow: none !important; background: #fff !important; }
+.dash-project-card:hover, .dash-project-card.active { border-color: var(--fdl-blue-600) !important; background: var(--fdl-blue-050) !important; }
+.dash-project-card.active { border-left: 4px solid var(--fdl-blue-700) !important; }
+.dashboard-main { min-width: 0; background: var(--fdl-canvas); }
+.active-workspace-hero { background: #fff !important; border-top: 4px solid var(--fdl-navy-800); border-bottom: 1px solid var(--fdl-line); box-shadow: none !important; }
+.dashboard-header-container { padding: 20px 24px 14px !important; }
+.dash-hero-desc { color: var(--fdl-muted) !important; }
+.dashboard-toolbar { padding: 10px 24px !important; background: var(--fdl-blue-050) !important; border-top: 1px solid var(--fdl-line); border-bottom: 1px solid var(--fdl-line); }
+.dash-tab { border-radius: 0 !important; box-shadow: none !important; }
+.dash-tab.active { background: var(--fdl-navy-800) !important; }
+.dash-search__input, .dash-custom-select { border-radius: 2px !important; border-color: var(--fdl-line-strong) !important; box-shadow: none !important; }
+.afl-selection-bar { border-radius: 0 !important; box-shadow: none !important; border: 1px solid var(--fdl-line) !important; border-left: 4px solid var(--fdl-blue-600) !important; }
+.afl-table-wrap { border-radius: 0 !important; border-color: var(--fdl-line) !important; box-shadow: none !important; }
+.afl-table thead th { background: var(--fdl-blue-050) !important; color: var(--fdl-navy-950) !important; border-bottom-color: var(--fdl-line-strong) !important; }
+.afl-table tbody tr:hover { background: #f7fbff !important; }
+.dash-tag-chip, .afl-chip { border-radius: 2px !important; box-shadow: none !important; }
+@media (max-width: 900px) { .dashboard-layout { display: block !important; border: 0; } .dashboard-sidebar { border-right: 0; border-bottom: 1px solid var(--fdl-line); } .dashboard-header-container, .dashboard-toolbar { padding-left: 16px !important; padding-right: 16px !important; } }

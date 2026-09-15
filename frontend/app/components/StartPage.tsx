@@ -17,17 +17,18 @@ export default function StartPage({ onLogin, onSignUp, onGuest }: StartPageProps
       flexDirection: 'column',
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: '#f8fafc',
+      backgroundColor: '#f3f6f8',
       padding: '2rem'
     }}>
       <div style={{
         background: 'white',
         maxWidth: '600px',
         width: '100%',
-        borderRadius: '16px',
-        boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
+        borderRadius: '0',
+        boxShadow: 'none',
         padding: '3rem',
-        border: '1px solid #e2e8f0'
+        border: '1px solid #b8c8d7',
+        borderTop: '3px solid #071f3d'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <img 
@@ -35,15 +36,16 @@ export default function StartPage({ onLogin, onSignUp, onGuest }: StartPageProps
             alt="AskFDALabel"
             style={{ maxWidth: '80%', height: 'auto', marginBottom: '1.5rem' }}
           />
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '1rem' }}>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#071f3d', marginBottom: '1rem' }}>
             Welcome to AskFDALabel
           </h1>
         </div>
 
         <div style={{
-          background: '#fef2f2',
-          border: '1px solid #fecaca',
-          borderRadius: '8px',
+          background: '#fff1f1',
+          border: '1px solid #f7d2d2',
+          borderRadius: '0',
+          borderTop: '3px solid #b50909',
           padding: '1rem 1.5rem',
           marginBottom: '2rem'
         }}>
@@ -67,17 +69,17 @@ export default function StartPage({ onLogin, onSignUp, onGuest }: StartPageProps
             style={{
               width: '100%',
               padding: '12px',
-              background: '#6366f1',
+            background: '#0759a5',
               color: 'white',
               border: 'none',
-              borderRadius: '8px',
+            borderRadius: '2px',
               fontSize: '1rem',
               fontWeight: 600,
               cursor: 'pointer',
               transition: 'background 0.2s'
             }}
-            onMouseOver={(e) => e.currentTarget.style.background = '#4f46e5'}
-            onMouseOut={(e) => e.currentTarget.style.background = '#6366f1'}
+            onMouseOver={(e) => e.currentTarget.style.background = '#071f3d'}
+            onMouseOut={(e) => e.currentTarget.style.background = '#0759a5'}
           >
             Login
           </button>
@@ -89,20 +91,20 @@ export default function StartPage({ onLogin, onSignUp, onGuest }: StartPageProps
                 padding: '12px',
                 background: 'white',
                 color: '#334155',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
+                border: '1px solid #b8c8d7',
+                borderRadius: '2px',
                 fontSize: '0.95rem',
                 fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'all 0.2s'
               }}
               onMouseOver={(e) => {
-                e.currentTarget.style.background = '#f1f5f9';
-                e.currentTarget.style.borderColor = '#94a3b8';
+                e.currentTarget.style.background = '#edf4fa';
+                e.currentTarget.style.borderColor = '#0071bc';
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.background = 'white';
-                e.currentTarget.style.borderColor = '#cbd5e1';
+                e.currentTarget.style.borderColor = '#b8c8d7';
               }}
             >
               Continue as Guest
@@ -116,7 +118,7 @@ export default function StartPage({ onLogin, onSignUp, onGuest }: StartPageProps
             style={{
               background: 'none',
               border: 'none',
-              color: '#6366f1',
+              color: '#0759a5',
               fontWeight: 600,
               cursor: 'pointer',
               padding: 0,
@@ -131,7 +133,7 @@ export default function StartPage({ onLogin, onSignUp, onGuest }: StartPageProps
       <div style={{ marginTop: '3rem', textAlign: 'center', fontSize: '0.85rem', color: '#94a3b8', maxWidth: '600px', lineHeight: '1.6' }}>
         AskFDALabel &copy; 2026. FDA/NCTR This is an on-going research effort that is not for official use yet.
         <br />
-        Please contact us (<a href="mailto:Leihong.wu@fda.hhs.gov" style={{ color: '#6366f1', textDecoration: 'none' }}>Leihong.wu@fda.hhs.gov</a>) for more details about this project.
+        Please contact us (<a href="mailto:Leihong.wu@fda.hhs.gov" style={{ color: '#0759a5', textDecoration: 'none' }}>Leihong.wu@fda.hhs.gov</a>) for more details about this project.
       </div>
     </div>
   );

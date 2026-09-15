@@ -30,6 +30,7 @@ import { QUERY_PARAM, decodeQuery, encodeQuery, resultsPath } from '../querybuil
 import { fromWire, stripFacetFilters, toWire, type LabelQuery, type TargetDb, type WireQuery } from '../querybuilder/types';
 import { withAppBase } from '../utils/appPaths';
 import '../querybuilder/querybuilder.css';
+import './results-workstation.css';
 
 const PAGE_SIZE = 50;
 
@@ -613,6 +614,7 @@ function ResultsPage() {
                   Expanded View
                 </button>
               </div>
+              <div id="fdl-results-table-controls" className="fdl-resultshead__table-controls" />
 
               {/* Unified Export Dropdown Button */}
               <div className="fdl-export-dropdown" style={{ position: 'relative', display: 'inline-block' }}>
@@ -829,53 +831,6 @@ function ResultsPage() {
               </div>
             ) : null}
 
-            {/* Active query summary tag pill & SQL panel (developer / admin only) */}
-            {isDevOrAdmin && (
-              <>
-                <div className="fdl-results-summary-bar">
-                  <span className="fdl-results-summary-label">Query Criteria:</span>
-                  <span className="fdl-results-summary-text">{summarizeQuery(activeWireQuery)}</span>
-                  {data?.sql ? (
-                    <button
-                      type="button"
-                      className="fdl-link fdl-link--sql"
-                      onClick={() => setSqlOpen((prev) => !prev)}
-                    >
-                      {sqlOpen ? 'Hide SQL' : 'View SQL'}
-                    </button>
-                  ) : null}
-                </div>
-
-                {sqlOpen && data?.sql ? (
-                  <div className="fdl-sql-panel">
-                    <div className="fdl-sql-panel__head">
-                      <span className="fdl-sql-panel__title">Generated SQL Query</span>
-                      <button
-                        type="button"
-                        className={`fdl-sql-panel__copy${sqlCopied ? ' is-copied' : ''}`}
-                        onClick={() => {
-                          navigator.clipboard.writeText(data.sql!);
-                          setSqlCopied(true);
-                          setTimeout(() => setSqlCopied(false), 2000);
-                        }}
-                      >
-                        {sqlCopied ? '✓ Copied!' : 'Copy SQL'}
-                      </button>
-                    </div>
-                    <pre className="fdl-sql-panel__code">{data.sql}</pre>
-                  </div>
-                ) : null}
-              </>
-            )}
-
-            {data?.warnings?.length ? (
-              <ul className="fdl-results__warnings">
-                {data.warnings.map((w) => (
-                  <li key={w}>{w}</li>
-                ))}
-              </ul>
-            ) : null}
-
             {rows.length > 0 ? (
               // The rows on screen belong to the previous filter set until the
               // refetch lands; dimming them says so, instead of letting a stale
@@ -904,7 +859,7 @@ function ResultsPage() {
                     </button>
                   </div>
                 </div>
-                <ResultsTable rows={rows} view={view} sortState={sortState} onSort={onSort} targetDb={currentTargetDb} />
+                <ResultsTable rows={rows} view={view} sortState={sortState} onSort={onSort} targetDb={currentTargetDb} controlsTargetId="fdl-results-table-controls" />
                 <div className="fdl-results__bar fdl-results__bar--bottom">
                   <span className="fdl-results__count">
                     Showing {offset + 1}–{to} of {browsable.toLocaleString()}
@@ -934,6 +889,31 @@ function ResultsPage() {
                 <p>No labeling matched your criteria.</p>
               </div>
             ) : null}
+
+            {data?.warnings?.length ? (
+              <ul className="fdl-results__warnings fdl-results__warnings--footer">
+                {data.warnings.map((w) => (
+                  <li key={w}>{w}</li>
+                ))}
+              </ul>
+            ) : null}
+
+            {/* Audit details follow the result set so retrieval stays primary. */}
+            {isDevOrAdmin && (
+              <>
+                <div className="fdl-results-summary-bar">
+                  <span className="fdl-results-summary-label">Query Criteria:</span>
+                  <span className="fdl-results-summary-text">{summarizeQuery(activeWireQuery)}</span>
+                  {data?.sql ? <button type="button" className="fdl-link fdl-link--sql" onClick={() => setSqlOpen((prev) => !prev)}>{sqlOpen ? 'Hide SQL' : 'View SQL'}</button> : null}
+                </div>
+                {sqlOpen && data?.sql ? (
+                  <div className="fdl-sql-panel">
+                    <div className="fdl-sql-panel__head"><span className="fdl-sql-panel__title">Generated SQL Query</span><button type="button" className={`fdl-sql-panel__copy${sqlCopied ? ' is-copied' : ''}`} onClick={() => { navigator.clipboard.writeText(data.sql!); setSqlCopied(true); setTimeout(() => setSqlCopied(false), 2000); }}>{sqlCopied ? '✓ Copied!' : 'Copy SQL'}</button></div>
+                    <pre className="fdl-sql-panel__code">{data.sql}</pre>
+                  </div>
+                ) : null}
+              </>
+            )}
           </div>
         </div>
       </main>

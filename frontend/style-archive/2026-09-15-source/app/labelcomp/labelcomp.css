@@ -1,0 +1,101 @@
+/*
+ * LabelComp (Compare). Tokens only, no literals.
+ */
+
+.lc-setup-panel {
+  margin-bottom: 2.5rem;
+  background-color: var(--afl-bg-surface);
+  border-radius: var(--afl-radius-xl);
+  padding: 1.5rem;
+  border: 1px solid var(--afl-border);
+  box-shadow: var(--afl-shadow-sm);
+}
+
+.lc-label-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background-color: var(--afl-a-50);
+  border: 1px solid var(--afl-a-100);
+  border-radius: var(--afl-radius-md);
+  color: var(--afl-a-700);
+  font-size: var(--afl-text-sm);
+  font-weight: var(--afl-weight-bold);
+}
+
+.lc-label-chip__meta {
+  font-size: var(--afl-text-xs);
+  font-weight: var(--afl-weight-medium);
+  color: var(--afl-a-500);
+}
+
+.lc-label-chip__remove {
+  border: none;
+  background: transparent;
+  color: var(--afl-a-600);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--afl-text-xs);
+}
+
+.lc-add-label-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--afl-bg-surface);
+  border: 1px dashed var(--afl-n-300);
+  border-radius: var(--afl-radius-md);
+  color: var(--afl-text-secondary);
+  font-size: var(--afl-text-sm);
+  font-weight: var(--afl-weight-medium);
+  cursor: pointer;
+  transition: all var(--afl-transition);
+}
+
+.lc-add-label-btn:hover {
+  border-color: var(--afl-a-500);
+  color: var(--afl-a-500);
+  background-color: var(--afl-bg-page);
+}
+
+/* ---- Toolbar ------------------------------------------------------------ */
+
+.lc-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2.5rem;
+  padding: 1rem 1.25rem;
+  background-color: var(--afl-bg-surface);
+  border-radius: var(--afl-radius-xl);
+  border: 1px solid var(--afl-border);
+  box-shadow: var(--afl-shadow-xs);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.lc-toolbar__tabs {
+  display: flex;
+  gap: 4px;
+  background-color: var(--afl-bg-sunken);
+  padding: 4px;
+  border-radius: var(--afl-radius-md);
+}
+
+.lc-toolbar-toggle {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: var(--afl-text-sm);
+  font-weight: var(--afl-weight-bold);
+  color: var(--afl-text-secondary);
+  border-radius: var(--afl-radius-sm);
+  transition: all var(--afl-transition);
+}
+.lc-toolbar-toggle:hover { background-color: var(--afl-bg-surface); }

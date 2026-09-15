@@ -14,6 +14,7 @@ import { labelRoute, type LaunchContext } from '../platform/context';
 import './dashboard.css';
 import './selection.css';
 import './workspace.css';
+import './dashboard-workstation.css';
 
 interface Project {
   id: number;

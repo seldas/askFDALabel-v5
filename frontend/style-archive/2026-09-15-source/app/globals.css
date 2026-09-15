@@ -1,0 +1,1367 @@
+@import url('datatables.net-bs5');
+@import url('datatables.net-autofill-bs5');
+@import url('datatables.net-buttons-bs5');
+@import url('datatables.net-colreorder-bs5');
+@import url('datatables.net-responsive-bs5');
+@import url('datatables.net-rowgroup-bs5');
+@import url('datatables.net-scroller-bs5');
+@import url('datatables.net-searchpanes-bs5');
+
+:root {
+  --background: #ffffff;
+  --foreground: #1e293b;
+  --fda-dark-blue: #002e5d;
+  --fda-blue: #0071bc;
+  --fda-light-blue: #e8f1f8;
+  --fda-grey: #f0f3f5;
+  --fda-border: #d1d5db;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0f172a;
+    --foreground: #f8fafc;
+    --fda-dark-blue: #0f172a;
+    --fda-blue: #3b82f6;
+    --fda-light-blue: #1e293b;
+    --fda-grey: #1e293b;
+    --fda-border: #334155;
+  }
+}
+
+.gov-banner {
+  background-color: var(--fda-grey);
+  font-size: 0.75rem;
+  padding: 4px 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--fda-border);
+}
+
+.header-main {
+  background-color: var(--fda-dark-blue);
+  color: white;
+  padding: 0.75rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.header-branding {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.mobile-menu-toggle {
+  display: none !important;
+}
+
+.header-logo-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: white;
+}
+
+.header-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: white;
+  letter-spacing: -0.025em;
+  white-space: nowrap;
+}
+
+.header-title-suffix {
+  font-weight: 300;
+  opacity: 0.7;
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  justify-content: center;
+  padding: 0 1rem;
+}
+
+.hp-nav-item {
+  text-decoration: none;
+  color: white;
+  font-weight: 800;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  letter-spacing: -0.01em;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+
+@media (max-width: 1280px) {
+  .hp-nav-item {
+    font-size: 0.85rem;
+    padding: 6px 8px;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .header-nav {
+    gap: 0.25rem;
+  }
+  .hp-nav-item svg {
+    display: none;
+  }
+}
+
+@media (max-width: 992px) {
+  .header-main {
+    padding: 0.5rem 1rem;
+  }
+  
+  .mobile-menu-toggle {
+    display: block !important;
+    z-index: 101;
+  }
+
+  .header-nav {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    width: 100%;
+    height: 0;
+    background: var(--fda-dark-blue);
+    flex-direction: column;
+    overflow: hidden;
+    transition: all 0.3s ease-in-out;
+    padding: 0;
+    box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+  }
+
+  .header-nav.open {
+    height: auto;
+    padding: 1rem 0;
+    border-top: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .header-controls {
+    display: none; /* Hide on small screens unless menu open or separate logic */
+  }
+  
+  .header-controls.open {
+    display: flex;
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: var(--afl-n-900);
+    padding: 1rem;
+    justify-content: center;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    z-index: 101;
+  }
+
+  .hp-nav-item {
+    width: 100%;
+    justify-content: center;
+    padding: 12px !important;
+  }
+
+  .hp-dropdown-content {
+    position: static;
+    transform: none;
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+  }
+  
+  .hp-nav-dropdown:hover .hp-dropdown-content {
+    transform: none;
+  }
+  
+  .hp-dropdown-item {
+    color: white;
+    justify-content: center;
+  }
+  
+  .hp-dropdown-item:hover {
+    background: rgba(255,255,255,0.1);
+    transform: none;
+  }
+  
+  .header-title-suffix {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-title {
+    font-size: 1.2rem;
+  }
+  .username-text {
+    display: none;
+  }
+}
+
+.custom-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-trigger {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s;
+}
+
+.dropdown-trigger:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid var(--fda-border);
+  border-radius: 6px;
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+  min-width: 180px;
+  overflow: hidden;
+  z-index: 1000;
+  animation: modalScaleUp 0.2s ease-out;
+}
+
+.dropdown-item {
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  color: var(--afl-n-800);
+  cursor: pointer;
+  transition: background 0.1s;
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  text-decoration: none;
+}
+
+.dropdown-item:hover {
+  background: var(--afl-n-100);
+  color: var(--fda-blue);
+}
+
+.dropdown-item.active {
+  background: var(--fda-light-blue);
+  color: var(--fda-blue);
+  font-weight: 600;
+}
+
+.hero-section {
+  padding: 4rem 2rem;
+  background-color: white;
+  text-align: center;
+  border-bottom: 1px solid var(--fda-border);
+}
+
+.card-grid {
+  width: 100%;
+  background: linear-gradient(180deg, var(--afl-n-50) 0%, var(--afl-n-0) 40%, var(--afl-n-100) 100%);
+  padding: 6rem 0 !important;
+  border-top: 1px solid var(--afl-n-200);
+}
+
+.card-grid-inner {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.scientific-card {
+  background: linear-gradient(145deg, var(--afl-n-0) 0%, var(--afl-n-50) 100%);
+  border: 1px solid var(--afl-n-200);
+  padding: 2rem;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+  height: 100%;
+}
+
+.scientific-card:hover {
+  background: linear-gradient(145deg, var(--afl-n-0) 0%, var(--afl-n-100) 100%);
+  box-shadow: 0 20px 40px -12px rgba(0, 46, 93, 0.12);
+  border-color: var(--afl-info-500);
+  transform: translateY(-8px);
+}
+
+.scientific-card h2 {
+  color: var(--fda-dark-blue);
+  margin-top: 0;
+  font-size: 1.25rem;
+}
+
+.scientific-card .icon {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.side-by-side-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .side-by-side-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Modals */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 28px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-header {
+  padding: 1.75rem 2.5rem;
+  border-bottom: 1px solid var(--afl-n-100);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(to right, var(--afl-n-50), var(--afl-n-0));
+  flex-shrink: 0;
+}
+
+.modal-body {
+  padding: 2.5rem;
+  max-height: calc(90vh - 100px);
+  overflow-y: auto;
+}
+
+@media (max-width: 550px) {
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end; /* Slide up from bottom on mobile */
+  }
+  .modal-content {
+    border-radius: 24px 24px 0 0;
+    max-width: 100%;
+    border-bottom: none;
+    max-height: 95vh;
+  }
+  .modal-header {
+    padding: 1.25rem 1.5rem;
+  }
+  .modal-body {
+    padding: 1.5rem 1.5rem 3rem 1.5rem;
+    max-height: calc(95vh - 70px);
+  }
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mission Section & Immersive Cards */
+.mission-section {
+  padding: clamp(4rem, 10vh, 8rem) 2rem;
+  background: var(--afl-n-900);
+  position: relative;
+  overflow: hidden;
+}
+
+.mission-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.mission-card {
+  position: relative;
+  height: clamp(300px, 50vh, 400px);
+  border-radius: 32px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: clamp(1.5rem, 5%, 3rem);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.mission-card:hover {
+  transform: translateY(-10px);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.5);
+}
+
+.mission-card-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+  transition: transform 10s ease;
+}
+
+.mission-card:hover .mission-card-bg {
+  transform: scale(1.1);
+}
+
+.mission-card-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, rgba(15, 23, 42, 0.2) 0%, rgba(15, 23, 42, 0.95) 100%);
+  z-index: 1;
+}
+
+.mission-card-content {
+  position: relative;
+  z-index: 2;
+  color: white;
+}
+
+.mission-card h4 {
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
+  font-weight: 800;
+  margin-bottom: 1rem;
+  background: linear-gradient(to right, var(--afl-n-0), var(--afl-n-400));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.mission-card-content p {
+  font-size: clamp(0.9rem, 2vw, 1.1rem);
+  line-height: 1.6;
+  color: var(--afl-n-300);
+  margin: 0;
+}
+
+.mission-carousel-container {
+  position: relative;
+  max-width: 900px;
+  margin: 0 auto;
+  height: clamp(300px, 60vh, 420px);
+  transition: height 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .mission-section {
+    padding: 1rem 1rem 3rem 1rem !important;
+  }
+  .mission-carousel-card {
+    padding: 2rem 1.5rem !important;
+  }
+  .mission-carousel-container {
+    height: 350px;
+  }
+}
+
+@media (max-height: 700px) {
+  .mission-section {
+    padding: 2rem 1rem !important;
+  }
+  .mission-carousel-container {
+    height: 280px;
+  }
+}
+
+.mission-carousel-card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 1s ease, visibility 1s;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 4rem;
+  border-radius: 40px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mission-carousel-card.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.mission-nav-dots {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 2.5rem;
+}
+
+.mission-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+}
+
+.mission-dot.active {
+  background: var(--afl-info-500);
+  transform: scale(1.3);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+}
+
+/* Mini Service Badges */
+.mini-service-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  max-width: 1200px;
+  margin: 3rem auto 0 auto;
+  padding: 0 20px;
+}
+
+.mini-service-card {
+  flex: 1;
+  min-width: 160px;
+  max-width: 200px;
+  background: white;
+  border: 1px solid var(--fda-border);
+  border-radius: 16px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.mini-service-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--fda-blue);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+}
+
+.mini-service-card h2 {
+  font-size: 0.85rem;
+  font-weight: 800;
+  margin: 0.5rem 0 0 0;
+  color: var(--fda-dark-blue);
+  white-space: nowrap;
+}
+
+.mini-icon {
+  color: var(--fda-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes ken-burns {
+  0% { transform: scale(1) translate(0, 0); }
+  50% { transform: scale(1.1) translate(-1%, -1%); }
+  100% { transform: scale(1) translate(0, 0); }
+}
+
+.animate-ken-burns {
+  animation: ken-burns 20s ease infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  opacity: 0;
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-modal-enter {
+  animation: modalScaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* AskFDALabel Homepage Top Nav */
+.hp-top-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2.5rem;
+  padding: 1rem 2rem;
+  background: var(--afl-gov-navy);
+  border-bottom: 4px solid var(--afl-info-500);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.hp-nav-item {
+  text-decoration: none;
+  color: white;
+  font-weight: 800;
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  letter-spacing: -0.01em;
+  opacity: 0.9;
+}
+
+.hp-nav-item:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+  opacity: 1;
+}
+
+.hp-nav-item-flagship {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%) !important;
+  border: 1px solid rgba(59, 130, 246, 0.4) !important;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);
+  position: relative;
+  overflow: visible;
+  opacity: 1 !important;
+}
+
+.hp-nav-item-flagship:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(37, 99, 235, 0.2) 100%) !important;
+  border-color: rgba(59, 130, 246, 0.6) !important;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.25);
+}
+
+.hp-nav-item-flagship::after {
+  content: 'FLAGSHIP';
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  background: var(--afl-info-500);
+  color: white;
+  font-size: 0.5rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.scientific-card-flagship {
+  border: 2px solid var(--afl-info-500) !important;
+  background: linear-gradient(145deg, var(--afl-n-0) 0%, var(--afl-info-50) 100%) !important;
+  position: relative;
+}
+
+.scientific-card-flagship::after {
+  content: 'FLAGSHIP AGENT';
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  background: var(--afl-info-500);
+  color: white;
+  font-size: 0.65rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 800;
+  letter-spacing: 0.025em;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.scientific-card-flagship:hover {
+  box-shadow: 0 25px 50px -12px rgba(59, 130, 246, 0.25) !important;
+  transform: translateY(-12px) scale(1.02);
+}
+
+.hp-nav-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.hp-dropdown-content {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(15px);
+  background: white;
+  border: 1px solid var(--fda-border);
+  border-radius: 16px;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+  min-width: 280px;
+  padding: 12px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  z-index: 101;
+}
+
+.hp-nav-dropdown:hover .hp-dropdown-content {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.hp-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  text-decoration: none;
+  color: var(--afl-n-800);
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.hp-dropdown-item:hover {
+  background: var(--afl-n-50);
+  color: var(--fda-blue);
+  transform: translateX(6px);
+}
+
+.hp-dropdown-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fda-blue);
+  font-size: 1.4rem;
+}
+
+/* Hero Animations */
+.hero-title-animated {
+  background: linear-gradient(
+      -45deg, 
+      var(--afl-gov-navy) 0%, 
+      var(--afl-gov-blue) 25%, 
+      var(--afl-a-600) 50%, 
+      #0ea5e9 75%,
+      var(--afl-gov-navy) 100%
+  );
+  background-size: 400% 400%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+  animation: 
+      hp-title-fluid 8s ease infinite,
+      hp-title-reveal 1.2s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+/* More significant version for the main homepage (Luminous Sweep Style) */
+.afdl-home-title-animated {
+  color: var(--afl-gov-navy);
+  background: linear-gradient(
+    to right, 
+    var(--afl-gov-navy) 20%, 
+    #0ea5e9 40%, 
+    #b6effb 50%, 
+    #0ea5e9 60%, 
+    var(--afl-gov-navy) 80%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-flex;
+  align-items: center;
+  letter-spacing: -0.04em;
+  text-shadow: 0 10px 30px rgba(14, 165, 233, 0.1);
+  animation: 
+      hp-title-sweep 8s ease-in-out infinite,
+      hp-title-reveal-large 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.afdl-home-title-animated.no-reveal {
+  animation: hp-title-sweep 8s ease-in-out infinite;
+}
+
+.hero-subtitle-animated {
+  opacity: 0;
+  text-align: center;
+  animation: hp-fade-in 1s ease-out 0.6s forwards;
+}
+
+@keyframes hp-title-sweep {
+  0% { background-position: 200% center; }
+  65% { background-position: 0% center; }
+  100% { background-position: 0% center; }
+}
+
+@keyframes hp-title-fluid {
+  0% { background-position: 0% 50%; }
+  70% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes hp-title-reveal {
+  from {
+      transform: translateY(100%) skewY(5deg);
+      opacity: 0;
+  }
+  to {
+      transform: translateY(0) skewY(0deg);
+      opacity: 1;
+  }
+}
+
+@keyframes hp-title-reveal-large {
+  from {
+      transform: translateY(80%) scale(0.95) skewY(3deg);
+      opacity: 0;
+  }
+  to {
+      transform: translateY(0) scale(1) skewY(0deg);
+      opacity: 1;
+  }
+}
+
+@keyframes hp-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.2s; }
+.delay-3 { animation-delay: 0.3s; }
+.delay-4 { animation-delay: 0.4s; }
+.delay-5 { animation-delay: 0.5s; }
+.delay-6 { animation-delay: 0.6s; }
+
+
+/*New header styles to override previous setting*/
+/* ===== Typography refinements (optional but recommended) ===== */
+.header-main {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+.header-title {
+  font-size: 1.25rem; /* was 1.5rem */
+  font-weight: 850;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.header-title-suffix {
+  font-weight: 600; /* was 300; reads better on dark bg */
+  opacity: 0.65;
+}
+
+/* If your hp-nav-item base style lives elsewhere, you can omit this */
+.hp-nav-item {
+  font-size: 0.92rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+/* ===== New helper classes used in the Header component ===== */
+.header-muted {
+  opacity: 0.8;
+  font-size: 0.86rem;
+  font-weight: 550;
+}
+
+.caret {
+  font-size: 0.65rem;
+  margin-left: 6px;
+  opacity: 0.8;
+}
+
+.header-chip {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border-radius: 8px;
+}
+
+/* Avatar used in the user dropdown trigger */
+.avatar-circle {
+  width: 24px;
+  height: 24px;
+  background: var(--afl-info-500);
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 850;
+}
+
+/* Dropdown label text in your HP dropdown items */
+.dropdown-title {
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: -0.01em;
+}
+
+.dropdown-subtitle {
+  font-size: 0.72rem;
+  font-weight: 550;
+  opacity: 0.75;
+}
+
+/* Account section in user dropdown */
+.account-block {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--afl-n-100);
+}
+
+.account-dropdown-menu {
+  width: min(320px, calc(100vw - 24px));
+  box-sizing: border-box;
+  padding: 8px;
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+}
+
+.account-dropdown-menu .account-block {
+  padding: 10px 12px 14px;
+}
+
+.account-label {
+  font-size: 0.75rem;
+  color: var(--afl-n-400);
+  font-weight: 600;
+}
+
+.account-name {
+  font-size: 0.875rem;
+  font-weight: 650;
+  color: var(--afl-n-800);
+}
+
+.account-ai-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 5px 8px;
+  border: 1px solid #dbe3ef;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.account-ai-config {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid #c7d2fe;
+  border-radius: 7px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.account-ai-config:hover {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  color: #ffffff;
+}
+
+.account-actions {
+  margin-top: 0;
+  padding: 2px 0;
+}
+
+.account-dropdown-menu .dropdown-item {
+  box-sizing: border-box;
+}
+
+.dropdown-item.dropdown-item--secondary-action {
+  width: calc(100% - 8px);
+  margin: 4px;
+  padding: 9px 10px;
+  border-radius: 7px;
+  color: #475569;
+  font-weight: 700;
+}
+
+.dropdown-item.dropdown-item--secondary-action:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+/* Danger button style (Sign Out) */
+.dropdown-item.danger {
+  color: var(--afl-danger-500);
+}
+
+/* ===== Active highlight (driven by .is-active class) ===== */
+.hp-nav-item.is-active {
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+}
+
+.hp-nav-item-flagship.is-active {
+  background: rgba(59, 130, 246, 0.18);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+.hp-dropdown-item.is-active {
+  background: var(--afl-info-50);
+  color: var(--fda-blue);
+}
+
+/* ===== Header Auth Buttons ===== */
+.header-auth-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-auth-buttons .btn-login {
+  background: transparent;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header-auth-buttons .btn-login:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: white;
+}
+
+.header-auth-buttons .btn-register {
+  background: white;
+  color: var(--afl-n-900);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.header-auth-buttons .btn-register:hover {
+  background: var(--afl-n-100);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+}
+
+/* -------------------------------------------------------------------------
+ * Federal scientific workstation layer
+ *
+ * This is intentionally an override layer: pages keep their component and
+ * content structure while the common chrome, controls, panels, and data
+ * surfaces share one precise visual grammar.
+ * ------------------------------------------------------------------------- */
+:root {
+  --fsw-navy-950: #071f3d;
+  --fsw-navy-800: #12375b;
+  --fsw-blue-700: #0759a5;
+  --fsw-blue-600: #0071bc;
+  --fsw-blue-100: #dcecf8;
+  --fsw-blue-050: #edf4fa;
+  --fsw-paper: #ffffff;
+  --fsw-canvas: #f3f6f8;
+  --fsw-ink: #132332;
+  --fsw-muted: #5e6e7c;
+  --fsw-line: #b8c8d7;
+  --fsw-line-soft: #d7e0e7;
+  --fsw-safety-red: #b50909;
+}
+
+html { background: var(--fsw-canvas); }
+
+body {
+  background: var(--fsw-canvas);
+  color: var(--fsw-ink);
+  font-family: var(--afl-font-sans);
+}
+
+button, input, select, textarea { font: inherit; }
+
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 3px solid var(--fsw-blue-600);
+  outline-offset: 2px;
+}
+
+.gov-banner {
+  background: var(--fsw-canvas);
+  color: var(--fsw-muted);
+  border-bottom-color: var(--fsw-line);
+}
+
+.header-main {
+  min-height: var(--afl-header-height);
+  padding: 0.75rem 1.5rem;
+  background: var(--fsw-navy-950);
+  border-bottom: 3px solid var(--fsw-blue-600);
+  box-shadow: none;
+}
+
+.header-branding { gap: 10px; }
+
+.header-logo-link {
+  width: 34px;
+  height: 34px;
+  border-right: 1px solid rgba(220, 236, 248, 0.35);
+  padding-right: 10px;
+}
+
+.header-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+}
+
+.header-chip,
+.header-auth-buttons .btn-login,
+.header-auth-buttons .btn-register {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+.header-chip {
+  height: 34px;
+  border-color: rgba(220, 236, 248, 0.46) !important;
+  background: transparent !important;
+  font-family: var(--afl-font-sans);
+  font-size: 0.78rem !important;
+  letter-spacing: 0.01em;
+}
+
+.header-chip:hover,
+.header-chip.active {
+  background: var(--fsw-blue-600) !important;
+  border-color: var(--fsw-blue-600) !important;
+  color: #fff !important;
+}
+
+.header-chip.active span,
+.header-chip.active .caret,
+.header-chip.active svg { color: #fff !important; stroke: #fff !important; }
+
+.avatar-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 2px;
+  background: var(--fsw-blue-600);
+  font-family: var(--afl-font-mono);
+}
+
+.dropdown-menu,
+.account-dropdown-menu {
+  margin-top: 6px;
+  border: 1px solid var(--fsw-line);
+  border-top: 3px solid var(--fsw-blue-600);
+  border-radius: 0;
+  box-shadow: 0 8px 18px rgba(7, 31, 61, 0.16);
+}
+
+.dropdown-section-label,
+.account-label {
+  color: var(--fsw-muted) !important;
+  font-family: var(--afl-font-mono);
+  letter-spacing: 0.08em;
+}
+
+.hp-dropdown-item,
+.dropdown-item {
+  border-radius: 0 !important;
+}
+
+.hp-dropdown-item:hover,
+.dropdown-item:hover,
+.dropdown-item.dropdown-item--secondary-action:hover {
+  background: var(--fsw-blue-050);
+  color: var(--fsw-blue-700);
+}
+
+.account-ai-status,
+.account-ai-config {
+  border-radius: 2px;
+  border-color: var(--fsw-line);
+  background: var(--fsw-blue-050);
+  color: var(--fsw-blue-700);
+}
+
+.account-ai-config:hover { background: var(--fsw-blue-700); border-color: var(--fsw-blue-700); }
+
+.header-auth-buttons .btn-login { border-color: rgba(220, 236, 248, 0.55); }
+.header-auth-buttons .btn-register { color: var(--fsw-navy-950); }
+
+.afl-page { background: var(--fsw-canvas); }
+.afl-page-body { max-width: 1440px; padding-top: 1.5rem; }
+
+.afl-section-header {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--fsw-navy-950);
+}
+
+.afl-section-header__title { color: var(--fsw-navy-950); letter-spacing: 0; }
+.afl-section-header__desc { color: var(--fsw-muted); }
+
+.afl-card,
+.afl-table-wrap {
+  border-color: var(--fsw-line-soft);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.afl-card { border-top: 2px solid var(--fsw-navy-800); }
+.afl-card--quiet { border-top-color: var(--fsw-line-soft); }
+.afl-card--interactive:hover { transform: none; border-color: var(--fsw-blue-600); box-shadow: inset 3px 0 0 var(--fsw-blue-600); }
+
+.afl-btn { border-radius: 2px; font-weight: 700; }
+.afl-btn--primary { background: var(--fsw-blue-700); }
+.afl-btn--primary:hover:not([disabled]) { background: var(--fsw-navy-800); }
+
+.afl-tabs { border-radius: 0; background: transparent; padding: 0; gap: 0; border-bottom: 1px solid var(--fsw-line); }
+.afl-tab { border-radius: 0; padding: 0.55rem 0.8rem; }
+.afl-tab[aria-selected='true'] { box-shadow: inset 0 -3px 0 var(--fsw-blue-600); background: var(--fsw-blue-050); color: var(--fsw-navy-950); }
+
+.afl-input,
+.afl-select { border-radius: 2px; border-color: var(--fsw-line); }
+.afl-input:focus,
+.afl-select:focus { border-color: var(--fsw-blue-600); box-shadow: 0 0 0 2px var(--fsw-blue-100); }
+
+.afl-badge { border-radius: 2px; font-family: var(--afl-font-mono); font-weight: 600; }
+.afl-badge--ai { background: var(--fsw-blue-100); color: var(--fsw-blue-700); }
+
+.afl-table-wrap { border-top: 3px solid var(--fsw-navy-800); }
+.afl-table thead tr { background: var(--fsw-blue-050); border-bottom-color: var(--fsw-line); }
+.afl-table th { color: var(--fsw-navy-800); font-family: var(--afl-font-mono); }
+.afl-table tbody tr[data-selected='true'] { background: var(--fsw-blue-100); }
+
+.modal-content {
+  border-radius: 0;
+  border: 1px solid var(--fsw-line);
+  border-top: 3px solid var(--fsw-blue-600);
+  box-shadow: 0 12px 32px rgba(7, 31, 61, 0.2);
+}
+
+@media (max-width: 992px) {
+  .header-main { min-height: 60px; padding: 0.5rem 1rem; }
+  .header-nav { top: 60px; background: var(--fsw-navy-950); }
+  .header-controls.open { background: var(--fsw-navy-950); }
+}
