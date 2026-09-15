@@ -1462,6 +1462,21 @@ def api_project_detail(project_id):
         db.session.commit()
         return jsonify({'success': True})
 
+def _clean_fav_names(fav):
+    """Ensure brand_name and generic_name are sensible and do not duplicate as 'n/a'."""
+    b = (fav.brand_name or '').strip()
+    g = (fav.generic_name or '').strip()
+    b_bad = not b or b.lower() in ['n/a', 'unknown drug', 'description', 'none']
+    g_bad = not g or g.lower() in ['n/a', 'unknown generic', 'none']
+    if b_bad and not g_bad:
+        b = g
+    elif b_bad and g_bad:
+        b = 'Unbranded Product'
+    if g_bad or g.lower() == b.lower():
+        g = ''
+    return b, g
+
+
 @api_bp.route('/favorites_data')
 @login_required
 def api_my_favorites():
@@ -1495,9 +1510,9 @@ def api_my_favorites():
             'favorites': [{
                 'id': fav.id,
                 'set_id': fav.set_id,
-                'brand_name': fav.brand_name,
-                'generic_name': fav.generic_name,
-                'manufacturer_name': fav.manufacturer_name,
+                'brand_name': _clean_fav_names(fav)[0],
+                'generic_name': _clean_fav_names(fav)[1],
+                'manufacturer_name': fav.manufacturer_name or 'N/A',
                 'market_category': fav.market_category,
                 'application_number': fav.application_number,
                 'ndc': fav.ndc,
@@ -1524,9 +1539,9 @@ def api_my_favorites():
             'favorites': [{
                 'id': fav.id,
                 'set_id': fav.set_id,
-                'brand_name': fav.brand_name,
-                'generic_name': fav.generic_name,
-                'manufacturer_name': fav.manufacturer_name,
+                'brand_name': _clean_fav_names(fav)[0],
+                'generic_name': _clean_fav_names(fav)[1],
+                'manufacturer_name': fav.manufacturer_name or 'N/A',
                 'market_category': fav.market_category,
                 'application_number': fav.application_number,
                 'ndc': fav.ndc,
@@ -1932,6 +1947,29 @@ def create_task_from_query():
         fav_objects = []
         for set_id in set_ids:
             fields = _favorite_fields_from_row(supplied.get(set_id) or {})
+
+            # Fallback to XML extraction if brand_name or manufacturer_name is missing or n/a
+            brand = fields.get('brand_name') or 'n/a'
+            manufacturer = fields.get('manufacturer_name') or 'n/a'
+            generic = fields.get('generic_name') or 'n/a'
+            if brand.lower() in ['n/a', 'unknown drug', ''] or manufacturer.lower() in ['n/a', 'unknown manufacturer', '']:
+                from dashboard.services.fdalabel_db import FDALabelDBService
+                from dashboard.services.xml_handler import extract_metadata_from_xml
+                xml_raw, _ = FDALabelDBService.resolve_spl_xml(set_id)
+                if xml_raw:
+                    xml_meta = extract_metadata_from_xml(xml_raw)
+                    if xml_meta:
+                        xb = xml_meta.get('brand_name')
+                        xg = xml_meta.get('generic_name')
+                        xm = xml_meta.get('manufacturer_name')
+                        if brand.lower() in ['n/a', 'unknown drug', ''] and xb and xb.lower() not in ['n/a', 'unknown drug', 'description']:
+                            fields['brand_name'] = xb
+                        elif brand.lower() in ['n/a', 'unknown drug', ''] and xg and xg.lower() not in ['n/a', 'unknown generic']:
+                            fields['brand_name'] = xg
+                        if generic.lower() in ['n/a', 'unknown generic', ''] and xg and xg.lower() not in ['n/a', 'unknown generic']:
+                            fields['generic_name'] = xg
+                        if manufacturer.lower() in ['n/a', 'unknown manufacturer', ''] and xm and xm.lower() not in ['n/a', 'unknown manufacturer']:
+                            fields['manufacturer_name'] = xm
 
             new_fav = Favorite(
                 user_id=current_user.id,

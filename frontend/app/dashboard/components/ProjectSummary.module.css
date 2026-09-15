@@ -1,7 +1,7 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.62);
+  background: rgba(7, 31, 61, 0.65);
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -12,41 +12,43 @@
 .modal {
   width: min(980px, 96vw);
   max-height: min(84vh, 860px);
-  background: var(--afl-n-0);
-  border-radius: 18px;
-  border: 1px solid var(--afl-n-200);
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.28);
+  background: var(--fdl-paper, #ffffff);
+  border-radius: 2px;
+  border: 1px solid var(--fdl-line, #b8c8d7);
+  border-top: 4px solid var(--fdl-navy-800, #12375b);
+  box-shadow: 0 16px 48px rgba(7, 31, 61, 0.25);
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .header {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--afl-n-100);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--fdl-line, #b8c8d7);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--afl-n-50);
+  background: var(--fdl-blue-050, #edf4fa);
 }
 
 .headerLeft {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
 }
 
 .headerIcon {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  background: rgba(2, 132, 199, 0.1);
-  border: 1px solid rgba(2, 132, 199, 0.22);
+  width: 32px;
+  height: 32px;
+  border-radius: 2px;
+  background: var(--fdl-blue-100, #dcecf8);
+  border: 1px solid var(--fdl-line, #b8c8d7);
+  color: var(--fdl-blue-700, #0759a5);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.05rem;
+  font-size: 1rem;
   flex-shrink: 0;
 }
 
@@ -55,41 +57,50 @@
 }
 
 .title {
-  font-weight: 950;
-  color: var(--afl-n-900);
-  line-height: 1.1;
+  font-weight: 800;
+  color: var(--fdl-navy-950, #071f3d);
+  font-size: 1.1rem;
+  line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .subtitle {
-  font-size: 0.82rem;
-  color: var(--afl-n-500);
-  font-weight: 800;
+  font-size: 0.76rem;
+  color: var(--fdl-muted, #5e6e7c);
+  font-weight: 600;
   margin-top: 2px;
 }
 
 .dot {
-  margin: 0 8px;
-  color: var(--afl-n-300);
+  margin: 0 6px;
+  color: var(--fdl-line, #b8c8d7);
 }
 
 .closeBtn {
-  border: 1px solid var(--afl-n-200);
-  background: var(--afl-n-0);
+  border: 1px solid var(--fdl-line, #b8c8d7);
+  background: var(--fdl-paper, #ffffff);
   cursor: pointer;
   font-size: 1.1rem;
   line-height: 1;
-  color: var(--afl-n-600);
-  padding: 8px 10px;
-  border-radius: 12px;
-  font-weight: 900;
+  color: var(--fdl-muted, #5e6e7c);
+  padding: 6px 9px;
+  border-radius: 2px;
+  font-weight: 700;
+  transition: all 0.15s ease;
+}
+
+.closeBtn:hover {
+  background: var(--fdl-blue-050, #edf4fa);
+  color: var(--fdl-navy-950, #071f3d);
+  border-color: var(--fdl-blue-600, #0071bc);
 }
 
 .body {
   padding: 16px;
   overflow-y: auto;
+  background: var(--fdl-canvas, #f3f6f8);
 }
 
 .loadingRow {
@@ -100,91 +111,96 @@
 }
 
 .loadingText {
-  font-weight: 800;
-  color: var(--afl-n-700);
+  font-weight: 700;
+  color: var(--fdl-ink, #132332);
 }
 
 .errorBox {
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: var(--afl-danger-50);
-  border: 1px solid var(--afl-danger-100);
-  color: #991b1b;
-  font-weight: 800;
+  padding: 10px 14px;
+  border-radius: 2px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: var(--fdl-red, #b50909);
+  font-weight: 700;
+  font-size: 0.82rem;
 }
 
 .sectionIntro {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .sectionKicker {
-  font-size: 0.72rem;
-  font-weight: 950;
-  color: var(--afl-n-500);
-  letter-spacing: 0.10em;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--fdl-muted, #5e6e7c);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  font-family: var(--fdl-font-mono);
 }
 
 .sectionHeadline {
-  font-size: 1.05rem;
-  font-weight: 950;
-  color: var(--afl-n-900);
-  margin-top: 4px;
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--fdl-navy-950, #071f3d);
+  margin-top: 2px;
 }
 
 .kpiGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-  margin-bottom: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .kpiCard {
-  border: 1px solid var(--afl-n-200);
-  border-radius: 14px;
-  padding: 12px 14px;
-  background: var(--afl-n-0);
+  border: 1px solid var(--fdl-line, #b8c8d7);
+  border-radius: 2px;
+  padding: 10px 12px;
+  background: var(--fdl-paper, #ffffff);
 }
 
 .kpiLabel {
-  font-size: 0.70rem;
-  font-weight: 950;
-  color: var(--afl-n-500);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--fdl-muted, #5e6e7c);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
+  font-family: var(--fdl-font-mono);
 }
 
 .kpiValue {
-  font-size: 1.75rem;
-  font-weight: 950;
-  color: var(--afl-n-900);
-  margin-top: 6px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--fdl-navy-950, #071f3d);
+  margin-top: 4px;
+  font-family: var(--fdl-font-mono);
 }
 
 .kpiSubValue {
-  font-size: 0.98rem;
-  font-weight: 950;
-  color: var(--afl-n-900);
-  margin-top: 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--fdl-ink, #132332);
+  margin-top: 6px;
+  font-family: var(--fdl-font-mono);
 }
 
 .to {
-  color: var(--afl-n-400);
+  color: var(--fdl-muted, #5e6e7c);
   margin: 0 6px;
 }
 
 .panel {
-  border: 1px solid var(--afl-n-200);
-  border-radius: 16px;
+  border: 1px solid var(--fdl-line, #b8c8d7);
+  border-radius: 2px;
   overflow: hidden;
-  background: var(--afl-n-0);
+  background: var(--fdl-paper, #ffffff);
   margin-bottom: 12px;
 }
 
 .panelHeader {
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--afl-n-100);
-  background: #fbfdff;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--fdl-line, #b8c8d7);
+  background: var(--fdl-blue-050, #edf4fa);
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -192,37 +208,39 @@
 }
 
 .panelKicker {
-  font-size: 0.75rem;
-  font-weight: 950;
-  color: var(--afl-n-500);
-  letter-spacing: 0.10em;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--fdl-muted, #5e6e7c);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  font-family: var(--fdl-font-mono);
 }
 
 .panelTitle {
-  font-size: 0.95rem;
-  font-weight: 950;
-  color: var(--afl-n-900);
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--fdl-navy-950, #071f3d);
   margin-top: 2px;
 }
 
 .panelMeta {
-  font-size: 0.78rem;
-  font-weight: 900;
-  color: var(--afl-n-700);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--fdl-ink-soft, #273843);
+  font-family: var(--fdl-font-mono);
 }
 
 .panelBody {
-  padding: 12px 14px;
+  padding: 12px;
 }
 
 .chartWrap {
   width: 100%;
   height: 260px;
-  border: 1px solid var(--afl-n-200);
-  border-radius: 14px;
-  background: var(--afl-n-0);
-  padding: 8px;
+  border: 1px solid var(--fdl-line-soft, #d7e0e7);
+  border-radius: 2px;
+  background: var(--fdl-paper, #ffffff);
+  padding: 6px;
 }
 
 .canvas {
@@ -233,21 +251,21 @@
 
 .methodsNote {
   margin-top: 8px;
-  font-size: 0.78rem;
-  color: var(--afl-n-500);
-  font-weight: 750;
+  font-size: 0.74rem;
+  color: var(--fdl-muted, #5e6e7c);
+  font-weight: 500;
 }
 
 .chartStatus {
-  color: var(--afl-n-400);
-  font-weight: 800;
+  color: var(--fdl-muted, #5e6e7c);
+  font-weight: 700;
 }
 
 .emptyState {
   padding: 12px;
-  color: var(--afl-n-400);
+  color: var(--fdl-muted, #5e6e7c);
   font-style: italic;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .twoCol {
@@ -265,171 +283,179 @@
 .bucketGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .bucketGrid2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .bucketCard {
-  border: 1px solid var(--afl-n-200);
-  border-radius: 14px;
-  padding: 10px 12px;
-  background: var(--afl-n-0);
+  border: 1px solid var(--fdl-line-soft, #d7e0e7);
+  border-radius: 2px;
+  padding: 8px 10px;
+  background: var(--fdl-paper, #ffffff);
 }
 
 .bucketLabel {
-  font-size: 0.70rem;
-  font-weight: 950;
-  color: var(--afl-n-500);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--fdl-muted, #5e6e7c);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
+  font-family: var(--fdl-font-mono);
 }
 
 .bucketValue {
-  font-size: 1.2rem;
-  font-weight: 950;
-  color: var(--afl-n-900);
-  margin-top: 6px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--fdl-navy-950, #071f3d);
+  margin-top: 4px;
+  font-family: var(--fdl-font-mono);
 }
 
 .limitedBadge {
-  font-size: 0.75rem;
-  font-weight: 900;
-  color: #92400e;
-  background: var(--afl-warn-50);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--fdl-amber, #8a5700);
+  background: #fffbeb;
   border: 1px solid #fef3c7;
-  padding: 6px 10px;
-  border-radius: 999px;
+  padding: 3px 8px;
+  border-radius: 2px;
   white-space: nowrap;
 }
 
 .rightCol {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .rankList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .rankRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  border: 1px solid var(--afl-n-100);
-  border-radius: 12px;
-  padding: 8px 10px;
-  background: var(--afl-n-0);
+  gap: 8px;
+  border: 1px solid var(--fdl-line-soft, #d7e0e7);
+  border-radius: 2px;
+  padding: 6px 10px;
+  background: var(--fdl-paper, #ffffff);
 }
 
 .rankLeft {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
 .rankBadge {
-  width: 26px;
-  height: 26px;
-  border-radius: 10px;
-  background: var(--afl-n-100);
-  border: 1px solid var(--afl-n-200);
+  width: 22px;
+  height: 22px;
+  border-radius: 2px;
+  background: var(--fdl-blue-050, #edf4fa);
+  border: 1px solid var(--fdl-line, #b8c8d7);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 950;
-  color: var(--afl-n-700);
-  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--fdl-blue-700, #0759a5);
+  font-size: 0.72rem;
+  font-family: var(--fdl-font-mono);
   flex-shrink: 0;
 }
 
 .rankName {
-  font-weight: 900;
-  color: var(--afl-n-900);
+  font-weight: 700;
+  color: var(--fdl-navy-950, #071f3d);
+  font-size: 0.78rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .rankCount {
-  font-weight: 950;
-  color: var(--afl-n-900);
+  font-weight: 800;
+  color: var(--fdl-navy-950, #071f3d);
+  font-size: 0.78rem;
+  font-family: var(--fdl-font-mono);
 }
 
 .footerHint {
-  margin-top: 14px;
-  font-size: 0.78rem;
-  color: var(--afl-n-400);
-  font-weight: 800;
+  margin-top: 10px;
+  font-size: 0.72rem;
+  color: var(--fdl-muted, #5e6e7c);
+  font-weight: 600;
 }
 
 .badgeBlock {
-  margin-top: 10px;
-  border-top: 1px solid var(--afl-n-100);
-  padding-top: 10px;
+  margin-top: 8px;
+  border-top: 1px solid var(--fdl-line-soft, #d7e0e7);
+  padding-top: 8px;
 }
 
 .badgeKicker {
-  font-size: 0.72rem;
-  font-weight: 950;
-  color: var(--afl-n-500);
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--fdl-muted, #5e6e7c);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  margin-bottom: 8px;
+  font-family: var(--fdl-font-mono);
+  margin-bottom: 6px;
 }
 
 .badgeLines {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
 }
 
 .miniBadge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--afl-n-200);
-  background: var(--afl-n-50);
+  gap: 5px;
+  padding: 3px 6px;
+  border-radius: 2px;
+  border: 1px solid var(--fdl-line-soft, #d7e0e7);
+  background: var(--fdl-blue-050, #edf4fa);
   cursor: default;
   user-select: none;
 }
 
 .miniBadgeRank {
-  font-size: 0.72rem;
-  font-weight: 950;
-  color: var(--afl-n-500);
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--fdl-blue-700, #0759a5);
+  font-family: var(--fdl-font-mono);
 }
 
 .miniBadgeInitials {
-  width: 28px;
-  height: 22px;
-  border-radius: 999px;
-  border: 1px solid var(--afl-n-200);
-  background: var(--afl-n-0);
+  padding: 1px 4px;
+  border-radius: 2px;
+  border: 1px solid var(--fdl-line, #b8c8d7);
+  background: var(--fdl-paper, #ffffff);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-weight: 950;
-  color: var(--afl-n-900);
-  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--fdl-navy-950, #071f3d);
+  font-size: 0.72rem;
   letter-spacing: 0.04em;
+  font-family: var(--fdl-font-mono);
 }
 
 .badgeHint {
-  margin-top: 8px;
-  font-size: 0.78rem;
-  color: var(--afl-n-500);
-  font-weight: 750;
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: var(--fdl-muted, #5e6e7c);
+  font-weight: 500;
 }

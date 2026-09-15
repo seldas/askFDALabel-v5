@@ -7,7 +7,6 @@ import Footer from '../../components/Footer';
 import { Badge, Button, ButtonLink, EmptyState, Input, Select } from '../../platform/primitives';
 import { useUser } from '../../context/UserContext';
 import AccessRestricted from '../../components/AccessRestricted';
-import '../dashboard.css';
 
 interface QueryHistoryItem {
   id: number;

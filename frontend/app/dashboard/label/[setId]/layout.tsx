@@ -25,7 +25,6 @@ import { LabelContextProvider } from './LabelContext';
 import type { LabelData } from './types';
 import './labelShell.css';
 import './label.css';
-import '../../dashboard.css';
 import './label-workstation.css';
 
 /** Maps the trailing route segment to the registry tool id, for highlighting. */

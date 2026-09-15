@@ -11,9 +11,6 @@ import Link from 'next/link';
 import { Badge, Button, ButtonLink, EmptyState, Input, Select, cx } from '../platform/primitives';
 import { ToolLauncher } from '../platform/ToolLauncher';
 import { labelRoute, type LaunchContext } from '../platform/context';
-import './dashboard.css';
-import './selection.css';
-import './workspace.css';
 import './dashboard-workstation.css';
 
 interface Project {
@@ -57,6 +54,16 @@ function TruncatedText({ text, limit = 100 }: { text: string, limit?: number }) 
     </span>
   );
 }
+
+function getProductDisplay(item: { brand_name?: string | null; generic_name?: string | null; set_id?: string }) {
+  const isBad = (v?: string | null) => !v || ['n/a', 'unknown drug', 'unknown generic', 'none', '-'].includes(v.trim().toLowerCase());
+  const b = !isBad(item.brand_name) ? item.brand_name!.trim() : null;
+  const g = !isBad(item.generic_name) ? item.generic_name!.trim() : null;
+  const primary = b || g || item.set_id || 'Unbranded Product';
+  const secondary = g && g.toLowerCase() !== primary.toLowerCase() ? g : null;
+  return { primary, secondary };
+}
+
 
 function DashboardContent() {
   const [uploading, setUploading] = useState(false);
@@ -608,7 +615,7 @@ function DashboardContent() {
 
   return (
     <div className="dashboard-container">
-      <main className="hp-main-layout" suppressHydrationWarning style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div suppressHydrationWarning style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Header activeApp="dashboard" />
 
         <div className="dashboard-layout" style={{ flex: 1 }}>
@@ -617,9 +624,10 @@ function DashboardContent() {
             <div className="workspace-header">
               <div className="dash-sidebar-title-row">
                 <div className="dash-sidebar-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                 </div>
                 <h2 className="dash-sidebar-heading">Tasks</h2>
+                <span className="dash-sidebar-count-chip">{projects.length}</span>
               </div>
             </div>
 
@@ -639,7 +647,7 @@ function DashboardContent() {
                   }
                 }}
               >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   {showImportUI ? (
                     <line x1="18" y1="6" x2="6" y2="18" />
                   ) : (
@@ -729,7 +737,7 @@ function DashboardContent() {
                   </div>
 
                   {/* Excel File Uploader (Optional for New Task) */}
-                  <div className="dash-import-field" style={{ marginBottom: '16px' }}>
+                  <div className="dash-import-field" style={{ marginBottom: '14px' }}>
                     <label className="dash-import-field__label">FDALabel Excel (Optional)</label>
                     <button
                       className="dash-file-picker"
@@ -777,26 +785,26 @@ function DashboardContent() {
             </div>
 
             {/* Search, Sort, & Tag Filter Controls */}
-            <div style={{ padding: '0 20px 12px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className="dash-sidebar-controls">
               {/* Task Search Box */}
-              <div style={{ position: 'relative' }}>
+              <div className="dash-search-box">
                 <Input
                   type="text"
-                  placeholder="Filter tasks by name or description..."
+                  placeholder="Filter tasks..."
                   value={taskSearchQuery}
                   onChange={(e) => setTaskSearchQuery(e.target.value)}
-                  style={{ paddingLeft: '32px', fontSize: '0.8rem', height: '34px', borderRadius: '8px' }}
+                  style={{ paddingLeft: '28px', fontSize: '0.78rem', height: '30px' }}
                 />
                 <svg
-                  width="14"
-                  height="14"
+                  width="13"
+                  height="13"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#94a3b8"
+                  stroke="var(--fdl-muted)"
                   strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+                  style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
                 >
                   <circle cx="11" cy="11" r="8"></circle>
                   <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -810,14 +818,13 @@ function DashboardContent() {
                     className="dash-custom-select"
                     value={taskSortMode}
                     onChange={(e) => setTaskSortMode(e.target.value as any)}
-                    style={{ fontSize: '0.74rem', height: '30px', padding: '0 20px 0 8px', borderRadius: '6px' }}
                   >
                     <option value="newest">Sort: Newest</option>
                     <option value="name_asc">Name (A-Z)</option>
                     <option value="name_desc">Name (Z-A)</option>
                     <option value="count_desc">Most Labels</option>
                   </select>
-                  <span className="dash-select-caret" style={{ right: '6px' }}>▼</span>
+                  <span className="dash-select-caret">▼</span>
                 </div>
 
                 {allProjectsTags.length > 0 && (
@@ -826,23 +833,22 @@ function DashboardContent() {
                       className="dash-custom-select"
                       value={sidebarTagFilter}
                       onChange={(e) => setSidebarTagFilter(e.target.value)}
-                      style={{ fontSize: '0.74rem', height: '30px', padding: '0 20px 0 8px', borderRadius: '6px' }}
                     >
                       <option value="All">All Tags</option>
                       {allProjectsTags.map(tag => (
                         <option key={tag} value={tag}>{tag}</option>
                       ))}
                     </select>
-                    <span className="dash-select-caret" style={{ right: '6px' }}>▼</span>
+                    <span className="dash-select-caret">▼</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Overflow Task List — five per page, cards at natural height */}
-            <div className="workspace-list" style={{ overflowY: 'auto', flex: 1, padding: '0 20px 12px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {/* Overflow Task List — cards at natural height */}
+            <div className="workspace-list">
               {projectsLoading ? (
-                <div style={{ textAlign: 'center', padding: '2rem' }}><div className="loader" style={{ width: '28px', height: '28px', margin: '0 auto' }}></div></div>
+                <div style={{ textAlign: 'center', padding: '2rem' }}><div className="loader" style={{ margin: '0 auto' }}></div></div>
               ) : pagedProjects.length > 0 ? (
                 pagedProjects.map(p => {
                   const isActive = activeProject?.id === p.id;
@@ -860,43 +866,38 @@ function DashboardContent() {
                         }
                       }}
                       className={cx('dash-project-card', isActive && 'active')}
-                      // flexShrink: 0 is what keeps the description readable. As a
-                      // flex child in a column, the card would otherwise be
-                      // compressed once the list outgrew the sidebar, clipping the
-                      // description line before the scrollbar ever appeared.
-                      style={{ padding: '12px 14px', borderRadius: '10px', flexShrink: 0 }}
                     >
                       {/* Header Row: Icon, Title, Count, Badge */}
-                      <div className="dash-project-card__header" style={{ marginBottom: '4px', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                      <div className="dash-project-card__header">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
                           <div className="dash-project-card__icon-wrapper">
                             {p.title === 'Favorite' ? (
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="#eab308" stroke="#ca8a04" strokeWidth="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="#eab308" stroke="#ca8a04" strokeWidth="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                             ) : (
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isActive ? "#2563eb" : "#64748b"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isActive ? "var(--fdl-blue-700)" : "var(--fdl-muted)"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                             )}
                           </div>
-                          <span className="dash-project-card__title" style={{ fontSize: '0.88rem', color: '#0f172a' }}>{p.title}</span>
+                          <span className="dash-project-card__title">{p.title}</span>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#2563eb', background: '#eff6ff', padding: '1px 6px', borderRadius: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+                          <span className="dash-project-card__count-badge">
                             {p.count.toLocaleString()} label{p.count !== 1 ? 's' : ''}
                           </span>
-                          <span className="dash-project-card__badge" style={{ fontSize: '0.6rem' }}>{p.role.toUpperCase()}</span>
+                          <span className="dash-project-card__badge">{p.role.toUpperCase()}</span>
                         </div>
                       </div>
 
-                      {/* List w/ Description Style Subtitle */}
-                      <div style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.4, margin: '2px 0 2px 24px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                      {/* Subtitle / Description */}
+                      <div className="dash-project-card__desc">
                         {p.description ? p.description : `Task workspace containing ${p.count.toLocaleString()} label record${p.count !== 1 ? 's' : ''}.`}
                       </div>
 
-                      {/* Tags Line */}
+                      {/* Tags */}
                       {p.tags && p.tags.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginLeft: '24px', marginTop: '4px' }}>
+                        <div className="dash-project-card__tags">
                           {p.tags.map((t, idx) => (
-                            <span key={idx} style={{ fontSize: '0.64rem', color: '#475569', background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                            <span key={idx} className="dash-project-card__tag">
                               #{t.trim()}
                             </span>
                           ))}
@@ -912,9 +913,9 @@ function DashboardContent() {
               )}
             </div>
 
-            {/* Pager — only earns its space once there is a second page */}
+            {/* Pager */}
             {!projectsLoading && taskPageCount > 1 && (
-              <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '10px 20px 16px 20px', borderTop: '1px solid #e2e8f0' }}>
+              <div className="dash-sidebar-pager">
                 <button
                   type="button"
                   onClick={() => setTaskPage(p => Math.max(1, p - 1))}
@@ -923,9 +924,9 @@ function DashboardContent() {
                 >
                   ← Prev
                 </button>
-                <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>
+                <span className="dash-pager-info">
                   Page {currentTaskPage} of {taskPageCount}
-                  <span style={{ color: '#94a3b8', fontWeight: 500 }}> · {filteredProjects.length} task{filteredProjects.length !== 1 ? 's' : ''}</span>
+                  <span style={{ color: 'var(--fdl-muted)', fontWeight: 400 }}> · {filteredProjects.length} task{filteredProjects.length !== 1 ? 's' : ''}</span>
                 </span>
                 <button
                   type="button"
@@ -1022,12 +1023,14 @@ function DashboardContent() {
                       </div>
 
                       <div ref={dropdownRef} style={{ position: 'relative' }}>
-                        <Button variant="primary" onClick={() => setActiveDropdown(activeDropdown === 'analyze' ? null : 'analyze')}>
-                          Export ▼
+                        <Button variant="primary" size="sm" onClick={() => setActiveDropdown(activeDropdown === 'analyze' ? null : 'analyze')}>
+                          Export ▾
                         </Button>
                         {activeDropdown === 'analyze' && (
-                          <div className="dropdown-menu visible" style={{ right: 0, top: '100%', marginTop: '8px', width: '220px', display: 'block', position: 'absolute', zIndex: 1000 }}>
-                            <button className="dropdown-item" onClick={() => { handleExportProject(activeProject.id, activeProject.title); setActiveDropdown(null); }}>to XLSX</button>
+                          <div className="dropdown-menu">
+                            <button className="dropdown-item" onClick={() => { handleExportProject(activeProject.id, activeProject.title); setActiveDropdown(null); }}>
+                              Export to XLSX
+                            </button>
                           </div>
                         )}
                       </div>
@@ -1036,7 +1039,7 @@ function DashboardContent() {
                 </div>
 
                 {/* Table Content */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
                   {projectTab === 'labels' ? (
                     <div>
                       {/* Comparison Selection Banner */}
@@ -1052,21 +1055,24 @@ function DashboardContent() {
                                 <span className="afl-selection-bar__label">
                                     Selected ({selectedLabels.length}/4)
                                 </span>
-                                {selectedLabels.map(l => (
-                                    <span key={l.set_id} className="afl-chip">
-                                        <span className="afl-chip__text" title={l.brand_name}>
-                                            {l.brand_name || l.set_id}
+                                {selectedLabels.map(l => {
+                                    const { primary } = getProductDisplay(l);
+                                    return (
+                                        <span key={l.set_id} className="afl-chip">
+                                            <span className="afl-chip__text" title={primary}>
+                                                {primary}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                className="afl-chip__remove"
+                                                onClick={() => removeLabel(l.set_id)}
+                                                aria-label={`Remove ${primary} from selection`}
+                                            >
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                            </button>
                                         </span>
-                                        <button
-                                            type="button"
-                                            className="afl-chip__remove"
-                                            onClick={() => removeLabel(l.set_id)}
-                                            aria-label={`Remove ${l.brand_name || l.set_id} from selection`}
-                                        >
-                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                        </button>
-                                    </span>
-                                ))}
+                                    );
+                                })}
                             </div>
                             <div className="afl-selection-bar__actions">
                                 <Button variant="ghost" size="sm" onClick={clearSelections}>
@@ -1097,7 +1103,7 @@ function DashboardContent() {
                         <table className="afl-table" style={{ minWidth: '750px' }}>
                           <thead>
                             <tr>
-                              <th style={{ width: '40px' }}></th>
+                              <th style={{ width: '40px', textAlign: 'center' }}></th>
                               <th>Product Name</th>
                               <th>Manufacturer</th>
                               <th
@@ -1120,22 +1126,31 @@ function DashboardContent() {
                                       type="checkbox"
                                       checked={isSelected}
                                       onChange={() => toggleLabelSelection(item)}
-                                      style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--afl-a-500)' }}
+                                      style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: 'var(--fdl-blue-700)' }}
                                     />
                                   </td>
                                   <td>
-                                    <Link href={labelRoute(item.set_id)} style={{ fontWeight: 700, color: 'var(--afl-text-primary)', textDecoration: 'none' }}>
-                                        <TruncatedText text={item.brand_name || 'N/A'} />
-                                    </Link>
-                                    <div style={{ fontSize: 'var(--afl-text-xs)', color: 'var(--afl-text-muted)', marginTop: '2px' }}>
-                                        <TruncatedText text={item.generic_name || ''} limit={120} />
-                                    </div>
+                                    {(() => {
+                                      const { primary, secondary } = getProductDisplay(item);
+                                      return (
+                                        <>
+                                          <Link href={labelRoute(item.set_id)} style={{ fontWeight: 700, color: 'var(--fdl-navy-950)', textDecoration: 'none' }}>
+                                              <TruncatedText text={primary} />
+                                          </Link>
+                                          {secondary && (
+                                              <div style={{ fontSize: '0.74rem', color: 'var(--fdl-muted)', marginTop: '2px' }}>
+                                                  <TruncatedText text={secondary} limit={120} />
+                                              </div>
+                                          )}
+                                        </>
+                                      );
+                                    })()}
                                   </td>
                                   <td>{item.manufacturer_name || 'N/A'}</td>
-                                  <td>{formatEffectiveTime(item.effective_time)}</td>
+                                  <td style={{ fontFamily: 'var(--fdl-font-mono)', fontSize: '0.75rem' }}>{formatEffectiveTime(item.effective_time)}</td>
                                   <td>
                                     {item.tag ? (
-                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center' }}>
                                         {item.tag.split(/[;,]/).map(t => t.trim()).filter(Boolean).map((t, idx) => (
                                           <span
                                             key={idx}
@@ -1244,7 +1259,7 @@ function DashboardContent() {
           projectId={activeProject?.id || 0}
           projectName={activeProject?.title || ''}
         />
-      </main>
+      </div>
     </div>
   );
 }
