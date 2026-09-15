@@ -155,19 +155,19 @@ function LinksCell({ row, targetDb }: { row: LabelRow; targetDb?: TargetDb }) {
         </a>
       </span>
       <span className="fdl-links__row">
-        DailyMed (
+        <span className="fdl-links__source">DailyMed</span>
+        {' · '}
         <a className="fdl-link" href={DAILYMED_SPL(row.set_id)} target="_blank" rel="noreferrer">
           SPL
         </a>
-        {' | '}
+        {' · '}
         <a className="fdl-link" href={DAILYMED_PDF(row.set_id)} target="_blank" rel="noreferrer">
           PDF
         </a>
-        )
       </span>
       {apps.length > 0 ? (
         <span className="fdl-links__row">
-          Drugs@FDA{' '}
+          <span className="fdl-links__source">Drugs@FDA</span>{' '}
           {apps.map((a) => (
             <a
               key={`daf-${a.number}`}
@@ -183,7 +183,7 @@ function LinksCell({ row, targetDb }: { row: LabelRow; targetDb?: TargetDb }) {
       ) : null}
       {apps.some((a) => a.obType) ? (
         <span className="fdl-links__row">
-          Orange Book{' '}
+          <span className="fdl-links__source">Orange Book</span>{' '}
           {apps
             .filter((a) => a.obType)
             .map((a) => (

@@ -198,7 +198,7 @@
 .fdl-td--accent { color: var(--fdl-ink-soft); font-weight: 700; }
 
 .fdl-tr-expand-btn { border: 0; background: transparent; color: var(--fdl-blue-700); cursor: pointer; }
-.fdl-links { gap: 0.2rem; }
+.fdl-links { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 132px; }
 .fdl-links__primary {
   display: inline-flex;
   width: fit-content;
@@ -212,8 +212,9 @@
   text-decoration: none;
 }
 .fdl-links__primary:hover { background: var(--fdl-navy-950); border-color: var(--fdl-navy-950); color: var(--fdl-paper) !important; }
-.fdl-links__row { font-size: 0.76rem; }
-.fdl-links__row .fdl-link { color: var(--fdl-blue-700); }
+.fdl-links__row { display: block; color: var(--fdl-muted); font-size: 0.75rem; line-height: 1.25; }
+.fdl-links__row .fdl-link { display: inline; padding: 0; color: var(--fdl-blue-700); font-size: inherit; }
+.fdl-links__source { color: var(--fdl-ink-soft); font-weight: 700; }
 .fdl-links__num { font-family: var(--fdl-font-mono); font-size: 0.68rem; }
 .fdl-unii code { color: var(--fdl-muted); font-family: var(--fdl-font-mono); font-size: 0.7rem; }
 
