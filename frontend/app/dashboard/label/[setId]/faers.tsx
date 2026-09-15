@@ -283,10 +283,10 @@ function EmergingAeAnalysis({
 
   return (
     <div className="chart-card full-width" style={{ marginTop: '0', borderTop: 'none', paddingTop: '0' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--afl-n-50)', padding: '16px 24px', borderRadius: '12px', border: '1px solid var(--afl-n-200)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--afl-n-50)', padding: '14px 20px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--afl-n-200)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '1.5rem' }}>🆕</span>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--afl-n-900)' }}>Emerging Adverse Events (Last 5 Years Only)</h3>
+            <span style={{ fontSize: '1.3rem' }}>🆕</span>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--afl-n-900)' }}>Emerging Adverse Events (Last 5 Years Only)</h3>
         </div>
         {loading && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -302,8 +302,8 @@ function EmergingAeAnalysis({
           alignItems: 'center', 
           justifyContent: 'space-between', 
           background: 'var(--afl-info-50)', 
-          padding: '12px 20px', 
-          borderRadius: '10px', 
+          padding: '10px 16px', 
+          borderRadius: 'var(--fdl-radius-sm, 2px)', 
           border: '1px solid var(--afl-info-100)' 
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -319,33 +319,44 @@ function EmergingAeAnalysis({
                     onChange={(e) => setAiMinCount(parseInt(e.target.value) || 0)}
                     style={{ 
                         width: '60px', 
-                        padding: '4px 8px', 
-                        borderRadius: '6px', 
-                        border: '1px solid var(--afl-info-100)', 
-                        fontSize: '0.75rem', 
-                        fontWeight: 700 
-                    }}
+                        padding: '2px 6px', 
+                        borderRadius: 'var(--fdl-radius-sm, 2px)', 
+                        border: '1px solid var(--afl-info-200)', 
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        color: 'var(--afl-info-700)'
+                    }} 
                 />
             </div>
         </div>
         <button 
-            onClick={runAiMatch}
+            onClick={runAiMatch} 
             disabled={aiLoading || !data}
-            style={{ 
-                backgroundColor: aiLoading ? 'var(--afl-n-400)' : 'var(--afl-info-500)', 
-                color: 'white', 
-                padding: '6px 16px', 
-                borderRadius: '6px', 
-                fontSize: '0.75rem', 
-                fontWeight: 800, 
-                border: 'none', 
-                cursor: (aiLoading || !data) ? 'not-allowed' : 'pointer',
+            style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: '6px',
+                padding: '6px 14px',
+                borderRadius: 'var(--fdl-radius-sm, 2px)',
+                backgroundColor: aiLoading ? 'var(--afl-n-200)' : 'var(--afl-info-500)',
+                color: 'white',
+                border: 'none',
+                fontWeight: 700,
+                fontSize: '0.75rem',
+                cursor: aiLoading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.15s ease'
             }}
         >
-            {aiLoading ? 'Processing AI...' : (hasAiResult ? '🔄 AI Semantic Rematch' : '✨ AI Semantic Check')}
+            {aiLoading ? (
+                <>
+                    <div className="loader" style={{ width: '12px', height: '12px', borderWidth: '2px', borderTopColor: 'white' }}></div>
+                    Evaluating Top Candidates...
+                </>
+            ) : (
+                <>
+                    <span>⚡</span> Run Semantic Analysis
+                </>
+            )}
         </button>
       </div>
       
@@ -355,8 +366,8 @@ function EmergingAeAnalysis({
       </p>
 
       {error && (
-        <div style={{ backgroundColor: 'var(--afl-danger-50)', border: '1px solid var(--afl-danger-100)', color: 'var(--afl-danger-700)', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '0.8rem' }}>
-            <strong>Analysis Error:</strong> {error}
+        <div style={{ backgroundColor: 'var(--afl-danger-50)', border: '1px solid var(--afl-danger-100)', color: 'var(--afl-danger-700)', padding: '10px 14px', borderRadius: 'var(--fdl-radius-sm, 2px)', marginBottom: '16px', marginTop: '16px', fontSize: '0.8rem' }}>
+          {error}
         </div>
       )}
 
@@ -366,13 +377,13 @@ function EmergingAeAnalysis({
               <button 
                 onClick={() => toggleFilter('exact')}
                 style={{
-                    padding: '6px 14px',
-                    borderRadius: '20px',
+                    padding: '5px 12px',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
                     fontSize: '0.75rem',
-                    fontWeight: 800,
+                    fontWeight: 700,
                     border: '1px solid',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease',
+                    transition: 'all 0.15s ease',
                     backgroundColor: activeFilters.has('exact') ? 'var(--afl-success-50)' : 'transparent',
                     color: activeFilters.has('exact') ? 'var(--afl-success-700)' : 'var(--afl-n-500)',
                     borderColor: activeFilters.has('exact') ? 'var(--afl-success-500)' : 'var(--afl-n-200)',
@@ -383,13 +394,13 @@ function EmergingAeAnalysis({
               <button 
                 onClick={() => toggleFilter('semantic')}
                 style={{
-                    padding: '6px 14px',
-                    borderRadius: '20px',
+                    padding: '5px 12px',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
                     fontSize: '0.75rem',
-                    fontWeight: 800,
+                    fontWeight: 700,
                     border: '1px solid',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease',
+                    transition: 'all 0.15s ease',
                     backgroundColor: activeFilters.has('semantic') ? 'var(--afl-success-50)' : 'transparent',
                     color: activeFilters.has('semantic') ? 'var(--afl-success-700)' : 'var(--afl-n-500)',
                     borderColor: activeFilters.has('semantic') ? 'var(--afl-success-500)' : 'var(--afl-n-200)',
@@ -400,13 +411,13 @@ function EmergingAeAnalysis({
               <button 
                 onClick={() => toggleFilter('none')}
                 style={{
-                    padding: '6px 14px',
-                    borderRadius: '20px',
+                    padding: '5px 12px',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
                     fontSize: '0.75rem',
-                    fontWeight: 800,
+                    fontWeight: 700,
                     border: '1px solid',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease',
+                    transition: 'all 0.15s ease',
                     backgroundColor: activeFilters.has('none') ? 'var(--afl-danger-50)' : 'transparent',
                     color: activeFilters.has('none') ? 'var(--afl-danger-700)' : 'var(--afl-n-500)',
                     borderColor: activeFilters.has('none') ? 'var(--afl-danger-500)' : 'var(--afl-n-200)',
@@ -579,15 +590,14 @@ function EmergingAeAnalysis({
 
           {/* Trend Chart Section */}
           <div style={{ 
-              marginTop: '30px', 
-              padding: '24px', 
-              background: 'var(--afl-n-0)', 
-              borderRadius: '16px', 
-              border: '1px solid var(--afl-n-200)',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+              marginTop: '24px', 
+              padding: '20px', 
+              background: 'var(--fdl-surface, var(--afl-n-0))', 
+              borderRadius: 'var(--fdl-radius-sm, 2px)', 
+              border: '1px solid var(--fdl-line, var(--afl-n-200))',
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--afl-n-800)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--afl-n-800)' }}>
                     {selectedAe ? `Cumulative Reporting Trend: ${selectedAe.term}` : 'Select an AE term above to view reporting trend'}
                 </h4>
                 {selectedAe && (
@@ -631,7 +641,7 @@ function EmergingAeAnalysis({
                             />
                             <Tooltip 
                                 labelFormatter={(ts) => new Date(ts).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
-                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+                                contentStyle={{ borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line, #e2e8f0)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)' }}
                                 itemStyle={{ fontWeight: 700, fontSize: '0.85rem' }}
                             />
                             <Area 
@@ -647,7 +657,7 @@ function EmergingAeAnalysis({
                         </AreaChart>
                     </ResponsiveContainer>
                 ) : (
-                    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--afl-n-400)', background: 'var(--afl-n-50)', borderRadius: '12px', border: '1px dashed var(--afl-n-200)' }}>
+                    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--afl-n-400)', background: 'var(--afl-n-50)', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px dashed var(--afl-n-200)' }}>
                         <span style={{ fontSize: '2rem', marginBottom: '8px' }}>📈</span>
                         <p style={{ fontSize: '0.85rem', fontWeight: 600 }}>
                             {selectedAe ? 'No trend data available for this term.' : 'Click a row in the table above to analyze its growth.'}

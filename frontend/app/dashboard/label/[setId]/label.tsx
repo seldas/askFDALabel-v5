@@ -19,14 +19,14 @@ const SectionComponent = memo(function SectionComponent({ section }: { section: 
       className={`Section ${section.is_boxed_warning ? 'black-boxed-warning' : ''}`}
       id={section.id}
       data-section-number={section.numeric_id}
-      style={{ marginBottom: '30px' }}
+      style={{ marginBottom: '28px' }}
     >
       {section.title && <h2 style={{ 
-        fontSize: '1.5rem', 
-        color: 'var(--afl-n-800)', 
-        borderBottom: '2px solid var(--afl-n-100)', 
-        paddingBottom: '12px',
-        marginBottom: '20px',
+        fontSize: '1.35rem', 
+        color: 'var(--fdl-navy-950)', 
+        borderBottom: '1px solid var(--fdl-line)', 
+        paddingBottom: '10px',
+        marginBottom: '18px',
         fontWeight: 700
       }}>{section.title}</h2>}
       {section.content && <div className="spl-content" dangerouslySetInnerHTML={{ __html: section.content }} />}
@@ -47,14 +47,14 @@ const HighlightsComponent = memo(function HighlightsComponent({
   return (
     <div id="highlights-content">
         <h2 style={{ 
-            fontSize: '1.25rem', 
-            color: 'var(--afl-n-900)',
-            marginBottom: '20px',
-            fontWeight: 900,
+            fontSize: '1.15rem', 
+            color: 'var(--fdl-navy-950)',
+            marginBottom: '16px',
+            fontWeight: 800,
             textTransform: 'uppercase',
-            borderBottom: '2px solid var(--afl-n-900)',
+            borderBottom: '2px solid var(--fdl-navy-950)',
             paddingBottom: '8px',
-            letterSpacing: '0.05em' 
+            letterSpacing: '0.04em' 
         }}>
             Highlights of Prescribing Information
         </h2>
@@ -390,25 +390,25 @@ export default function LabelView({
           width: tocCollapsed ? '0' : '300px', 
           height: '100%',
           flexShrink: 0,
-          background: 'white',
-          borderRadius: '16px',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-          border: '1px solid var(--afl-n-100)',
+          background: 'var(--fdl-surface)',
+          borderRadius: 'var(--fdl-radius-sm, 2px)',
+          boxShadow: 'none',
+          border: '1px solid var(--fdl-line)',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          transition: 'all 0.3s ease'
+          transition: 'all 0.25s ease'
         }}>
-          <div className="toc-box" style={{ padding: '16px 14px', flex: 1, overflowY: 'auto' }}>
+          <div className="toc-box" style={{ padding: '14px 12px', flex: 1, overflowY: 'auto' }}>
             {/* Top Header: ToC / SoC Segmented Toggle + Close Button */}
             <div className="toc-header" style={{ 
-              marginBottom: '12px', 
+              marginBottom: '10px', 
               display: 'flex', 
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: '8px',
-              paddingBottom: '10px',
-              borderBottom: '1px solid var(--afl-n-100)'
+              paddingBottom: '8px',
+              borderBottom: '1px solid var(--fdl-line)'
             }}>
               <div className="nav-tab-toggle-bar" style={{ flex: 1, margin: 0 }}>
                 <button 
@@ -446,18 +446,18 @@ export default function LabelView({
               <button 
                 onClick={() => setTocCollapsed(true)} 
                 style={{ 
-                  background: 'var(--afl-n-50)', 
-                  border: '1px solid var(--afl-n-200)', 
-                  borderRadius: '6px',
+                  background: 'var(--fdl-canvas)', 
+                  border: '1px solid var(--fdl-line)', 
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
                   cursor: 'pointer', 
-                  color: 'var(--afl-n-400)', 
+                  color: 'var(--fdl-muted)', 
                   fontSize: '0.75rem',
                   width: '26px',
                   height: '26px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  transition: 'all 0.2s ease',
+                  transition: 'all 0.12s ease',
                   flexShrink: 0
                 }}
                 className="toc-close-btn"
@@ -569,10 +569,10 @@ export default function LabelView({
                             <span style={{ 
                               fontSize: '0.7rem', 
                               fontWeight: 700, 
-                              padding: '1px 6px', 
-                              borderRadius: '10px', 
-                              background: isFocused ? '#fde047' : 'var(--afl-n-200)',
-                              color: isFocused ? '#854d0e' : 'var(--afl-n-700)',
+                              padding: '1px 5px', 
+                              borderRadius: 'var(--fdl-radius-sm, 2px)', 
+                              background: isFocused ? '#fde047' : 'var(--fdl-canvas, var(--afl-n-200))',
+                              color: isFocused ? '#854d0e' : 'var(--fdl-text, var(--afl-n-700))',
                               flexShrink: 0
                             }}>
                               {isFocused ? `${activeTermOccurIndex + 1}/${termItem.count}` : `${termItem.count}x`}
@@ -616,10 +616,10 @@ export default function LabelView({
                             <span style={{
                               fontSize: '0.7rem',
                               fontWeight: 700,
-                              padding: '1px 6px',
-                              borderRadius: '10px',
-                              background: 'var(--afl-n-200)',
-                              color: 'var(--afl-n-700)',
+                              padding: '1px 5px',
+                              borderRadius: 'var(--fdl-radius-sm, 2px)',
+                              background: 'var(--fdl-canvas, var(--afl-n-200))',
+                              color: 'var(--fdl-text, var(--afl-n-700))',
                               flexShrink: 0
                             }}>
                               {group.totalOccurrences}
@@ -646,7 +646,7 @@ export default function LabelView({
         {/* Main Content */}
         <div className="label-main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
             {tocCollapsed && (
-              <button onClick={() => setTocCollapsed(false)} style={{ position: 'absolute', left: '20px', zIndex: 10, background: 'white', border: '1px solid var(--afl-n-200)', borderRadius: '8px', padding: '4px 12px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+              <button onClick={() => setTocCollapsed(false)} style={{ position: 'absolute', left: '20px', zIndex: 10, background: 'white', border: '1px solid var(--fdl-line)', borderRadius: 'var(--fdl-radius-sm, 2px)', padding: '5px 12px', fontSize: '0.72rem', fontWeight: 800, color: 'var(--fdl-navy-950)', cursor: 'pointer', boxShadow: 'none' }}>
                 ☰ SHOW MENU
               </button>
             )}
@@ -657,11 +657,12 @@ export default function LabelView({
                 display: 'flex', 
                 flexDirection: 'column', 
                 minHeight: 0, 
-                background: 'var(--afl-n-100)',
-                borderRadius: '12px',
+                background: 'var(--fdl-canvas)',
+                borderRadius: 'var(--fdl-radius-sm, 2px)',
+                border: '1px solid var(--fdl-line)',
                 padding: '0',
                 position: 'relative',
-                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)',
+                boxShadow: 'none',
                 overflow: 'hidden'
             }}>
                 {/* Reading Progress Bar */}
@@ -674,24 +675,25 @@ export default function LabelView({
                     style={{ 
                         flex: 1, 
                         overflowY: 'auto', 
-                        padding: '40px',
+                        padding: '32px 36px',
                         scrollBehavior: 'smooth'
                     }}
                 >
-                    <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '40px' }}>
+                    <div style={{ maxWidth: '920px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
                         {data.is_latest === false && (
                           <div style={{
-                            background: 'var(--afl-warn-50)',
-                            border: '1px dashed var(--afl-warn-700)',
-                            borderRadius: '8px',
-                            padding: '16px 20px',
+                            background: '#fffbeb',
+                            border: '1px solid #fde047',
+                            borderLeft: '4px solid #b45309',
+                            borderRadius: 'var(--fdl-radius-sm, 2px)',
+                            padding: '14px 18px',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '12px',
-                            color: 'var(--afl-warn-700)',
-                            fontSize: '0.85rem',
+                            color: '#92400e',
+                            fontSize: '0.82rem',
                             fontWeight: 600,
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                            boxShadow: 'none'
                           }}>
                             <span style={{ fontSize: '1.25rem' }}>⚠️</span>
                             <div>
@@ -702,17 +704,18 @@ export default function LabelView({
                         )}
                         {data.is_latest !== false && data.openfda_status === 'Archived' && (
                           <div style={{
-                            background: 'var(--afl-warn-50)',
-                            border: '1px dashed var(--afl-warn-700)',
-                            borderRadius: '8px',
-                            padding: '16px 20px',
+                            background: '#fffbeb',
+                            border: '1px solid #fde047',
+                            borderLeft: '4px solid #b45309',
+                            borderRadius: 'var(--fdl-radius-sm, 2px)',
+                            padding: '14px 18px',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '12px',
-                            color: 'var(--afl-warn-700)',
-                            fontSize: '0.85rem',
+                            color: '#92400e',
+                            fontSize: '0.82rem',
                             fontWeight: 600,
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                            boxShadow: 'none'
                           }}>
                             <span style={{ fontSize: '1.25rem' }}>⚠️</span>
                             <div>
@@ -730,11 +733,11 @@ export default function LabelView({
                                 data-section-index={idx}
                                 id={section.id}
                                 style={{ 
-                                    background: 'white',
-                                    borderRadius: '8px',
-                                    padding: '40px 50px',
-                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                                    border: '1px solid var(--afl-n-200)',
+                                    background: '#ffffff',
+                                    borderRadius: 'var(--fdl-radius-sm, 2px)',
+                                    padding: '36px 44px',
+                                    boxShadow: 'none',
+                                    border: '1px solid var(--fdl-line)',
                                     position: 'relative'
                                 }}
                             >

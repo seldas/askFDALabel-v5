@@ -42,7 +42,7 @@ function AppTypeBadge({ appType }: { appType: string }) {
     <span style={{
       display: 'inline-block',
       padding: '2px 8px',
-      borderRadius: '6px',
+      borderRadius: 'var(--fdl-radius-sm, 2px)',
       fontSize: '0.72rem',
       fontWeight: 700,
       letterSpacing: '0.05em',
@@ -87,7 +87,7 @@ export function ProductSpecsTable({ productData }: { productData: ProductData[] 
   if (!productData || productData.length === 0) {
     return (
       <div style={{
-        padding: '20px 24px', background: 'var(--afl-n-50)', borderRadius: '12px',
+        padding: '20px 24px', background: 'var(--afl-n-50)', borderRadius: 'var(--fdl-radius-sm, 2px)',
         border: '1px solid var(--afl-n-200)', color: 'var(--afl-n-400)', fontSize: '0.85rem', textAlign: 'center',
       }}>
         No structured product data found in this SPL document.
@@ -96,7 +96,7 @@ export function ProductSpecsTable({ productData }: { productData: ProductData[] 
   }
   const headers = ['Product Name', 'NDC Number', 'Dosage Form', 'Application No.', 'Category', 'Ingredients'];
   return (
-    <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid var(--afl-n-200)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+    <div style={{ overflowX: 'auto', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--afl-n-200)' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
         <thead>
           <tr style={{ background: 'var(--afl-n-50)', borderBottom: '2px solid var(--afl-n-200)' }}>
@@ -251,10 +251,10 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
                 setSelected(val === 'custom' ? 'custom' : Number(val));
               }}
               style={{
-                width: '100%', padding: '10px 14px', border: '1px solid var(--afl-n-300)',
-                borderRadius: '10px', fontSize: '0.88rem', fontWeight: 600,
-                color: 'var(--afl-n-900)', background: 'var(--afl-n-0)', cursor: 'pointer',
-                outline: 'none', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                width: '100%', padding: '8px 12px', border: '1px solid var(--fdl-line, var(--afl-n-300))',
+                borderRadius: 'var(--fdl-radius-sm, 2px)', fontSize: '0.85rem', fontWeight: 600,
+                color: 'var(--fdl-text, var(--afl-n-900))', background: 'var(--fdl-surface, var(--afl-n-0))', cursor: 'pointer',
+                outline: 'none',
               }}
             >
               {prompts.map(p => (
@@ -289,14 +289,13 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
                   style={{
                     width: '100%',
                     minHeight: '80px',
-                    padding: '10px 12px',
-                    border: '1px solid var(--afl-n-300)',
-                    borderRadius: '8px',
+                    padding: '8px 10px',
+                    border: '1px solid var(--fdl-line, var(--afl-n-300))',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
                     fontSize: '0.85rem',
-                    color: 'var(--afl-n-900)',
+                    color: 'var(--fdl-text, var(--afl-n-900))',
                     outline: 'none',
                     resize: 'vertical',
-                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)',
                   }}
                 />
               </div>
@@ -309,12 +308,11 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
             onClick={() => handleRun(false)}
             disabled={loading || !selectedPromptId}
             style={{
-              padding: '10px 20px', background: loading ? 'var(--afl-n-400)' : 'var(--afl-info-700)',
-              color: 'var(--afl-n-0)', border: 'none', borderRadius: '10px', fontWeight: 700,
-              fontSize: '0.85rem', cursor: loading ? 'wait' : 'pointer',
+              padding: '8px 16px', background: loading ? 'var(--afl-n-400)' : 'var(--fdl-accent, #1a56db)',
+              color: '#ffffff', border: '1px solid transparent', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 700,
+              fontSize: '0.82rem', cursor: loading ? 'wait' : 'pointer',
               display: 'flex', alignItems: 'center', gap: '7px',
-              boxShadow: loading ? 'none' : '0 2px 8px rgba(30,64,175,0.3)',
-              transition: 'all 0.2s ease',
+              transition: 'all 0.15s ease',
             }}
           >
             {loading ? (
@@ -330,10 +328,10 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
               disabled={loading}
               title="Force a fresh AI generation (bypass cache)"
               style={{
-                padding: '10px 14px', background: 'var(--afl-n-100)', color: 'var(--afl-n-600)',
-                border: '1px solid var(--afl-n-200)', borderRadius: '10px', fontWeight: 700,
+                padding: '8px 12px', background: 'var(--fdl-surface, #ffffff)', color: 'var(--fdl-text, var(--afl-n-600))',
+                border: '1px solid var(--fdl-line, var(--afl-n-200))', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 700,
                 fontSize: '0.82rem', cursor: loading ? 'wait' : 'pointer',
-                display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s ease',
+                display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s ease',
               }}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -345,16 +343,16 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
         </div>
       </div>
       {error && (
-        <div style={{ padding: '14px 18px', background: 'var(--afl-danger-50)', border: '1px solid var(--afl-danger-100)', borderRadius: '10px', color: 'var(--afl-danger-700)', fontSize: '0.84rem', marginBottom: '16px' }}>
+        <div style={{ padding: '12px 16px', background: 'var(--afl-danger-50)', border: '1px solid var(--afl-danger-100)', borderRadius: 'var(--fdl-radius-sm, 2px)', color: 'var(--afl-danger-700)', fontSize: '0.84rem', marginBottom: '16px' }}>
           {error}
         </div>
       )}
       {result && (
-        <div style={{ background: 'var(--afl-n-0)', border: '1px solid var(--afl-n-200)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+        <div style={{ background: 'var(--fdl-surface, var(--afl-n-0))', border: '1px solid var(--fdl-line, var(--afl-n-200))', borderRadius: 'var(--fdl-radius-sm, 2px)', overflow: 'hidden' }}>
           <div style={{
             padding: '10px 18px',
-            background: result.from_cache ? 'var(--afl-success-50)' : 'var(--afl-info-50)',
-            borderBottom: '1px solid var(--afl-n-200)',
+            background: result.from_cache ? 'var(--afl-success-50)' : 'var(--fdl-canvas, var(--afl-info-50))',
+            borderBottom: '1px solid var(--fdl-line, var(--afl-n-200))',
             display: 'flex', alignItems: 'center', gap: '16px',
             fontSize: '0.75rem', flexWrap: 'wrap' as const,
           }}>
@@ -368,7 +366,7 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                h1: ({children}) => <h1 style={{fontSize:'1.1rem',fontWeight:800,color:'var(--afl-n-900)',margin:'0 0 12px',borderBottom:'2px solid var(--afl-n-200)',paddingBottom:'6px'}}>{children}</h1>,
+                h1: ({children}) => <h1 style={{fontSize:'1.1rem',fontWeight:800,color:'var(--afl-n-900)',margin:'0 0 12px',borderBottom:'1px solid var(--fdl-line, var(--afl-n-200))',paddingBottom:'6px'}}>{children}</h1>,
                 h2: ({children}) => <h2 style={{fontSize:'0.98rem',fontWeight:700,color:'var(--afl-n-800)',margin:'18px 0 8px'}}>{children}</h2>,
                 h3: ({children}) => <h3 style={{fontSize:'0.88rem',fontWeight:700,color:'var(--afl-n-700)',margin:'14px 0 6px'}}>{children}</h3>,
                 p:  ({children}) => <p  style={{margin:'0 0 10px',lineHeight:1.7,color:'var(--afl-n-700)',fontSize:'0.87rem'}}>{children}</p>,
@@ -376,7 +374,7 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
                 ol: ({children}) => <ol style={{margin:'0 0 10px',paddingLeft:'18px',color:'var(--afl-n-700)',fontSize:'0.87rem'}}>{children}</ol>,
                 li: ({children}) => <li style={{marginBottom:'4px',lineHeight:1.65}}>{children}</li>,
                 strong: ({children}) => <strong style={{fontWeight:700,color:'var(--afl-n-900)'}}>{children}</strong>,
-                blockquote: ({children}) => <blockquote style={{margin:'12px 0',padding:'12px 16px',borderLeft:'4px solid var(--afl-info-500)',background:'var(--afl-info-50)',borderRadius:'0 8px 8px 0',color:'var(--afl-info-700)',fontSize:'0.84rem',fontStyle:'italic'}}>{children}</blockquote>,
+                blockquote: ({children}) => <blockquote style={{margin:'12px 0',padding:'12px 16px',borderLeft:'3px solid var(--fdl-accent, var(--afl-info-500))',background:'var(--fdl-canvas, var(--afl-info-50))',borderRadius:'0 2px 2px 0',color:'var(--fdl-text, var(--afl-info-700))',fontSize:'0.84rem',fontStyle:'italic'}}>{children}</blockquote>,
                 code: ({children, ...props}) => {
                   const text = String(children);
                   if (text.startsWith('MDD::')) {
@@ -385,11 +383,10 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', gap: '5px',
                         background: 'var(--afl-warn-50)', color: 'var(--afl-warn-700)',
-                        border: '1.5px solid var(--afl-warn-500)',
-                        borderRadius: '6px', padding: '1px 9px',
-                        fontWeight: 800, fontSize: '0.88rem',
+                        border: '1px solid var(--afl-warn-500)',
+                        borderRadius: 'var(--fdl-radius-sm, 2px)', padding: '1px 8px',
+                        fontWeight: 700, fontSize: '0.85rem',
                         fontFamily: 'inherit', letterSpacing: '0.01em',
-                        boxShadow: '0 1px 4px rgba(251,191,36,0.25)',
                       }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
                           <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>

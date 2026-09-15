@@ -1,268 +1,281 @@
-/* Dashboard Grid and Cards (Ported from dashboard.css) */
-.dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-.chart-card { background: white; border: 1px solid var(--afl-n-200); border-radius: 12px; padding: 20px; }
-.chart-card.full-width { grid-column: 1 / -1; }
+/*
+ * Federal-Scientific Workstation: Clinical Analysis & Evidence Charts
+ */
 
-/* Global Button Style (Ported from dashboard.css) */
+/* Dashboard Grid and Cards */
+.dashboard-grid { 
+  display: grid; 
+  grid-template-columns: repeat(2, 1fr); 
+  gap: 14px; 
+}
+
+.chart-card { 
+  background: var(--fdl-surface); 
+  border: 1px solid var(--fdl-line); 
+  border-radius: var(--fdl-radius-sm, 2px); 
+  padding: 16px; 
+  box-shadow: none;
+}
+
+.chart-card.full-width { 
+  grid-column: 1 / -1; 
+}
+
+/* Global Button Style */
 .button {
-    border-radius: 25px;
-    padding: 8px 20px;
-    font-weight: 600;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none !important;
-    border: 1px solid transparent;
-    cursor: pointer;
+  border-radius: var(--fdl-radius-sm, 2px);
+  padding: 6px 14px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  transition: all 0.12s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none !important;
+  border: 1px solid var(--fdl-line);
+  background: var(--fdl-surface);
+  color: var(--fdl-ink);
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--fdl-canvas);
+  border-color: var(--fdl-line-strong);
+  color: var(--fdl-navy-950);
 }
 
 /* Loader Animation */
 .loader {
-    border: 5px solid #f3f3f3;
-    border-top: 5px solid var(--afl-info-500);
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: spin 1s linear infinite;
+  border: 3px solid var(--fdl-line-soft);
+  border-top: 3px solid var(--fdl-blue-600);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* Assessment Prompt (AI Analysis Trigger) */
 .assessment-prompt {
-    text-align: center;
-    padding: 30px;
-    background-color: var(--afl-n-50);
-    border-radius: 8px;
-    border: 1px dashed var(--afl-n-200);
+  text-align: center;
+  padding: 24px;
+  background-color: var(--fdl-canvas);
+  border-radius: var(--fdl-radius-sm, 2px);
+  border: 1px dashed var(--fdl-line-strong);
 }
 
 .assessment-prompt p {
-    color: var(--afl-n-500);
-    margin-bottom: 15px;
-    font-size: 0.95rem;
-    line-height: 1.5;
+  color: var(--fdl-muted);
+  margin-bottom: 12px;
+  font-size: 0.88rem;
+  line-height: 1.5;
 }
 
 /* Assessment Button Variants */
-.btn-assess-dili { background-color: #17a2b8 !important; color: white !important; }
-.btn-assess-dict { background-color: var(--afl-danger-500) !important; color: white !important; }
-.btn-assess-diri { background-color: #ffc107 !important; color: black !important; }
+.btn-assess-dili { background-color: var(--fdl-navy-950) !important; color: white !important; }
+.btn-assess-dict { background-color: var(--fdl-danger, #b91c1c) !important; color: white !important; }
+.btn-assess-diri { background-color: #b45309 !important; color: white !important; }
 
 /* Agent Card Index Styles (Toxicological Overview) */
 .agent-card {
-    width: 200px;
-    padding: 30px;
-    border: 2px solid var(--afl-n-200);
-    border-radius: 12px;
-    background: var(--afl-n-50);
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s, background-color 0.2s;
-    text-align: center;
+  width: 200px;
+  padding: 20px;
+  border: 1px solid var(--fdl-line);
+  border-radius: var(--fdl-radius-sm, 2px);
+  background: var(--fdl-surface);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+  text-align: center;
+  box-shadow: none;
 }
-
-#btn-agent-dili { border-color: #17a2b8; background: #f0f7ff; }
-#btn-agent-dict { border-color: var(--afl-danger-500); background: #fff5f5; }
-#btn-agent-diri { border-color: #ffc107; background: #fffdf0; }
-#btn-agent-pgx { border-color: #6610f2; background: #f3e5f5; }
 
 .agent-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  border-color: var(--fdl-line-strong);
+  background: var(--fdl-canvas);
 }
+
 .agent-card.disabled:hover {
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-.agent-card.disabled:hover {
-    transform: none;
-    box-shadow: none;
+  border-color: var(--fdl-line);
+  background: var(--fdl-surface);
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 /* Agent Analysis Cards Active States */
 .active-agent {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important;
-    background-color: var(--afl-n-0) !important;
+  border-color: var(--fdl-blue-600) !important;
+  background-color: var(--fdl-blue-050) !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
-
-#btn-agent-dili.active-agent { border-color: #17a2b8; background-color: #e0f7fa !important; }
-#btn-agent-dict.active-agent { border-color: var(--afl-danger-500); background-color: #ffeef0 !important; }
-#btn-agent-diri.active-agent { border-color: #ffc107; background-color: #fffbf0 !important; }
-#btn-agent-pgx.active-agent { border-color: #6610f2; background-color: #f3e5f5 !important; }
 
 /* Toxicity Results Container Styles (Markdown content) */
 .dili-results, .dict-results, .diri-results {
-    line-height: 1.6;
+  line-height: 1.6;
 }
 
 .dili-results h3, .dili-results h4,
 .dict-results h3, .dict-results h4,
 .diri-results h3, .diri-results h4 {
-    color: #17a2b8;
-    border-bottom: 2px solid #f0f2f5;
-    padding-bottom: 5px;
-    margin-top: 1.5em;
+  color: var(--fdl-navy-950);
+  border-bottom: 1px solid var(--fdl-line);
+  padding-bottom: 6px;
+  margin-top: 1.25em;
+  font-weight: 700;
 }
 
 /* Official Label Analysis Evidence Spans */
 .dili-evidence, .dict-evidence, .diri-evidence {
-    font-style: italic;
-    color: var(--afl-n-600);
-    background-color: var(--afl-n-50);
-    padding: 0 4px;
-    border-radius: 3px;
-    border-bottom: 1px dashed var(--afl-n-400);
-    font-size: 0.95em;
+  font-style: italic;
+  color: var(--fdl-ink);
+  background-color: var(--fdl-canvas);
+  padding: 1px 4px;
+  border-radius: 2px;
+  border-bottom: 1px dashed var(--fdl-muted);
+  font-size: 0.9em;
 }
 
 /* Score Badges */
 .badge-score {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 10px;
-    border-radius: 16px;
-    font-size: 0.7em;
-    font-weight: 800;
-    margin-left: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    border: 1px solid;
-    vertical-align: middle;
-    white-space: nowrap;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    background-clip: padding-box;
-    transition: all 0.2s ease;
-    cursor: default;
-}
-
-.badge-score:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 2px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  margin-left: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+  vertical-align: middle;
+  white-space: nowrap;
+  box-shadow: none;
+  cursor: default;
 }
 
 /* Pre-existing (Green) */
 .badge-score-0 { 
-    background-color: #d1e7dd; 
-    color: #0f5132; 
-    border-color: #badbcc; 
+  background-color: #f0fdf4; 
+  color: #166534; 
+  border-color: #bbf7d0; 
 } 
 
 /* Mild (Blue) */
 .badge-score-1, .badge-score-2 { 
-    background-color: #cff4fc; 
-    color: #055160; 
-    border-color: #b6effb; 
+  background-color: var(--fdl-blue-050); 
+  color: var(--fdl-blue-700); 
+  border-color: #bfdbfe; 
 } 
 
 /* Moderate (Yellow/Orange) */
 .badge-score-3, .badge-score-4, .badge-score-5 { 
-    background-color: #fff3cd; 
-    color: #664d03; 
-    border-color: #ffecb5; 
+  background-color: #fffbeb; 
+  color: #92400e; 
+  border-color: #fde68a; 
 } 
 
 /* Severe (Red) */
 .badge-score-6, .badge-score-7, .badge-score-8 { 
-    background-color: #f8d7da; 
-    color: #842029; 
-    border-color: #f5c6cb; 
+  background-color: #fef2f2; 
+  color: #991b1b; 
+  border-color: #fecaca; 
 }
 
-/* Additional Badge Styles for DICT/DIRI specific text levels if needed */
 .badge-score-severe, .badge-score-certain {
-    background-color: #f8d7da; 
-    color: #842029; 
-    border-color: #f5c6cb; 
+  background-color: #fef2f2; 
+  color: #991b1b; 
+  border-color: #fecaca; 
 }
+
 .badge-score-moderate, .badge-score-possible {
-    background-color: #fff3cd; 
-    color: #664d03; 
-    border-color: #ffecb5; 
+  background-color: #fffbeb; 
+  color: #92400e; 
+  border-color: #fde68a; 
 }
+
 .badge-score-mild {
-    background-color: #cff4fc; 
-    color: #055160; 
-    border-color: #b6effb; 
+  background-color: var(--fdl-blue-050); 
+  color: var(--fdl-blue-700); 
+  border-color: #bfdbfe; 
 }
 
 /* --- DILI Risk Panel --- */
 #dili-risk-panel, #dict-risk-panel, #diri-risk-panel {
-    padding: 15px 20px;
-    border-radius: 8px;
-    border-left: 6px solid var(--afl-n-300);
-    background-color: var(--afl-n-50);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    animation: fadeIn 0.5s ease;
+  padding: 12px 16px;
+  border-radius: var(--fdl-radius-sm, 2px);
+  border: 1px solid var(--fdl-line);
+  border-left: 4px solid var(--fdl-line-strong);
+  background-color: var(--fdl-surface);
+  box-shadow: none;
+  font-family: inherit;
 }
 
 #dili-risk-panel h4, #dict-risk-panel h4, #diri-risk-panel h4 {
-    margin-top: 0;
-    margin-bottom: 5px;
-    font-size: 1.2em;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+  margin-top: 0;
+  margin-bottom: 4px;
+  font-size: 1.05em;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 #dili-risk-panel p, #dict-risk-panel p, #diri-risk-panel p {
-    margin: 0;
-    font-size: 0.95em;
-    color: var(--afl-n-600);
+  margin: 0;
+  font-size: 0.88em;
+  color: var(--fdl-muted);
 }
 
 /* Specific Risk Classes */
 
 /* Most Concern - Red */
 .dili-risk-most, .dict-risk-most, .diri-risk-most {
-    border-left-color: var(--afl-danger-500) !important;
-    background-color: #fff5f5 !important;
+  border-left-color: var(--fdl-danger, #b91c1c) !important;
+  background-color: #fffdfd !important;
+  border-color: #fecaca !important;
 }
 .dili-risk-most h4, .dict-risk-most h4, .diri-risk-most h4 {
-    color: var(--afl-danger-500);
+  color: var(--fdl-danger, #b91c1c);
 }
 
 /* Less Concern - Orange/Yellow */
 .dili-risk-less, .dict-risk-less, .diri-risk-less {
-    border-left-color: #fd7e14 !important;
-    background-color: #fff9f2 !important;
+  border-left-color: #d97706 !important;
+  background-color: #fffdf8 !important;
+  border-color: #fde68a !important;
 }
 .dili-risk-less h4, .dict-risk-less h4, .diri-risk-less h4 {
-    color: #fd7e14;
+  color: #b45309;
 }
 
 /* No Concern - Green */
 .dili-risk-no, .dict-risk-no, .diri-risk-no {
-    border-left-color: var(--afl-success-500) !important;
-    background-color: #f0fff4 !important;
+  border-left-color: #16a34a !important;
+  background-color: #f7fee7 !important;
+  border-color: #bbf7d0 !important;
 }
 .dili-risk-no h4, .dict-risk-no h4, .diri-risk-no h4 {
-    color: var(--afl-success-500);
+  color: #15803d;
 }
 
 /* Under Assessment / Pending - Gray */
 .dili-risk-pending, .dict-risk-pending, .diri-risk-pending {
-    border-left-color: var(--afl-n-500) !important;
-    background-color: var(--afl-n-50) !important;
+  border-left-color: var(--fdl-muted) !important;
+  background-color: var(--fdl-canvas) !important;
 }
 .dili-risk-pending h4, .dict-risk-pending h4, .diri-risk-pending h4 {
-    color: var(--afl-n-500);
+  color: var(--fdl-muted);
 }
 
 /* Loading/Placeholder */
 .dili-risk-loading, .dict-risk-loading, .diri-risk-loading {
-    border-left-color: #17a2b8 !important;
-    background-color: #f0f7ff !important;
+  border-left-color: var(--fdl-blue-600) !important;
+  background-color: var(--fdl-blue-050) !important;
 }
 .dili-risk-loading h4, .dict-risk-loading h4, .diri-risk-loading h4 {
-    color: #17a2b8;
+  color: var(--fdl-blue-700);
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}

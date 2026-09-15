@@ -276,15 +276,16 @@
    ===================================================================== */
 
 .label-section-item.boxed-warning-card {
-  background: linear-gradient(135deg, #fff5f5 0%, var(--afl-n-0) 60%) !important;
-  border-left: 5px solid #dc2626 !important;
-  border-color: #fca5a5 !important;
-  box-shadow: 0 4px 20px rgba(220, 38, 38, 0.10), 0 1px 3px rgba(0,0,0,0.08) !important;
+  background: #fffdfd !important;
+  border: 1px solid #fca5a5 !important;
+  border-left: 4px solid var(--fdl-danger, #b91c1c) !important;
+  border-radius: var(--fdl-radius-sm, 2px) !important;
+  box-shadow: none !important;
 }
 
 .label-section-item.boxed-warning-card h2 {
   color: #991b1b !important;
-  border-bottom-color: #fecaca !important;
+  border-bottom: 2px solid #fca5a5 !important;
 }
 
 /* =====================================================================
@@ -322,15 +323,15 @@
   gap: 4px;
   font-size: 0.72rem;
   font-weight: 700;
-  color: var(--afl-gov-blue);
+  color: var(--fdl-blue-700);
   text-decoration: none;
-  margin-top: 6px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: #f0f7ff;
-  border: 1px solid #bfdbfe;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: var(--fdl-radius-sm, 2px);
+  background: var(--fdl-blue-050);
+  border: 1px solid var(--fdl-line-strong);
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: all 0.12s ease;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   user-select: none;
@@ -339,7 +340,8 @@
 
 .highlight-goto-link:hover {
   background: #dbeafe;
-  border-color: #93c5fd;
+  border-color: var(--fdl-blue-600);
+  color: var(--fdl-navy-950);
 }
 
 .highlight-item-header {
@@ -1419,77 +1421,81 @@ html {
 .nav-tab-toggle-bar {
     display: flex;
     align-items: center;
-    background: var(--afl-n-100);
-    padding: 3px;
-    border-radius: 8px;
-    gap: 4px;
-    margin-bottom: 12px;
+    background: var(--fdl-canvas);
+    border: 1px solid var(--fdl-line);
+    padding: 2px;
+    border-radius: var(--fdl-radius-sm, 2px);
+    gap: 2px;
+    margin-bottom: 10px;
 }
 
 .nav-tab-toggle-btn {
     flex: 1;
-    border: none;
+    border: 1px solid transparent;
     background: transparent;
-    color: var(--afl-n-600);
-    font-size: 0.75rem;
+    color: var(--fdl-muted);
+    font-size: 0.74rem;
     font-weight: 700;
-    padding: 5px 8px;
-    border-radius: 6px;
+    padding: 4px 8px;
+    border-radius: var(--fdl-radius-sm, 2px);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    transition: all 0.15s ease;
+    gap: 5px;
+    transition: all 0.12s ease;
 }
 
 .nav-tab-toggle-btn:hover {
-    color: var(--afl-n-900);
+    color: var(--fdl-navy-950);
 }
 
 .nav-tab-toggle-btn.active {
-    background: white;
-    color: var(--afl-n-900);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    background: var(--fdl-surface);
+    color: var(--fdl-navy-950);
+    border-color: var(--fdl-line);
+    box-shadow: none;
 }
 
 .nav-tab-badge {
     font-size: 0.65rem;
     padding: 1px 5px;
-    border-radius: 10px;
-    background: var(--afl-n-200);
-    color: var(--afl-n-700);
+    border-radius: 2px;
+    background: var(--fdl-canvas);
+    border: 1px solid var(--fdl-line);
+    color: var(--fdl-muted);
     font-weight: 700;
 }
 
 .nav-tab-toggle-btn.active .nav-tab-badge {
-    background: #fef08a;
-    color: #854d0e;
+    background: var(--fdl-blue-050);
+    border-color: var(--fdl-blue-600);
+    color: var(--fdl-blue-700);
 }
 
 .soc-group-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 10px;
-    border-radius: 6px;
+    padding: 6px 8px;
+    border-radius: var(--fdl-radius-sm, 2px);
     cursor: pointer;
-    font-size: 0.8rem;
-    color: var(--afl-n-700);
-    transition: all 0.15s ease;
-    margin-bottom: 3px;
+    font-size: 0.78rem;
+    color: var(--fdl-ink);
+    transition: all 0.12s ease;
+    margin-bottom: 2px;
     border: 1px solid transparent;
 }
 
 .soc-group-item:hover {
-    background: var(--afl-n-50);
-    color: var(--afl-n-900);
+    background: var(--fdl-blue-050);
+    color: var(--fdl-navy-950);
 }
 
 .soc-group-item.active {
-    background: #fefce8;
-    color: #713f12;
-    border-color: #fef08a;
+    background: var(--fdl-blue-050);
+    color: var(--fdl-navy-950);
+    border-color: var(--fdl-blue-500);
     font-weight: 600;
 }
 
@@ -1497,18 +1503,18 @@ html {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 7px 10px;
-    border-radius: 6px;
+    padding: 5px 8px;
+    border-radius: var(--fdl-radius-sm, 2px);
     cursor: pointer;
-    font-size: 0.8rem;
-    color: var(--afl-n-800);
-    transition: all 0.15s ease;
+    font-size: 0.78rem;
+    color: var(--fdl-ink);
+    transition: all 0.12s ease;
     margin-bottom: 2px;
 }
 
 .soc-term-row:hover {
-    background: #fef9c3;
-    color: #713f12;
+    background: var(--fdl-blue-050);
+    color: var(--fdl-navy-950);
 }
 
 .soc-term-row.focused {

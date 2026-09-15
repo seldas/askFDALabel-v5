@@ -933,12 +933,12 @@ function LabelContent() {
           display: 'flex', 
           flexDirection: 'column', 
           minHeight: 0,
-          background: '#ffffff',
-          borderRadius: '16px',
-          border: '1px solid #cbd5e1',
-          boxShadow: '0 4px 20px rgba(15, 23, 42, 0.05)',
-          padding: '16px',
-          marginBottom: '20px'
+          background: 'var(--fdl-surface)',
+          borderRadius: 'var(--fdl-radius-sm, 2px)',
+          border: '1px solid var(--fdl-line)',
+          boxShadow: 'none',
+          padding: '14px',
+          marginBottom: '16px'
       }}>
           <div id="top-annotations-container" className="top-annotations-container"></div>
           {/*
@@ -953,31 +953,31 @@ function LabelContent() {
       {/* Product Specifications Modal Dialog */}
       {productSpecsModalOpen && (
         <div
-          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.55)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
           onClick={() => setProductSpecsModalOpen(false)}
         >
           <div
-            style={{ background: '#ffffff', borderRadius: '16px', width: '90%', maxWidth: '1000px', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #cbd5e1', overflow: 'hidden' }}
+            style={{ background: '#ffffff', borderRadius: 'var(--fdl-radius-sm, 2px)', width: '90%', maxWidth: '1000px', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 16px 40px rgba(15, 23, 42, 0.2)', border: '1px solid var(--fdl-line)', overflow: 'hidden' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--fdl-line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--fdl-canvas)' }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '1.2rem' }}>📦</span> Product Specifications
+                <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--fdl-navy-950)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>📦</span> Product Specifications
                 </h2>
-                <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: 'var(--fdl-muted)' }}>
                   Structured product registration &amp; packaging specifications extracted from the SPL XML document.
                 </p>
               </div>
               <button
                 onClick={() => setProductSpecsModalOpen(false)}
-                style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '6px 14px', cursor: 'pointer', fontWeight: 800, color: '#475569', fontSize: '0.85rem' }}
+                style={{ background: '#ffffff', border: '1px solid var(--fdl-line)', borderRadius: 'var(--fdl-radius-sm, 2px)', padding: '5px 12px', cursor: 'pointer', fontWeight: 700, color: 'var(--fdl-ink)', fontSize: '0.82rem' }}
               >
                 ✕ Close
               </button>
             </div>
 
-            <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+            <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
               <ProductSpecsTable productData={data?.product_data || []} />
             </div>
           </div>
@@ -1093,47 +1093,47 @@ function LabelContent() {
       </div>
 
       {ndcModalOpen && (
-        <div onClick={() => setNdcModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.45)', zIndex: 5000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(720px, 92vw)', maxHeight: 'min(520px, 80vh)', background: 'white', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', border: '1px solid #e2e8f0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '14px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
-              <div><div style={{ fontWeight: 800, color: '#0f172a' }}>NDC Codes</div><div style={{ fontSize: '0.8rem', color: '#64748b' }}>ESC or outside click to close</div></div>
-              <button onClick={() => setNdcModalOpen(false)} style={{ width: '34px', height: '34px', borderRadius: '10px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: '18px', color: '#334155' }}>×</button>
+        <div onClick={() => setNdcModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.55)', zIndex: 5000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(720px, 92vw)', maxHeight: 'min(520px, 80vh)', background: 'white', borderRadius: 'var(--fdl-radius-sm, 2px)', boxShadow: '0 16px 40px rgba(15, 23, 42, 0.2)', border: '1px solid var(--fdl-line)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--fdl-line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--fdl-canvas)' }}>
+              <div><div style={{ fontWeight: 800, color: 'var(--fdl-navy-950)' }}>NDC Codes</div><div style={{ fontSize: '0.78rem', color: 'var(--fdl-muted)' }}>ESC or outside click to close</div></div>
+              <button onClick={() => setNdcModalOpen(false)} style={{ width: '30px', height: '30px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line)', background: 'white', cursor: 'pointer', fontSize: '16px', color: 'var(--fdl-ink)' }}>×</button>
             </div>
             <div style={{ padding: '16px', overflow: 'auto' }}>
               {ndcList.length > 0 ? (
                 <div className="ndc-container" style={{ maxWidth: '100%', padding: '8px' }}>
                   {ndcList.map((code, i) => (
-                    <span key={i} className="ndc-badge" style={{ padding: '6px 12px', fontSize: '0.9rem' }}>{code}</span>
+                    <span key={i} className="ndc-badge" style={{ padding: '4px 10px', fontSize: '0.85rem' }}>{code}</span>
                   ))}
                 </div>
-              ) : <div style={{ color: '#64748b' }}>No NDC codes available.</div>}
+              ) : <div style={{ color: 'var(--fdl-muted)' }}>No NDC codes available.</div>}
             </div>
           </div>
         </div>
       )}
 
       {companyModalOpen && (
-        <div onClick={() => setCompanyModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.45)', zIndex: 5000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', backdropFilter: 'blur(4px)' }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(800px, 95vw)', maxHeight: 'min(600px, 90vh)', background: 'white', borderRadius: '20px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e2e8f0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div><h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Organization Details</h3><p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Companies involved in manufacture/distribution</p></div>
-              <button onClick={() => setCompanyModalOpen(false)} style={{ background: 'white', border: '1px solid #e2e8f0', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer' }}>×</button>
+        <div onClick={() => setCompanyModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.55)', zIndex: 5000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(800px, 95vw)', maxHeight: 'min(600px, 90vh)', background: 'white', borderRadius: 'var(--fdl-radius-sm, 2px)', boxShadow: '0 16px 40px rgba(15, 23, 42, 0.2)', border: '1px solid var(--fdl-line)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--fdl-line)', background: 'var(--fdl-canvas)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div><h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--fdl-navy-950)' }}>Organization Details</h3><p style={{ margin: '3px 0 0 0', fontSize: '0.78rem', color: 'var(--fdl-muted)', fontWeight: 500 }}>Companies involved in manufacture/distribution</p></div>
+              <button onClick={() => setCompanyModalOpen(false)} style={{ background: 'white', border: '1px solid var(--fdl-line)', width: '30px', height: '30px', borderRadius: 'var(--fdl-radius-sm, 2px)', cursor: 'pointer', color: 'var(--fdl-ink)' }}>×</button>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {data?.companies?.map((comp, idx) => (
-                <div key={idx} style={{ border: '1px solid #e2e8f0', borderRadius: '14px', padding: '16px 20px', background: '#f8fafc' }}>
+                <div key={idx} style={{ border: '1px solid var(--fdl-line)', borderRadius: 'var(--fdl-radius-sm, 2px)', padding: '14px 18px', background: 'var(--fdl-surface)' }}>
                   {/* Role badge + Name */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#475569', background: '#e2e8f0', padding: '3px 10px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--fdl-navy-800)', background: 'var(--fdl-blue-050)', border: '1px solid var(--fdl-line)', padding: '2px 8px', borderRadius: '2px', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                       {comp.role}
                     </span>
-                    <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.95rem' }}>{comp.name}</span>
+                    <span style={{ fontWeight: 700, color: 'var(--fdl-navy-950)', fontSize: '0.92rem' }}>{comp.name}</span>
                   </div>
                   {/* Details row */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.8rem', color: '#475569' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', fontSize: '0.8rem', color: 'var(--fdl-ink)' }}>
                     {comp.address && (
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', flex: '1 1 200px' }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: '2px', flexShrink: 0 }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: '2px', flexShrink: 0, color: 'var(--fdl-muted)' }}>
                           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
                         </svg>
                         <span>{comp.address}</span>
@@ -1141,83 +1141,83 @@ function LabelContent() {
                     )}
                     {comp.duns && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-                        <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>DUNS</span>
-                        <span style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700, color: '#334155' }}>{comp.duns}</span>
+                        <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--fdl-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'var(--fdl-font-mono)' }}>DUNS</span>
+                        <span style={{ fontFamily: 'var(--fdl-font-mono)', fontWeight: 700, color: 'var(--fdl-navy-950)' }}>{comp.duns}</span>
                       </div>
                     )}
                     {comp.safety_phone && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fdl-blue-700)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                           <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13 19.79 19.79 0 0 1 1.62 4.38 2 2 0 0 1 3.6 2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.08 6.08l.99-.99a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
                         </svg>
-                        <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#0284c7', textTransform: 'uppercase' }}>Safety</span>
-                        <span style={{ fontWeight: 700, color: '#0284c7' }}>{comp.safety_phone}</span>
+                        <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--fdl-blue-700)', textTransform: 'uppercase' }}>Safety</span>
+                        <span style={{ fontWeight: 700, color: 'var(--fdl-blue-700)' }}>{comp.safety_phone}</span>
                       </div>
                     )}
                   </div>
                 </div>
               ))}
             </div>
-            <div style={{ padding: '20px 24px', borderTop: '1px solid #f1f5f9', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end' }}>
-              <button onClick={() => setCompanyModalOpen(false)} style={{ padding: '10px 24px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 800 }}>CLOSE</button>
+            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--fdl-line)', background: 'var(--fdl-canvas)', display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setCompanyModalOpen(false)} style={{ padding: '7px 18px', background: 'var(--fdl-navy-950)', color: 'white', border: 'none', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>Close</button>
             </div>
           </div>
         </div>
       )}
       {exportModalOpen && (
-        <div onClick={() => setExportModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.45)', zIndex: 5000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', backdropFilter: 'blur(4px)' }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(600px, 95vw)', maxHeight: 'min(700px, 90vh)', background: 'white', borderRadius: '20px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e2e8f0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div><h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Export Sections</h3><p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Select label sections and preferred format</p></div>
-              <button onClick={() => setExportModalOpen(false)} style={{ background: 'white', border: '1px solid #e2e8f0', width: '32px', height: '32px', borderRadius: '8px' }}>×</button>
+        <div onClick={() => setExportModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.55)', zIndex: 5000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(600px, 95vw)', maxHeight: 'min(700px, 90vh)', background: 'white', borderRadius: 'var(--fdl-radius-sm, 2px)', boxShadow: '0 16px 40px rgba(15, 23, 42, 0.2)', border: '1px solid var(--fdl-line)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--fdl-line)', background: 'var(--fdl-canvas)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div><h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--fdl-navy-950)' }}>Export Sections</h3><p style={{ margin: '3px 0 0 0', fontSize: '0.78rem', color: 'var(--fdl-muted)', fontWeight: 500 }}>Select label sections and preferred format</p></div>
+              <button onClick={() => setExportModalOpen(false)} style={{ background: 'white', border: '1px solid var(--fdl-line)', width: '30px', height: '30px', borderRadius: 'var(--fdl-radius-sm, 2px)', cursor: 'pointer', color: 'var(--fdl-ink)' }}>×</button>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8' }}>Available Sections ({selectedSectionsForExport.size})</span>
-                <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--fdl-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Available Sections ({selectedSectionsForExport.size})</span>
+                <div style={{ display: 'flex', gap: '10px' }}>
                   <button onClick={() => {
                     const allIds = new Set<string>();
                     const addIdsRecursive = (items: any[]) => { items.forEach(i => { allIds.add(i.id); if (i.children) addIdsRecursive(i.children); }); };
                     if (data.table_of_contents) addIdsRecursive(data.table_of_contents);
                     setSelectedSectionsForExport(allIds);
-                  }} style={{ color: '#3b82f6', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '0.7rem' }}>SELECT ALL</button>
-                  <button onClick={() => setSelectedSectionsForExport(new Set())} style={{ color: '#64748b', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '0.7rem' }}>CLEAR</button>
+                  }} style={{ color: 'var(--fdl-blue-700)', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.72rem' }}>SELECT ALL</button>
+                  <button onClick={() => setSelectedSectionsForExport(new Set())} style={{ color: 'var(--fdl-muted)', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.72rem' }}>CLEAR</button>
                 </div>
               </div>
-              <div style={{ background: '#f9fafb', border: '1px solid #f1f5f9', borderRadius: '12px', padding: '16px' }}>
+              <div style={{ background: 'var(--fdl-canvas)', border: '1px solid var(--fdl-line)', borderRadius: 'var(--fdl-radius-sm, 2px)', padding: '14px' }}>
                 {data?.table_of_contents?.map(item => <ExportSectionItem key={item.id} item={item} selectedSectionsForExport={selectedSectionsForExport} toggleSectionSelection={toggleSectionSelection} />)}
               </div>
             </div>
-            <div style={{ padding: '20px 24px', borderTop: '1px solid #f1f5f9', background: '#f8fafc' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800 }}>FORMAT:</span>
-                <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ padding: '16px 20px', borderTop: '1px solid var(--fdl-line)', background: 'var(--fdl-canvas)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--fdl-navy-950)' }}>FORMAT:</span>
+                <div style={{ display: 'flex', gap: '6px' }}>
                   {(['html', 'xml', 'text'] as const).map(fmt => (
-                    <button key={fmt} onClick={() => setExportFormat(fmt)} style={{ padding: '6px 16px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, backgroundColor: exportFormat === fmt ? '#3b82f6' : 'white', color: exportFormat === fmt ? 'white' : '#64748b', border: '1px solid #e2e8f0' }}>{fmt}</button>
+                    <button key={fmt} onClick={() => setExportFormat(fmt)} style={{ padding: '5px 14px', borderRadius: 'var(--fdl-radius-sm, 2px)', fontSize: '0.75rem', fontWeight: 700, backgroundColor: exportFormat === fmt ? 'var(--fdl-blue-700)' : 'white', color: exportFormat === fmt ? 'white' : 'var(--fdl-ink)', border: '1px solid', borderColor: exportFormat === fmt ? 'var(--fdl-blue-700)' : 'var(--fdl-line)', cursor: 'pointer' }}>{fmt.toUpperCase()}</button>
                   ))}
                 </div>
               </div>
-              <button onClick={handleExport} style={{ width: '100%', backgroundColor: '#0f172a', color: 'white', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer' }}>GENERATE EXPORT FILE</button>
+              <button onClick={handleExport} style={{ width: '100%', backgroundColor: 'var(--fdl-navy-950)', color: 'white', border: 'none', padding: '10px', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer' }}>GENERATE EXPORT FILE</button>
             </div>
           </div>
         </div>
       )}
 
       {projectModalOpen && (
-        <div onClick={() => setProjectModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.45)', zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', backdropFilter: 'blur(4px)' }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(450px, 95vw)', maxHeight: 'min(500px, 80vh)', background: 'white', borderRadius: '20px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e2e8f0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div onClick={() => setProjectModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.55)', zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(460px, 95vw)', maxHeight: 'min(520px, 80vh)', background: 'white', borderRadius: 'var(--fdl-radius-sm, 2px)', boxShadow: '0 16px 40px rgba(15, 23, 42, 0.2)', border: '1px solid var(--fdl-line)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--fdl-line)', background: 'var(--fdl-canvas)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>Add to Projects</h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#64748b' }}>Select projects for this label</p>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--fdl-navy-950)' }}>Add to Projects</h3>
+                <p style={{ margin: '3px 0 0 0', fontSize: '0.78rem', color: 'var(--fdl-muted)' }}>Select projects for this label</p>
               </div>
-              <button onClick={() => setProjectModalOpen(false)} style={{ background: 'white', border: '1px solid #e2e8f0', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer' }}>×</button>
+              <button onClick={() => setProjectModalOpen(false)} style={{ background: 'white', border: '1px solid var(--fdl-line)', width: '30px', height: '30px', borderRadius: 'var(--fdl-radius-sm, 2px)', cursor: 'pointer', color: 'var(--fdl-ink)' }}>×</button>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
               {projects.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>No projects found.</div>
+                <div style={{ textAlign: 'center', padding: '20px', color: 'var(--fdl-muted)' }}>No projects found.</div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {projects.map((p) => {
                     const isInProject = labelProjectIds.includes(p.id);
                     const isToggling = isTogglingProject === p.id;
@@ -1230,27 +1230,27 @@ function LabelContent() {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
-                          padding: '12px 16px',
-                          borderRadius: '12px',
+                          padding: '10px 14px',
+                          borderRadius: 'var(--fdl-radius-sm, 2px)',
                           border: '1px solid',
-                          borderColor: isInProject ? '#bfdbfe' : '#e2e8f0',
-                          backgroundColor: isInProject ? '#eff6ff' : 'white',
+                          borderColor: isInProject ? 'var(--fdl-blue-600)' : 'var(--fdl-line)',
+                          backgroundColor: isInProject ? 'var(--fdl-blue-050)' : 'white',
                           cursor: isToggling ? 'not-allowed' : 'pointer',
-                          transition: 'all 0.2s ease',
+                          transition: 'all 0.12s ease',
                           textAlign: 'left'
                         }}
                       >
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontWeight: 700, color: isInProject ? '#1e40af' : '#334155', fontSize: '0.9rem' }}>{p.title}</span>
-                          <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{p.role === 'owner' ? 'Your Project' : 'Shared with you'}</span>
+                          <span style={{ fontWeight: 700, color: isInProject ? 'var(--fdl-navy-950)' : 'var(--fdl-ink)', fontSize: '0.88rem' }}>{p.title}</span>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--fdl-muted)' }}>{p.role === 'owner' ? 'Your Project' : 'Shared with you'}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {isToggling ? (
-                            <div className="loader" style={{ width: '16px', height: '16px', borderWidth: '2px' }}></div>
+                            <div className="loader" style={{ width: '14px', height: '14px', borderWidth: '2px' }}></div>
                           ) : isInProject ? (
-                            <span style={{ color: '#2563eb', fontWeight: 900 }}>✓</span>
+                            <span style={{ color: 'var(--fdl-blue-700)', fontWeight: 900 }}>✓</span>
                           ) : (
-                            <span style={{ color: '#cbd5e1' }}>+</span>
+                            <span style={{ color: 'var(--fdl-muted)' }}>+</span>
                           )}
                         </div>
                       </button>
@@ -1259,8 +1259,8 @@ function LabelContent() {
                 </div>
               )}
             </div>
-            <div style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', background: '#f8fafc', display: 'flex', justifyContent: 'center' }}>
-               <Link href="/dashboard" target="_blank" style={{ fontSize: '0.8rem', color: '#3b82f6', textDecoration: 'none', fontWeight: 600 }}>Manage Projects in Dashboard ↗</Link>
+            <div style={{ padding: '12px 20px', borderTop: '1px solid var(--fdl-line)', background: 'var(--fdl-canvas)', display: 'flex', justifyContent: 'center' }}>
+               <Link href="/dashboard" target="_blank" style={{ fontSize: '0.78rem', color: 'var(--fdl-blue-700)', textDecoration: 'none', fontWeight: 600 }}>Manage Projects in Dashboard ↗</Link>
             </div>
           </div>
         </div>
