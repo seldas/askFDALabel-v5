@@ -724,10 +724,10 @@ function LabelContent() {
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                {data.label_format && <span className={`afl-badge afl-badge--${data.label_format === 'PLR' ? 'success' : 'neutral'}`} style={{ fontSize: '0.72rem', padding: '2px 8px' }}>{data.label_format}</span>}
-                {data.is_rld && <span className="afl-badge afl-badge--danger" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>RLD</span>}
-                {data.openfda_status && <span className={`afl-badge afl-badge--${data.openfda_status === 'Current' ? 'info' : 'warn'}`} style={{ fontSize: '0.72rem', padding: '2px 8px' }}>{data.openfda_status}</span>}
-                {data.application_number && <span style={{ fontSize: '0.74rem', fontFamily: 'ui-monospace, monospace', fontWeight: 700, color: '#475569', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>{data.application_number}</span>}
+                {data.label_format && <span className={`afl-badge afl-badge--${data.label_format === 'PLR' ? 'success' : 'neutral'}`}>{data.label_format}</span>}
+                {data.is_rld && <span className="afl-badge afl-badge--danger">RLD</span>}
+                {data.openfda_status && <span className={`afl-badge afl-badge--${data.openfda_status === 'Current' ? 'info' : 'warn'}`}>{data.openfda_status}</span>}
+                {data.application_number && <span className="afl-badge afl-badge--neutral" style={{ fontFamily: 'var(--fdl-font-mono, monospace)', letterSpacing: '0.04em' }}>{data.application_number}</span>}
                 <button
                   type="button"
                   onClick={() => setHeaderCollapsed(false)}
@@ -796,10 +796,10 @@ function LabelContent() {
               )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-              {data.label_format && <span className={`afl-badge afl-badge--${data.label_format === 'PLR' ? 'success' : 'neutral'}`} style={{ fontSize: '0.72rem', padding: '2px 8px' }}>{data.label_format}</span>}
-              {data.is_rld && <span className="afl-badge afl-badge--danger" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>RLD</span>}
-              {data.openfda_status && <span className={`afl-badge afl-badge--${data.openfda_status === 'Current' ? 'info' : 'warn'}`} style={{ fontSize: '0.72rem', padding: '2px 8px' }}>{data.openfda_status}</span>}
-              {data.application_number && <span style={{ fontSize: '0.74rem', fontFamily: 'ui-monospace, monospace', fontWeight: 700, color: '#475569', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>{data.application_number}</span>}
+              {data.label_format && <span className={`afl-badge afl-badge--${data.label_format === 'PLR' ? 'success' : 'neutral'}`}>{data.label_format}</span>}
+              {data.is_rld && <span className="afl-badge afl-badge--danger">RLD</span>}
+              {data.openfda_status && <span className={`afl-badge afl-badge--${data.openfda_status === 'Current' ? 'info' : 'warn'}`}>{data.openfda_status}</span>}
+              {data.application_number && <span className="afl-badge afl-badge--neutral" style={{ fontFamily: 'var(--fdl-font-mono, monospace)', letterSpacing: '0.04em' }}>{data.application_number}</span>}
               <button
                 type="button"
                 onClick={() => setHeaderCollapsed(false)}

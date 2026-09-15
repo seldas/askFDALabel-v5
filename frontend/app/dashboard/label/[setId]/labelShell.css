@@ -224,13 +224,13 @@
 }
 
 .afl-collapse-toggle-btn {
-  background: var(--fdl-blue-050);
-  color: var(--fdl-blue-700);
-  border: 1px solid var(--fdl-line-strong);
+  background: var(--fdl-surface);
+  color: var(--fdl-muted);
+  border: 1px solid var(--fdl-line);
   border-radius: var(--fdl-radius-sm, 2px);
-  padding: 3px 8px;
-  font-size: 0.72rem;
-  font-weight: 700;
+  padding: 2px 7px;
+  font-size: 0.7rem;
+  font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -240,9 +240,9 @@
 }
 
 .afl-collapse-toggle-btn:hover {
-  background: #dbeafe;
-  border-color: var(--fdl-blue-600);
-  color: var(--fdl-navy-950);
+  background: var(--fdl-canvas);
+  border-color: var(--fdl-line-strong);
+  color: var(--fdl-text);
 }
 
 @keyframes afl-fade-in {
