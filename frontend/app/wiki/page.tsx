@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import Footer from '../components/Footer';
 import { useUser } from '../context/UserContext';
@@ -19,8 +19,6 @@ export default function WikiPage() {
   // States
   const [activeTopicId, setActiveTopicId] = useState<string>(allTopics[0]?.id || '1-1-account-login');
   const [searchQuery, setSearchQuery] = useState('');
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
-  const contentRef = useRef<HTMLDivElement>(null);
 
   // Keyboard shortcut: Ctrl+K / Cmd+K focus on search
   useEffect(() => {
@@ -80,13 +78,6 @@ export default function WikiPage() {
   // Topic Selection Handler
   const selectTopic = (id: string) => {
     setActiveTopicId(id);
-    if (contentRef.current) {
-      contentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
-  const toggleSection = (sectionId: string) => {
-    setCollapsedSections((prev) => ({ ...prev, [sectionId]: !prev[sectionId] }));
   };
 
   return (
@@ -123,22 +114,6 @@ export default function WikiPage() {
             v5.0
           </span>
         </div>
-
-        <Link
-          href="/dashboard"
-          style={{
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            color: '#002e5d',
-            textDecoration: 'none',
-            padding: '5px 12px',
-            borderRadius: '6px',
-            border: '1px solid #cbd5e1',
-            background: '#ffffff',
-          }}
-        >
-          &larr; Return to Application
-        </Link>
       </header>
 
       {/* Two-Column Handbook Body */}
@@ -246,24 +221,15 @@ export default function WikiPage() {
 
                   {/* Sections */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                    {part.sections.map((sec) => {
-                      const isCollapsed = collapsedSections[sec.id] && !q;
-                      return (
+                    {part.sections.map((sec) => (
                         <div key={sec.id}>
                           {/* Section Header */}
-                          <button
-                            type="button"
-                            onClick={() => toggleSection(sec.id)}
+                          <div
                             style={{
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'space-between',
                               width: '100%',
                               padding: '4px 6px',
-                              borderRadius: '4px',
-                              border: 'none',
-                              background: 'transparent',
-                              cursor: 'pointer',
                               textAlign: 'left',
                             }}
                           >
@@ -271,63 +237,57 @@ export default function WikiPage() {
                               <span style={{ color: '#002e5d', marginRight: '6px' }}>{sec.number}</span>
                               {sec.title}
                             </span>
-                            <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>
-                              {isCollapsed ? '+' : '−'}
-                            </span>
-                          </button>
+                          </div>
 
                           {/* Topic Links */}
-                          {!isCollapsed && (
-                            <div
-                              style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '1px',
-                                paddingLeft: '0.75rem',
-                                borderLeft: '1.5px solid #e2e8f0',
-                                marginLeft: '0.5rem',
-                                marginTop: '2px',
-                              }}
-                            >
-                              {sec.topics.map((t) => {
-                                const isActive = t.id === activeTopic?.id;
-                                return (
-                                  <button
-                                    key={t.id}
-                                    type="button"
-                                    onClick={() => selectTopic(t.id)}
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'space-between',
-                                      width: '100%',
-                                      padding: '5px 8px',
-                                      borderRadius: '4px',
-                                      border: 'none',
-                                      textAlign: 'left',
-                                      cursor: 'pointer',
-                                      fontSize: '0.78rem',
-                                      lineHeight: 1.35,
-                                      fontWeight: isActive ? 700 : 500,
-                                      color: isActive ? '#002e5d' : '#475569',
-                                      background: isActive ? '#eff6ff' : 'transparent',
-                                      borderLeft: isActive ? '3px solid #002e5d' : '3px solid transparent',
-                                    }}
-                                  >
-                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                      <span style={{ color: isActive ? '#002e5d' : '#64748b', marginRight: '5px', fontWeight: 600 }}>
-                                        {t.number}
-                                      </span>
-                                      {t.title}
+                          <div
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '1px',
+                              paddingLeft: '0.75rem',
+                              borderLeft: '1.5px solid #e2e8f0',
+                              marginLeft: '0.5rem',
+                              marginTop: '2px',
+                            }}
+                          >
+                            {sec.topics.map((t) => {
+                              const isActive = t.id === activeTopic?.id;
+                              return (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  onClick={() => selectTopic(t.id)}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    width: '100%',
+                                    padding: '5px 8px',
+                                    borderRadius: '4px',
+                                    border: 'none',
+                                    textAlign: 'left',
+                                    cursor: 'pointer',
+                                    fontSize: '0.78rem',
+                                    lineHeight: 1.35,
+                                    fontWeight: isActive ? 700 : 500,
+                                    color: isActive ? '#002e5d' : '#475569',
+                                    background: isActive ? '#eff6ff' : 'transparent',
+                                    borderLeft: isActive ? '3px solid #002e5d' : '3px solid transparent',
+                                  }}
+                                >
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span style={{ color: isActive ? '#002e5d' : '#64748b', marginRight: '5px', fontWeight: 600 }}>
+                                      {t.number}
                                     </span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
+                                    {t.title}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                      );
-                    })}
+                    ))}
                   </div>
                 </div>
               ))}
@@ -337,7 +297,6 @@ export default function WikiPage() {
 
         {/* RIGHT COLUMN: Main Content Area (flex: 1) */}
         <main
-          ref={contentRef}
           style={{
             flex: 1,
             minWidth: 0,
