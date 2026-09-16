@@ -186,11 +186,34 @@ a { color: var(--fdl-blue-700); }
 .dropdown-item:hover { background: var(--fdl-blue-050); color: var(--fdl-blue-700); }
 .dropdown-section-label,
 .account-label { padding: 0.6rem 0.8rem 0.3rem; color: var(--fdl-muted); font-family: var(--fdl-font-mono); font-size: 0.68rem; letter-spacing: 0.08em; }
+.dropdown-section-label--separated { margin-top: 0.25rem; border-top: 1px solid var(--fdl-line-soft); padding-top: 0.7rem; }
 .account-block { padding: 0.8rem; border-bottom: 1px solid var(--fdl-line-soft); }
+.account-identity { display: flex; align-items: center; gap: 0.6rem; }
+.account-avatar { display: grid; place-items: center; width: 30px; height: 30px; flex: 0 0 auto; background: var(--fdl-navy-950); color: var(--fdl-paper); font-family: var(--fdl-font-mono); font-weight: 700; }
 .account-name { color: var(--fdl-navy-950); font-weight: 700; }
+.account-role { margin-top: 0.05rem; color: var(--fdl-muted); font-size: 0.7rem; }
 .account-ai-status,
-.account-ai-config { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.5rem; padding: 0.35rem 0.5rem; border: 1px solid var(--fdl-line); border-radius: 2px; background: var(--fdl-blue-050); color: var(--fdl-blue-700); font-size: 0.72rem; text-decoration: none; }
+.account-ai-config { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.55rem; padding: 0.35rem 0.5rem; border: 1px solid var(--fdl-line); border-radius: 2px; background: var(--fdl-blue-050); color: var(--fdl-blue-700); font-size: 0.72rem; text-decoration: none; }
+.account-ai-status strong { margin-left: auto; color: var(--fdl-navy-950); font-size: 0.7rem; }
+.account-ai-config { justify-content: space-between; }
 .dropdown-item.danger { color: var(--fdl-red); }
+
+.about-dropdown-menu { width: 320px; }
+.about-product { padding: 0.9rem 0.9rem 0.7rem; border-bottom: 1px solid var(--fdl-line-soft); }
+.about-product-heading { display: flex; align-items: center; gap: 0.45rem; color: var(--fdl-navy-950); font-size: 0.94rem; font-weight: 700; }
+.about-badge { padding: 0.1rem 0.35rem; background: var(--fdl-blue-100); color: var(--fdl-blue-700); font-family: var(--fdl-font-mono); font-size: 0.61rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.about-product p { margin: 0.35rem 0 0; color: var(--fdl-ink-soft); font-size: 0.74rem; line-height: 1.5; }
+.about-links { display: flex; flex-direction: column; padding: 0.45rem; }
+.about-link { display: flex; align-items: center; justify-content: space-between; gap: 0.55rem; padding: 0.52rem 0.55rem; color: var(--fdl-ink-soft); font-size: 0.75rem; text-decoration: none; }
+.about-link:hover { background: var(--fdl-blue-050); color: var(--fdl-blue-700); }
+.about-link--primary { align-items: center; color: var(--fdl-blue-700); }
+.about-link--primary > span:nth-child(2) { display: flex; flex: 1; flex-direction: column; gap: 0.1rem; }
+.about-link strong { font-size: 0.78rem; }
+.about-link small { color: var(--fdl-muted); font-size: 0.68rem; }
+.about-link-icon { display: grid; place-items: center; width: 23px; height: 23px; background: var(--fdl-navy-950); color: var(--fdl-paper); font-family: var(--fdl-font-mono); font-weight: 700; }
+.about-link--support { align-items: flex-start; flex-direction: column; gap: 0.12rem; color: var(--fdl-ink-soft); }
+.about-link--support span { color: var(--fdl-blue-700); font-size: 0.69rem; overflow-wrap: anywhere; }
+.about-footer { margin: 0 0.9rem; padding: 0.55rem 0 0.7rem; border-top: 1px solid var(--fdl-line-soft); color: var(--fdl-muted); font-size: 0.66rem; }
 
 /* Shared modal shell */
 .modal-overlay {

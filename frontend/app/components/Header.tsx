@@ -546,13 +546,17 @@ export default function Header({
                 <div className="dropdown-menu account-dropdown-menu" style={{ right: 0, left: 'auto' }}>
                   <div className="account-block">
                     <div className="account-label">ACCOUNT</div>
-                    <div className="account-name">{session.username}</div>
-                    <div 
-                      className="account-ai-status"
-                      title={!session?.is_admin ? "this model is selected by the admin" : undefined}
-                    >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>
-                        AI: {session.ai_provider?.toUpperCase()}
+                    <div className="account-identity">
+                      <div className="account-avatar" aria-hidden="true">{session.username?.[0].toUpperCase()}</div>
+                      <div>
+                        <div className="account-name">{session.username}</div>
+                        <div className="account-role">{session?.is_admin ? 'Administrator' : 'Account'}</div>
+                      </div>
+                    </div>
+                    <div className="account-ai-status" title={!session?.is_admin ? "This model is selected by the administrator" : undefined}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>
+                      <span>AI model</span>
+                      <strong>{session.ai_provider?.toUpperCase()}</strong>
                     </div>
                     {session?.is_admin && !isGuest ? (
                       <Link
@@ -560,13 +564,14 @@ export default function Header({
                         className="account-ai-config"
                         onClick={() => setActiveDropdown(null)}
                       >
-                        Change AI Engine
+                        Manage AI model
                         <span aria-hidden="true">→</span>
                       </Link>
                     ) : null}
                   </div>
 
                   <div className="account-actions">
+                    <div className="dropdown-section-label">WORKSPACE</div>
                     <Link href="/dashboard" className="dropdown-item dropdown-item--secondary-action" onClick={() => setActiveDropdown(null)}>
                       My Dashboard
                     </Link>
@@ -579,6 +584,7 @@ export default function Header({
                         Search & Query History
                       </Link>
                     )}
+                    {!isGuest && <div className="dropdown-section-label dropdown-section-label--separated">ACCOUNT</div>}
                     {!isGuest && (
                       <Link href="/management" className="dropdown-item dropdown-item--secondary-action" onClick={() => setActiveDropdown(null)}>
                         {session?.is_admin ? 'System Management' : 'Settings & Preferences'}
@@ -630,94 +636,36 @@ export default function Header({
           </button>
 
           {activeDropdown === 'updates' && (
-            <div className="dropdown-menu" style={{ 
-              width: '340px', 
-              right: 0, 
-              left: 'auto',
-              padding: '1.5rem',
-              backgroundColor: '#ffffff',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-              border: '1px solid #e2e8f0',
-              borderRadius: '0',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <span>AskFDALabel -V3.0</span>
-                <span style={{ 
-                  fontSize: '0.65rem', 
-                  fontWeight: 700, 
-                  textTransform: 'uppercase', 
-                  backgroundColor: '#dcecf8',
-                  color: '#0759a5',
-                  padding: '2px 8px', 
-                  borderRadius: '2px',
-                  lineHeight: '1.2',
-                  letterSpacing: '0.05em'
-                }}>
-                  alpha
-                </span>
+            <div className="dropdown-menu about-dropdown-menu" style={{ right: 0, left: 'auto' }}>
+              <div className="about-product">
+                <div className="about-product-heading">
+                  <span>AskFDALabel V3</span>
+                  <span className="about-badge">Alpha</span>
+                </div>
+                <p>Search, review, and analyze FDA drug-label metadata.</p>
               </div>
-              <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.6, marginBottom: '14px' }}>
-                FDALabel web application for search, customization, and analysis of drug labeling metadata.
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.82rem', marginBottom: '16px', textAlign: 'left', padding: '10px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
-                <Link
-                  href="/wiki"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setActiveDropdown(null)}
-                  style={{
-                    backgroundColor: '#eff6ff',
-                    border: '1px solid #bfdbfe',
-                    borderRadius: '8px',
-                    padding: '8px 12px',
-                    color: '#1d4ed8',
-                    fontWeight: 700,
-                    textDecoration: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '8px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '1.1rem' }}>📖</span>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e3a8a' }}>User Guide & Wiki</span>
-                      <span style={{ fontSize: '0.72rem', color: '#3b82f6', fontWeight: 500 }}>Search FAQs & Guidance</span>
-                    </div>
-                  </div>
-                  <span style={{ fontSize: '0.85rem', color: '#2563eb' }}>↗</span>
+              <div className="about-links">
+                <Link href="/wiki" target="_blank" rel="noopener noreferrer" onClick={() => setActiveDropdown(null)} className="about-link about-link--primary">
+                  <span className="about-link-icon" aria-hidden="true">?</span>
+                  <span><strong>User Guide &amp; Wiki</strong><small>FAQs, guidance, and workflows</small></span>
+                  <span aria-hidden="true">↗</span>
                 </Link>
-
                 <a
                   href="https://www.fda.gov/ScienceResearch/BioinformaticsTools/ucm289739.htm"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  className="about-link"
                 >
-                  <span>FDA Bioinformatics Tools</span>
+                  FDA Bioinformatics Tools <span aria-hidden="true">↗</span>
                 </a>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '0.78rem', marginTop: '2px' }}>
-                  <span style={{ color: '#64748b', fontWeight: 600 }}>Report Technical Problems:</span>
-                  <a
-                    href="mailto:NCTRBioinformaticsSupport@fda.hhs.gov"
-                    style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'underline', wordBreak: 'break-all' }}
-                  >
-                    NCTRBioinformaticsSupport@fda.hhs.gov
-                  </a>
-                </div>
-                <Link
-                  href="/disclaimer"
-                  onClick={() => setActiveDropdown(null)}
-                  style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <span>FDALabel Disclaimer →</span>
+                <a href="mailto:NCTRBioinformaticsSupport@fda.hhs.gov" className="about-link about-link--support">
+                  Technical support <span>NCTRBioinformaticsSupport@fda.hhs.gov</span>
+                </a>
+                <Link href="/disclaimer" onClick={() => setActiveDropdown(null)} className="about-link">
+                  FDALabel Disclaimer <span aria-hidden="true">→</span>
                 </Link>
               </div>
-
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
+              <div className="about-footer">
                 &copy; {new Date().getFullYear()} FDA/NCTR
               </div>
             </div>
