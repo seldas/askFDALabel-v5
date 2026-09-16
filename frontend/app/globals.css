@@ -132,6 +132,21 @@ a { color: var(--fdl-blue-700); }
   font-size: 0.7rem;
 }
 
+.header-chip--account {
+  justify-content: flex-start;
+  gap: 0.5rem;
+  padding-left: 0.65rem;
+}
+
+.header-chip--account .username-text {
+  font-weight: 800;
+  line-height: 1;
+}
+
+.header-chip--account .caret {
+  margin-left: 0.1rem;
+}
+
 .caret { margin-left: 0.25rem; font-size: 0.65rem; }
 .header-muted { color: #b8c8d7; font-size: 0.78rem; }
 

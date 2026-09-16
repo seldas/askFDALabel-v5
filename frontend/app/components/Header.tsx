@@ -534,11 +534,11 @@ export default function Header({
             {/* 2. User Panel Dropdown */}
             <div className="custom-dropdown" onClick={(e) => e.stopPropagation()}>
               <button 
-                className={cx('dropdown-trigger header-chip', activeDropdown === 'user' && 'active')} 
+                className={cx('dropdown-trigger header-chip header-chip--account', activeDropdown === 'user' && 'active')}
                 onClick={() => setActiveDropdown(activeDropdown === 'user' ? null : 'user')}
               >
                 <div className="avatar-circle">{session.username?.[0].toUpperCase()}</div>
-                <span className="username-text" style={{ fontWeight: 800 }}>{session.username}</span>
+                <span className="username-text">{session.username}</span>
                 <span className="caret">▼</span>
               </button>
 
