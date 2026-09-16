@@ -246,59 +246,17 @@ export function AiIntentPanel({
   };
 
   return (
-    <section 
-      className="fdl-ai" 
-      aria-label="Natural Language Query Assistant"
-      style={{
-        borderRadius: '0',
-        border: '1px solid #b8c8d7',
-        borderTop: '3px solid #071f3d',
-        background: '#ffffff',
-        boxShadow: 'none',
-        padding: '22px 24px',
-        marginBottom: '20px',
-        position: 'relative',
-      }}
-    >
-      <div className="fdl-ai__head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+    <section className="fdl-ai" aria-label="Natural Language Query Assistant">
+      <div className="fdl-ai__head">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '9px', flexWrap: 'wrap' }}>
-            <div
-              style={{
-                width: '30px',
-                height: '30px',
-                borderRadius: '2px',
-                background: '#002e5d',
-                color: '#ffffff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                boxShadow: 'none',
-              }}
-            >
+          <div className="fdl-ai__heading">
+            <div className="fdl-ai__icon">
               <AssistantIcon size={16} />
             </div>
-            <h2 className="fdl-ai__title" style={{ fontSize: '1.2rem', color: '#002e5d', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>
-              Query Assistant
-            </h2>
-            <span
-              style={{
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                background: '#002e5d',
-                color: '#ffffff',
-                padding: '2px 8px',
-                borderRadius: '2px',
-              }}
-            >
-              Natural Language Console
-            </span>
+            <h2 className="fdl-ai__title">AI Query Builder</h2>
           </div>
           {!isFolded && (
-            <p className="fdl-ai__lede" style={{ color: '#475569', fontSize: '0.84rem', marginTop: '6px', lineHeight: 1.45, maxWidth: '960px' }}>
+            <p className="fdl-ai__lede">
               Enter clinical intent, active ingredients, application categories, or MedDRA adverse events in plain English. The query assistant maps terminology and translates your input into structured criteria below for verification before execution.
             </p>
           )}
@@ -307,22 +265,7 @@ export function AiIntentPanel({
         <button
           type="button"
           onClick={() => setIsFolded(!isFolded)}
-          style={{
-            background: '#ffffff',
-            color: '#334155',
-            border: '1px solid #cbd5e1',
-            borderRadius: '2px',
-            padding: '5px 12px',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            transition: 'all 0.15s ease',
-            whiteSpace: 'nowrap',
-            boxShadow: 'none',
-          }}
+          className="fdl-ai__collapse"
         >
           <span>{isFolded ? 'Expand Assistant' : 'Collapse'}</span>
           {isFolded ? <ChevronDownIcon /> : <ChevronUpIcon />}
@@ -331,7 +274,7 @@ export function AiIntentPanel({
 
       {!isFolded && (
         <>
-          <div className="fdl-ai__field" style={{ marginTop: '16px', display: 'flex', gap: '10px' }}>
+          <div className="fdl-ai__field">
             <textarea
               className="fdl-ai__input"
               rows={2}
@@ -345,15 +288,6 @@ export function AiIntentPanel({
                   translate(intent);
                 }
               }}
-              style={{
-                borderRadius: '2px',
-                borderColor: '#94a3b8',
-                background: '#ffffff',
-                padding: '10px 14px',
-                fontSize: '0.9rem',
-                boxShadow: 'none',
-                lineHeight: 1.45,
-              }}
             />
             <button
               type="button"
@@ -362,18 +296,6 @@ export function AiIntentPanel({
               onClick={() => translate(intent)}
               style={{
                 minWidth: busy ? '160px' : '136px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                background: '#0071bc',
-                borderColor: '#005a96',
-                color: '#ffffff',
-                fontWeight: 700,
-                fontSize: '0.88rem',
-                borderRadius: '2px',
-                boxShadow: 'none',
-                transition: 'all 0.15s ease',
               }}
             >
               {busy ? (
@@ -390,8 +312,8 @@ export function AiIntentPanel({
             </button>
           </div>
 
-          <div className="fdl-ai__examples" style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#002e5d', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <div className="fdl-ai__examples">
+            <span className="fdl-ai__examples-label">
               Suggested Queries:
             </span>
             {EXAMPLES.map((ex) => (
@@ -405,18 +327,6 @@ export function AiIntentPanel({
                   translate(ex.prompt);
                 }}
                 title={ex.prompt}
-                style={{
-                  fontSize: '0.8rem',
-                  color: '#005ea2',
-                  textDecoration: 'none',
-                  background: '#ffffff',
-                  border: '1px solid #bfdbfe',
-                  padding: '3px 10px',
-                  borderRadius: '2px',
-                  fontWeight: 600,
-                  boxShadow: 'none',
-                  transition: 'all 0.15s ease',
-                }}
               >
                 {ex.display}
               </button>
@@ -427,59 +337,21 @@ export function AiIntentPanel({
 
       {/* Clean, professional progress indicator when building query */}
       {busy && (
-        <div
-          style={{
-            marginTop: '14px',
-            background: '#f8fafc',
-            border: '1px solid #cbd5e1',
-            borderLeft: '4px solid #0071bc',
-            borderRadius: '6px',
-            padding: '12px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '14px',
-          }}
-        >
-          <div
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '6px',
-              background: '#e0f2fe',
-              color: '#0071bc',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
+        <div className="fdl-ai__progress">
+          <div className="fdl-ai__progress-icon">
             <SpinnerIcon size={18} />
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px', flexWrap: 'wrap', gap: '8px' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>
+          <div className="fdl-ai__progress-content">
+            <div className="fdl-ai__progress-heading">
+              <span>
                 Translating Query to Structured Criteria…
               </span>
-              <span
-                style={{
-                  fontFamily: 'ui-monospace, monospace',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  color: '#334155',
-                  background: '#f1f5f9',
-                  padding: '2px 8px',
-                  borderRadius: '4px',
-                  border: '1px solid #e2e8f0',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                }}
-              >
+              <span className="fdl-ai__elapsed">
                 <ClockIcon size={13} />
                 <span>Elapsed: {formatElapsed(elapsedSeconds)}</span>
               </span>
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#475569', lineHeight: 1.4 }}>
+            <div className="fdl-ai__progress-status">
               {getLiveStatusText(elapsedSeconds)}
             </div>
           </div>
@@ -487,44 +359,9 @@ export function AiIntentPanel({
       )}
 
       {activePrompt && (
-        <div
-          className="fdl-ai-applied-intent"
-          style={{
-            marginTop: isFolded ? '8px' : '12px',
-            padding: '7px 12px',
-            background: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            borderRadius: '6px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '0.82rem',
-          }}
-        >
-          <span
-            style={{
-              fontWeight: 700,
-              color: '#002e5d',
-              fontSize: '0.7rem',
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-              flexShrink: 0,
-              background: '#e2e8f0',
-              padding: '2px 7px',
-              borderRadius: '4px',
-            }}
-          >
-            Active Intent
-          </span>
-          <span
-            style={{
-              color: '#334155',
-              fontWeight: 600,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
+        <div className={`fdl-ai-applied-intent ${isFolded ? 'is-folded' : ''}`}>
+          <span className="fdl-ai-applied-intent__label">Active Intent</span>
+          <span className="fdl-ai-applied-intent__text">
             “{activePrompt}”
           </span>
         </div>
@@ -545,63 +382,41 @@ export function AiIntentPanel({
 
       {/* Structured Query Translation Audit Trail Panel */}
       {notes.length > 0 && (
-        <div
-          className="fdl-ai-response-card"
-          style={{
-            marginTop: '14px',
-            background: '#ffffff',
-            border: '1px solid #cbd5e1',
-            borderTop: '3px solid #059669',
-            borderRadius: '6px',
-            padding: '14px 16px',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px solid #f1f5f9', flexWrap: 'wrap', gap: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ color: '#059669', display: 'flex', alignItems: 'center' }}>
+        <div className="fdl-ai-response-card">
+          <div className="fdl-ai-response-card__head">
+            <div className="fdl-ai-response-card__title">
+              <div className="fdl-ai-response-card__check">
                 <CheckIcon size={16} />
               </div>
-              <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, color: '#0f172a' }}>
+              <h3>
                 Query Translation & Entity Mapping Audit
               </h3>
             </div>
-            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#047857', background: '#ecfdf5', padding: '2px 8px', borderRadius: '4px', border: '1px solid #a7f3d0' }}>
+            <span className="fdl-ai-response-card__status">
               Criteria Configured Below
             </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div className="fdl-ai-response-card__notes">
             {notes.map((n, idx) => {
               const isWarn = n.toLowerCase().includes('warning') || n.toLowerCase().includes('not available') || n.toLowerCase().includes('omitted');
               return (
                 <div
                   key={idx}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '8px',
-                    backgroundColor: isWarn ? '#fffbeb' : '#f8fafc',
-                    border: isWarn ? '1px solid #fde68a' : '1px solid #e2e8f0',
-                    borderRadius: '5px',
-                    padding: '8px 12px',
-                    color: isWarn ? '#92400e' : '#334155',
-                    fontSize: '0.82rem',
-                    lineHeight: 1.45,
-                  }}
+                  className={`fdl-ai-response-note ${isWarn ? 'is-warning' : ''}`}
                 >
-                  <span style={{ flexShrink: 0, marginTop: '2px', color: isWarn ? '#b45309' : '#0284c7' }}>
+                  <span className="fdl-ai-response-note__icon">
                     {isWarn ? <AlertIcon size={14} /> : <InfoIcon size={14} />}
                   </span>
-                  <div style={{ flex: 1 }}>
-                    <span style={{ fontWeight: isWarn ? 600 : 500 }}>{n.replace(/^⚠️\s*/, '')}</span>
+                  <div>
+                    <span>{n.replace(/^⚠️\s*/, '')}</span>
                   </div>
                 </div>
               );
             })}
           </div>
 
-          <p style={{ margin: '8px 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+          <p className="fdl-ai-response-card__hint">
             Review the populated criteria in the cards below before clicking <strong>Search Labels »</strong>.
           </p>
         </div>

@@ -141,6 +141,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onSearch }) => {
           body: JSON.stringify({ query: queryText, ai_provider: session?.ai_provider }),
         });
         const dbData = await dbRes.json();
+        if (!dbRes.ok) {
+          throw new Error(dbData.error || `Database search failed (${dbRes.status})`);
+        }
 
         if (dbData.action === 'db_found' || dbData.action === 'single_label') {
           // Populate Results panel if the backend returned rows (count ≤ 10)
@@ -169,12 +172,16 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onSearch }) => {
           }),
         });
         const chatData = await chatRes.json();
+        if (!chatRes.ok) {
+          throw new Error(chatData.error || `AI search failed (${chatRes.status})`);
+        }
         setChatHistory(prev => [...prev, { role: 'assistant' as const, content: chatData.response_text }]);
         setIsLoading(false);
         setLoadingStatus('');
       } catch (error) {
         console.error('Search error:', error);
-        setChatHistory(prev => [...prev, { role: 'assistant', content: 'An unexpected error occurred.' }]);
+        const message = error instanceof Error ? error.message : 'An unexpected error occurred.';
+        setChatHistory(prev => [...prev, { role: 'assistant', content: message }]);
         setIsLoading(false);
         setLoadingStatus('');
       }
@@ -202,12 +209,16 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onSearch }) => {
         }),
       });
       const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || `AI search failed (${response.status})`);
+      }
       setChatHistory(prev => [...prev, { role: 'assistant' as const, content: result.response_text }]);
       setIsLoading(false);
       setLoadingStatus('');
     } catch (error) {
       console.error('Chat error:', error);
-      setChatHistory(prev => [...prev, { role: 'assistant', content: 'An unexpected error occurred.' }]);
+      const message = error instanceof Error ? error.message : 'An unexpected error occurred.';
+      setChatHistory(prev => [...prev, { role: 'assistant', content: message }]);
       setIsLoading(false);
       setLoadingStatus('');
     }
@@ -606,4 +617,3 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onSearch }) => {
 };
 
 export default ChatPanel;
-

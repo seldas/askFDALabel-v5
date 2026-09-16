@@ -189,6 +189,7 @@ def db_search():
     from dashboard.services.fdalabel_db import FDALabelDBService
     from dashboard.services.fda_client   import get_label_xml
 
+    user_obj = current_user._get_current_object() if current_user.is_authenticated else None
     payload    = request.json or {}
     query      = (payload.get("query") or "").strip()
     ai_provider = payload.get("ai_provider")
@@ -270,6 +271,7 @@ def chat_with_ai():
     Handles conversational responses based on labeling data.
     Includes history capping (20 msgs) and length truncation (300k chars).
     """
+    user_obj = current_user._get_current_object() if current_user.is_authenticated else None
     payload = request.json or {}
     ai_provider = payload.get("ai_provider")
     from dashboard.services.ai_handler import _check_is_internal

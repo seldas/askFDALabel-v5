@@ -280,7 +280,7 @@ function HomePage() {
 
   const actionBar = (position: 'top' | 'bottom') => (
     <div className={position === 'top' ? 'fdl-actions' : 'fdl-actions fdl-actions--bottom'}>
-      <div style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+      <div className="fdl-actions__summary">
         {filled > 0 ? (
           <span className="fdl-active-tag fdl-active-tag--highlight">
             {filled} active {filled === 1 ? 'criterion' : 'criteria'} configured
@@ -296,58 +296,19 @@ function HomePage() {
           </span>
         ) : null}
         {hasUnverified && (
-          <span
-            style={{
-              backgroundColor: '#fef3c7',
-              color: '#92400e',
-              border: '1px solid #f59e0b',
-              padding: '3px 9px',
-              borderRadius: '5px',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px',
-            }}
-          >
+          <span className="fdl-warning-tag">
             <AlertIcon size={13} />
             <span>Please confirm name(s) / MedDRA term(s)</span>
           </span>
         )}
         {hasCommonFullText && (
-          <span
-            style={{
-              backgroundColor: '#fef3c7',
-              color: '#92400e',
-              border: '1px solid #f59e0b',
-              padding: '3px 9px',
-              borderRadius: '5px',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px',
-            }}
-          >
+          <span className="fdl-warning-tag">
             <AlertIcon size={13} />
             <span>Please refine common full-text term(s)</span>
           </span>
         )}
         {hasHigherMeddra && (
-          <span
-            style={{
-              backgroundColor: '#fef3c7',
-              color: '#92400e',
-              border: '1px solid #f59e0b',
-              padding: '3px 9px',
-              borderRadius: '5px',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px',
-            }}
-          >
+          <span className="fdl-warning-tag">
             <AlertIcon size={13} />
             <span>MedDRA levels above PT are disabled (use PT/LLT)</span>
           </span>
