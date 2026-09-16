@@ -10,7 +10,7 @@ import { useUser } from '../../../context/UserContext';
 import { withApiBase } from '../../../utils/appPaths';
 import { ToolIcon } from '../../../platform/icons';
 import { LabelToolStrip, useToolboxTools } from '../../../platform/ToolLauncher';
-import type { ToolPattern } from '../../../platform/registry';
+import type { ToolboxWorkflow } from '../../../platform/registry';
 
 // The reader body. FAERS, Deep Dive and Examine are sibling routes now, and
 // the Header / identity chrome belongs to ../layout.tsx.
@@ -65,7 +65,6 @@ function TOCItemComponent({
         <a 
           href={`#${item.id}`}
           className={`toc-link ${level === 0 ? 'root-link' : 'sub-link'} ${isActive ? 'active-section-link' : ''}`}
-          style={isActive ? { backgroundColor: '#e0f2fe', color: '#0284c7', borderLeft: '3px solid #0284c7', paddingLeft: '7px' } : {}}
           onClick={() => {
             if (hasChildren && !isExpanded) {
               toggleSection(item.id);
@@ -139,62 +138,6 @@ function ExportSectionItem({
   );
 }
 
-/*
- * Card treatment derived from a tool's single accent color.
- *
- * These nine cards used to carry eight hand-written gradient strings each,
- * which is why adding a tool meant copying a block rather than adding a line.
- * The registry now supplies one hex and an optional texture, and the rest is
- * computed to the same values those strings held.
- */
-const DEFAULT_ACCENT = '#475569';
-
-function rgbOf(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
-  const n = parseInt(full, 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-
-function toolCardStyle(accent: string = DEFAULT_ACCENT, pattern: ToolPattern = 'dots') {
-  const [r, g, b] = rgbOf(accent);
-  const a = (alpha: number) => `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  // Mixed toward white rather than laid over it with alpha, so the wash does
-  // not change when the card sits on the dimmed (unfavorited) background.
-  const tint = (amount: number) =>
-    `rgb(${Math.round(r + (255 - r) * amount)}, ${Math.round(g + (255 - g) * amount)}, ${Math.round(b + (255 - b) * amount)})`;
-
-  const glow = `radial-gradient(circle at 88% 12%, ${a(0.18)} 0%, transparent 55%)`;
-  const wash = `linear-gradient(135deg, ${tint(0.93)} 0%, ${tint(0.965)} 100%)`;
-
-  const textures: Record<ToolPattern, { layers: string; size: string }> = {
-    dots: {
-      layers: `radial-gradient(${a(0.13)} 1.2px, transparent 1.2px)`,
-      size: '16px 16px',
-    },
-    grid: {
-      layers: `linear-gradient(to right, ${a(0.06)} 1px, transparent 1px), linear-gradient(to bottom, ${a(0.06)} 1px, transparent 1px)`,
-      size: '20px 20px, 20px 20px',
-    },
-    stripes: {
-      layers: `repeating-linear-gradient(45deg, ${a(0.05)} 0px, ${a(0.05)} 2px, transparent 2px, transparent 10px)`,
-      size: '100% 100%',
-    },
-  };
-  const texture = textures[pattern] ?? textures.dots;
-
-  return {
-    cardBg: `${glow}, ${texture.layers}, ${wash}`,
-    bgSize: `100% 100%, ${texture.size}, 100% 100%`,
-    cardBorder: a(0.32),
-    cardShadow: `0 4px 16px ${a(0.1)}`,
-    badgeBg: `linear-gradient(135deg, ${a(0.22)} 0%, ${a(0.35)} 100%)`,
-    badgeColor: accent,
-    badgeBorder: `1px solid ${a(0.4)}`,
-    accentColor: accent,
-  };
-}
-
 function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
   const brandName = data?.brand_name || data?.drug_name || 'this product';
   const applicationNumber = String(data?.application_number || data?.metadata?.application_number || '').trim();
@@ -203,15 +146,17 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
   const historyApplicationNumber = applicationNumber.split(/[;,]/, 1)[0].trim();
   const hasApplicationNumber = Boolean(historyApplicationNumber && !/^n\/?a$/i.test(historyApplicationNumber));
   const [favoriteToolIds, setFavoriteToolIds] = useState<string[]>([]);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem('askfdalabel_favorite_tools');
       if (stored) {
-        setFavoriteToolIds(JSON.parse(stored));
+        const saved = JSON.parse(stored) as string[];
+        // `label-tox` was the previous default id before the organ-specific
+        // agents were split; retain the user's intent by pinning DILI instead.
+        setFavoriteToolIds([...new Set(saved.map((id) => id === 'label-tox' ? 'label-tox-dili' : id))]);
       } else {
-        setFavoriteToolIds(['label-faers', 'label-tox']);
+        setFavoriteToolIds(['label-faers', 'label-tox-dili']);
       }
     } catch (e) {
       console.error('Failed to load favorite tools:', e);
@@ -256,129 +201,87 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
         blurb: tool.blurbFor?.(launchContext) ?? tool.blurb,
         iconId: tool.iconId,
         href: tool.href(launchContext),
-        ...toolCardStyle(tool.accent, tool.pattern),
+        workflow: tool.toolboxWorkflow ?? 'review',
       })),
     [registryTools, launchContext],
   );
 
-  const sortedTools = [...toolsList].sort((a, b) => {
-    const aFav = favoriteToolIds.includes(a.id);
-    const bFav = favoriteToolIds.includes(b.id);
-    if (aFav && !bFav) return -1;
-    if (!aFav && bFav) return 1;
-    return 0;
-  });
+  const workflowDetails: Record<ToolboxWorkflow, { code: string; title: string; description: string }> = {
+    review: { code: 'REVIEW / 01', title: 'Label review', description: 'Prompted review and structured label interpretation.' },
+    safety: { code: 'SAFETY / 02', title: 'Safety signals', description: 'Adverse-event evidence, extraction, and safety profiling.' },
+    toxicity: { code: 'TOX / 03', title: 'Toxicology assessment', description: 'Organ-specific risk assessment and toxicity classification.' },
+    comparison: { code: 'COMPARE / 04', title: 'Cross-label analysis', description: 'Version history, peer context, and label comparison.' },
+  };
+  const workflowOrder: ToolboxWorkflow[] = ['review', 'safety', 'toxicity', 'comparison'];
+  const pinnedTools = toolsList.filter((tool) => favoriteToolIds.includes(tool.id));
+  const workflowSets = workflowOrder
+    .map((workflow) => ({
+      workflow,
+      tools: toolsList.filter((tool) => tool.workflow === workflow && !favoriteToolIds.includes(tool.id)),
+    }))
+    .filter(({ tools }) => tools.length > 0);
+
+  const renderToolCard = (t: typeof toolsList[number]) => {
+    const isFav = favoriteToolIds.includes(t.id);
+    return (
+      <article key={t.id} className={`afl-toolbox__tool${isFav ? ' is-pinned' : ''}`}>
+        <header className="afl-toolbox__tool-header">
+          <span className="afl-toolbox__tool-icon" aria-hidden="true"><ToolIcon id={t.iconId as any} size={20} /></span>
+          <h3>{t.name}</h3>
+          <button type="button" className="afl-toolbox__pin" onClick={(e) => toggleFavoriteTool(t.id, e)} aria-pressed={isFav} title={isFav ? 'Unpin tool' : 'Pin tool'}>
+            {isFav ? 'PINNED' : 'PIN'}
+          </button>
+        </header>
+        <p>{t.blurb}</p>
+        <a className="afl-toolbox__launch" href={t.href} target="_blank" rel="noopener noreferrer">
+          Open analysis <span aria-hidden="true">↗</span>
+        </a>
+      </article>
+    );
+  };
 
   return (
-    <div className="toolbox-panel" style={{ padding: '16px 0' }}>
-      <div style={{ marginBottom: '24px', background: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
-        <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0' }}>
-          Product Toolbox
-        </h2>
-        <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 10px 0', lineHeight: 1.5 }}>
-          Launch analytical tools for <strong>{brandName}</strong>. Click any tool button to open in a new window. Star tools to keep them pinned at the top of your toolbox.
-        </p>
-        <p style={{ color: '#475569', fontSize: '0.84rem', margin: 0, lineHeight: 1.5, background: '#f8fafc', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '1.05rem', flexShrink: 0 }}>🤝</span>
-          <span>We are continuously collecting and building more tools for drug labeling analysis and warmly welcome research collaborations. To discuss new analytical tools or collaborative projects, please contact <a href="mailto:askfdalabel@fda.hhs.gov" style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'underline' }}>askfdalabel@fda.hhs.gov</a>.</span>
-        </p>
-      </div>
+    <section className="afl-toolbox" aria-labelledby="toolbox-title">
+      <header className="afl-toolbox__header">
+        <div className="afl-toolbox__heading">
+          <span className="afl-toolbox__region">TOOL SET / {String(toolsList.length).padStart(2, '0')}</span>
+          <h2 id="toolbox-title">Product Toolbox</h2>
+          <p>Launch label-specific analyses for {brandName}. Tools are organized by analytical workflow.</p>
+        </div>
+        <dl className="afl-toolbox__metadata">
+          <div><dt>LABEL SET</dt><dd>{setId}</dd></div>
+          {hasApplicationNumber && <div><dt>APPLICATION</dt><dd>{historyApplicationNumber}</dd></div>}
+        </dl>
+      </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-        {sortedTools.map((t) => {
-          const isFav = favoriteToolIds.includes(t.id);
-          const isHovered = hoveredId === t.id;
-          const isFeatured = isFav || isHovered;
+      <aside className="afl-toolbox__notice" aria-label="Toolbox collaboration contact">
+        <span>Tool requests or research collaboration:</span>{' '}
+        <a href="mailto:askfdalabel@fda.hhs.gov">askfdalabel@fda.hhs.gov</a>
+      </aside>
 
-          return (
-            <a
-              key={t.id}
-              href={t.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              onMouseEnter={() => setHoveredId(t.id)}
-              onMouseLeave={() => setHoveredId(null)}
-              className="toolbox-card"
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                padding: '22px',
-                borderRadius: '16px',
-                background: isFeatured ? t.cardBg : '#f8fafc',
-                backgroundSize: isFeatured ? t.bgSize : 'auto',
-                border: isFav 
-                  ? `2.5px solid ${t.accentColor}` 
-                  : isHovered 
-                    ? `1.5px solid ${t.cardBorder}` 
-                    : '1.5px solid #e2e8f0',
-                boxShadow: isFav 
-                  ? `0 6px 20px ${t.accentColor}35` 
-                  : isHovered 
-                    ? t.cardShadow 
-                    : 'none',
-                opacity: isFeatured ? 1 : 0.55,
-                filter: isFeatured ? 'none' : 'grayscale(85%)',
-                backdropFilter: isFeatured ? 'blur(8px)' : 'none',
-                textDecoration: 'none',
-                position: 'relative',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      width: '42px', 
-                      height: '42px', 
-                      borderRadius: '12px', 
-                      background: t.badgeBg, 
-                      color: t.badgeColor,
-                      border: t.badgeBorder,
-                      boxShadow: `0 2px 8px ${t.badgeColor}25`,
-                      backdropFilter: 'blur(4px)'
-                    }}>
-                      <ToolIcon id={t.iconId as any} size={22} />
-                    </span>
-                    <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#0f172a' }}>
-                      {t.name}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => toggleFavoriteTool(t.id, e)}
-                    title={isFav ? 'Unstar tool' : 'Star tool'}
-                    style={{
-                      background: isFav ? '#fef9c3' : isHovered ? '#ffffff' : 'rgba(255, 255, 255, 0.72)',
-                      border: isFav ? '1px solid #facc15' : isHovered ? `1px solid ${t.accentColor}` : '1px solid #cbd5e1',
-                      cursor: 'pointer',
-                      fontSize: '1.4rem',
-                      color: isFav ? '#a16207' : isHovered ? t.accentColor : '#64748b',
-                      padding: '3px 7px',
-                      borderRadius: '999px',
-                      lineHeight: 1,
-                      boxShadow: isHovered && !isFav ? `0 2px 8px ${t.accentColor}33` : 'none',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {isFav ? '★' : '☆'}
-                  </button>
-                </div>
-                <p style={{ fontSize: '0.85rem', color: '#475569', margin: '0 0 16px 0', lineHeight: 1.5, fontWeight: 500 }}>
-                  {t.blurb}
-                </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 800, color: t.accentColor }}>
-                Open Tool <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-              </div>
-            </a>
-          );
-        })}
-      </div>
-    </div>
+      {pinnedTools.length > 0 && (
+        <section className="afl-toolbox__section afl-toolbox__section--pinned" aria-labelledby="pinned-tools-title">
+          <header className="afl-toolbox__section-header">
+            <div><span>PINNED / {String(pinnedTools.length).padStart(2, '0')}</span><h3 id="pinned-tools-title">Pinned tools</h3></div>
+            <p>Frequently used analyses for this workspace.</p>
+          </header>
+          <div className="afl-toolbox__grid">{pinnedTools.map(renderToolCard)}</div>
+        </section>
+      )}
+
+      {workflowSets.map(({ workflow, tools }) => {
+        const detail = workflowDetails[workflow];
+        return (
+          <section key={workflow} className="afl-toolbox__section" data-workflow={workflow} aria-labelledby={`toolbox-${workflow}`}>
+            <header className="afl-toolbox__section-header">
+              <div><span>{detail.code} / {String(tools.length).padStart(2, '0')}</span><h3 id={`toolbox-${workflow}`}>{detail.title}</h3></div>
+              <p>{detail.description}</p>
+            </header>
+            <div className="afl-toolbox__grid">{tools.map(renderToolCard)}</div>
+          </section>
+        );
+      })}
+    </section>
   );
 }
 

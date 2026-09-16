@@ -431,9 +431,259 @@
   min-height: 0;
 }
 
+/* ---- Product Toolbox ---------------------------------------------------- */
+
+.afl-toolbox {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0 20px;
+}
+
+.afl-toolbox__header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 18px;
+  border: 1px solid var(--fdl-line);
+  border-top: 3px solid var(--fdl-navy-800);
+  background: var(--fdl-paper);
+}
+
+.afl-toolbox__heading { min-width: 0; }
+
+.afl-toolbox__region {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--fdl-blue-700);
+  font-family: var(--fdl-font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.afl-toolbox__heading h2 {
+  margin: 0;
+  color: var(--fdl-navy-950);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.afl-toolbox__heading p {
+  margin: 5px 0 0;
+  color: var(--fdl-muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.afl-toolbox__metadata {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 16px;
+  margin: 0;
+}
+
+.afl-toolbox__metadata div { min-width: 108px; }
+.afl-toolbox__metadata dt {
+  color: var(--fdl-muted);
+  font-family: var(--fdl-font-mono);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.afl-toolbox__metadata dd {
+  max-width: 220px;
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: var(--fdl-ink);
+  font-family: var(--fdl-font-mono);
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.afl-toolbox__notice {
+  padding: 8px 12px;
+  border: 1px solid var(--fdl-line-soft);
+  border-left: 3px solid var(--fdl-blue-600);
+  background: var(--fdl-blue-050);
+  color: var(--fdl-ink-soft);
+  font-size: 0.76rem;
+}
+
+.afl-toolbox__notice a { color: var(--fdl-blue-700); font-weight: 700; }
+
+.afl-toolbox__section {
+  --afl-toolbox-workflow: var(--fdl-blue-700);
+  --afl-toolbox-workflow-tint: var(--fdl-blue-050);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.afl-toolbox__section--pinned {
+  --afl-toolbox-workflow: var(--fdl-navy-800);
+  --afl-toolbox-workflow-tint: var(--fdl-blue-100);
+}
+
+.afl-toolbox__section[data-workflow='safety'] {
+  --afl-toolbox-workflow: var(--fdl-amber);
+  --afl-toolbox-workflow-tint: var(--fdl-amber-050);
+}
+
+.afl-toolbox__section[data-workflow='toxicity'] {
+  --afl-toolbox-workflow: var(--fdl-green);
+  --afl-toolbox-workflow-tint: var(--fdl-green-050);
+}
+
+.afl-toolbox__section[data-workflow='comparison'] {
+  --afl-toolbox-workflow: var(--fdl-navy-800);
+  --afl-toolbox-workflow-tint: var(--fdl-blue-050);
+}
+
+.afl-toolbox__section-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0 8px;
+  border-bottom: 1px solid var(--fdl-line);
+  border-left: 3px solid var(--afl-toolbox-workflow);
+  padding-left: 9px;
+}
+
+.afl-toolbox__section-header span {
+  display: block;
+  color: var(--afl-toolbox-workflow);
+  font-family: var(--fdl-font-mono);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.afl-toolbox__section-header h3 {
+  margin: 2px 0 0;
+  color: var(--fdl-navy-950);
+  font-size: 0.96rem;
+  font-weight: 750;
+}
+
+.afl-toolbox__section-header p {
+  max-width: 56ch;
+  margin: 0;
+  color: var(--fdl-muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.afl-toolbox__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.afl-toolbox__tool {
+  display: flex;
+  min-height: 176px;
+  flex-direction: column;
+  padding: 14px;
+  border: 1px solid var(--fdl-line-soft);
+  border-top: 2px solid var(--afl-toolbox-workflow, var(--fdl-line));
+  background: var(--fdl-paper);
+}
+
+.afl-toolbox__tool.is-pinned {
+  background: var(--afl-toolbox-workflow-tint, var(--fdl-blue-050));
+}
+
+.afl-toolbox__tool-header {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.afl-toolbox__tool-icon {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid var(--fdl-line);
+  background: var(--afl-toolbox-workflow-tint, var(--fdl-blue-050));
+  color: var(--afl-toolbox-workflow, var(--fdl-blue-700));
+}
+
+.afl-toolbox__tool h3 {
+  margin: 0;
+  color: var(--fdl-navy-950);
+  font-size: 0.93rem;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.afl-toolbox__pin {
+  min-height: 24px;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--fdl-line);
+  border-radius: 0;
+  background: var(--fdl-paper);
+  color: var(--fdl-muted);
+  cursor: pointer;
+  font-family: var(--fdl-font-mono);
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+
+.afl-toolbox__pin[aria-pressed='true'] {
+  border-color: var(--fdl-blue-700);
+  background: var(--fdl-blue-700);
+  color: var(--fdl-paper);
+}
+
+.afl-toolbox__pin:hover { border-color: var(--fdl-blue-600); color: var(--fdl-blue-700); }
+.afl-toolbox__pin[aria-pressed='true']:hover { background: var(--fdl-navy-950); color: var(--fdl-paper); }
+.afl-toolbox__pin:focus-visible, .afl-toolbox__launch:focus-visible { outline: 2px solid var(--fdl-blue-600); outline-offset: 2px; }
+
+.afl-toolbox__tool > p {
+  margin: 12px 0;
+  color: var(--fdl-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.afl-toolbox__launch {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--fdl-line-soft);
+  color: var(--afl-toolbox-workflow, var(--fdl-blue-700));
+  font-size: 0.76rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.afl-toolbox__launch:hover { color: var(--fdl-navy-950); text-decoration: underline; }
+
+@media (max-width: 1099px) {
+  .afl-toolbox__header { align-items: start; flex-direction: column; gap: 14px; }
+  .afl-toolbox__metadata { justify-content: start; }
+  .afl-toolbox__section-header { align-items: start; flex-direction: column; gap: 4px; }
+  .afl-toolbox__section-header p { text-align: left; }
+}
+
 @media (max-width: 768px) {
   .afl-label-shell__inner { padding: 12px 14px 20px; }
   .afl-label-identity { padding: 14px 16px; }
   .afl-label-identity__title { font-size: 1.25rem; }
+  .afl-toolbox__grid { grid-template-columns: 1fr; }
 }
 

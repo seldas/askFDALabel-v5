@@ -14,8 +14,11 @@
   --fdl-line: #b8c8d7;
   --fdl-line-soft: #d7e0e7;
   --fdl-red: #b50909;
+  --fdl-red-050: #fff1f1;
   --fdl-green: #2d7a4c;
+  --fdl-green-050: #edf7f0;
   --fdl-amber: #8a5700;
+  --fdl-amber-050: #fff8e6;
 
   /* Layout and type */
   --fdl-font-ui: var(--font-inter), "Segoe UI", Arial, sans-serif;

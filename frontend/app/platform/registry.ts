@@ -33,6 +33,9 @@ export type Requirement = 'internal' | 'fdaAccessible' | 'cderAccessible' | 'loc
 
 export type ToolGroup = 'discover' | 'analyze' | 'manage' | 'validate' | 'reference';
 
+/** Workflow grouping used when label-context tools are shown as a workstation. */
+export type ToolboxWorkflow = 'review' | 'safety' | 'toxicity' | 'comparison';
+
 /**
  * Background texture for a tool card. Presentation, but kept here rather than
  * in the consumer so that adding a tool stays a single registry entry -- the
@@ -48,6 +51,8 @@ export interface ToolDef {
   iconId: IconId;
   kind: ToolKind;
   group: ToolGroup;
+  /** Optional label-workspace workflow. Keeps future Toolbox additions classified in the registry. */
+  toolboxWorkflow?: ToolboxWorkflow;
   /** Context kinds this tool can be launched with. */
   contexts: ContextKind[];
   /** All must be satisfied for the tool to be offered. */
@@ -118,6 +123,7 @@ const LABEL_TOOLS: ToolDef[] = [
     iconId: 'pulse',
     kind: 'embedded',
     group: 'analyze',
+    toolboxWorkflow: 'safety',
     contexts: ['label'],
     featureKey: 'tool_faers',
     accent: '#0284c7',
@@ -131,6 +137,7 @@ const LABEL_TOOLS: ToolDef[] = [
     iconId: 'flask',
     kind: 'embedded',
     group: 'analyze',
+    toolboxWorkflow: 'toxicity',
     contexts: ['label'],
     featureKey: 'tool_dili',
     ai: true,
@@ -145,6 +152,7 @@ const LABEL_TOOLS: ToolDef[] = [
     iconId: 'flask',
     kind: 'embedded',
     group: 'analyze',
+    toolboxWorkflow: 'toxicity',
     contexts: ['label'],
     featureKey: 'tool_dict',
     ai: true,
@@ -159,6 +167,7 @@ const LABEL_TOOLS: ToolDef[] = [
     iconId: 'flask',
     kind: 'embedded',
     group: 'analyze',
+    toolboxWorkflow: 'toxicity',
     contexts: ['label'],
     featureKey: 'tool_diri',
     ai: true,
@@ -173,6 +182,7 @@ const LABEL_TOOLS: ToolDef[] = [
     iconId: 'flask',
     kind: 'embedded',
     group: 'analyze',
+    toolboxWorkflow: 'toxicity',
     contexts: ['label'],
     featureKey: 'tool_pgx',
     ai: true,
@@ -187,6 +197,7 @@ const LABEL_TOOLS: ToolDef[] = [
     iconId: 'bars',
     kind: 'embedded',
     group: 'analyze',
+    toolboxWorkflow: 'toxicity',
     contexts: ['label'],
     featureKey: 'tool_ro2',
     accent: '#1d4ed8',
@@ -200,6 +211,7 @@ const LABEL_TOOLS: ToolDef[] = [
     iconId: 'microscope',
     kind: 'embedded',
     group: 'analyze',
+    toolboxWorkflow: 'review',
     contexts: ['label'],
     featureKey: 'tool_examine',
     ai: true,
@@ -214,6 +226,7 @@ const LABEL_TOOLS: ToolDef[] = [
     iconId: 'compare',
     kind: 'embedded',
     group: 'analyze',
+    toolboxWorkflow: 'comparison',
     contexts: ['label'],
     featureKey: 'tool_deepdive',
     ai: true,
@@ -228,6 +241,7 @@ const LABEL_TOOLS: ToolDef[] = [
     iconId: 'pulse',
     kind: 'embedded',
     group: 'analyze',
+    toolboxWorkflow: 'safety',
     contexts: ['label'],
     featureKey: 'tool_pv_profile',
     ai: true,
@@ -242,6 +256,7 @@ const LABEL_TOOLS: ToolDef[] = [
     iconId: 'pulse',
     kind: 'embedded',
     group: 'analyze',
+    toolboxWorkflow: 'safety',
     contexts: ['label'],
     featureKey: 'tool_labeling_ae',
     accent: '#8b5cf6',
@@ -255,6 +270,7 @@ const LABEL_TOOLS: ToolDef[] = [
     iconId: 'document',
     kind: 'embedded',
     group: 'analyze',
+    toolboxWorkflow: 'comparison',
     contexts: ['label'],
     featureKey: 'tool_history_set_id',
     accent: '#4f46e5',
@@ -268,6 +284,7 @@ const LABEL_TOOLS: ToolDef[] = [
     iconId: 'document',
     kind: 'embedded',
     group: 'analyze',
+    toolboxWorkflow: 'comparison',
     contexts: ['label'],
     featureKey: 'tool_history_application',
     accent: '#0891b2',
@@ -325,6 +342,7 @@ const PLATFORM_TOOLS: ToolDef[] = [
     iconId: 'compare',
     kind: 'embedded',
     group: 'analyze',
+    toolboxWorkflow: 'comparison',
     // Also offered from a single label so the user can pick a second one there.
     contexts: ['label', 'labelSet', 'project', 'global'],
     featureKey: 'tool_labelcomp',

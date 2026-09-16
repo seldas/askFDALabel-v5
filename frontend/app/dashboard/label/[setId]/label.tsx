@@ -376,41 +376,20 @@ export default function LabelView({
   }, [tocCollapsed, setTocCollapsed]);
 
   return (
-    <div id="label-view" className={`tab-content ${activeTab === 'label-view' ? 'active' : ''} ${(data.openfda_status === 'Archived' || data.is_latest === false) ? 'archived-theme' : ''}`} style={{ 
+    <div id="label-view" className={`tab-content afl-label-reader-workspace ${activeTab === 'label-view' ? 'active' : ''} ${(data.openfda_status === 'Archived' || data.is_latest === false) ? 'archived-theme' : ''}`} style={{
       display: activeTab === 'label-view' ? 'flex' : 'none', 
       flex: 1, 
-      minHeight: 0,
-      gap: '20px',
-      alignItems: 'stretch',
-      marginTop: '0px'
+      minHeight: 0
     }}>
         
         {/* Navigation Sidebar (ToC / SoC) */}
-        <div id="toc-panel" className={`toc-side-panel-inline ${tocCollapsed ? 'collapsed' : ''}`} style={{ 
-          width: tocCollapsed ? '0' : '300px', 
-          height: '100%',
-          flexShrink: 0,
-          background: 'var(--fdl-surface)',
-          borderRadius: 'var(--fdl-radius-sm, 2px)',
-          boxShadow: 'none',
-          border: '1px solid var(--fdl-line)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          transition: 'all 0.25s ease'
-        }}>
-          <div className="toc-box" style={{ padding: '14px 12px', flex: 1, overflowY: 'auto' }}>
+        <div id="toc-panel" className={`toc-side-panel-inline afl-label-nav-rail ${tocCollapsed ? 'collapsed' : ''}`} style={{ width: tocCollapsed ? '0' : '280px' }}>
+          <div className="toc-box afl-label-nav-rail__body">
             {/* Top Header: ToC / SoC Segmented Toggle + Close Button */}
-            <div className="toc-header" style={{ 
-              marginBottom: '10px', 
-              display: 'flex', 
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '8px',
-              paddingBottom: '8px',
-              borderBottom: '1px solid var(--fdl-line)'
-            }}>
-              <div className="nav-tab-toggle-bar" style={{ flex: 1, margin: 0 }}>
+            <div className="toc-header afl-label-nav-rail__header">
+              <div className="afl-label-nav-rail__controls">
+                <span className="afl-label-nav-rail__code">NAVIGATION / 01</span>
+                <div className="nav-tab-toggle-bar">
                 <button 
                   type="button"
                   className={`nav-tab-toggle-btn ${navTab === 'toc' ? 'active' : ''}`}
@@ -441,25 +420,11 @@ export default function LabelView({
                     <span className="nav-tab-badge">{Object.keys(socCatalog).length}</span>
                   )}
                 </button>
+                </div>
               </div>
 
               <button 
                 onClick={() => setTocCollapsed(true)} 
-                style={{ 
-                  background: 'var(--fdl-canvas)', 
-                  border: '1px solid var(--fdl-line)', 
-                  borderRadius: 'var(--fdl-radius-sm, 2px)',
-                  cursor: 'pointer', 
-                  color: 'var(--fdl-muted)', 
-                  fontSize: '0.75rem',
-                  width: '26px',
-                  height: '26px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.12s ease',
-                  flexShrink: 0
-                }}
                 className="toc-close-btn"
                 title="Collapse sidebar"
               >
