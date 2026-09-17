@@ -57,11 +57,56 @@ def load_docker_images(source_dir):
         run_cmd(["docker", "load", "-i", str(archive_path)])
     print("[SUCCESS] All Docker images loaded successfully.")
 
+def fix_directory_ownership(dest_dir):
+    """
+    Ensures dest_dir (and subdirectories like data/) are writable by the current user.
+    If files or folders are owned by root from previous Docker runs, repairs
+    ownership using an ephemeral Docker container with the current user's UID/GID.
+    """
+    if os.name == "nt":
+        return
+    try:
+        uid = os.getuid()
+        gid = os.getgid()
+        if uid == 0:
+            return
+
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        needs_fix = False
+        for check_path in [dest_dir, dest_dir / "data", dest_dir / "backend", dest_dir / "frontend"]:
+            if check_path.exists():
+                if not os.access(check_path, os.W_OK):
+                    needs_fix = True
+                    break
+                test_file = check_path / f".perm_test_{os.getpid()}"
+                try:
+                    test_file.touch()
+                    test_file.unlink(missing_ok=True)
+                except (PermissionError, OSError):
+                    needs_fix = True
+                    break
+
+        if needs_fix:
+            print(f"[INFO] Detected root-owned files or restricted permissions in {dest_dir}. Auto-repairing via Docker...")
+            for img in ["fdalabel-v3-backend:latest", "fdalabel-v3-redis:latest", "alpine:latest"]:
+                res = subprocess.run(
+                    ["docker", "run", "--rm", "-v", f"{dest_dir}:/work", "-w", "/work",
+                     img, "chown", "-R", f"{uid}:{gid}", "/work"],
+                    check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+                if res.returncode == 0:
+                    print("[SUCCESS] Fixed directory ownership in target destination.")
+                    break
+    except Exception as e:
+        print(f"[WARN] Directory ownership auto-repair check skipped: {e}")
+
 def unzip_archive(zip_path, dest_dir, exclude_filenames=None):
     """Unzips a zip file into dest_dir, overwriting existing files except excluded ones (such as .env)."""
     if not zip_path.exists():
         print(f"[ERROR] Zip archive not found: {zip_path}")
         sys.exit(1)
+
+    fix_directory_ownership(dest_dir)
 
     exclude_set = set(exclude_filenames or [".env"])
     exclude_set.add(".env")
@@ -87,8 +132,30 @@ def unzip_archive(zip_path, dest_dir, exclude_filenames=None):
                 target_path.mkdir(parents=True, exist_ok=True)
             else:
                 target_path.parent.mkdir(parents=True, exist_ok=True)
-                with zf.open(member) as source, open(target_path, "wb") as target:
-                    target.write(source.read())
+                if target_path.exists():
+                    try:
+                        os.chmod(target_path, 0o666)
+                    except Exception:
+                        pass
+                try:
+                    with zf.open(member) as source, open(target_path, "wb") as target:
+                        target.write(source.read())
+                except PermissionError:
+                    # Attempt unlink or Docker permission repair and retry once
+                    try:
+                        target_path.unlink(missing_ok=True)
+                        with zf.open(member) as source, open(target_path, "wb") as target:
+                            target.write(source.read())
+                    except PermissionError:
+                        fix_directory_ownership(dest_dir)
+                        if target_path.exists():
+                            try:
+                                target_path.unlink(missing_ok=True)
+                            except Exception:
+                                pass
+                        with zf.open(member) as source, open(target_path, "wb") as target:
+                            target.write(source.read())
+
                 print(f"  + Extracted: {member.filename}")
 
 def main():
