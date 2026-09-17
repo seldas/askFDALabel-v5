@@ -188,74 +188,77 @@ def get_rich_metadata_by_generic(generic_name):
     """
     return None
 
-def check_openfda_status(set_id):
+def check_openfda_status(set_id, is_latest=True):
     """
-    Checks if a label with the given set_id exists in openFDA or public FDALabel.
-    Returns:
-      'Current' if found in either of them,
-      'Archived' if not found in either (verified on all working ones),
-      None if the checks were inconclusive (e.g. connection/timeout error on a checked API) and not found to be Current.
+    Checks if a label with the given set_id is Current or Archived.
+
+    In local, intranet, and RAPID deployments, external network calls to public openFDA
+    and public FDALabel endpoints are disabled by default to eliminate blocking
+    15-20s HTTP timeouts. Status is determined cleanly from local database metadata.
     """
     if not set_id:
         return None
 
-    has_current = False
-    has_failed = False
+    # Optional opt-in for remote probing via env var
+    if os.environ.get('CHECK_OPENFDA_REMOTE', '').strip().lower() in ('1', 'true', 'yes'):
+        has_current = False
+        has_failed = False
 
-    # 1. Check openFDA
-    openfda_url = "https://api.fda.gov/drug/label.json"
-    params = {
-        'search': f'openfda.spl_set_id:"{set_id}"',
-        'limit': 1
-    }
-    if Config.OPENFDA_API_KEY:
-        params['api_key'] = Config.OPENFDA_API_KEY
-    try:
-        resp = requests.get(openfda_url, params=params, timeout=5)
-        if resp.status_code == 200:
-            results = resp.json().get('results', [])
-            if results:
-                has_current = True
-        elif resp.status_code == 404:
-            pass  # Not found
-        else:
-            logger.warning(f"openFDA returned unexpected status {resp.status_code} for set_id {set_id}")
-            has_failed = True
-    except Exception as e:
-        logger.error(f"Error checking openFDA status for set_id {set_id}: {e}")
-        has_failed = True
-
-    if has_current:
-        return 'Current'
-
-    # 2. Check FDALabel Public
-    # Path variant 1: set-ids (correct working path)
-    # Path variant 2: seti-ids (as specified in user prompt)
-    fdalabel_paths = ["set-ids", "seti-ids"]
-    fdalabel_success = False
-    for path in fdalabel_paths:
-        fdalabel_url = f"https://nctr-crs.fda.gov/fdalabel/services/spl/{path}/{set_id}/spl-doc"
+        # 1. Check openFDA
+        openfda_url = "https://api.fda.gov/drug/label.json"
+        params = {
+            'search': f'openfda.spl_set_id:"{set_id}"',
+            'limit': 1
+        }
+        if Config.OPENFDA_API_KEY:
+            params['api_key'] = Config.OPENFDA_API_KEY
         try:
-            resp = requests.get(fdalabel_url, timeout=5)
+            resp = requests.get(openfda_url, params=params, timeout=3)
             if resp.status_code == 200:
-                has_current = True
-                fdalabel_success = True
-                break
-            elif resp.status_code in [404, 500]:
-                fdalabel_success = True
+                results = resp.json().get('results', [])
+                if results:
+                    has_current = True
+            elif resp.status_code == 404:
+                pass  # Not found
             else:
-                logger.warning(f"FDALabel Public ({path}) returned unexpected status {resp.status_code} for set_id {set_id}")
+                logger.warning(f"openFDA returned unexpected status {resp.status_code} for set_id {set_id}")
+                has_failed = True
         except Exception as e:
-            logger.error(f"Error checking FDALabel Public ({path}) status for set_id {set_id}: {e}")
-            
-    if not fdalabel_success:
-        has_failed = True
+            logger.error(f"Error checking openFDA status for set_id {set_id}: {e}")
+            has_failed = True
 
-    if has_current:
-        return 'Current'
+        if has_current:
+            return 'Current'
 
-    if has_failed:
-        return None
+        # 2. Check FDALabel Public
+        fdalabel_paths = ["set-ids", "seti-ids"]
+        fdalabel_success = False
+        for path in fdalabel_paths:
+            fdalabel_url = f"https://nctr-crs.fda.gov/fdalabel/services/spl/{path}/{set_id}/spl-doc"
+            try:
+                resp = requests.get(fdalabel_url, timeout=3)
+                if resp.status_code == 200:
+                    has_current = True
+                    fdalabel_success = True
+                    break
+                elif resp.status_code in [404, 500]:
+                    fdalabel_success = True
+                else:
+                    logger.warning(f"FDALabel Public ({path}) returned unexpected status {resp.status_code} for set_id {set_id}")
+            except Exception as e:
+                logger.error(f"Error checking FDALabel Public ({path}) status for set_id {set_id}: {e}")
 
-    return 'Archived'
+        if not fdalabel_success:
+            has_failed = True
+
+        if has_current:
+            return 'Current'
+
+        if has_failed:
+            return None
+
+        return 'Archived'
+
+    # Local resolution (default): instant, zero network overhead
+    return 'Current' if is_latest is not False else 'Archived'
 

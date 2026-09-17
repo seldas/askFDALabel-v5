@@ -481,10 +481,13 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
     backend_volumes.extend([
         "./data:/data",
         "./deploy:/deploy",
-        "./backend/database/scripts:/app/database/scripts",
-        "./backend/webtest/results:/app/webtest/results",
-        "./backend/webtest/history:/app/webtest/history"
     ])
+    if not rapid:
+        backend_volumes.extend([
+            "./backend/database/scripts:/app/database/scripts",
+            "./backend/webtest/results:/app/webtest/results",
+            "./backend/webtest/history:/app/webtest/history"
+        ])
 
 
     backend_service = {
@@ -530,10 +533,9 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
     celery_volumes = []
     if mode == "dev":
         celery_volumes.append("./backend:/app")
-    celery_volumes.extend([
-        "./data:/data",
-        "./backend/database/scripts:/app/database/scripts"
-    ])
+    celery_volumes.append("./data:/data")
+    if not rapid:
+        celery_volumes.append("./backend/database/scripts:/app/database/scripts")
 
     concurrency = 1 if efficient else 4
     celery_service = {
@@ -573,7 +575,8 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
             "./frontend:/app",
             "/app/node_modules"
         ])
-    frontend_volumes.append("./frontend/public:/app/public")
+    if not rapid:
+        frontend_volumes.append("./frontend/public:/app/public")
 
     frontend_service = {
         "image": "fdalabel-v3-frontend:latest",

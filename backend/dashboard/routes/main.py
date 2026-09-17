@@ -448,7 +448,7 @@ def view_label(set_id):
         current_app.logger.error(f"Error fetching tox summary: {e}")
 
     is_latest = metadata.get('is_latest', True) if metadata else True
-    openfda_status = check_openfda_status(set_id)
+    openfda_status = check_openfda_status(set_id, is_latest=is_latest)
 
     return jsonify({
         'drug_name': display_drug_name,
