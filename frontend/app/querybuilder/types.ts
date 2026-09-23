@@ -39,11 +39,14 @@ export interface CriteriaGroup {
 
 export interface LabelQuery {
   groups: CriteriaGroup[];
+  /** When checked, searches only the recognized input entities without expansion. */
+  exactMatch: boolean;
 }
 
 /** Wire format — what /api/labelquery/execute accepts and /translate returns. */
 export interface WireQuery {
   groups: Array<{ criteria: Array<{ type: CriterionType; value: CriterionValue }> }>;
+  exactMatch?: boolean;
 }
 
 export interface QuickPick {
@@ -430,12 +433,13 @@ export function makeDefaultGroup(): CriteriaGroup {
 }
 
 export function makeEmptyQuery(): LabelQuery {
-  return { groups: [makeDefaultGroup()] };
+  return { groups: [makeDefaultGroup()], exactMatch: false };
 }
 
 /** Drops client-only ids so the tree matches what the compiler expects. */
 export function toWire(query: LabelQuery, targetDb?: TargetDb): WireQuery {
   return {
+    exactMatch: Boolean(query.exactMatch),
     groups: query.groups.map((g) => ({
       criteria: g.criteria
         .filter((c) => {
@@ -473,7 +477,7 @@ export function fromWire(wire: WireQuery): LabelQuery {
     }))
     .filter((g) => g.criteria.length > 0);
 
-  return groups.length ? { groups } : makeEmptyQuery();
+  return groups.length ? { groups, exactMatch: Boolean(wire.exactMatch) } : makeEmptyQuery();
 }
 
 /** True when a criterion would contribute nothing to the SQL. */
@@ -498,6 +502,8 @@ export function isCriterionEmpty(c: Criterion): boolean {
         v.ptTerms?.length > 0 ||
         v.lltTerms?.length > 0
       );
+    case 'productName':
+      return v.entityNamesResolved ? false : !String(v.text || '').trim();
     case 'pharmClass':
     case 'activeMoiety':
       return !(v.terms?.length > 0);

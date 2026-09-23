@@ -26,15 +26,6 @@ import {
   unsupportedReason,
 } from './types';
 
-function LockIcon({ size = 12 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  );
-}
-
 function ChevronDownIcon({ size = 12 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -77,8 +68,8 @@ export function QueryPanel({
   // Track collapsed sections per group by section key ("groupUid_sectionId")
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
-  const toggleSection = (key: string) => {
-    setCollapsedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  const toggleSection = (key: string, defaultCollapsed = false) => {
+    setCollapsedSections((prev) => ({ ...prev, [key]: !(prev[key] ?? defaultCollapsed) }));
   };
 
   const replaceGroup = (index: number, group: CriteriaGroup | null) => {
@@ -86,7 +77,44 @@ export function QueryPanel({
     if (group) groups.splice(index, 1, group);
     else groups.splice(index, 1);
     // Never leave the page with nothing
-    onChange({ groups: groups.length ? groups : [makeDefaultGroup()] });
+    onChange({ ...query, groups: groups.length ? groups : [makeDefaultGroup()] });
+  };
+
+  const setExactMatch = (exactMatch: boolean) => {
+    const groups = query.groups.map((group) => ({
+      ...group,
+      criteria: group.criteria.map((criterion) => {
+        const value = { ...criterion.value } as Record<string, any>;
+        if (criterion.type === 'productName') {
+          const original = Array.isArray(value.entityOriginalNames)
+            ? value.entityOriginalNames
+            : String(value.text || '').split(/[;,\n]/).map((name: string) => name.trim()).filter(Boolean);
+          const source = exactMatch ? original : value.entityCandidateNames;
+          if (Array.isArray(source)) {
+            const excluded = new Set((value.entityExcludedNames || []).map((name: string) => String(name).toLowerCase()));
+            value.candidateNames = source.filter((name: string) => !excluded.has(String(name).toLowerCase()));
+            value.entityOriginalNames = original;
+            value.entityCandidateNames = value.entityCandidateNames || original;
+            if (exactMatch && value.entityExpansionApplied === undefined) value.entityExpansionApplied = false;
+            if (!exactMatch && value.entityExpansionApplied === false) {
+              value.entityNamesResolved = false;
+            } else {
+              value.entityNamesResolved = true;
+              value.op = 'equals';
+            }
+          } else if (!exactMatch) {
+            value.candidateNames = undefined;
+            value.entityNamesResolved = false;
+          }
+        }
+        if (criterion.type === 'meddra' && Array.isArray(value.entityOriginalLltTerms)) {
+          const source = exactMatch ? value.entityOriginalLltTerms : value.entityCandidateLltTerms;
+          if (Array.isArray(source)) value.lltTerms = source;
+        }
+        return { ...criterion, value };
+      }),
+    }));
+    onChange({ ...query, exactMatch, groups });
   };
 
   const sectionsToRender = SEARCH_SECTIONS.filter(
@@ -95,6 +123,19 @@ export function QueryPanel({
 
   return (
     <div className="fdl-sectioned-builder">
+      <div className="fdl-entity-match-option">
+        <label className="fdl-checkbox-label">
+          <input
+            type="checkbox"
+            checked={query.exactMatch}
+            onChange={(event) => setExactMatch(event.target.checked)}
+          />
+          <span>Exact Match</span>
+        </label>
+        <span className="fdl-entity-match-option__help">
+          Use recognized drug and AE terms only; leave unchecked to include related drug names and MedDRA terms.
+        </span>
+      </div>
       {query.groups.map((group, gi) => (
         <div key={group.uid} className="fdl-group-container">
           {query.groups.length > 1 && (
@@ -118,8 +159,10 @@ export function QueryPanel({
             {sectionsToRender.map((sec, secIdx) => {
               const stepNumber = secIdx + 1;
               const secKey = `${group.uid}_${sec.id}`;
-              const isSectionDisabled = sec.id === 'textMatch' && targetDb === 'local';
-              const isCollapsed = isSectionDisabled || Boolean(collapsedSections[secKey]);
+              const isTextUnavailable = sec.id === 'textMatch' && targetDb === 'local';
+              const isCollapsed = isTextUnavailable
+                ? (collapsedSections[secKey] ?? true)
+                : Boolean(collapsedSections[secKey]);
 
               // Filter criteria belonging to this section
               const sectionCriteria = group.criteria.filter(
@@ -141,22 +184,18 @@ export function QueryPanel({
               return (
                 <section
                   key={sec.id}
-                  className={`fdl-step-section fdl-step-section--step-${stepNumber} fdl-step-section--${sec.id} ${isCollapsed ? 'is-collapsed' : ''} ${isSectionDisabled ? 'is-disabled' : ''}`}
+                  className={`fdl-step-section fdl-step-section--step-${stepNumber} fdl-step-section--${sec.id} ${isCollapsed ? 'is-collapsed' : ''} ${isTextUnavailable ? 'is-unavailable' : ''}`}
                 >
                   <header
                     className="fdl-step-header"
-                    onClick={() => {
-                      if (!isSectionDisabled) {
-                        toggleSection(secKey);
-                      }
-                    }}
+                    onClick={() => toggleSection(secKey, isTextUnavailable)}
                     role="button"
-                    tabIndex={isSectionDisabled ? -1 : 0}
-                    style={{ cursor: isSectionDisabled ? 'not-allowed' : 'pointer' }}
+                    tabIndex={0}
+                    style={{ cursor: 'pointer' }}
                     onKeyDown={(e) => {
-                      if (!isSectionDisabled && (e.key === 'Enter' || e.key === ' ')) {
+                      if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        toggleSection(secKey);
+                        toggleSection(secKey, isTextUnavailable);
                       }
                     }}
                   >
@@ -165,7 +204,7 @@ export function QueryPanel({
                       <div className="fdl-step-header__titles">
                         <h3 className="fdl-step-title">
                           {sec.title}
-                          {isSectionDisabled && (
+                          {isTextUnavailable && (
                             <span
                               className="fdl-header-disabled-badge"
                               style={{
@@ -183,7 +222,7 @@ export function QueryPanel({
                               }}
                             >
                               <AlertIcon size={12} />
-                              <span>Unavailable for Local DB (Ignored)</span>
+                              <span>No label text in Local DB</span>
                             </span>
                           )}
                         </h3>
@@ -191,9 +230,9 @@ export function QueryPanel({
                       </div>
                     </div>
                     <div className="fdl-step-header__right">
-                      {isSectionDisabled ? (
+                      {isTextUnavailable ? (
                         <span className="fdl-active-tag fdl-active-tag--disabled" style={{ background: '#f1f5f9', color: '#64748b' }}>
-                          Folded (Ignored)
+                          Unavailable (Ignored)
                         </span>
                       ) : activeCount > 0 ? (
                         <span className="fdl-active-tag fdl-active-tag--highlight">
@@ -205,13 +244,18 @@ export function QueryPanel({
                         <span className="fdl-active-tag fdl-active-tag--none">Optional</span>
                       )}
                       <span className="fdl-collapse-arrow" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {isSectionDisabled ? <LockIcon size={12} /> : isCollapsed ? <ChevronDownIcon size={12} /> : <ChevronUpIcon size={12} />}
+                        {isCollapsed ? <ChevronDownIcon size={12} /> : <ChevronUpIcon size={12} />}
                       </span>
                     </div>
                   </header>
 
                   {!isCollapsed && (
                     <div className="fdl-step-body">
+                      {isTextUnavailable && (
+                        <div className="fdl-local-text-unavailable" role="note">
+                          Full-text and clinical text search are unavailable for the Local DB because it does not store searchable label text. Text-search criteria are disabled or ignored; Product Title and Initial U.S. Approval filters remain available.
+                        </div>
+                      )}
                       {sec.id === 'textMatch' && hasAdvancedSearch && (
                         <div className="fdl-advanced-warning" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                           <span className="fdl-advanced-warning-icon" style={{ flexShrink: 0, marginTop: '2px', color: '#b45309' }}>
@@ -307,7 +351,7 @@ export function QueryPanel({
         <button
           type="button"
           className="fdl-add-group-btn"
-          onClick={() => onChange({ groups: [...query.groups, { uid: uid(), criteria: [] }] })}
+          onClick={() => onChange({ ...query, groups: [...query.groups, { uid: uid(), criteria: [] }] })}
         >
           + Add Alternative Criteria Group (OR Logic)
         </button>

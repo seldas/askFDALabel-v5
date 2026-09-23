@@ -135,6 +135,7 @@ export function AiIntentPanel({
   onSetAllPrefilters,
   disabled,
   targetDb = 'local',
+  exactMatch = false,
 }: {
   onQuery: (query: LabelQuery) => void;
   /* Categorical picks the model read out of the description. They are held by
@@ -148,6 +149,7 @@ export function AiIntentPanel({
   /* The three databases do not answer the same questions, so the model is told
    * which one before it picks criteria. */
   targetDb?: TargetDb;
+  exactMatch?: boolean;
 }) {
   const [intent, setIntent] = useState('');
   const [busy, setBusy] = useState(false);
@@ -176,6 +178,12 @@ export function AiIntentPanel({
     return () => clearTimeout(t);
   }, [completionToast]);
 
+  useEffect(() => {
+    if (exactMatch) {
+      setNotes((current) => current.filter((note) => !note.startsWith('Drug name ') && !note.startsWith('AE term ')));
+    }
+  }, [exactMatch]);
+
   const translate = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || busy || refining) return;
@@ -197,7 +205,7 @@ export function AiIntentPanel({
       const res = await fetch('/api/labelquery/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intent: trimmed, target_db: targetDb }),
+        body: JSON.stringify({ intent: trimmed, target_db: targetDb, exact_match: exactMatch }),
       });
       const json = await res.json();
       if (!res.ok) {

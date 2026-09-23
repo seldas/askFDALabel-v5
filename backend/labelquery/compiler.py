@@ -261,6 +261,18 @@ def _c_labeling_type(value, bag, warnings):
 def _c_product_name(criterion, bag, warnings):
     field = criterion.get('field') or 'any'
     op = criterion.get('op') or 'contains'
+    if criterion.get('entityNamesResolved'):
+        names = [name.upper() for name in _as_list(criterion.get('candidateNames'))]
+        if not names:
+            return 'FALSE'
+        name_param = bag.add(names)
+        columns = _PRODUCT_NAME_COLUMNS.get(field) or _PRODUCT_NAME_COLUMNS['any']
+        clauses = [
+            f"EXISTS (SELECT 1 FROM unnest(string_to_array(COALESCE({col}, ''), ';')) AS names(entity_name) "
+            f"WHERE UPPER(TRIM(names.entity_name)) = ANY({name_param}))"
+            for col in columns
+        ]
+        return '(' + ' OR '.join(clauses) + ')'
     terms = _split_terms(criterion.get('text'))
     if not terms:
         return None

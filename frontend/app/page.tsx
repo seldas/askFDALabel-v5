@@ -379,6 +379,7 @@ function HomePage() {
           onTogglePrefilter={(id) => setPrefilters((prev) => togglePrefilter(prev, id))}
           onSetAllPrefilters={(checked) => setPrefilters((prev) => setAllPrefilters(prev, checked))}
           targetDb={targetDb}
+          exactMatch={query.exactMatch}
         />
 
         {actionBar('top')}

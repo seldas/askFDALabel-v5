@@ -12,6 +12,7 @@ which is also why it returns `notes` describing what it could not express.
 """
 
 import csv
+import copy
 import io
 import json
 import os
@@ -65,9 +66,8 @@ _DEFAULT_TARGET = 'oracle'
 
 
 def _use_oracle(target_db):
-    return (target_db in _ORACLE_TARGETS) or (
-        target_db != 'local' and FDALabelDBService.is_internal()
-    )
+    """Use only the database selected for this query; never infer a source from environment."""
+    return str(target_db or '').strip().lower() in _ORACLE_TARGETS
 
 
 def _pg():
@@ -85,6 +85,284 @@ def _rows(sql, params=None):
             return [dict(r) for r in cur.fetchall()]
     finally:
         conn.close()
+
+
+def _unique_entity_names(values):
+    unique = {}
+    for value in values:
+        name = str(value or '').strip()
+        if name:
+            unique.setdefault(name.casefold(), name)
+    return list(unique.values())
+
+
+def _entity_expansions(query, target_db):
+    """Resolve related drug names and bounded MedDRA LLT candidates.
+
+    The returned query is a copy. Drug candidates are names with the exact same
+    active-ingredient UNII set as the matched label. For an LLT, its PT is kept
+    as display metadata and the search is widened only to the original LLT plus
+    the three lowest-code sibling LLTs; compiling the PT itself would widen to
+    every LLT under that PT and defeat the cap.
+    """
+    expanded = copy.deepcopy(query or {})
+    summaries = []
+    exact_match = bool(expanded.get('exactMatch'))
+
+    use_oracle = _use_oracle(target_db)
+    from .compiler import _split_terms
+
+    for group in expanded.get('groups') or []:
+        for criterion in group.get('criteria') or []:
+            ctype = criterion.get('type')
+            value = criterion.get('value')
+            if not isinstance(value, dict):
+                continue
+
+            if ctype == 'productName' and value.get('op', 'equals') != 'notContains':
+                if value.get('entityNamesResolved'):
+                    source = value.get('entityOriginalNames') if exact_match else value.get('entityCandidateNames')
+                    if isinstance(source, list):
+                        excluded = {str(name).casefold() for name in (value.get('entityExcludedNames') or [])}
+                        value['candidateNames'] = [name for name in source if str(name).casefold() not in excluded]
+                        value['op'] = 'equals'
+                    continue
+                raw_text = str(value.get('text') or '').strip()
+                terms = _split_terms(raw_text)
+                if exact_match:
+                    if terms:
+                        terms = _unique_entity_names(terms)
+                        value['entityOriginalNames'] = terms
+                        value['entityCandidateNames'] = terms
+                        value['candidateNames'] = terms
+                        value['entityExcludedNames'] = []
+                        value['entityNamesResolved'] = True
+                        value['entityExpansionApplied'] = False
+                        value['op'] = 'equals'
+                    continue
+                all_names = []
+                resolved_any = False
+                for term in terms:
+                    try:
+                        if use_oracle:
+                            from dashboard.services.fdalabel_db import FDALabelDBService
+                            bind = {'name': term.upper()}
+                            ingr_rows = FDALabelDBService.execute_oracle_query(
+                                """
+                                SELECT DISTINCT ai.SPL_ID, ai.UNII
+                                FROM druglabel.SUM_SPL_ACT_INGR_UNII ai
+                                JOIN druglabel.SPL_PROD p ON p.SPL_ID = ai.SPL_ID
+                                WHERE (UPPER(p.NAME) = :name OR UPPER(p.NORMD_GENERIC_NAME) = :name)
+                                """, bind)
+                            resolved_any = resolved_any or bool(ingr_rows)
+                            sets = {}
+                            incomplete = set()
+                            for row in ingr_rows:
+                                sid = str(row.get('SPL_ID') or row.get('spl_id') or '')
+                                unii = str(row.get('UNII') or row.get('unii') or '').strip().upper()
+                                if sid and unii:
+                                    sets.setdefault(sid, set()).add(unii)
+                                elif sid:
+                                    incomplete.add(sid)
+                            ingredient_sets = {tuple(sorted(s)) for sid, s in sets.items() if s and sid not in incomplete}
+                            candidate_uniis = sorted({u for ing_set in ingredient_sets for u in ing_set})
+                            if not ingredient_sets or not candidate_uniis:
+                                all_names.append(term)
+                                if ingr_rows:
+                                    resolved_any = True
+                                continue
+                            unii_binds = {f'u{i}': u for i, u in enumerate(candidate_uniis)}
+                            in_uniis = ', '.join(f':u{i}' for i in range(len(candidate_uniis)))
+                            rows = FDALabelDBService.execute_oracle_query(
+                                f"""
+                                SELECT ai.SPL_ID, ai.UNII, p.NAME, p.NORMD_GENERIC_NAME
+                                FROM druglabel.SUM_SPL_ACT_INGR_UNII ai
+                                JOIN druglabel.SPL_PROD p ON p.SPL_ID = ai.SPL_ID
+                                WHERE ai.SPL_ID IN (
+                                    SELECT DISTINCT match_ai.SPL_ID
+                                    FROM druglabel.SUM_SPL_ACT_INGR_UNII match_ai
+                                    WHERE match_ai.UNII IN ({in_uniis})
+                                )
+                                """, unii_binds)
+                            by_spl = {}
+                            for row in rows:
+                                sid = str(row.get('SPL_ID') or row.get('spl_id') or '')
+                                unii = str(row.get('UNII') or row.get('unii') or '').strip().upper()
+                                if sid:
+                                    item = by_spl.setdefault(sid, {'uniis': set(), 'names': set()})
+                                    if unii:
+                                        item['uniis'].add(unii)
+                                    else:
+                                        item['incomplete'] = True
+                                    for key in ('NAME', 'name', 'NORMD_GENERIC_NAME', 'normd_generic_name'):
+                                        name = str(row.get(key) or '').strip()
+                                        if name:
+                                            item['names'].add(name)
+                            candidates = {term}
+                            for item in by_spl.values():
+                                if not item.get('incomplete') and tuple(sorted(item['uniis'])) in ingredient_sets:
+                                    candidates.update(item['names'])
+                        else:
+                            matched = _rows(
+                                """
+                                SELECT DISTINCT s.spl_id
+                                FROM labeling.sum_spl s
+                                WHERE s.is_latest = TRUE AND (
+                                    EXISTS (
+                                        SELECT 1 FROM unnest(string_to_array(COALESCE(s.product_names, ''), ';')) n
+                                        WHERE UPPER(TRIM(n)) = UPPER(%(name)s)
+                                    ) OR EXISTS (
+                                        SELECT 1 FROM unnest(string_to_array(COALESCE(s.generic_names, ''), ';')) n
+                                        WHERE UPPER(TRIM(n)) = UPPER(%(name)s)
+                                    )
+                                )
+                                """, {'name': term})
+                            spl_ids = [r['spl_id'] for r in matched if r.get('spl_id')]
+                            if not spl_ids:
+                                all_names.append(term)
+                                continue
+                            resolved_any = True
+                            ingr_rows = _rows(
+                                "SELECT spl_id, UPPER(unii) AS unii FROM labeling.active_ingredients_map WHERE spl_id = ANY(%(ids)s) AND is_active = 1",
+                                {'ids': spl_ids})
+                            sets = {}
+                            incomplete = set()
+                            for row in ingr_rows:
+                                if row.get('unii'):
+                                    sets.setdefault(row['spl_id'], set()).add(row['unii'])
+                                else:
+                                    incomplete.add(row['spl_id'])
+                            ingredient_sets = {tuple(sorted(s)) for sid, s in sets.items() if s and sid not in incomplete}
+                            candidate_uniis = sorted({u for ing_set in ingredient_sets for u in ing_set})
+                            if not ingredient_sets or not candidate_uniis:
+                                all_names.append(term)
+                                continue
+                            rows = _rows(
+                                """
+                                SELECT m.spl_id, UPPER(m.unii) AS unii, s.product_names, s.generic_names
+                                FROM labeling.active_ingredients_map m
+                                JOIN labeling.sum_spl s ON s.spl_id = m.spl_id
+                                WHERE s.is_latest = TRUE AND m.is_active = 1
+                                  AND m.spl_id IN (
+                                      SELECT DISTINCT match_m.spl_id
+                                      FROM labeling.active_ingredients_map match_m
+                                      WHERE match_m.is_active = 1 AND match_m.unii = ANY(%(uniis)s)
+                                  )
+                                """, {'uniis': candidate_uniis})
+                            by_spl = {}
+                            for row in rows:
+                                item = by_spl.setdefault(row['spl_id'], {'uniis': set(), 'names': set()})
+                                if row.get('unii'):
+                                    item['uniis'].add(row['unii'])
+                                else:
+                                    item['incomplete'] = True
+                                for key in ('product_names', 'generic_names'):
+                                    item['names'].update(n.strip() for n in str(row.get(key) or '').split(';') if n.strip())
+                            candidates = {term}
+                            for item in by_spl.values():
+                                if not item.get('incomplete') and tuple(sorted(item['uniis'])) in ingredient_sets:
+                                    candidates.update(item['names'])
+
+                        candidate_list = _unique_entity_names(candidates)
+                        all_names.extend(sorted(candidate_list, key=lambda n: (n.casefold() != term.casefold(), n.casefold())))
+                        if len(candidate_list) > 1:
+                            summaries.append({'type': 'drug', 'input': term, 'candidates': sorted(candidate_list, key=str.casefold)[:50]})
+                    except Exception as exc:
+                        print(f"[WARN] Drug entity expansion failed for '{term}': {exc}")
+                        all_names.append(term)
+                if all_names:
+                    all_names = _unique_entity_names(all_names)
+                    if resolved_any:
+                        value['entityOriginalNames'] = terms
+                        value['entityCandidateNames'] = all_names
+                        excluded = set(value.get('entityExcludedNames') or [])
+                        value['candidateNames'] = [n for n in all_names if n.casefold() not in {x.casefold() for x in excluded}]
+                        value['entityNamesResolved'] = True
+                        value['entityExpansionApplied'] = True
+                        value['op'] = 'equals'
+                        value['field'] = 'any'
+                        value['verified'] = True
+
+            elif ctype == 'meddra':
+                # Only the Oracle target supports label occurrence matching.
+                if exact_match or not use_oracle or value.get('entityLltCandidatesResolved'):
+                    continue
+                llt_terms = list(dict.fromkeys(str(t).strip() for t in (value.get('lltTerms') or []) if str(t).strip()))
+                if not llt_terms:
+                    continue
+                try:
+                    from dashboard.services.fdalabel_db import FDALabelDBService
+                    all_llts = list(llt_terms)
+                    value['entityOriginalLltTerms'] = list(llt_terms)
+                    parent_pts = list(value.get('standardizedPtTerms') or [])
+                    grouped_pts = {}
+                    for term in llt_terms:
+                        rows = FDALabelDBService.execute_oracle_query(
+                            """
+                            SELECT pt.PT_CODE, pt.PT_NAME
+                            FROM meddra.low_level_term llt
+                            JOIN meddra.preferred_term pt ON pt.PT_CODE = llt.PT_CODE
+                            WHERE UPPER(llt.LLT_NAME) = :term
+                            ORDER BY llt.LLT_CODE FETCH FIRST 1 ROWS ONLY
+                            """, {'term': term.upper()})
+                        if not rows:
+                            continue
+                        pt_name = rows[0].get('PT_NAME') or rows[0].get('pt_name')
+                        pt_code = rows[0].get('PT_CODE') or rows[0].get('pt_code')
+                        if pt_name and pt_name.casefold() not in {p.casefold() for p in parent_pts}:
+                            parent_pts.append(pt_name)
+                        if pt_code is not None:
+                            item = grouped_pts.setdefault(str(pt_code), {'pt': pt_name, 'inputs': [], 'originals': set(), 'siblings': []})
+                            item['inputs'].append(term)
+                            item['originals'].add(term.casefold())
+                    for pt_code, item in grouped_pts.items():
+                        rows = FDALabelDBService.execute_oracle_query(
+                            """
+                            SELECT LLT_CODE, LLT_NAME FROM meddra.low_level_term
+                            WHERE PT_CODE = :pt_code ORDER BY LLT_CODE
+                            """, {'pt_code': pt_code})
+                        siblings = [
+                            (r.get('LLT_CODE') or r.get('llt_code'), r.get('LLT_NAME') or r.get('llt_name'))
+                            for r in rows
+                            if (r.get('LLT_NAME') or r.get('llt_name'))
+                            and (r.get('LLT_NAME') or r.get('llt_name')).casefold() not in item['originals']
+                        ][:3]
+                        chosen = [name for _, name in siblings]
+                        all_llts.extend(chosen)
+                        summaries.append({
+                            'type': 'ae', 'input': ', '.join(item['inputs']), 'pt': item['pt'],
+                            'candidates': item['inputs'] + chosen,
+                        })
+                    value['lltTerms'] = list(dict.fromkeys(all_llts))
+                    value['entityCandidateLltTerms'] = list(value['lltTerms'])
+                    value['entityLltCandidatesResolved'] = True
+                    value['standardizedPtTerms'] = parent_pts
+                    # `terms` is the legacy single-level shape. Keeping the new
+                    # explicit arrays avoids treating LLTs as PTs in the compiler.
+                    value['terms'] = []
+                except Exception as exc:
+                    print(f'[WARN] MedDRA entity expansion failed: {exc}')
+
+    return expanded, summaries
+
+
+def _entity_expansion_notes(summaries):
+    notes = []
+    for item in summaries:
+        if item['type'] == 'drug':
+            candidates = item.get('candidates') or []
+            if len(candidates) > 1:
+                related = [name for name in candidates if name.casefold() != item['input'].casefold()]
+                shown = ', '.join(related[:8])
+                remainder = f" (+{len(related) - 8} more)" if len(related) > 8 else ''
+                notes.append(f"Drug name '{item['input']}' expanded to same-ingredient label names: {shown}{remainder}.")
+        else:
+            names = item.get('candidates') or []
+            pt = item.get('pt')
+            sibling_names = ', '.join(names[1:])
+            suffix = f" Added LLT candidates: {sibling_names}." if sibling_names else ' No additional LLT candidates were available.'
+            notes.append(f"AE term '{item['input']}' maps to PT '{pt}'.{suffix}")
+    return notes
 
 
 # ---------------------------------------------------------------------------
@@ -964,7 +1242,8 @@ def _compute_facets(query, target_db):
     or changing any filter updates the result set while keeping the filter panel
     counts fixed against the full matched set.
     """
-    unfiltered_query = strip_all_categories(query)
+    expanded_query, _ = _entity_expansions(query, target_db)
+    unfiltered_query = strip_all_categories(expanded_query)
     if _use_oracle_facets(target_db):
         return _compute_oracle_facets(unfiltered_query, target_db)
 
@@ -1004,7 +1283,8 @@ def execute():
 
     # Target database selection: check explicit target_db payload first
     target_db = _resolve_target_db(payload.get('target_db') or payload.get('source'))
-    use_oracle = (target_db in _ORACLE_TARGETS) or (target_db != 'local' and FDALabelDBService.is_internal())
+    query, entity_expansions = _entity_expansions(query, target_db)
+    use_oracle = _use_oracle(target_db)
 
     if use_oracle:
         conn = FDALabelDBService.get_oracle_connection()
@@ -1129,7 +1409,8 @@ def execute():
                     'capped': False,
                     'limit': limit,
                     'offset': offset,
-                    'warnings': warnings,
+                    'warnings': warnings + _entity_expansion_notes(entity_expansions),
+                    'entity_expansions': entity_expansions,
                     'sql': debug_sql,
                 })
             except Exception as e:
@@ -1224,7 +1505,8 @@ def execute():
             'capped': False,
             'limit': limit,
             'offset': offset,
-            'warnings': warnings,
+            'warnings': warnings + _entity_expansion_notes(entity_expansions),
+            'entity_expansions': entity_expansions,
             'sql': debug_sql,
         })
     except Exception as e:
@@ -1270,8 +1552,9 @@ EXPORT_COLUMNS = [
 
 
 def _export_rows(query, sort, direction, target_db=None):
+    query, _ = _entity_expansions(query, target_db or 'local')
     target_str = str(target_db or '').lower()
-    use_oracle = (target_str in _ORACLE_TARGETS) or (target_str != 'local' and FDALabelDBService.is_internal())
+    use_oracle = _use_oracle(target_str)
 
     if use_oracle:
         conn = FDALabelDBService.get_oracle_connection()
@@ -1792,13 +2075,13 @@ def _auto_verify_meddra(terms, target_db='oracle'):
                         found = True
             else:
                 # Check local Postgres public.meddra_hierarchy / low_level_term
-                sql_pt = "SELECT DISTINCT pt_name FROM public.meddra_hierarchy WHERE lower(pt_name) = lower(%(t)s) LIMIT 1"
+                sql_pt = "SELECT DISTINCT pt_name FROM public.meddra_pt WHERE lower(pt_name) = lower(%(t)s) LIMIT 1"
                 rows_pt = _rows(sql_pt, {'t': t})
                 if rows_pt and rows_pt[0].get('pt_name'):
                     verified_pts.append(rows_pt[0]['pt_name'])
                     found = True
                 else:
-                    sql_llt = "SELECT DISTINCT llt_name FROM public.meddra_low_level_term WHERE lower(llt_name) = lower(%(t)s) LIMIT 1"
+                    sql_llt = "SELECT DISTINCT llt_name FROM public.meddra_llt WHERE lower(llt_name) = lower(%(t)s) LIMIT 1"
                     rows_llt = _rows(sql_llt, {'t': t})
                     if rows_llt and rows_llt[0].get('llt_name'):
                         verified_llts.append(rows_llt[0]['llt_name'])
@@ -1901,7 +2184,11 @@ def _sanitize_translation(parsed, target_db):
                 elif isinstance(value, list):
                     terms = value
                 elif isinstance(value, dict):
-                    terms = value.get('terms') or value.get('ptTerms') or value.get('lltTerms') or ([value.get('text')] if value.get('text') else [])
+                    terms = value.get('terms')
+                    if not terms:
+                        terms = list(value.get('ptTerms') or []) + list(value.get('lltTerms') or [])
+                    if not terms and value.get('text'):
+                        terms = [value.get('text')]
                 
                 lvl = (value.get('level') or 'pt').lower() if isinstance(value, dict) else 'pt'
                 if lvl in ('soc', 'hlgt', 'hlt'):
@@ -1914,10 +2201,14 @@ def _sanitize_translation(parsed, target_db):
                 is_fully_verified = len(unverified) == 0 and (len(verified_pts) > 0 or len(verified_llts) > 0)
                 value = {
                     'level': lvl if lvl in ('pt', 'llt') else 'pt',
-                    'ptTerms': verified_pts,
-                    'lltTerms': verified_llts,
+                    'ptTerms': verified_pts + (unverified if lvl == 'pt' else []),
+                    'lltTerms': verified_llts + (unverified if lvl == 'llt' else []),
                     'unverifiedTerms': unverified,
-                    'terms': verified_pts + verified_llts + unverified,
+                    # New shape keeps PT and LLT rows distinct. Putting all
+                    # terms into the legacy field causes the compiler to treat
+                    # LLTs as PTs whenever level='pt', widening every LLT to
+                    # all of its siblings.
+                    'terms': [],
                     'verified': is_fully_verified,
                 }
             elif ctype == 'identifier':
@@ -2000,6 +2291,9 @@ def translate():
         return jsonify({'error': 'The model did not return a usable query.'}), 502
 
     query, notes, harvested = _sanitize_translation(parsed, target_db)
+    query['exactMatch'] = bool(payload.get('exact_match', False))
+    query, entity_expansions = _entity_expansions(query, target_db)
+    notes.extend(_entity_expansion_notes(entity_expansions))
 
     raw_prefilters = list(parsed.get('prefilters') or []) + harvested
     prefilters, prefilter_notes = _sanitize_prefilters(raw_prefilters, target_db)

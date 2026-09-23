@@ -409,7 +409,7 @@ export function CriterionCard({
                   queryText={v.text}
                   field={v.field || 'any'}
                   targetDb={targetDb}
-                  onConfirm={(confirmedName) => set({ text: confirmedName, verified: true, op: 'equals' })}
+                  onConfirm={(confirmedName) => set({ text: confirmedName, verified: true, op: 'equals', candidateNames: undefined, entityNamesResolved: false, entityCandidateNames: undefined, entityOriginalNames: undefined, entityExcludedNames: [] })}
                 />
               </div>
             )}
@@ -418,6 +418,7 @@ export function CriterionCard({
               <Select
                 ariaLabel="Field scope"
                 value={v.field || 'any'}
+                disabled={Boolean(v.entityNamesResolved)}
                 onChange={(field) => set({ field })}
                 options={[
                   { value: 'any', label: 'All Product Identifiers' },
@@ -429,6 +430,7 @@ export function CriterionCard({
               <Select
                 ariaLabel="Match type"
                 value={v.op || 'equals'}
+                disabled={Boolean(v.entityNamesResolved)}
                 onChange={(newOp) => {
                   if (newOp === 'equals') {
                     set({ op: newOp, verified: false });
@@ -448,15 +450,15 @@ export function CriterionCard({
                   type="text"
                   className="fdl-input"
                   value={v.text || ''}
-                  onChange={(e) => set({ text: e.target.value, verified: true })}
+                  onChange={(e) => set({ text: e.target.value, verified: true, candidateNames: undefined, entityNamesResolved: false, entityCandidateNames: undefined, entityOriginalNames: undefined, entityExcludedNames: [] })}
                   placeholder="Enter partial product or ingredient name (freeform text)"
                   style={{ flex: 1 }}
                 />
               ) : (
                 <AutoCompleteInput
                   value={v.text || ''}
-                  onChange={(text) => set({ text, verified: isStartsWith ? true : false })}
-                  onSelect={(text) => set({ text, verified: true })}
+                  onChange={(text) => set({ text, verified: isStartsWith ? true : false, candidateNames: undefined, entityNamesResolved: false, entityCandidateNames: undefined, entityOriginalNames: undefined, entityExcludedNames: [] })}
+                  onSelect={(text) => set({ text, verified: true, candidateNames: undefined, entityNamesResolved: false, entityCandidateNames: undefined, entityOriginalNames: undefined, entityExcludedNames: [] })}
                   placeholder={
                     isStartsWith
                       ? 'Enter prefix or select suggestion (e.g. Tylenol)'
@@ -487,8 +489,33 @@ export function CriterionCard({
                 </span>
               )}
             </div>
+            {v.entityNamesResolved && Array.isArray(v.candidateNames) && (
+              <div className="fdl-entity-name-candidates">
+                <span className="fdl-entity-name-candidates__label">Exact name candidates</span>
+                {v.candidateNames.length ? (
+                  <Chips
+                    values={v.candidateNames}
+                    onRemove={(name) => {
+                      const keep = (items: unknown) => Array.isArray(items)
+                        ? items.filter((item) => String(item).toLowerCase() !== name.toLowerCase())
+                        : items;
+                      set({
+                        candidateNames: keep(v.candidateNames),
+                        entityCandidateNames: keep(v.entityCandidateNames),
+                        entityOriginalNames: keep(v.entityOriginalNames),
+                        entityExcludedNames: [...(v.entityExcludedNames || []), name],
+                      });
+                    }}
+                  />
+                ) : (
+                  <span className="fdl-entity-name-candidates__empty">No product names selected; this criterion will not match labels.</span>
+                )}
+              </div>
+            )}
             <p className="fdl-note">
-              {isExact ? (
+              {v.entityNamesResolved ? (
+                'Each selected name badge is matched as an exact product or generic name. Remove a badge to exclude that name.'
+              ) : isExact ? (
                 v.verified !== false ? (
                   'Standardized product name is confirmed. Exact match index scan will be used.'
                 ) : (
@@ -793,6 +820,18 @@ export function CriterionCard({
             verified: unverifiedTerms.length === 0,
           });
 
+        const removeDirectLlt = (llt: string) =>
+          set({
+            lltTerms: meddraLlts.filter((x) => x !== llt),
+            entityOriginalLltTerms: Array.isArray(v.entityOriginalLltTerms)
+              ? v.entityOriginalLltTerms.filter((x: string) => x !== llt)
+              : v.entityOriginalLltTerms,
+            entityCandidateLltTerms: Array.isArray(v.entityCandidateLltTerms)
+              ? v.entityCandidateLltTerms.filter((x: string) => x !== llt)
+              : v.entityCandidateLltTerms,
+            verified: unverifiedTerms.length === 0,
+          });
+
         const toggleExcluded = (llt: string) =>
           set({
             excludedLlts: meddraExcluded.includes(llt)
@@ -808,6 +847,12 @@ export function CriterionCard({
           if (!pt) return;
           set({
             lltTerms: meddraLlts.filter((x) => x !== llt),
+            entityOriginalLltTerms: Array.isArray(v.entityOriginalLltTerms)
+              ? v.entityOriginalLltTerms.filter((x: string) => x !== llt)
+              : v.entityOriginalLltTerms,
+            entityCandidateLltTerms: Array.isArray(v.entityCandidateLltTerms)
+              ? v.entityCandidateLltTerms.filter((x: string) => x !== llt)
+              : v.entityCandidateLltTerms,
             ptTerms: meddraPts.includes(pt) ? meddraPts : [...meddraPts, pt],
             verified: unverifiedTerms.length === 0,
           });
@@ -844,7 +889,7 @@ export function CriterionCard({
                 className="fdl-term-badge__x"
                 onClick={() =>
                   direct
-                    ? set({ lltTerms: meddraLlts.filter((x) => x !== llt), verified: unverifiedTerms.length === 0 })
+                    ? removeDirectLlt(llt)
                     : toggleExcluded(llt)
                 }
                 title={
@@ -904,6 +949,12 @@ export function CriterionCard({
                           unverifiedTerms: nextUnverified,
                           ptTerms: nextPts,
                           lltTerms: nextLlts,
+                          entityOriginalLltTerms: Array.isArray(v.entityOriginalLltTerms)
+                            ? [...v.entityOriginalLltTerms, ...(lvl === 'llt' ? [canonical] : [])]
+                            : v.entityOriginalLltTerms,
+                          entityCandidateLltTerms: Array.isArray(v.entityCandidateLltTerms)
+                            ? [...v.entityCandidateLltTerms, ...(lvl === 'llt' ? [canonical] : [])]
+                            : v.entityCandidateLltTerms,
                           verified: nextUnverified.length === 0,
                         });
                       }}

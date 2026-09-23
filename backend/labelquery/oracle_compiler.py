@@ -367,6 +367,24 @@ def _compile_active_moiety(value, bag):
 def _compile_product_name(value, bag, base_table=BASE_TABLE_HUMAN):
     field = value.get('field') or 'any'
     op = value.get('op') or 'contains'
+    if value.get('entityNamesResolved'):
+        names = list(dict.fromkeys(str(t).strip() for t in _as_list(value.get('candidateNames')) if str(t).strip()))
+        if not names:
+            return '1 = 0'
+        exact_clauses = []
+        for name in names:
+            p = bag.add(name.upper())
+            if field == 'trade':
+                match = f'UPPER(p.NAME) = {p}'
+            elif field == 'generic':
+                match = f'UPPER(p.NORMD_GENERIC_NAME) = {p}'
+            else:
+                match = f'(UPPER(p.NAME) = {p} OR UPPER(p.NORMD_GENERIC_NAME) = {p})'
+            exact_clauses.append(
+                'EXISTS (SELECT 1 FROM druglabel.SPL_PROD p '
+                f'WHERE p.SPL_ID = s.SPL_ID AND {match})'
+            )
+        return '(' + ' OR '.join(exact_clauses) + ')'
     terms = _split_terms(value.get('text'))
     if not terms:
         return None

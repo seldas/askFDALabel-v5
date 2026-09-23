@@ -311,18 +311,21 @@ export function Select({
   options,
   wide,
   ariaLabel,
+  disabled = false,
 }: {
   value: string;
   onChange: (value: string) => void;
   options: Array<{ value: string; label: string }>;
   wide?: boolean;
   ariaLabel: string;
+  disabled?: boolean;
 }) {
   return (
     <select
       className={wide ? 'fdl-select fdl-select--wide' : 'fdl-select'}
       value={value}
       aria-label={ariaLabel}
+      disabled={disabled}
       onChange={(e) => onChange(e.target.value)}
     >
       {options.map((o) => (

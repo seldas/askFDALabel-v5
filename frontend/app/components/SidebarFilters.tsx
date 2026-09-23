@@ -132,7 +132,7 @@ export default function SidebarFilters({
           return { ...g, criteria: updatedCriteria };
         });
 
-        return { groups: updatedGroups };
+        return { ...prev, groups: updatedGroups };
       });
     },
     [],
