@@ -10,6 +10,7 @@ import {
     Tooltip, ResponsiveContainer
 } from 'recharts';
 import { API_BASE } from '../utils/appPaths';
+import './webtest-workstation.css';
 
 interface TestResult {
     task_id: number;
@@ -54,11 +55,11 @@ const VERSION_ORDER = [
 
 function getVersionColor(v: string) {
     const vUpper = v.toUpperCase();
-    if (vUpper.includes('PROD')) return vUpper.includes('CDER') ? 'var(--afl-info-500)' : 'var(--afl-info-700)';
-    if (vUpper.includes('PUBLIC')) return vUpper.includes('CDER') ? 'var(--afl-success-500)' : 'var(--afl-success-700)';
-    if (vUpper.includes('TEST')) return vUpper.includes('CDER') ? 'var(--afl-ai-from)' : 'var(--afl-a-700)';
-    if (vUpper.includes('DEV')) return vUpper.includes('CDER') ? 'var(--afl-warn-500)' : 'var(--afl-warn-700)';
-    return 'var(--afl-n-500)';
+    if (vUpper.includes('PROD')) return vUpper.includes('CDER') ? 'var(--fdl-navy-800)' : 'var(--fdl-blue-700)';
+    if (vUpper.includes('PUBLIC')) return vUpper.includes('CDER') ? '#1e5634' : 'var(--fdl-green)';
+    if (vUpper.includes('TEST')) return vUpper.includes('CDER') ? '#b46a00' : 'var(--fdl-amber)';
+    if (vUpper.includes('DEV')) return 'var(--fdl-muted)';
+    return 'var(--fdl-ink-soft)';
 }
 
 function formatCount(c: string | null | undefined): string {
@@ -69,16 +70,25 @@ function formatCount(c: string | null | undefined): string {
 function countBg(c: string | null | undefined): string {
     if (!c || c === 'N/A' || c === '—') return 'transparent';
     const n = parseInt(c);
-    if (isNaN(n)) return 'var(--afl-n-100)';
-    if (n === 0) return 'var(--afl-danger-100)';
-    return 'var(--afl-success-50)';
+    if (isNaN(n)) return 'var(--fdl-canvas)';
+    if (n === 0) return 'var(--fdl-red-050)';
+    return 'var(--fdl-green-050)';
 }
+
 function countColor(c: string | null | undefined): string {
-    if (!c || c === 'N/A' || c === '—') return 'var(--afl-n-400)';
+    if (!c || c === 'N/A' || c === '—') return 'var(--fdl-muted)';
     const n = parseInt(c);
-    if (isNaN(n)) return 'var(--afl-n-500)';
-    if (n === 0) return 'var(--afl-danger-500)';
-    return 'var(--afl-success-500)';
+    if (isNaN(n)) return 'var(--fdl-ink-soft)';
+    if (n === 0) return 'var(--fdl-red)';
+    return 'var(--fdl-green)';
+}
+
+function countBorder(c: string | null | undefined): string {
+    if (!c || c === 'N/A' || c === '—') return 'transparent';
+    const n = parseInt(c);
+    if (isNaN(n)) return 'var(--fdl-line-soft)';
+    if (n === 0) return 'rgba(181, 9, 9, 0.25)';
+    return 'rgba(45, 122, 76, 0.25)';
 }
 
 function WebTestingPageInner() {
@@ -99,19 +109,21 @@ function WebTestingPageInner() {
     const [isSnapshotLoading, setIsSnapshotLoading] = useState(false);
     const [activeVersions, setActiveVersions] = useState<string[]>([]);
 
-    // Task chart state
-    const [selectedTask, setSelectedTask] = useState<SnapshotTask | null>(null);
+    // Tooltip hover
     const [hoveredCell, setHoveredCell] = useState<{ taskId: number; version: string } | null>(null);
+
+    // Selected task detail
+    const [selectedTask, setSelectedTask] = useState<SnapshotTask | null>(null);
     const [taskHistory, setTaskHistory] = useState<any[]>([]);
     const [isHistoryLoading, setIsHistoryLoading] = useState(false);
-    const [historyRange, setHistoryRange] = useState<'all' | '1y' | '3m'>('1y');
-    const [hiddenLines, setHiddenLines] = useState<string[]>([]);
+    const [historyRange, setHistoryRange] = useState<'3m' | '1y' | 'all'>('1y');
     const [showOutliers, setShowOutliers] = useState(false);
+    const [hiddenLines, setHiddenLines] = useState<string[]>([]);
 
-    // Download state
+    // Download controls
     const [downloadRange, setDownloadRange] = useState<'1m' | '3m' | '1y' | 'custom'>('1m');
-    const [customStartDate, setCustomStartDate] = useState<string>('');
-    const [customEndDate, setCustomEndDate] = useState<string>('');
+    const [customStartDate, setCustomStartDate] = useState('');
+    const [customEndDate, setCustomEndDate] = useState('');
     const [isDownloadingHistory, setIsDownloadingHistory] = useState(false);
 
     const stopRef = useRef(false);
@@ -337,7 +349,6 @@ function WebTestingPageInner() {
             return { lower: Math.max(0, q1 - 1.5*iqr), upper: q3 + 1.5*iqr };
         };
         const dBounds = getIQR(delays), cBounds = getIQR(counts);
-        const maxCount = counts[counts.length-1] || 1, cThresh = Math.max(1, maxCount * 0.02);
         return taskHistory.map(h => {
             if (h.isBreak) return h;
             let isOutlier = false; const newH = { ...h };
@@ -351,85 +362,196 @@ function WebTestingPageInner() {
         });
     }, [taskHistory, chartVersions, showOutliers]);
 
-    // ── Render ─────────────────────────────────────────────────────────────
     const processedCount = results.filter(r => r.status !== 'pending').length;
+    const totalTrackedRecords = useMemo(() => {
+        return calendarDates.reduce((s, d) => s + d.run_count, 0);
+    }, [calendarDates]);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--afl-n-50)' }}>
+        <div className="webtest-container">
             <Header />
-            <main style={{ flex: 1, padding: '32px 24px', maxWidth: '1600px', margin: '0 auto', width: '100%' }}>
-                {/* Page title */}
-                <div style={{ marginBottom: '24px' }}>
-                    <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--afl-n-900)', margin: 0 }}>FDALabel Auto-Test Dashboard</h1>
-                    <p style={{ color: 'var(--afl-n-500)', margin: '4px 0 0' }}>Browse historical test runs by date, inspect per-task results, and view long-term trends.</p>
+            <main className="webtest-layout">
+                {/* ── Workstation Precision Header ──────────────────────────── */}
+                <div className="webtest-header">
+                    <div className="webtest-header-titles">
+                        <span className="webtest-region-code">SYSTEM / REGRESSION-SURVEILLANCE</span>
+                        <h1 className="webtest-title">Automated Regression Testing & Surveillance</h1>
+                        <p className="webtest-subtitle">
+                            Monitor query latency drift, hit counts, and cross-endpoint parity across FDA production, test, and development instances.
+                        </p>
+                    </div>
+                    <div className="webtest-header-stats">
+                        <div className="webtest-stat-chip">
+                            <span className="webtest-stat-chip__label">Configured Tasks</span>
+                            <span className="webtest-stat-chip__value">{totalTasks}</span>
+                        </div>
+                        <div className="webtest-stat-chip">
+                            <span className="webtest-stat-chip__label">Tracked Days</span>
+                            <span className="webtest-stat-chip__value">{calendarDates.length}</span>
+                        </div>
+                        <div className="webtest-stat-chip">
+                            <span className="webtest-stat-chip__label">Total Runs</span>
+                            <span className="webtest-stat-chip__value">{totalTrackedRecords.toLocaleString()}</span>
+                        </div>
+                    </div>
                 </div>
 
-                {/* ── Control Bar ──────────────────────────────────────────── */}
-                <div style={{ background: 'var(--afl-n-0)', padding: '14px 24px', borderRadius: '14px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: '24px', border: '1px solid var(--afl-n-200)', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center' }}>
-                    {/* Status */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ padding: '3px 12px', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', backgroundColor: status === 'running' ? 'var(--afl-info-100)' : status === 'completed' ? 'var(--afl-success-50)' : 'var(--afl-n-100)', color: status === 'running' ? 'var(--afl-info-700)' : status === 'completed' ? 'var(--afl-success-700)' : 'var(--afl-n-600)' }}>{status}</span>
-                        {status === 'running' && <><div className="loader" style={{ width: '14px', height: '14px', borderWidth: '2px' }}></div><span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-info-700)' }}>{taskProgress}%</span></>}
-                        {status !== 'running' && <span style={{ fontSize: '0.8rem', color: 'var(--afl-n-500)' }}>{processedCount}/{totalTasks} tasks</span>}
+                {/* ── Action & Control Toolbar ─────────────────────────────── */}
+                <div className="webtest-toolbar">
+                    <div className="webtest-toolbar-group">
+                        <span className={`webtest-status-badge webtest-status-badge--${status}`}>
+                            {status === 'running' && <span className="webtest-spinner" style={{ width: '10px', height: '10px' }} />}
+                            {status}
+                        </span>
+
+                        {status === 'running' && (
+                            <span className="webtest-progress-text">{taskProgress}%</span>
+                        )}
+
+                        {status !== 'running' && (
+                            <span className="webtest-task-count-text">{processedCount} / {totalTasks} tasks processed</span>
+                        )}
+
+                        <button 
+                            className="webtest-btn webtest-btn-primary" 
+                            onClick={startAutomation} 
+                            disabled={totalTasks === 0 || status === 'running'}
+                        >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                <polygon points="5 3 19 12 5 21 5 3" />
+                            </svg>
+                            Start Automation
+                        </button>
+
+                        {status === 'running' && (
+                            <button 
+                                className="webtest-btn webtest-btn-danger" 
+                                onClick={() => { stopRef.current = true; }}
+                            >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                    <rect x="5" y="5" width="14" height="14" rx="1" />
+                                </svg>
+                                Stop
+                            </button>
+                        )}
+
+                        {error && (
+                            <span className="webtest-error-banner">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                    <line x1="12" y1="9" x2="12" y2="13" />
+                                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                                </svg>
+                                {error}
+                            </span>
+                        )}
                     </div>
-                    <button onClick={startAutomation} disabled={totalTasks === 0} style={{ padding: '9px 18px', backgroundColor: totalTasks > 0 ? 'var(--afl-info-700)' : 'var(--afl-n-300)', color: 'var(--afl-n-0)', borderRadius: '8px', fontWeight: 700, fontSize: '0.82rem', border: 'none', cursor: totalTasks > 0 ? 'pointer' : 'not-allowed', boxShadow: totalTasks > 0 ? '0 4px 12px rgba(37,99,235,0.25)' : 'none' }}>▶ Start Automation</button>
-                    {status === 'running' && <button onClick={() => { stopRef.current = true; }} style={{ padding: '9px 18px', backgroundColor: 'var(--afl-danger-500)', color: 'var(--afl-n-0)', borderRadius: '8px', fontWeight: 700, fontSize: '0.82rem', border: 'none', cursor: 'pointer' }}>■ Stop</button>}
 
-                    <div style={{ width: '1px', height: '28px', background: 'var(--afl-n-200)', flexShrink: 0 }} />
-
-                    {/* Download */}
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                        <div>
-                            <label style={{ display: 'block', fontSize: '0.62rem', fontWeight: 800, color: 'var(--afl-n-400)', textTransform: 'uppercase', marginBottom: '3px' }}>Download Range</label>
-                            <select value={downloadRange} onChange={e => setDownloadRange(e.target.value as any)} style={{ padding: '7px 28px 7px 10px', borderRadius: '8px', border: '1px solid var(--afl-n-200)', fontSize: '0.82rem', outline: 'none' }}>
+                    <div className="webtest-toolbar-group">
+                        <div className="webtest-divider-v" />
+                        <div className="webtest-export-form">
+                            <span className="webtest-control-label">Export Range</span>
+                            <select 
+                                className="webtest-select" 
+                                value={downloadRange} 
+                                onChange={e => setDownloadRange(e.target.value as any)}
+                            >
                                 <option value="1m">Past 1 Month</option>
                                 <option value="3m">Past 3 Months</option>
                                 <option value="1y">Past 1 Year</option>
                                 <option value="custom">Custom Range</option>
                             </select>
+
+                            {downloadRange === 'custom' && (
+                                <>
+                                    <input 
+                                        type="date" 
+                                        className="webtest-input-date" 
+                                        value={customStartDate} 
+                                        onChange={e => setCustomStartDate(e.target.value)} 
+                                    />
+                                    <input 
+                                        type="date" 
+                                        className="webtest-input-date" 
+                                        value={customEndDate} 
+                                        onChange={e => setCustomEndDate(e.target.value)} 
+                                    />
+                                </>
+                            )}
+
+                            <button 
+                                className="webtest-btn webtest-btn-secondary" 
+                                onClick={downloadHistory} 
+                                disabled={isDownloadingHistory || (downloadRange === 'custom' && (!customStartDate || !customEndDate))}
+                            >
+                                {isDownloadingHistory ? (
+                                    <>
+                                        <span className="webtest-spinner" style={{ width: '12px', height: '12px' }} />
+                                        Exporting…
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                            <polyline points="7 10 12 15 17 10" />
+                                            <line x1="12" y1="15" x2="12" y2="3" />
+                                        </svg>
+                                        Download History
+                                    </>
+                                )}
+                            </button>
                         </div>
-                        {downloadRange === 'custom' && <>
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.62rem', fontWeight: 800, color: 'var(--afl-n-400)', textTransform: 'uppercase', marginBottom: '3px' }}>Start</label>
-                                <input type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} style={{ padding: '7px', borderRadius: '8px', border: '1px solid var(--afl-n-200)', fontSize: '0.82rem', outline: 'none' }} />
-                            </div>
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.62rem', fontWeight: 800, color: 'var(--afl-n-400)', textTransform: 'uppercase', marginBottom: '3px' }}>End</label>
-                                <input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} style={{ padding: '7px', borderRadius: '8px', border: '1px solid var(--afl-n-200)', fontSize: '0.82rem', outline: 'none' }} />
-                            </div>
-                        </>}
-                        <button onClick={downloadHistory} disabled={isDownloadingHistory || (downloadRange === 'custom' && (!customStartDate || !customEndDate))} style={{ padding: '9px 16px', backgroundColor: 'var(--afl-n-0)', color: 'var(--afl-n-600)', borderRadius: '8px', fontWeight: 700, fontSize: '0.82rem', border: '1px solid var(--afl-n-200)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            {isDownloadingHistory ? <><div className="loader" style={{ width: '12px', height: '12px', borderWidth: '2px' }}></div>Downloading...</> : <>⬇ Download History</>}
-                        </button>
                     </div>
-                    {error && <span style={{ color: 'var(--afl-danger-500)', fontSize: '0.8rem', fontWeight: 600 }}>⚠ {error}</span>}
                 </div>
 
-                {/* ── Three-Panel Body ──────────────────────────────────────── */}
-                <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '20px', alignItems: 'start' }}>
-
-                    {/* ── LEFT: Calendar Panel ─────────────────────────────── */}
-                    <div style={{ background: 'var(--afl-n-0)', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid var(--afl-n-200)', position: 'sticky', top: '20px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                            <button onClick={() => setCalendarMonth(prev => { const d = new Date(prev); d.setMonth(d.getMonth() - 1); return d; })} style={{ background: 'none', border: '1px solid var(--afl-n-200)', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
-                            <span style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--afl-n-800)' }}>{formatMonthYear(calendarMonth)}</span>
-                            <button onClick={() => setCalendarMonth(prev => { const d = new Date(prev); d.setMonth(d.getMonth() + 1); return d; })} style={{ background: 'none', border: '1px solid var(--afl-n-200)', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+                {/* ── Body Grid: Sidebar Rail + Workspace Content ───────────── */}
+                <div className="webtest-body">
+                    {/* ── LEFT: Calendar Index Rail ─────────────────────────── */}
+                    <aside className="webtest-sidebar">
+                        <div className="webtest-month-nav">
+                            <button 
+                                className="webtest-nav-arrow" 
+                                onClick={() => setCalendarMonth(prev => { const d = new Date(prev); d.setMonth(d.getMonth() - 1); return d; })}
+                                title="Previous Month"
+                            >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+                                    <polyline points="15 18 9 12 15 6" />
+                                </svg>
+                            </button>
+                            <span className="webtest-month-title">{formatMonthYear(calendarMonth)}</span>
+                            <button 
+                                className="webtest-nav-arrow" 
+                                onClick={() => setCalendarMonth(prev => { const d = new Date(prev); d.setMonth(d.getMonth() + 1); return d; })}
+                                title="Next Month"
+                            >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+                                    <polyline points="9 18 15 12 9 6" />
+                                </svg>
+                            </button>
                         </div>
-                        {/* Day-of-week header */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: '2px', marginBottom: '4px' }}>
+
+                        {/* Weekday labels */}
+                        <div className="webtest-weekdays-row">
                             {['S','M','T','W','T','F','S'].map((d, i) => (
-                                <div key={i} style={{ textAlign: 'center', fontSize: '0.62rem', fontWeight: 800, color: 'var(--afl-n-400)', padding: '4px 0' }}>{d}</div>
+                                <div key={i} className="webtest-weekday-label">{d}</div>
                             ))}
                         </div>
-                        {/* Days grid */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: '3px' }}>
+
+                        {/* Days Grid */}
+                        <div className="webtest-days-grid">
                             {calendarDays.map((day, i) => {
-                                if (!day) return <div key={`empty-${i}`} />;
+                                if (!day) return <div key={`empty-${i}`} className="webtest-day-cell" />;
                                 const dateStr = toDateStr(day);
                                 const hasData = calendarDateSet.has(dateStr);
                                 const calInfo = calendarDateSet.get(dateStr);
                                 const isSelected = selectedDate === dateStr;
                                 const isToday = dateStr === today;
+
+                                let cellClasses = 'webtest-day-cell';
+                                if (hasData) cellClasses += ' webtest-day-cell--has-data';
+                                if (isSelected) cellClasses += ' webtest-day-cell--selected';
+                                if (isToday) cellClasses += ' webtest-day-cell--today';
+
                                 return (
                                     <button
                                         key={dateStr}
@@ -437,120 +559,118 @@ function WebTestingPageInner() {
                                             setSelectedDate(dateStr);
                                             fetchDateSnapshot(dateStr);
                                         }}
-                                        title={hasData ? `${calInfo?.task_count} tasks, ${calInfo?.run_count} records` : 'No data'}
-                                        style={{
-                                            position: 'relative', width: '100%', aspectRatio: '1', borderRadius: '8px', border: 'none',
-                                            cursor: hasData ? 'pointer' : 'default',
-                                            fontSize: '0.72rem', fontWeight: isSelected ? 800 : hasData ? 700 : 400,
-                                            backgroundColor: isSelected ? 'var(--afl-info-700)' : hasData ? 'var(--afl-info-50)' : 'transparent',
-                                            color: isSelected ? 'var(--afl-n-0)' : hasData ? 'var(--afl-info-700)' : isToday ? 'var(--afl-warn-500)' : 'var(--afl-n-400)',
-                                            outline: isToday && !isSelected ? '2px solid var(--afl-warn-500)' : 'none',
-                                            transition: 'all 0.15s ease',
-                                        }}
+                                        className={cellClasses}
+                                        title={hasData ? `${calInfo?.task_count} tasks, ${calInfo?.run_count} records` : 'No test run data'}
                                     >
                                         {day}
-                                        {hasData && !isSelected && (
-                                            <span style={{ position: 'absolute', bottom: '3px', left: '50%', transform: 'translateX(-50%)', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--afl-info-700)', display: 'block' }} />
-                                        )}
+                                        {hasData && <span className="webtest-day-dot" />}
                                     </button>
                                 );
                             })}
                         </div>
 
                         {/* Legend */}
-                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--afl-n-100)', fontSize: '0.7rem', color: 'var(--afl-n-500)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                                <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', backgroundColor: 'var(--afl-info-50)', border: '1px solid var(--afl-info-100)' }}></span>Has test data
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                                <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', backgroundColor: 'var(--afl-info-700)' }}></span>Selected date
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', outline: '2px solid var(--afl-warn-500)' }}></span>Today
+                        <div className="webtest-sidebar-section">
+                            <div className="webtest-legend-list">
+                                <div className="webtest-legend-item">
+                                    <span className="webtest-legend-swatch" style={{ background: 'var(--fdl-blue-050)', border: '1px solid var(--fdl-blue-700)' }} />
+                                    <span>Has test run data</span>
+                                </div>
+                                <div className="webtest-legend-item">
+                                    <span className="webtest-legend-swatch" style={{ background: 'var(--fdl-navy-800)', border: '1px solid var(--fdl-navy-950)' }} />
+                                    <span>Selected date</span>
+                                </div>
+                                <div className="webtest-legend-item">
+                                    <span className="webtest-legend-swatch" style={{ background: 'transparent', border: '1px solid var(--fdl-amber)' }} />
+                                    <span>Today</span>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Total runs count */}
+                        {/* Rail Metrics Card */}
                         {calendarDates.length > 0 && (
-                            <div style={{ marginTop: '12px', padding: '10px', background: 'var(--afl-n-50)', borderRadius: '8px', fontSize: '0.72rem', color: 'var(--afl-n-600)' }}>
-                                <div style={{ fontWeight: 800, color: 'var(--afl-n-800)', marginBottom: '2px' }}>{calendarDates.length} test days in history</div>
-                                <div>Total {calendarDates.reduce((s, d) => s + d.run_count, 0).toLocaleString()} records tracked</div>
+                            <div className="webtest-meta-card">
+                                <span className="webtest-meta-card__title">Surveillance Index</span>
+                                <span className="webtest-meta-card__desc">
+                                    {calendarDates.length} recorded dates · {totalTrackedRecords.toLocaleString()} execution records
+                                </span>
                             </div>
                         )}
-                    </div>
+                    </aside>
 
-                    {/* ── RIGHT: Snapshot + Chart Panel ────────────────────── */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-                        {/* ── Task Matrix (Right-Top) ─────────────────────── */}
-                        <div style={{ background: 'var(--afl-n-0)', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid var(--afl-n-200)', overflow: 'hidden' }}>
-                            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--afl-n-100)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div>
-                                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--afl-n-800)' }}>
-                                        {selectedDate ? `Results for ${selectedDate}` : 'FDALabel Auto-Test Tasks'}
-                                    </h3>
-                                    {!selectedDate && <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--afl-n-400)' }}>Select a highlighted date on the calendar to view results.</p>}
+                    {/* ── RIGHT: Snapshot Matrix + Chart Inspector ──────────── */}
+                    <div className="webtest-content">
+                        {/* ── Test Run Snapshot Panel ───────────────────────── */}
+                        <section className="webtest-panel">
+                            <div className="webtest-panel-header">
+                                <div className="webtest-panel-title-wrap">
+                                    <h2 className="webtest-panel-title">
+                                        {selectedDate ? `Snapshot Results: ${selectedDate}` : 'Endpoint Parity Snapshot'}
+                                    </h2>
+                                    {selectedDate && dateSnapshot.length > 0 && (
+                                        <span className="webtest-panel-meta-chip">
+                                            {dateSnapshot.length} TASKS · {activeVersions.length} INSTANCES
+                                        </span>
+                                    )}
                                 </div>
-                                {selectedDate && dateSnapshot.length > 0 && (
-                                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--afl-n-500)', backgroundColor: 'var(--afl-n-100)', padding: '4px 10px', borderRadius: '999px' }}>
-                                        {dateSnapshot.length} tasks · {activeVersions.length} versions
-                                    </span>
-                                )}
                             </div>
 
                             {!selectedDate && (
-                                <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--afl-n-400)' }}>
-                                    <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📅</div>
-                                    <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>Pick a date to explore test results</div>
-                                    <div style={{ fontSize: '0.78rem', marginTop: '4px' }}>Blue highlighted days in the calendar have test data available.</div>
+                                <div className="webtest-empty-state">
+                                    <svg className="webtest-empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                        <line x1="16" y1="2" x2="16" y2="6" />
+                                        <line x1="8" y1="2" x2="8" y2="6" />
+                                        <line x1="3" y1="10" x2="21" y2="10" />
+                                    </svg>
+                                    <div className="webtest-empty-state__title">Select a Date from the Calendar</div>
+                                    <div className="webtest-empty-state__subtitle">
+                                        Highlighted calendar dates contain multi-endpoint query telemetry. Click a date to inspect result counts and latency across versions.
+                                    </div>
                                 </div>
                             )}
 
                             {selectedDate && isSnapshotLoading && (
-                                <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--afl-n-400)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                                    <div className="loader" style={{ width: '28px', height: '28px', borderWidth: '3px' }}></div>
-                                    <span style={{ fontSize: '0.85rem' }}>Loading results…</span>
+                                <div className="webtest-empty-state">
+                                    <span className="webtest-spinner" style={{ width: '28px', height: '28px' }} />
+                                    <div className="webtest-empty-state__title">Loading Snapshot Telemetry…</div>
                                 </div>
                             )}
 
                             {selectedDate && !isSnapshotLoading && dateSnapshot.length === 0 && (
-                                <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--afl-n-400)' }}>No records found for {selectedDate}.</div>
+                                <div className="webtest-empty-state">
+                                    <div className="webtest-empty-state__title">No Records Available</div>
+                                    <div className="webtest-empty-state__subtitle">No test execution records found for {selectedDate}.</div>
+                                </div>
                             )}
 
                             {selectedDate && !isSnapshotLoading && dateSnapshot.length > 0 && (
-                                <div style={{ overflowX: 'auto' }}>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                                <div className="webtest-table-wrap">
+                                    <table className="webtest-table">
                                         <thead>
-                                            <tr style={{ backgroundColor: 'var(--afl-n-50)' }}>
-                                                <th style={{ padding: '10px 16px', textAlign: 'left', color: 'var(--afl-n-500)', fontWeight: 700, borderBottom: '1px solid var(--afl-n-100)', whiteSpace: 'nowrap', minWidth: '280px' }}>Task</th>
+                                            <tr>
+                                                <th className="webtest-th-task">Task Criteria</th>
                                                 {activeVersions.map(v => (
-                                                    <th key={v} style={{ padding: '10px 10px', textAlign: 'center', color: getVersionColor(v), fontWeight: 800, borderBottom: '1px solid var(--afl-n-100)', whiteSpace: 'nowrap', fontSize: '0.68rem' }}>
-                                                        {v.replace(' - ', '\n')}
+                                                    <th key={v} style={{ color: getVersionColor(v) }}>
+                                                        {v}
                                                     </th>
                                                 ))}
-                                                <th style={{ padding: '10px 10px', textAlign: 'center', color: 'var(--afl-n-500)', fontWeight: 700, borderBottom: '1px solid var(--afl-n-100)', whiteSpace: 'nowrap' }}>Details</th>
+                                                <th style={{ width: '90px' }}>Inspector</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {dateSnapshot.map((task, rowIndex) => {
                                                 const isSelected = selectedTask?.task_id === task.task_id;
                                                 return (
-                                                    <tr
-                                                        key={task.task_id}
+                                                    <tr 
+                                                        key={task.task_id} 
+                                                        className={`webtest-tr ${isSelected ? 'webtest-tr--selected' : ''}`}
                                                         onClick={() => setSelectedTask(isSelected ? null : task)}
-                                                        style={{
-                                                            borderBottom: '1px solid var(--afl-n-50)',
-                                                            backgroundColor: isSelected ? 'var(--afl-info-50)' : 'transparent',
-                                                            borderLeft: isSelected ? '3px solid var(--afl-info-700)' : '3px solid transparent',
-                                                            cursor: 'pointer',
-                                                            transition: 'all 0.15s ease',
-                                                        }}
-                                                        className="row-hover"
                                                     >
-                                                        <td style={{ padding: '9px 16px', color: 'var(--afl-n-800)', fontWeight: 600 }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                <span style={{ backgroundColor: isSelected ? 'var(--afl-info-700)' : 'var(--afl-n-200)', color: isSelected ? 'var(--afl-n-0)' : 'var(--afl-n-600)', fontSize: '0.6rem', fontWeight: 800, padding: '1px 6px', borderRadius: '4px', flexShrink: 0 }}>#{task.task_num}</span>
-                                                                <span style={{ fontSize: '0.76rem', lineHeight: 1.3 }}>{task.query_details}</span>
+                                                        <td>
+                                                            <div className="webtest-task-cell">
+                                                                <span className="webtest-task-num-chip">#{task.task_num}</span>
+                                                                <span className="webtest-task-query-text">{task.query_details}</span>
                                                             </div>
                                                         </td>
                                                         {activeVersions.map(v => {
@@ -560,87 +680,96 @@ function WebTestingPageInner() {
                                                             const delay = latest?.delay;
                                                             const isHovered = hoveredCell?.taskId === task.task_id && hoveredCell?.version === v;
                                                             return (
-                                                                <td
+                                                                <td 
                                                                     key={v}
                                                                     onMouseEnter={() => setHoveredCell({ taskId: task.task_id, version: v })}
                                                                     onMouseLeave={() => setHoveredCell(null)}
-                                                                    style={{ padding: '9px 10px', textAlign: 'center', position: 'relative' }}
+                                                                    style={{ position: 'relative', textAlign: 'center' }}
                                                                 >
                                                                     {vData ? (
-                                                                        <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                                                                            <span style={{ backgroundColor: countBg(c), color: countColor(c), fontWeight: 800, padding: '2px 8px', borderRadius: '6px', fontSize: '0.78rem', minWidth: '32px', display: 'inline-block', textAlign: 'center' }}>
+                                                                        <div className="webtest-metric-cell">
+                                                                            <span 
+                                                                                className="webtest-count-badge"
+                                                                                style={{
+                                                                                    backgroundColor: countBg(c),
+                                                                                    color: countColor(c),
+                                                                                    border: `1px solid ${countBorder(c)}`,
+                                                                                }}
+                                                                            >
                                                                                 {formatCount(c)}
                                                                             </span>
-                                                                            {delay != null && <span style={{ color: 'var(--afl-n-400)', fontSize: '0.6rem' }}>{delay.toFixed(1)}s</span>}
+                                                                            {delay != null && (
+                                                                                <span className="webtest-delay-text">
+                                                                                    {delay.toFixed(1)}s
+                                                                                </span>
+                                                                            )}
                                                                         </div>
                                                                     ) : (
-                                                                        <span style={{ color: 'var(--afl-n-200)' }}>—</span>
+                                                                        <span style={{ color: 'var(--fdl-line)' }}>—</span>
                                                                     )}
 
+                                                                    {/* Run detail hover popover */}
                                                                     {isHovered && vData && vData.runs && vData.runs.length > 0 && (
-                                                                        <div style={{
-                                                                            position: 'absolute',
-                                                                            ...(rowIndex < 3 ? {
-                                                                                top: '100%',
-                                                                                transform: 'translateX(-50%) translateY(6px)',
-                                                                            } : {
-                                                                                bottom: '100%',
-                                                                                transform: 'translateX(-50%) translateY(-6px)',
-                                                                            }),
-                                                                            backgroundColor: 'var(--afl-n-800)',
-                                                                            color: 'var(--afl-n-0)',
-                                                                            padding: '12px',
-                                                                            borderRadius: '10px',
-                                                                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                                                                            zIndex: 100,
-                                                                            minWidth: '240px',
-                                                                            textAlign: 'left',
-                                                                            fontSize: '0.72rem',
-                                                                            lineHeight: '1.4',
-                                                                            pointerEvents: 'none',
-                                                                        }}>
-                                                                            <div style={{ fontWeight: 800, borderBottom: '1px solid var(--afl-n-700)', paddingBottom: '6px', marginBottom: '8px', color: 'var(--afl-info-500)', fontSize: '0.74rem' }}>
-                                                                                All Runs ({v})
+                                                                        <div 
+                                                                            className="webtest-popover"
+                                                                            style={{
+                                                                                left: '50%',
+                                                                                transform: 'translateX(-50%)',
+                                                                                ...(rowIndex < 3 ? {
+                                                                                    top: '100%',
+                                                                                    marginTop: '6px',
+                                                                                } : {
+                                                                                    bottom: '100%',
+                                                                                    marginBottom: '6px',
+                                                                                }),
+                                                                            }}
+                                                                        >
+                                                                            <div className="webtest-popover-title">
+                                                                                Execution Log: {v}
                                                                             </div>
                                                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto' }}>
                                                                                 {vData.runs.map((run, idx) => (
-                                                                                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', borderBottom: idx < vData.runs.length - 1 ? '1px dashed var(--afl-n-700)' : 'none', paddingBottom: idx < vData.runs.length - 1 ? '4px' : '0' }}>
+                                                                                    <div 
+                                                                                        key={idx} 
+                                                                                        style={{ 
+                                                                                            display: 'flex', 
+                                                                                            justifyContent: 'space-between', 
+                                                                                            gap: '12px', 
+                                                                                            borderBottom: idx < vData.runs.length - 1 ? '1px dashed var(--fdl-navy-800)' : 'none', 
+                                                                                            paddingBottom: idx < vData.runs.length - 1 ? '4px' : '0' 
+                                                                                        }}
+                                                                                    >
                                                                                         <div>
-                                                                                            <span style={{ fontWeight: 700, color: 'var(--afl-n-50)' }}>{run.time}</span>
-                                                                                            {run.notes && <span style={{ color: 'var(--afl-n-400)', display: 'block', fontSize: '0.62rem' }}>{run.notes}</span>}
+                                                                                            <span style={{ fontWeight: 700, fontFamily: 'var(--fdl-font-mono)', color: 'var(--fdl-paper)' }}>{run.time}</span>
+                                                                                            {run.notes && <span style={{ color: 'var(--fdl-muted)', display: 'block', fontSize: '0.65rem' }}>{run.notes}</span>}
                                                                                         </div>
                                                                                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                                                                            <span style={{ color: countColor(run.count), fontWeight: 800 }}>{formatCount(run.count)}</span>
-                                                                                            {run.delay != null && <span style={{ color: 'var(--afl-n-400)', display: 'block', fontSize: '0.62rem' }}>{run.delay.toFixed(1)}s</span>}
+                                                                                            <span style={{ color: countColor(run.count), fontWeight: 800, fontFamily: 'var(--fdl-font-mono)' }}>{formatCount(run.count)}</span>
+                                                                                            {run.delay != null && <span style={{ color: 'var(--fdl-muted)', display: 'block', fontSize: '0.65rem', fontFamily: 'var(--fdl-font-mono)' }}>{run.delay.toFixed(1)}s</span>}
                                                                                         </div>
                                                                                     </div>
                                                                                 ))}
                                                                             </div>
-                                                                            <div style={{
-                                                                                position: 'absolute',
-                                                                                ...(rowIndex < 3 ? {
-                                                                                    bottom: '100%',
-                                                                                    borderBottom: '6px solid var(--afl-n-800)',
-                                                                                } : {
-                                                                                    top: '100%',
-                                                                                    borderTop: '6px solid var(--afl-n-800)',
-                                                                                }),
-                                                                                left: '50%',
-                                                                                transform: 'translateX(-50%)',
-                                                                                width: 0,
-                                                                                height: 0,
-                                                                                borderLeft: '6px solid transparent',
-                                                                                borderRight: '6px solid transparent',
-                                                                            }} />
                                                                         </div>
                                                                     )}
                                                                 </td>
                                                             );
                                                         })}
-                                                        <td style={{ padding: '9px 10px', textAlign: 'center' }}>
-                                                            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: isSelected ? 'var(--afl-info-700)' : 'var(--afl-n-400)', backgroundColor: isSelected ? 'var(--afl-info-100)' : 'var(--afl-n-50)', padding: '3px 8px', borderRadius: '6px', border: `1px solid ${isSelected ? 'var(--afl-info-100)' : 'var(--afl-n-100)'}` }}>
-                                                                {isSelected ? '▲ Chart' : '▼ Chart'}
-                                                            </span>
+                                                        <td style={{ textAlign: 'center' }}>
+                                                            <button 
+                                                                className={`webtest-inspect-btn ${isSelected ? 'webtest-inspect-btn--active' : ''}`}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelectedTask(isSelected ? null : task);
+                                                                }}
+                                                            >
+                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                                                                    <line x1="18" y1="20" x2="18" y2="10" />
+                                                                    <line x1="12" y1="20" x2="12" y2="4" />
+                                                                    <line x1="6" y1="20" x2="6" y2="14" />
+                                                                </svg>
+                                                                {isSelected ? 'Close' : 'Trend'}
+                                                            </button>
                                                         </td>
                                                     </tr>
                                                 );
@@ -649,116 +778,189 @@ function WebTestingPageInner() {
                                     </table>
                                 </div>
                             )}
-                        </div>
+                        </section>
 
-                        {/* ── Historical Line Chart (Right-Bottom) ────────── */}
+                        {/* ── Historical Trend Inspector Panel ──────────────── */}
                         {selectedTask && (
-                            <div ref={chartRef} style={{ background: 'var(--afl-n-0)', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid var(--afl-n-200)', overflow: 'hidden' }}>
-                                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--afl-n-100)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                                    <div>
+                            <section ref={chartRef} className="webtest-inspector-panel">
+                                <div className="webtest-inspector-header">
+                                    <div className="webtest-inspector-title-group">
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span style={{ backgroundColor: 'var(--afl-info-700)', color: 'var(--afl-n-0)', fontSize: '0.6rem', fontWeight: 800, padding: '1px 6px', borderRadius: '4px' }}>#{selectedTask.task_num}</span>
-                                            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--afl-n-800)' }}>Historical Trend</h3>
+                                            <span className="webtest-task-num-chip" style={{ background: 'var(--fdl-navy-800)', color: 'var(--fdl-paper)' }}>
+                                                #{selectedTask.task_num}
+                                            </span>
+                                            <h3 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 800, color: 'var(--fdl-navy-950)' }}>
+                                                Historical Latency & Count Trend
+                                            </h3>
                                         </div>
-                                        <p style={{ margin: '3px 0 0', fontSize: '0.76rem', color: 'var(--afl-n-500)' }}>{selectedTask.query_details}</p>
+                                        <span style={{ fontSize: '0.74rem', color: 'var(--fdl-muted)' }}>
+                                            {selectedTask.query_details}
+                                        </span>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--afl-n-500)' }}>Range:</label>
+
+                                    <div className="webtest-range-group">
+                                        <span className="webtest-control-label">Range:</span>
                                         {(['3m', '1y', 'all'] as const).map(r => (
-                                            <button key={r} onClick={() => setHistoryRange(r)} style={{ padding: '4px 12px', borderRadius: '6px', border: '1px solid', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', backgroundColor: historyRange === r ? 'var(--afl-info-700)' : 'var(--afl-n-0)', color: historyRange === r ? 'var(--afl-n-0)' : 'var(--afl-n-500)', borderColor: historyRange === r ? 'var(--afl-info-700)' : 'var(--afl-n-200)' }}>
-                                                {r === 'all' ? 'All' : r.toUpperCase()}
+                                            <button 
+                                                key={r} 
+                                                onClick={() => setHistoryRange(r)} 
+                                                className={`webtest-toggle-btn ${historyRange === r ? 'webtest-toggle-btn--active' : ''}`}
+                                            >
+                                                {r === 'all' ? 'ALL' : r.toUpperCase()}
                                             </button>
                                         ))}
-                                        <button onClick={() => setShowOutliers(p => !p)} style={{ padding: '4px 12px', borderRadius: '6px', border: '1px solid', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', backgroundColor: showOutliers ? 'var(--afl-warn-500)' : 'var(--afl-n-0)', color: showOutliers ? 'var(--afl-n-0)' : 'var(--afl-n-500)', borderColor: showOutliers ? 'var(--afl-warn-500)' : 'var(--afl-n-200)' }}>
-                                            {showOutliers ? '● Outliers' : '○ Outliers'}
+                                        <button 
+                                            onClick={() => setShowOutliers(p => !p)} 
+                                            className={`webtest-toggle-btn ${showOutliers ? 'webtest-toggle-btn--outlier-active' : ''}`}
+                                            title="Toggle outlier detection"
+                                        >
+                                            {showOutliers ? 'Outliers: Shown' : 'Outliers: Hidden'}
                                         </button>
                                     </div>
                                 </div>
 
                                 {isHistoryLoading ? (
-                                    <div style={{ padding: '60px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                                        <div className="loader" style={{ width: '28px', height: '28px', borderWidth: '3px' }}></div>
-                                        <span style={{ color: 'var(--afl-n-400)', fontSize: '0.85rem' }}>Loading history…</span>
+                                    <div className="webtest-empty-state">
+                                        <span className="webtest-spinner" style={{ width: '28px', height: '28px' }} />
+                                        <div className="webtest-empty-state__title">Retrieving Historical Telemetry…</div>
                                     </div>
                                 ) : processedChartData.length > 0 ? (
-                                    <div style={{ padding: '20px' }}>
-                                        {/* Delay Chart */}
-                                        <div style={{ marginBottom: '20px' }}>
-                                            <h4 style={{ margin: '0 0 12px', fontSize: '0.82rem', fontWeight: 800, color: 'var(--afl-danger-500)' }}>⏱ Query Processed Time (seconds)</h4>
-                                            <div style={{ height: '220px' }}>
+                                    <div className="webtest-chart-body">
+                                        {/* Query Processing Time (Latency) */}
+                                        <div className="webtest-chart-section">
+                                            <h4 className="webtest-chart-heading">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                                                    <circle cx="12" cy="12" r="10" />
+                                                    <polyline points="12 6 12 12 16 14" />
+                                                </svg>
+                                                Query Latency (Seconds)
+                                            </h4>
+                                            <div className="webtest-chart-wrap">
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <LineChart data={processedChartData} syncId="histCharts" margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--afl-n-100)" />
-                                                        <XAxis dataKey="DisplayDate" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--afl-n-400)', fontSize: 10 }} />
-                                                        <YAxis domain={[0, 'auto']} axisLine={false} tickLine={false} tick={{ fill: 'var(--afl-n-400)', fontSize: 10 }} />
-                                                        <Tooltip contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 8px 16px rgba(0,0,0,0.1)', fontSize: '0.78rem' }}
-                                                            formatter={(val: any) => [`${val}s`]} />
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fdl-line-soft)" />
+                                                        <XAxis dataKey="DisplayDate" type="category" axisLine={{ stroke: 'var(--fdl-line)' }} tickLine={false} tick={{ fill: 'var(--fdl-muted)', fontSize: 10, fontFamily: 'var(--fdl-font-mono)' }} />
+                                                        <YAxis domain={[0, 'auto']} axisLine={{ stroke: 'var(--fdl-line)' }} tickLine={false} tick={{ fill: 'var(--fdl-muted)', fontSize: 10, fontFamily: 'var(--fdl-font-mono)' }} />
+                                                        <Tooltip 
+                                                            contentStyle={{ 
+                                                                borderRadius: '2px', 
+                                                                border: '1px solid var(--fdl-line)', 
+                                                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)', 
+                                                                fontSize: '0.74rem',
+                                                                fontFamily: 'var(--fdl-font-mono)',
+                                                                background: 'var(--fdl-paper)',
+                                                                color: 'var(--fdl-ink)'
+                                                            }}
+                                                            formatter={(val: any) => [`${val}s`]} 
+                                                        />
                                                         {chartVersions.filter(v => !hiddenLines.includes(v)).map(v => (
-                                                            <Line key={`d_${v}`} type="monotone" name={v} dataKey={`delay_${v}`} stroke={getVersionColor(v)} strokeWidth={2} dot={{ r: 2.5, strokeWidth: 0, fill: getVersionColor(v) }} activeDot={{ r: 5 }} connectNulls />
+                                                            <Line 
+                                                                key={`d_${v}`} 
+                                                                type="monotone" 
+                                                                name={v} 
+                                                                dataKey={`delay_${v}`} 
+                                                                stroke={getVersionColor(v)} 
+                                                                strokeWidth={2} 
+                                                                dot={{ r: 2, strokeWidth: 0, fill: getVersionColor(v) }} 
+                                                                activeDot={{ r: 4 }} 
+                                                                connectNulls 
+                                                            />
                                                         ))}
                                                     </LineChart>
                                                 </ResponsiveContainer>
                                             </div>
                                         </div>
-                                        {/* Count Chart */}
-                                        <div>
-                                            <h4 style={{ margin: '0 0 12px', fontSize: '0.82rem', fontWeight: 800, color: 'var(--afl-a-500)' }}>📊 Result Count Over Time</h4>
-                                            <div style={{ height: '220px' }}>
+
+                                        {/* Result Count Over Time */}
+                                        <div className="webtest-chart-section">
+                                            <h4 className="webtest-chart-heading">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                                                    <line x1="18" y1="20" x2="18" y2="10" />
+                                                    <line x1="12" y1="20" x2="12" y2="4" />
+                                                    <line x1="6" y1="20" x2="6" y2="14" />
+                                                </svg>
+                                                Result Count Over Time
+                                            </h4>
+                                            <div className="webtest-chart-wrap">
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <LineChart data={processedChartData} syncId="histCharts" margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--afl-n-100)" />
-                                                        <XAxis dataKey="DisplayDate" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--afl-n-400)', fontSize: 10 }} />
-                                                        <YAxis domain={['auto', 'auto']} axisLine={false} tickLine={false} tick={{ fill: 'var(--afl-n-400)', fontSize: 10 }} />
-                                                        <Tooltip contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 8px 16px rgba(0,0,0,0.1)', fontSize: '0.78rem' }}
-                                                            formatter={(val: any) => [val]} />
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fdl-line-soft)" />
+                                                        <XAxis dataKey="DisplayDate" type="category" axisLine={{ stroke: 'var(--fdl-line)' }} tickLine={false} tick={{ fill: 'var(--fdl-muted)', fontSize: 10, fontFamily: 'var(--fdl-font-mono)' }} />
+                                                        <YAxis domain={['auto', 'auto']} axisLine={{ stroke: 'var(--fdl-line)' }} tickLine={false} tick={{ fill: 'var(--fdl-muted)', fontSize: 10, fontFamily: 'var(--fdl-font-mono)' }} />
+                                                        <Tooltip 
+                                                            contentStyle={{ 
+                                                                borderRadius: '2px', 
+                                                                border: '1px solid var(--fdl-line)', 
+                                                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)', 
+                                                                fontSize: '0.74rem',
+                                                                fontFamily: 'var(--fdl-font-mono)',
+                                                                background: 'var(--fdl-paper)',
+                                                                color: 'var(--fdl-ink)'
+                                                            }}
+                                                            formatter={(val: any) => [val]} 
+                                                        />
                                                         {chartVersions.filter(v => !hiddenLines.includes(v)).map(v => (
-                                                            <Line key={`c_${v}`} type="stepAfter" name={v} dataKey={`count_${v}`} stroke={getVersionColor(v)} strokeWidth={2} dot={{ r: 2.5, strokeWidth: 0, fill: getVersionColor(v) }} activeDot={{ r: 5 }} connectNulls />
+                                                            <Line 
+                                                                key={`c_${v}`} 
+                                                                type="stepAfter" 
+                                                                name={v} 
+                                                                dataKey={`count_${v}`} 
+                                                                stroke={getVersionColor(v)} 
+                                                                strokeWidth={2} 
+                                                                dot={{ r: 2, strokeWidth: 0, fill: getVersionColor(v) }} 
+                                                                activeDot={{ r: 4 }} 
+                                                                connectNulls 
+                                                            />
                                                         ))}
                                                     </LineChart>
                                                 </ResponsiveContainer>
                                             </div>
                                         </div>
-                                        {/* Legend */}
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--afl-n-100)' }}>
+
+                                        {/* Legend filter */}
+                                        <div className="webtest-legend-bar">
                                             {chartVersions.map(v => {
                                                 const isHidden = hiddenLines.includes(v);
                                                 return (
-                                                    <button key={v} onClick={() => toggleLine(v)} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', opacity: isHidden ? 0.35 : 1, transition: 'opacity 0.2s', fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-600)', padding: '3px 8px', borderRadius: '6px', backgroundColor: isHidden ? 'transparent' : 'var(--afl-n-50)' }}>
-                                                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: getVersionColor(v), flexShrink: 0 }} />
+                                                    <button 
+                                                        key={v} 
+                                                        onClick={() => toggleLine(v)} 
+                                                        className={`webtest-legend-pill ${isHidden ? 'webtest-legend-pill--hidden' : ''}`}
+                                                    >
+                                                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: getVersionColor(v), flexShrink: 0 }} />
                                                         {v}
                                                     </button>
                                                 );
                                             })}
                                         </div>
-                                        <div style={{ fontSize: '0.68rem', color: 'var(--afl-n-400)', textAlign: 'center', marginTop: '10px', fontStyle: 'italic' }}>
-                                            Click legend items to toggle visibility. Delay values after 03/01/2026 use new measurement technology.
-                                        </div>
+
+                                        {/* Manual Verification Endpoints */}
                                         {selectedTask.urls && Object.keys(selectedTask.urls).length > 0 && (
-                                            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--afl-n-200)', textAlign: 'left' }}>
-                                                <h5 style={{ margin: '0 0 12px', fontSize: '0.8rem', fontWeight: 800, color: 'var(--afl-n-700)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    🔗 Manual Verification Links (Test Outliers)
+                                            <div className="webtest-verif-section">
+                                                <h5 className="webtest-verif-title">
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                                        <polyline points="15 3 21 3 21 9" />
+                                                        <line x1="10" y1="14" x2="21" y2="3" />
+                                                    </svg>
+                                                    Manual Verification Endpoints
                                                 </h5>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 8px' }}>
+                                                <div className="webtest-verif-list">
                                                     {Object.entries(selectedTask.urls).map(([ver, url]) => (
-                                                        <div key={ver} style={{ display: 'flex', alignItems: 'baseline', gap: '10px', fontSize: '0.74rem' }}>
-                                                            <span style={{ fontWeight: 800, color: 'var(--afl-n-600)', minWidth: '140px', flexShrink: 0 }}>
-                                                                {ver}:
-                                                            </span>
-                                                            <a
-                                                                href={url}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                style={{
-                                                                    color: 'var(--afl-info-700)',
-                                                                    textDecoration: 'none',
-                                                                    wordBreak: 'break-all',
-                                                                    fontWeight: 500,
-                                                                    transition: 'color 0.15s ease',
-                                                                }}
-                                                                onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; e.currentTarget.style.color = 'var(--afl-info-700)'; }}
-                                                                onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; e.currentTarget.style.color = 'var(--afl-info-700)'; }}
+                                                        <div key={ver} className="webtest-verif-row">
+                                                            <span className="webtest-verif-version">{ver}:</span>
+                                                            <a 
+                                                                href={url} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer" 
+                                                                className="webtest-verif-link"
                                                             >
                                                                 {url}
+                                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                                                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                                                    <polyline points="15 3 21 3 21 9" />
+                                                                    <line x1="10" y1="14" x2="21" y2="3" />
+                                                                </svg>
                                                             </a>
                                                         </div>
                                                     ))}
@@ -767,22 +969,17 @@ function WebTestingPageInner() {
                                         )}
                                     </div>
                                 ) : (
-                                    <div style={{ padding: '40px', textAlign: 'center', color: 'var(--afl-n-400)', border: '2px dashed var(--afl-n-100)', margin: '20px', borderRadius: '12px' }}>
-                                        No historical data found for this task.
+                                    <div className="webtest-empty-state">
+                                        <div className="webtest-empty-state__title">No Historical Records</div>
+                                        <div className="webtest-empty-state__subtitle">No historical telemetry points found for this task in the chosen range.</div>
                                     </div>
                                 )}
-                            </div>
+                            </section>
                         )}
                     </div>
                 </div>
             </main>
-
             <Footer />
-            <style jsx global>{`
-                @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-                .loader { border: 3px solid var(--afl-n-100); border-radius: 50%; border-top-color: var(--afl-info-700); animation: spin 1s linear infinite; }
-                .row-hover:hover { background-color: var(--afl-n-50) !important; }
-            `}</style>
         </div>
     );
 }
