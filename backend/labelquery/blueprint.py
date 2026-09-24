@@ -254,7 +254,11 @@ def _entity_expansions(query, target_db):
             if not isinstance(value, dict):
                 continue
 
-            if ctype == 'productName' and value.get('op', 'equals') != 'notContains':
+            # Entity-name expansion is for a standardized, exact drug/product
+            # name. Flexible ingredient fragments (e.g. each side of a fixed
+            # dose combination) must remain independent contains predicates;
+            # exact-name expansion would exclude the combination products.
+            if ctype == 'productName' and value.get('op', 'equals') == 'equals':
                 if value.get('entityNamesResolved'):
                     source = value.get('entityOriginalNames') if exact_match else value.get('candidateNames')
                     if isinstance(source, list):
@@ -276,6 +280,11 @@ def _entity_expansions(query, target_db):
                         value['op'] = 'equals'
                     continue
                 all_names = []
+                candidate_name_groups = {
+                    'activeIngredient': set(),
+                    'genericName': set(),
+                    'brandName': set(),
+                }
                 resolved_any = False
                 for term in terms:
                     try:
@@ -310,9 +319,11 @@ def _entity_expansions(query, target_db):
                             in_uniis = ', '.join(f':u{i}' for i in range(len(candidate_uniis)))
                             rows = FDALabelDBService.execute_oracle_query(
                                 f"""
-                                SELECT ai.SPL_ID, ai.UNII, p.NAME, p.NORMD_GENERIC_NAME
+                                SELECT ai.SPL_ID, ai.UNII, p.NAME, p.NORMD_GENERIC_NAME,
+                                       s.ACT_INGR_NAMES AS ACTIVE_INGREDIENTS
                                 FROM druglabel.SUM_SPL_ACT_INGR_UNII ai
                                 JOIN druglabel.SPL_PROD p ON p.SPL_ID = ai.SPL_ID
+                                JOIN druglabel.DGV_SUM_SPL s ON s.SPL_ID = ai.SPL_ID
                                 WHERE ai.SPL_ID IN (
                                     SELECT DISTINCT match_ai.SPL_ID
                                     FROM druglabel.SUM_SPL_ACT_INGR_UNII match_ai
@@ -324,19 +335,28 @@ def _entity_expansions(query, target_db):
                                 sid = str(row.get('SPL_ID') or row.get('spl_id') or '')
                                 unii = str(row.get('UNII') or row.get('unii') or '').strip().upper()
                                 if sid:
-                                    item = by_spl.setdefault(sid, {'uniis': set(), 'names': set()})
+                                    item = by_spl.setdefault(sid, {
+                                        'uniis': set(), 'brand_names': set(),
+                                        'generic_names': set(), 'active_ingredients': set(),
+                                    })
                                     if unii:
                                         item['uniis'].add(unii)
                                     else:
                                         item['incomplete'] = True
-                                    for key in ('NAME', 'name', 'NORMD_GENERIC_NAME', 'normd_generic_name'):
-                                        name = str(row.get(key) or '').strip()
-                                        if name:
-                                            item['names'].add(name)
-                            candidates = {term}
+                                    for key in ('NAME', 'name'):
+                                        item['brand_names'].update(n.strip() for n in str(row.get(key) or '').split(';') if n.strip())
+                                    for key in ('NORMD_GENERIC_NAME', 'normd_generic_name'):
+                                        item['generic_names'].update(n.strip() for n in str(row.get(key) or '').split(';') if n.strip())
+                                    for key in ('ACTIVE_INGREDIENTS', 'active_ingredients'):
+                                        item['active_ingredients'].update(n.strip() for n in str(row.get(key) or '').split(';') if n.strip())
                             for item in by_spl.values():
                                 if not item.get('incomplete') and tuple(sorted(item['uniis'])) in ingredient_sets:
-                                    candidates.update(item['names'])
+                                    for key, category in (
+                                        ('active_ingredients', 'activeIngredient'),
+                                        ('generic_names', 'genericName'),
+                                        ('brand_names', 'brandName'),
+                                    ):
+                                        candidate_name_groups[category].update(item[key])
                         else:
                             matched = _rows(
                                 """
@@ -374,7 +394,8 @@ def _entity_expansions(query, target_db):
                                 continue
                             rows = _rows(
                                 """
-                                SELECT m.spl_id, UPPER(m.unii) AS unii, s.product_names, s.generic_names
+                                SELECT m.spl_id, UPPER(m.unii) AS unii, m.substance_name,
+                                       s.product_names, s.generic_names, s.active_ingredients
                                 FROM labeling.active_ingredients_map m
                                 JOIN labeling.sum_spl s ON s.spl_id = m.spl_id
                                 WHERE s.is_latest = TRUE AND m.is_active = 1
@@ -386,30 +407,55 @@ def _entity_expansions(query, target_db):
                                 """, {'uniis': candidate_uniis})
                             by_spl = {}
                             for row in rows:
-                                item = by_spl.setdefault(row['spl_id'], {'uniis': set(), 'names': set()})
+                                item = by_spl.setdefault(row['spl_id'], {
+                                    'uniis': set(), 'brand_names': set(),
+                                    'generic_names': set(), 'active_ingredients': set(),
+                                })
                                 if row.get('unii'):
                                     item['uniis'].add(row['unii'])
                                 else:
                                     item['incomplete'] = True
-                                for key in ('product_names', 'generic_names'):
-                                    item['names'].update(n.strip() for n in str(row.get(key) or '').split(';') if n.strip())
-                            candidates = {term}
+                                item['brand_names'].update(n.strip() for n in str(row.get('product_names') or '').split(';') if n.strip())
+                                item['generic_names'].update(n.strip() for n in str(row.get('generic_names') or '').split(';') if n.strip())
+                                item['active_ingredients'].update(n.strip() for n in str(row.get('active_ingredients') or row.get('substance_name') or '').split(';') if n.strip())
                             for item in by_spl.values():
                                 if not item.get('incomplete') and tuple(sorted(item['uniis'])) in ingredient_sets:
-                                    candidates.update(item['names'])
-
-                        candidate_list = _unique_entity_names(candidates)
-                        all_names.extend(sorted(candidate_list, key=lambda n: (n.casefold() != term.casefold(), n.casefold())))
-                        if len(candidate_list) > 1:
-                            summaries.append({'type': 'drug', 'input': term, 'candidates': sorted(candidate_list, key=str.casefold)[:50]})
+                                    for key, category in (
+                                        ('active_ingredients', 'activeIngredient'),
+                                        ('generic_names', 'genericName'),
+                                        ('brand_names', 'brandName'),
+                                    ):
+                                        candidate_name_groups[category].update(item[key])
+                        all_names.append(term)
                     except Exception as exc:
                         print(f"[WARN] Drug entity expansion failed for '{term}': {exc}")
                         all_names.append(term)
                 if all_names:
-                    all_names = _unique_entity_names(all_names)
                     if resolved_any:
+                        candidate_details = []
+                        seen_candidate_names = set()
+                        for category in ('activeIngredient', 'genericName', 'brandName'):
+                            for name in sorted(candidate_name_groups[category], key=str.casefold):
+                                normalized = name.casefold()
+                                if normalized in seen_candidate_names:
+                                    continue
+                                seen_candidate_names.add(normalized)
+                                candidate_details.append({'name': name, 'type': category})
+                        # Keep an unclassified input searchable, but do not show
+                        # the same spelling twice across the three name types.
+                        for name in all_names:
+                            if name.casefold() not in seen_candidate_names:
+                                seen_candidate_names.add(name.casefold())
+                                candidate_details.append({'name': name, 'type': 'genericName'})
+                        all_names = [item['name'] for item in candidate_details]
+                        if len(all_names) > 1:
+                            summaries.append({
+                                'type': 'drug', 'input': terms[0],
+                                'candidates': all_names[:50],
+                            })
                         value['entityOriginalNames'] = terms
                         value['entityCandidateNames'] = all_names
+                        value['entityCandidateDetails'] = candidate_details
                         excluded = set(value.get('entityExcludedNames') or [])
                         selected = value.get('candidateNames')
                         if isinstance(selected, list):
@@ -1867,6 +1913,7 @@ Rules:
 5. Target Sections: When specific sections are named (e.g. "Boxed Warning", "Warnings and Precautions", "Adverse Reactions"), use "labelingSection" or attach "sections" to "meddra".
 6. A drug name goes in "productName", never "identifier". "identifier" is for codes: application number, Set ID, SPL ID, UNII, NDC. If the request provides one or more Set IDs / SPL GUIDs (UUID format), emit them in "identifier" under "setSplGuids" as an array.
 7. Never return an empty "groups" array when medical concepts, drug names, or labeling sections are requested.
+8. When the user explicitly asks for combination/fixed-dose combination products containing multiple ingredients joined by "and" or "with", emit one "productName" criterion per ingredient in the SAME group, with op="contains" for each. These criteria are ANDed by the query builder. Never put the whole conjunction into one productName text value, and do not use equals for these ingredient fragments.
 """
 
 
@@ -2083,21 +2130,6 @@ def _criterion_to_prefilters(ctype, value):
     return [{'type': ctype, 'value': v} for v in values if isinstance(v, str) and v.strip()]
 
 
-def _sanitize_translation(parsed, target_db='local'):
-    """
-    Keeps only criteria the compiler understands and normalizes loose LLM outputs.
-
-    Returns the criteria tree, the notes, and any categorical criterion the
-    model put in `groups` anyway -- harvested rather than dropped, so it comes
-    back to the user as a tick box instead of silently narrowing the backbone.
-
-    Criteria the chosen database cannot evaluate are dropped here as a backstop.
-    The prompt already tells the model which those are; this catches the case
-    where it emits one anyway, and says so in the notes rather than letting the
-    search quietly run wider than asked.
-    """
-
-
 def _auto_verify_product_name(text, target_db='local'):
     """
     Checks if a product name text exactly matches a standard trade, generic, or ingredient name.
@@ -2182,7 +2214,7 @@ def _auto_verify_meddra(terms):
     return verified_pts, verified_llts, unverified
 
 
-def _sanitize_translation(parsed, target_db):
+def _sanitize_translation(parsed, target_db, intent=''):
     """
     Validates LLM translation payload, dropping unsupported criteria and harvesting prefilters.
     Auto-verifies exact matching Product Names and MedDRA terms against database terminology.
@@ -2193,9 +2225,29 @@ def _sanitize_translation(parsed, target_db):
     unavailable = []
     harvested = []
     notes_from_pharm = []
+    combination_intent = bool(re.search(r'\b(?:combination|combo|fixed[ -]dose)\b', intent, re.I))
     for group in (parsed.get('groups') or [])[:5]:
         criteria = []
-        for criterion in (group.get('criteria') or [])[:12]:
+        raw_criteria = group.get('criteria') or []
+        # Backstop the LLM schema instruction: split a single conjunction such
+        # as "amoxicillin and clavulanate" into two AND-ed flexible criteria
+        # when the request explicitly describes combination products.
+        normalized_criteria = []
+        for raw_criterion in raw_criteria:
+            raw_value = raw_criterion.get('value') if isinstance(raw_criterion, dict) else None
+            raw_text = raw_value.get('text') if isinstance(raw_value, dict) else raw_value
+            if combination_intent and isinstance(raw_criterion, dict) and raw_criterion.get('type') == 'productName' and isinstance(raw_text, str):
+                raw_text = re.sub(r'\s+(?:combination|combo|fixed[ -]dose)\s+products?\b.*$', '', raw_text, flags=re.I).strip()
+                ingredients = [part.strip() for part in re.split(r'\s+(?:and|with)\s+', raw_text, flags=re.I) if part.strip()]
+                if len(ingredients) > 1:
+                    for ingredient in ingredients:
+                        split_value = dict(raw_value) if isinstance(raw_value, dict) else {}
+                        split_value.update({'field': 'any', 'op': 'contains', 'text': ingredient})
+                        normalized_criteria.append({'type': 'productName', 'value': split_value})
+                    continue
+            normalized_criteria.append(raw_criterion)
+
+        for criterion in normalized_criteria[:12]:
             if not isinstance(criterion, dict):
                 continue
             ctype = criterion.get('type')
@@ -2377,7 +2429,7 @@ def translate():
     if not isinstance(parsed, dict):
         return jsonify({'error': 'The model did not return a usable query.'}), 502
 
-    query, notes, harvested = _sanitize_translation(parsed, target_db)
+    query, notes, harvested = _sanitize_translation(parsed, target_db, intent)
     query['exactMatch'] = bool(payload.get('exact_match', False))
     query, entity_expansions = _entity_expansions(query, target_db)
     notes.extend(_entity_expansion_notes(entity_expansions))

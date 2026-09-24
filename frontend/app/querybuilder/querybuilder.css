@@ -194,6 +194,9 @@
 .fdl-candidate-dialog__table th { position: sticky; top: 0; z-index: 1; padding: 9px 14px; border-bottom: 1px solid var(--fdl-line); background: #f1f5f9; color: var(--fdl-muted); font-size: .68rem; letter-spacing: .04em; text-align: left; text-transform: uppercase; }
 .fdl-candidate-dialog__table th:last-child, .fdl-candidate-dialog__table td:last-child { width: 110px; text-align: right; }
 .fdl-candidate-dialog__table td { padding: 8px 14px; border-bottom: 1px solid var(--fdl-line-soft); color: var(--fdl-ink); }
+.fdl-candidate-dialog__table th:last-child, .fdl-candidate-dialog__table td:last-child { width: auto; text-align: left; }
+.fdl-candidate-dialog__candidate { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; line-height: 1.4; }
+.fdl-candidate-dialog__candidate input { flex: 0 0 auto; margin-top: 2px; accent-color: var(--fdl-blue-700); }
 .fdl-candidate-dialog__table tr:hover td { background: #f8fafc; }
 .fdl-candidate-dialog__remove, .fdl-candidate-dialog__clear { border: 0; background: transparent; color: #a12e2e; cursor: pointer; font: 650 .76rem var(--fdl-font-sans); }
 .fdl-candidate-dialog__remove:hover, .fdl-candidate-dialog__clear:hover { text-decoration: underline; }

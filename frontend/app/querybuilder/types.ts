@@ -461,6 +461,7 @@ export function toWire(query: LabelQuery, targetDb?: TargetDb): WireQuery {
           // manager. Keep the selected names in the wire query, not thousands
           // of unselected candidates in the URL or search request.
           delete value.entityCandidateNames;
+          delete value.entityCandidateDetails;
           delete value.entityExpandedSelectedNames;
           return { type: c.type, value };
         }),

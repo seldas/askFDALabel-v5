@@ -103,7 +103,7 @@ const EXAMPLES = [
   },
   {
     category: 'Combination drug expansion',
-    prompt: 'Find labels for amoxicillin and clavulanate combination products',
+    prompt: 'Find fixed-dose combination products containing both amoxicillin and clavulanate',
     display: 'Amoxicillin/clavulanate combination',
   },
   {

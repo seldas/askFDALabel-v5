@@ -418,7 +418,7 @@ export function CriterionCard({
                   queryText={v.text}
                   field={v.field || 'any'}
                   targetDb={targetDb}
-                  onConfirm={(confirmedName) => set({ text: confirmedName, verified: true, op: 'equals', candidateNames: undefined, entityNamesResolved: false, entityCandidateNames: undefined, entityOriginalNames: undefined, entityExcludedNames: [] })}
+                  onConfirm={(confirmedName) => set({ text: confirmedName, verified: true, op: 'equals', candidateNames: undefined, entityNamesResolved: false, entityCandidateNames: undefined, entityCandidateDetails: undefined, entityOriginalNames: undefined, entityExcludedNames: [] })}
                 />
               </div>
             )}
@@ -459,15 +459,15 @@ export function CriterionCard({
                   type="text"
                   className="fdl-input"
                   value={v.text || ''}
-                  onChange={(e) => set({ text: e.target.value, verified: true, candidateNames: undefined, entityNamesResolved: false, entityCandidateNames: undefined, entityOriginalNames: undefined, entityExcludedNames: [] })}
+                  onChange={(e) => set({ text: e.target.value, verified: true, candidateNames: undefined, entityNamesResolved: false, entityCandidateNames: undefined, entityCandidateDetails: undefined, entityOriginalNames: undefined, entityExcludedNames: [] })}
                   placeholder="Enter partial product or ingredient name (freeform text)"
                   style={{ flex: 1 }}
                 />
               ) : (
                 <AutoCompleteInput
                   value={v.text || ''}
-                  onChange={(text) => set({ text, verified: isStartsWith ? true : false, candidateNames: undefined, entityNamesResolved: false, entityCandidateNames: undefined, entityOriginalNames: undefined, entityExcludedNames: [] })}
-                  onSelect={(text) => set({ text, verified: true, candidateNames: undefined, entityNamesResolved: false, entityCandidateNames: undefined, entityOriginalNames: undefined, entityExcludedNames: [] })}
+                  onChange={(text) => set({ text, verified: isStartsWith ? true : false, candidateNames: undefined, entityNamesResolved: false, entityCandidateNames: undefined, entityCandidateDetails: undefined, entityOriginalNames: undefined, entityExcludedNames: [] })}
+                  onSelect={(text) => set({ text, verified: true, candidateNames: undefined, entityNamesResolved: false, entityCandidateNames: undefined, entityCandidateDetails: undefined, entityOriginalNames: undefined, entityExcludedNames: [] })}
                   placeholder={
                     isStartsWith
                       ? 'Enter prefix or select suggestion (e.g. Tylenol)'
@@ -1403,7 +1403,7 @@ export function CriterionCard({
       {showCandidateManager && Array.isArray(v.candidateNames) && (
         <ProductNameCandidateDialog
           names={v.candidateNames}
-          allNames={v.entityCandidateNames || v.candidateNames}
+          details={v.entityCandidateDetails || (v.entityCandidateNames || v.candidateNames).map((name: string) => ({ name, type: 'genericName' }))}
           onRemove={removeProductCandidate}
           onAdd={addProductCandidate}
           onClearAll={onRemove}
@@ -1416,14 +1416,14 @@ export function CriterionCard({
 
 function ProductNameCandidateDialog({
   names,
-  allNames,
+  details,
   onRemove,
   onAdd,
   onClearAll,
   onClose,
 }: {
   names: string[];
-  allNames: string[];
+  details: { name: string; type: 'genericName' | 'brandName' | 'activeIngredient' }[];
   onRemove: (name: string) => void;
   onAdd: (name: string) => void;
   onClearAll: () => void;
@@ -1433,13 +1433,23 @@ function ProductNameCandidateDialog({
   const [filter, setFilter] = useState('');
   const [page, setPage] = useState(0);
   const pageSize = 50;
-  const filteredNames = useMemo(() => {
+  const filteredDetails = useMemo(() => {
     const query = filter.trim().toLocaleLowerCase();
-    return query ? allNames.filter((name) => name.toLocaleLowerCase().includes(query)) : allNames;
-  }, [filter, allNames]);
+    return query ? details.filter((item) => item.name.toLocaleLowerCase().includes(query)) : details;
+  }, [filter, details]);
   const selected = useMemo(() => new Set(names.map((name) => name.toLocaleLowerCase())), [names]);
-  const pageCount = Math.max(1, Math.ceil(filteredNames.length / pageSize));
-  const visibleNames = filteredNames.slice(page * pageSize, (page + 1) * pageSize);
+  const pageCount = Math.max(1, Math.ceil(filteredDetails.length / pageSize));
+  const visibleDetails = filteredDetails.slice(page * pageSize, (page + 1) * pageSize);
+  const typeCounts = useMemo(() => ({
+    genericName: details.filter((item) => item.type === 'genericName').length,
+    brandName: details.filter((item) => item.type === 'brandName').length,
+    activeIngredient: details.filter((item) => item.type === 'activeIngredient').length,
+  }), [details]);
+
+  const toggleCandidate = (name: string, checked: boolean) => {
+    if (checked) onAdd(name);
+    else onRemove(name);
+  };
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -1468,7 +1478,7 @@ function ProductNameCandidateDialog({
             <p className="fdl-candidate-dialog__eyebrow">Product name candidates</p>
             <h2 id={titleId}>Review exact-match names</h2>
             <p className="fdl-candidate-dialog__summary">
-              {names.length.toLocaleString()} selected of {allNames.length.toLocaleString()} available. Add or remove names to control the exact-match search.
+              {names.length.toLocaleString()} selected of {details.length.toLocaleString()} available. Select names by type to control the exact-match search.
             </p>
           </div>
           <button type="button" className="fdl-candidate-dialog__close" onClick={onClose} aria-label="Close name manager">×</button>
@@ -1485,29 +1495,40 @@ function ProductNameCandidateDialog({
             autoFocus
           />
           <span className="fdl-candidate-dialog__count">
-            {filteredNames.length.toLocaleString()} of {allNames.length.toLocaleString()} names
+            {filteredDetails.length.toLocaleString()} of {details.length.toLocaleString()} names
           </span>
         </div>
 
         <div className="fdl-candidate-dialog__table-wrap">
           <table className="fdl-candidate-dialog__table">
-            <thead><tr><th scope="col">Product / generic name</th><th scope="col">Action</th></tr></thead>
+            <thead>
+              <tr>
+                <th scope="col">Generic name ({typeCounts.genericName})</th>
+                <th scope="col">Brand name ({typeCounts.brandName})</th>
+                <th scope="col">Active ingredient ({typeCounts.activeIngredient})</th>
+              </tr>
+            </thead>
             <tbody>
-              {visibleNames.map((name) => (
+              {visibleDetails.map(({ name, type }) => (
                 <tr key={name}>
-                  <td>{name}</td>
-                  <td>
-                    <button
-                      type="button"
-                      className={selected.has(name.toLocaleLowerCase()) ? 'fdl-candidate-dialog__remove' : 'fdl-entity-name-candidates__action'}
-                      onClick={() => selected.has(name.toLocaleLowerCase()) ? onRemove(name) : onAdd(name)}
-                    >
-                      {selected.has(name.toLocaleLowerCase()) ? 'Remove' : 'Add'}
-                    </button>
-                  </td>
+                  {(['genericName', 'brandName', 'activeIngredient'] as const).map((columnType) => (
+                    <td key={columnType}>
+                      {type === columnType ? (
+                        <label className="fdl-candidate-dialog__candidate">
+                          <input
+                            type="checkbox"
+                            checked={selected.has(name.toLocaleLowerCase())}
+                            onChange={(event) => toggleCandidate(name, event.target.checked)}
+                            aria-label={`${selected.has(name.toLocaleLowerCase()) ? 'Remove' : 'Add'} ${name} ${columnType}`}
+                          />
+                          <span>{name}</span>
+                        </label>
+                      ) : null}
+                    </td>
+                  ))}
                 </tr>
               ))}
-              {!visibleNames.length && <tr><td colSpan={2} className="fdl-candidate-dialog__empty">No matching names.</td></tr>}
+              {!visibleDetails.length && <tr><td colSpan={3} className="fdl-candidate-dialog__empty">No matching names.</td></tr>}
             </tbody>
           </table>
         </div>
