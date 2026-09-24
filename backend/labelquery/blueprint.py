@@ -96,6 +96,141 @@ def _unique_entity_names(values):
     return list(unique.values())
 
 
+def _resolve_meddra_locally(value, exact_match, expand_candidates=True):
+    """Resolve MedDRA names and bounded LLT siblings from the local dictionary.
+
+    Oracle searches receive LLT codes from this resolver, so the dictionary
+    version used to recognize terms is explicit and independent of the label
+    database selected by the user.
+    """
+    from .compiler import _split_terms
+
+    level = str(value.get('level') or 'llt').lower()
+    legacy = _split_terms(value.get('terms') or value.get('text'))
+    pt_terms = list(dict.fromkeys(str(t).strip() for t in (value.get('ptTerms') or []) if str(t).strip()))
+    llt_terms = list(dict.fromkeys(str(t).strip() for t in (value.get('lltTerms') or []) if str(t).strip()))
+    if legacy:
+        if level == 'pt' and not pt_terms:
+            pt_terms = legacy
+        elif level == 'llt' and not llt_terms:
+            llt_terms = legacy
+
+    if not pt_terms and not llt_terms:
+        return [], [], [], []
+
+    pt_names = [t.upper() for t in pt_terms if not t.isdigit()]
+    pt_codes = [int(t) for t in pt_terms if t.isdigit()]
+    llt_names = [t.upper() for t in llt_terms if not t.isdigit()]
+    llt_codes = [int(t) for t in llt_terms if t.isdigit()]
+
+    pt_rows = []
+    if pt_names:
+        pt_rows.extend(_rows(
+            "SELECT pt_code, pt_name FROM public.meddra_pt WHERE UPPER(pt_name) = ANY(%(names)s)",
+            {'names': pt_names},
+        ))
+    if pt_codes:
+        pt_rows.extend(_rows(
+            "SELECT pt_code, pt_name FROM public.meddra_pt WHERE pt_code = ANY(%(codes)s)",
+            {'codes': pt_codes},
+        ))
+    pt_by_code = {int(r['pt_code']): r['pt_name'] for r in pt_rows if r.get('pt_code') is not None}
+
+    llt_rows = []
+    llt_select = """
+        SELECT l.llt_code, l.llt_name, l.pt_code, p.pt_name
+        FROM public.meddra_llt l
+        JOIN public.meddra_pt p ON p.pt_code = l.pt_code
+    """
+    if llt_names:
+        llt_rows.extend(_rows(
+            llt_select + " WHERE UPPER(l.llt_name) = ANY(%(names)s)",
+            {'names': llt_names},
+        ))
+    if llt_codes:
+        llt_rows.extend(_rows(
+            llt_select + " WHERE l.llt_code = ANY(%(codes)s)",
+            {'codes': llt_codes},
+        ))
+    llt_by_code = {int(r['llt_code']): r for r in llt_rows if r.get('llt_code') is not None}
+    direct_llt_codes = set(llt_by_code)
+    parent_pt_codes = {int(r['pt_code']) for r in llt_rows if r.get('pt_code') is not None}
+    selected_pt_codes = set(pt_by_code)
+
+    original_names = {str(r.get('llt_name') or '').casefold() for r in llt_rows}
+    candidate_rows = []
+    candidate_summaries = []
+    if not exact_match and expand_candidates and parent_pt_codes:
+        candidate_rows = _rows(
+            """
+            SELECT l.llt_code, l.llt_name, l.pt_code, p.pt_name
+            FROM (
+                SELECT l.llt_code, l.llt_name, l.pt_code,
+                       ROW_NUMBER() OVER (PARTITION BY l.pt_code ORDER BY l.llt_code) AS sibling_rank
+                FROM public.meddra_llt l
+                WHERE l.pt_code = ANY(%(pt_codes)s)
+                  AND NOT (UPPER(l.llt_name) = ANY(%(original_names)s))
+            ) l
+            JOIN public.meddra_pt p ON p.pt_code = l.pt_code
+            WHERE l.sibling_rank <= 3
+            ORDER BY l.pt_code, l.llt_code
+            """,
+            {'pt_codes': list(parent_pt_codes), 'original_names': [n.upper() for n in original_names] or ['']},
+        )
+
+    candidates_by_pt = {}
+    for row in candidate_rows:
+        code = int(row['llt_code'])
+        llt_by_code[code] = row
+        candidates_by_pt.setdefault(int(row['pt_code']), []).append(row['llt_name'])
+    for row in llt_rows:
+        pt_code = int(row['pt_code']) if row.get('pt_code') is not None else None
+        if pt_code is not None:
+            pt_by_code.setdefault(pt_code, row.get('pt_name'))
+    for pt_code in sorted(parent_pt_codes):
+        names = candidates_by_pt.get(pt_code, [])
+        original_for_pt = [r['llt_name'] for r in llt_rows if int(r['pt_code']) == pt_code]
+        candidate_summaries.append({
+            'type': 'ae',
+            'input': ', '.join(original_for_pt),
+            'originals': original_for_pt,
+            'pt': pt_by_code.get(pt_code),
+            'candidates': original_for_pt + names,
+        })
+
+    # A selected PT means all of its LLTs. Apply excluded LLTs to this PT
+    # expansion only; a separately selected LLT remains an independent branch.
+    pt_child_codes = set()
+    if selected_pt_codes:
+        pt_children = _rows(
+            "SELECT llt_code, llt_name, pt_code FROM public.meddra_llt WHERE pt_code = ANY(%(codes)s)",
+            {'codes': list(selected_pt_codes)},
+        )
+        excluded_names = [str(t).strip().upper() for t in (value.get('excludedLlts') or []) if str(t).strip()]
+        excluded_codes = set()
+        if excluded_names:
+            excluded_rows = _rows(
+                "SELECT llt_code FROM public.meddra_llt WHERE UPPER(llt_name) = ANY(%(names)s)",
+                {'names': excluded_names},
+            )
+            excluded_codes = {int(r['llt_code']) for r in excluded_rows if r.get('llt_code') is not None}
+        pt_child_codes = {
+            int(r['llt_code']) for r in pt_children
+            if r.get('llt_code') is not None and int(r['llt_code']) not in excluded_codes
+        }
+
+    resolved_codes = sorted(direct_llt_codes | {int(r['llt_code']) for r in candidate_rows} | pt_child_codes)
+    parent_names = _unique_entity_names(
+        [pt_by_code.get(code) for code in selected_pt_codes]
+        + [r.get('pt_name') for r in llt_rows]
+    )
+    candidate_names = _unique_entity_names(
+        [r.get('llt_name') for r in llt_rows]
+        + [r.get('llt_name') for r in candidate_rows]
+    )
+    return resolved_codes, parent_names, candidate_names, candidate_summaries
+
+
 def _entity_expansions(query, target_db):
     """Resolve related drug names and bounded MedDRA LLT candidates.
 
@@ -284,64 +419,40 @@ def _entity_expansions(query, target_db):
                         value['verified'] = True
 
             elif ctype == 'meddra':
-                # Only the Oracle target supports label occurrence matching.
-                if exact_match or not use_oracle or value.get('entityLltCandidatesResolved'):
-                    continue
-                llt_terms = list(dict.fromkeys(str(t).strip() for t in (value.get('lltTerms') or []) if str(t).strip()))
-                if not llt_terms:
+                # Resolve vocabulary against local MedDRA for every target. The
+                # Oracle compiler consumes the resulting LLT codes directly.
+                if not use_oracle:
                     continue
                 try:
-                    from dashboard.services.fdalabel_db import FDALabelDBService
-                    all_llts = list(llt_terms)
-                    value['entityOriginalLltTerms'] = list(llt_terms)
-                    parent_pts = list(value.get('standardizedPtTerms') or [])
-                    grouped_pts = {}
-                    for term in llt_terms:
-                        rows = FDALabelDBService.execute_oracle_query(
-                            """
-                            SELECT pt.PT_CODE, pt.PT_NAME
-                            FROM meddra.low_level_term llt
-                            JOIN meddra.preferred_term pt ON pt.PT_CODE = llt.PT_CODE
-                            WHERE UPPER(llt.LLT_NAME) = :term
-                            ORDER BY llt.LLT_CODE FETCH FIRST 1 ROWS ONLY
-                            """, {'term': term.upper()})
-                        if not rows:
-                            continue
-                        pt_name = rows[0].get('PT_NAME') or rows[0].get('pt_name')
-                        pt_code = rows[0].get('PT_CODE') or rows[0].get('pt_code')
-                        if pt_name and pt_name.casefold() not in {p.casefold() for p in parent_pts}:
-                            parent_pts.append(pt_name)
-                        if pt_code is not None:
-                            item = grouped_pts.setdefault(str(pt_code), {'pt': pt_name, 'inputs': [], 'originals': set(), 'siblings': []})
-                            item['inputs'].append(term)
-                            item['originals'].add(term.casefold())
-                    for pt_code, item in grouped_pts.items():
-                        rows = FDALabelDBService.execute_oracle_query(
-                            """
-                            SELECT LLT_CODE, LLT_NAME FROM meddra.low_level_term
-                            WHERE PT_CODE = :pt_code ORDER BY LLT_CODE
-                            """, {'pt_code': pt_code})
-                        siblings = [
-                            (r.get('LLT_CODE') or r.get('llt_code'), r.get('LLT_NAME') or r.get('llt_name'))
-                            for r in rows
-                            if (r.get('LLT_NAME') or r.get('llt_name'))
-                            and (r.get('LLT_NAME') or r.get('llt_name')).casefold() not in item['originals']
-                        ][:3]
-                        chosen = [name for _, name in siblings]
-                        all_llts.extend(chosen)
-                        summaries.append({
-                            'type': 'ae', 'input': ', '.join(item['inputs']), 'pt': item['pt'],
-                            'candidates': item['inputs'] + chosen,
-                        })
-                    value['lltTerms'] = list(dict.fromkeys(all_llts))
-                    value['entityCandidateLltTerms'] = list(value['lltTerms'])
-                    value['entityLltCandidatesResolved'] = True
+                    was_resolved = bool(value.get('entityLltCandidatesResolved'))
+                    originals = value.get('entityOriginalLltTerms')
+                    candidates = value.get('entityCandidateLltTerms')
+                    if was_resolved:
+                        source = originals if exact_match else candidates
+                        if isinstance(source, list):
+                            value['lltTerms'] = list(source)
+                    input_llts = list(value.get('lltTerms') or [])
+                    resolved_codes, parent_pts, candidate_llts, ae_summaries = _resolve_meddra_locally(
+                        value,
+                        exact_match=exact_match,
+                        expand_candidates=not was_resolved,
+                    )
+                    value['resolvedLltCodes'] = resolved_codes
+                    value['resolvedLltCodesReady'] = True
                     value['standardizedPtTerms'] = parent_pts
-                    # `terms` is the legacy single-level shape. Keeping the new
-                    # explicit arrays avoids treating LLTs as PTs in the compiler.
                     value['terms'] = []
+                    if not was_resolved and not exact_match and candidate_llts:
+                        value['entityOriginalLltTerms'] = input_llts
+                        value['entityCandidateLltTerms'] = candidate_llts
+                        value['lltTerms'] = candidate_llts
+                        value['entityLltCandidatesResolved'] = True
+                    if not exact_match:
+                        summaries.extend(ae_summaries)
                 except Exception as exc:
                     print(f'[WARN] MedDRA entity expansion failed: {exc}')
+                    value['resolvedLltCodes'] = []
+                    value['resolvedLltCodesReady'] = True
+                    summaries.append({'type': 'ae_resolution_error'})
 
     return expanded, summaries
 
@@ -356,10 +467,15 @@ def _entity_expansion_notes(summaries):
                 shown = ', '.join(related[:8])
                 remainder = f" (+{len(related) - 8} more)" if len(related) > 8 else ''
                 notes.append(f"Drug name '{item['input']}' expanded to same-ingredient label names: {shown}{remainder}.")
+        elif item['type'] == 'ae_resolution_error':
+            notes.append(
+                'The local MedDRA dictionary could not be queried. The AE criterion will match no labels.'
+            )
         else:
             names = item.get('candidates') or []
             pt = item.get('pt')
-            sibling_names = ', '.join(names[1:])
+            originals = {str(name).casefold() for name in (item.get('originals') or [item.get('input')]) if name}
+            sibling_names = ', '.join(name for name in names if str(name).casefold() not in originals)
             suffix = f" Added LLT candidates: {sibling_names}." if sibling_names else ' No additional LLT candidates were available.'
             notes.append(f"AE term '{item['input']}' maps to PT '{pt}'.{suffix}")
     return notes
@@ -803,41 +919,23 @@ _MEDDRA_LEVELS = {
     'soc': ('meddra_soc', 'soc_name'),
 }
 
-_ORACLE_MEDDRA_LEVELS = {
-    'llt': ('meddra.low_level_term', 'LLT_NAME'),
-    'pt': ('meddra.preferred_term', 'PT_NAME'),
-    'hlt': ('meddra.high_level_term', 'HLT_NAME'),
-    'hlgt': ('meddra.high_level_grouping_term', 'HLGT_NAME'),
-    'soc': ('meddra.soc_term', 'SOC_NAME'),
-}
-
-
 @labelquery_bp.route('/suggest/meddra', methods=['GET'])
 def suggest_meddra():
     q = (request.args.get('q') or '').strip()
     level = (request.args.get('level') or 'pt').lower()
-    target_db = _resolve_target_db(request.args.get('target_db') or request.args.get('targetDb'))
     if len(q) < 2 or level not in ('pt', 'llt'):
         return jsonify({'suggestions': []})
 
     try:
-        if target_db == 'oracle':
-            table, column = _ORACLE_MEDDRA_LEVELS[level]
-            sql = f"SELECT DISTINCT {column} AS name FROM {table} WHERE UPPER({column}) LIKE :q ORDER BY name FETCH NEXT 30 ROWS ONLY"
-            from dashboard.services.fdalabel_db import FDALabelDBService
-            oracle_rows = FDALabelDBService.execute_oracle_query(sql, {'q': f'%{q.upper()}%'})
-            suggestions = [r.get('NAME') or r.get('name') for r in oracle_rows if r and (r.get('NAME') or r.get('name'))]
-            return jsonify({'suggestions': suggestions})
-        else:
-            table, column = _MEDDRA_LEVELS[level]
-            rows = _rows(
-                f"""
-                SELECT DISTINCT {column} AS name FROM public.{table}
-                WHERE {column} ILIKE %(q)s ORDER BY name LIMIT 30
-                """,
-                {'q': f'%{q}%'},
-            )
-            return jsonify({'suggestions': [r['name'] for r in rows]})
+        table, column = _MEDDRA_LEVELS[level]
+        rows = _rows(
+            f"""
+            SELECT DISTINCT {column} AS name FROM public.{table}
+            WHERE {column} ILIKE %(q)s ORDER BY name LIMIT 30
+            """,
+            {'q': f'%{q}%'},
+        )
+        return jsonify({'suggestions': [r['name'] for r in rows]})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -846,7 +944,7 @@ def suggest_meddra():
 def get_meddra_hierarchy():
     term = (request.args.get('term') or '').strip()
     level = (request.args.get('level') or 'pt').lower()
-    target_db = _resolve_target_db(request.args.get('target_db') or request.args.get('targetDb'))
+    target_db = 'local'  # MedDRA vocabulary always comes from the local dictionary.
     if not term:
         return jsonify({'term': term, 'path': [], 'formatted': ''})
 
@@ -953,7 +1051,7 @@ def get_meddra_llts():
     gets displayed.
     """
     term = (request.args.get('term') or '').strip()
-    target_db = _resolve_target_db(request.args.get('target_db') or request.args.get('targetDb'))
+    target_db = 'local'  # MedDRA vocabulary always comes from the local dictionary.
     if not term:
         return jsonify({'term': term, 'llts': []})
 
@@ -1005,7 +1103,7 @@ def get_meddra_parent_pt():
     the pick alone" rather than as an error worth showing.
     """
     term = (request.args.get('term') or '').strip()
-    target_db = _resolve_target_db(request.args.get('target_db') or request.args.get('targetDb'))
+    target_db = 'local'  # MedDRA vocabulary always comes from the local dictionary.
     if not term:
         return jsonify({'term': term, 'pt': None})
 
@@ -2039,7 +2137,7 @@ def _auto_verify_product_name(text, target_db='local'):
     return t, False
 
 
-def _auto_verify_meddra(terms, target_db='oracle'):
+def _auto_verify_meddra(terms):
     """
     Checks if MedDRA terms exactly match standard PT or LLT names in the MedDRA vocabulary.
     Returns:
@@ -2057,24 +2155,8 @@ def _auto_verify_meddra(terms, target_db='oracle'):
             continue
         found = False
         try:
-            if _use_oracle(target_db):
-                from dashboard.services.fdalabel_db import FDALabelDBService
-                # Check PT first
-                sql_pt = "SELECT DISTINCT PT_NAME FROM meddra.meddra_hierarchy WHERE UPPER(PT_NAME) = :t FETCH NEXT 1 ROWS ONLY"
-                rows_pt = FDALabelDBService.execute_oracle_query(sql_pt, {'t': t.upper()})
-                if rows_pt:
-                    canonical = rows_pt[0].get('PT_NAME') or t
-                    verified_pts.append(canonical)
-                    found = True
-                else:
-                    sql_llt = "SELECT DISTINCT LLT_NAME FROM meddra.low_level_term WHERE UPPER(LLT_NAME) = :t FETCH NEXT 1 ROWS ONLY"
-                    rows_llt = FDALabelDBService.execute_oracle_query(sql_llt, {'t': t.upper()})
-                    if rows_llt:
-                        canonical = rows_llt[0].get('LLT_NAME') or t
-                        verified_llts.append(canonical)
-                        found = True
-            else:
-                # Check local Postgres public.meddra_hierarchy / low_level_term
+                # MedDRA is an application vocabulary, independent of the
+                # selected label search target. Always standardize locally.
                 sql_pt = "SELECT DISTINCT pt_name FROM public.meddra_pt WHERE lower(pt_name) = lower(%(t)s) LIMIT 1"
                 rows_pt = _rows(sql_pt, {'t': t})
                 if rows_pt and rows_pt[0].get('pt_name'):
@@ -2197,7 +2279,7 @@ def _sanitize_translation(parsed, target_db):
                     )
                     lvl = 'pt'
 
-                verified_pts, verified_llts, unverified = _auto_verify_meddra(terms, target_db)
+                verified_pts, verified_llts, unverified = _auto_verify_meddra(terms)
                 is_fully_verified = len(unverified) == 0 and (len(verified_pts) > 0 or len(verified_llts) > 0)
                 value = {
                     'level': lvl if lvl in ('pt', 'llt') else 'pt',

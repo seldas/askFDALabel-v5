@@ -77,12 +77,12 @@ export function CriterionCard({
   const unavailable = unsupportedReason(criterion.type, targetDb);
 
   const [hierarchies, setHierarchies] = useState<Record<string, string>>({});
-  /* LLT names under each selected PT, keyed `${targetDb}:pt:${term}`. A PT
+  /* LLT names under each selected PT, keyed by `pt:${term}`. A PT
    * searches its descendants, so showing them is the only way to see how wide
    * a pick really is before running it -- and, now, to drop the ones that do
    * not belong. */
   const [llts, setLlts] = useState<Record<string, string[]>>({});
-  /* The PT above each directly-picked LLT, keyed `${targetDb}:${llt}`, for the
+  /* The PT above each directly-picked LLT, keyed by LLT name, for the
    * "broaden to PT" control. Fetched up front rather than on click so the
    * button can name the term it would swap in. */
   const [parentPts, setParentPts] = useState<Record<string, string | null>>({});
@@ -126,14 +126,11 @@ export function CriterionCard({
       ...meddraLlts.map((t) => ['llt', t] as [string, string]),
     ];
     wanted.forEach(async ([level, t]) => {
-      // targetDb is part of the key: the two databases answer this from
-      // different MedDRA dictionaries, so a cached answer from one is not an
-      // answer for the other.
-      const key = `${targetDb}:${level}:${t}`;
+      const key = `${level}:${t}`;
       if (hierarchies[key]) return;
       try {
         const res = await fetch(
-          `/api/labelquery/meddra/hierarchy?term=${encodeURIComponent(t)}&level=${level}&target_db=${targetDb}`,
+          `/api/labelquery/meddra/hierarchy?term=${encodeURIComponent(t)}&level=${level}`,
         );
         if (res.ok) {
           const data = await res.json();
@@ -145,19 +142,19 @@ export function CriterionCard({
         // ignore fetch error
       }
     });
-  }, [criterion.type, meddraPts, meddraLlts, targetDb, hierarchies]);
+  }, [criterion.type, meddraPts, meddraLlts, hierarchies]);
 
   useEffect(() => {
     // Only a PT has LLTs below it; at LLT level the term is already the leaf.
     if (criterion.type !== 'meddra' || meddraPts.length === 0) return;
     meddraPts.forEach(async (t: string) => {
-      const key = `${targetDb}:pt:${t}`;
+      const key = `pt:${t}`;
       // `in`, not truthiness: an empty array is truthy, so `if (llts[key])`
       // would treat "no LLTs found" as "not fetched yet" and refetch forever.
       if (key in llts) return;
       try {
         const res = await fetch(
-          `/api/labelquery/meddra/llts?term=${encodeURIComponent(t)}&target_db=${targetDb}`,
+          `/api/labelquery/meddra/llts?term=${encodeURIComponent(t)}`,
         );
         if (!res.ok) return;
         const data = await res.json();
@@ -168,16 +165,16 @@ export function CriterionCard({
         // ignore fetch error
       }
     });
-  }, [criterion.type, meddraPts, targetDb, llts]);
+  }, [criterion.type, meddraPts, llts]);
 
   useEffect(() => {
     if (criterion.type !== 'meddra' || meddraLlts.length === 0) return;
     meddraLlts.forEach(async (t: string) => {
-      const key = `${targetDb}:${t}`;
+      const key = t;
       if (key in parentPts) return;
       try {
         const res = await fetch(
-          `/api/labelquery/meddra/parent_pt?term=${encodeURIComponent(t)}&target_db=${targetDb}`,
+          `/api/labelquery/meddra/parent_pt?term=${encodeURIComponent(t)}`,
         );
         if (!res.ok) return;
         const data = await res.json();
@@ -186,7 +183,7 @@ export function CriterionCard({
         // ignore fetch error
       }
     });
-  }, [criterion.type, meddraLlts, targetDb, parentPts]);
+  }, [criterion.type, meddraLlts, parentPts]);
 
   const [showMultiSetIdModal, setShowMultiSetIdModal] = useState(false);
 
@@ -233,7 +230,7 @@ export function CriterionCard({
   const fetchMeddra = useCallback(
     async (q: string) => {
       const res = await fetch(
-        `/api/labelquery/suggest/meddra?q=${encodeURIComponent(q)}&level=${v.level || 'llt'}&target_db=${targetDb}`,
+        `/api/labelquery/suggest/meddra?q=${encodeURIComponent(q)}&level=${v.level || 'llt'}`,
       );
       if (!res.ok) return [];
       const json = await res.json();
@@ -1493,7 +1490,7 @@ function UnverifiedMeddraPicker({
       setLoading(true);
       try {
         const res = await fetch(
-          `/api/labelquery/suggest/meddra?q=${encodeURIComponent(term.trim())}&level=pt&target_db=${targetDb}`,
+          `/api/labelquery/suggest/meddra?q=${encodeURIComponent(term.trim())}&level=pt`,
         );
         if (res.ok && !cancelled) {
           const json = await res.json();

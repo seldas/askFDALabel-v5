@@ -625,6 +625,24 @@ def _compile_meddra(value, bag, expand_meddra=None, alias='s', warnings=None):
             sec_params = [bag.add(loinc) for loinc in loinc_set]
             sec_clause = f" AND occ.SEC_TYPE_CODE IN ({', '.join(sec_params)})"
 
+    # MedDRA terminology is resolved against the application's local MedDRA
+    # dictionary. When present, these codes are authoritative for this query;
+    # do not re-resolve term names against Oracle's potentially different
+    # MedDRA release.
+    if value.get('resolvedLltCodesReady'):
+        codes = list(dict.fromkeys(int(code) for code in _as_list(value.get('resolvedLltCodes')) if str(code).isdigit()))
+        if not codes:
+            if warnings is not None:
+                warnings.append(
+                    'No selected MedDRA term could be resolved in the local MedDRA dictionary; the MedDRA criterion matched no labels.'
+                )
+            return '1 = 0'
+        code_params = [bag.add(code) for code in codes]
+        return (
+            f"{alias}.SET_ID IN (SELECT occ.SET_ID FROM druglabel.SPL_SEC_MEDDRA_LLT_OCC occ "
+            f"WHERE 1=1{sec_clause} AND occ.LLT_CODE IN ({', '.join(code_params)}))"
+        )
+
     exclude_sql = _meddra_exclusion_clause(excluded, bag)
 
     # A PT widens, so it carries the exclusions; an LLT is already the leaf and
