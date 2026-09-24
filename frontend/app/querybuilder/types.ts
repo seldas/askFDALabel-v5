@@ -455,7 +455,15 @@ export function toWire(query: LabelQuery, targetDb?: TargetDb): WireQuery {
           }
           return true;
         })
-        .map((c) => ({ type: c.type, value: c.value })),
+        .map((c) => {
+          const value = { ...(c.value as Record<string, unknown>) };
+          // The complete entity list is only needed by the builder's candidate
+          // manager. Keep the selected names in the wire query, not thousands
+          // of unselected candidates in the URL or search request.
+          delete value.entityCandidateNames;
+          delete value.entityExpandedSelectedNames;
+          return { type: c.type, value };
+        }),
     })),
   };
 }

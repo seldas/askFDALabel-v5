@@ -89,7 +89,14 @@ export function QueryPanel({
           const original = Array.isArray(value.entityOriginalNames)
             ? value.entityOriginalNames
             : String(value.text || '').split(/[;,\n]/).map((name: string) => name.trim()).filter(Boolean);
-          const source = exactMatch ? original : value.entityCandidateNames;
+          const source = exactMatch
+            ? original
+            : (Array.isArray(value.entityExpandedSelectedNames)
+              ? value.entityExpandedSelectedNames
+              : (value.entityCandidateNames || []).slice(0, 20));
+          if (exactMatch && Array.isArray(value.candidateNames)) {
+            value.entityExpandedSelectedNames = value.candidateNames;
+          }
           if (Array.isArray(source)) {
             const excluded = new Set((value.entityExcludedNames || []).map((name: string) => String(name).toLowerCase()));
             value.candidateNames = source.filter((name: string) => !excluded.has(String(name).toLowerCase()));

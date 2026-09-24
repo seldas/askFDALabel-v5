@@ -97,19 +97,19 @@ function CloseIcon({ size = 14 }: { size?: number }) {
 
 const EXAMPLES = [
   {
-    category: 'Multiple SET-IDs',
-    prompt: 'e5cbf204-c10d-444b-aba0-180a30645d55, 44fb1e25-ad03-4a7f-9f35-2e29f5025661, f7633480-25aa-4326-bec9-82835b486a20, 4b286ec6-68a7-4ec0-af07-5a27ec9cb35d',
-    display: 'Multiple SET-IDs paste (e5cbf204-…, 44fb1e25-…, f7633480-…)',
+    category: 'Single-ingredient name expansion',
+    prompt: 'Find labels for metformin',
+    display: 'Metformin name expansion',
   },
   {
-    category: 'Drug Name + Typo',
-    prompt: 'Lipitor or Metfomin with oral route',
-    display: 'Drug combination ("Lipitor or Metfomin with oral route")',
+    category: 'Combination drug expansion',
+    prompt: 'Find labels for amoxicillin and clavulanate combination products',
+    display: 'Amoxicillin/clavulanate combination',
   },
   {
-    category: 'MedDRA Safety',
-    prompt: 'Metformin labels with Boxed Warning mentioning lactic acidosis',
-    display: 'MedDRA safety ("Metformin with Boxed Warning lactic acidosis")',
+    category: 'MedDRA adverse-event expansion',
+    prompt: 'Find labels mentioning nausea as an adverse event',
+    display: 'Nausea MedDRA expansion',
   },
 ];
 

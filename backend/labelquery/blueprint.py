@@ -256,7 +256,7 @@ def _entity_expansions(query, target_db):
 
             if ctype == 'productName' and value.get('op', 'equals') != 'notContains':
                 if value.get('entityNamesResolved'):
-                    source = value.get('entityOriginalNames') if exact_match else value.get('entityCandidateNames')
+                    source = value.get('entityOriginalNames') if exact_match else value.get('candidateNames')
                     if isinstance(source, list):
                         excluded = {str(name).casefold() for name in (value.get('entityExcludedNames') or [])}
                         value['candidateNames'] = [name for name in source if str(name).casefold() not in excluded]
@@ -411,7 +411,12 @@ def _entity_expansions(query, target_db):
                         value['entityOriginalNames'] = terms
                         value['entityCandidateNames'] = all_names
                         excluded = set(value.get('entityExcludedNames') or [])
-                        value['candidateNames'] = [n for n in all_names if n.casefold() not in {x.casefold() for x in excluded}]
+                        selected = value.get('candidateNames')
+                        if isinstance(selected, list):
+                            allowed = {n.casefold() for n in all_names}
+                            value['candidateNames'] = [n for n in selected if n.casefold() in allowed and n.casefold() not in {x.casefold() for x in excluded}]
+                        else:
+                            value['candidateNames'] = [n for n in all_names if n.casefold() not in {x.casefold() for x in excluded}][:20]
                         value['entityNamesResolved'] = True
                         value['entityExpansionApplied'] = True
                         value['op'] = 'equals'

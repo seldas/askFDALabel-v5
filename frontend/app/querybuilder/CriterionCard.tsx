@@ -53,7 +53,6 @@ const SEARCH_HELP = (
 );
 
 const ENTITY_NAMES_INLINE_LIMIT = 20;
-const ENTITY_NAMES_INLINE_PREVIEW = 12;
 
 function labelForOption(options: Option[], value: string) {
   return options.find((o) => o.value === value)?.label || value;
@@ -196,18 +195,12 @@ export function CriterionCard({
     [onChange, v],
   );
   const removeProductCandidate = useCallback((name: string) => {
-    const keep = (items: unknown) => Array.isArray(items)
-      ? items.filter((item) => String(item).toLowerCase() !== name.toLowerCase())
-      : items;
-    const excluded = Array.isArray(v.entityExcludedNames) ? v.entityExcludedNames : [];
-    set({
-      candidateNames: keep(v.candidateNames),
-      entityCandidateNames: keep(v.entityCandidateNames),
-      entityOriginalNames: keep(v.entityOriginalNames),
-      entityExcludedNames: excluded.some((item: unknown) => String(item).toLowerCase() === name.toLowerCase())
-        ? excluded
-        : [...excluded, name],
-    });
+    set({ candidateNames: (v.candidateNames || []).filter((item: string) => item.toLowerCase() !== name.toLowerCase()) });
+  }, [set, v]);
+  const addProductCandidate = useCallback((name: string) => {
+    if ((v.candidateNames || []).some((item: string) => item.toLowerCase() === name.toLowerCase())) return;
+    const excluded = (v.entityExcludedNames || []).filter((item: string) => item.toLowerCase() !== name.toLowerCase());
+    set({ candidateNames: [...(v.candidateNames || []), name], entityExcludedNames: excluded });
   }, [set, v]);
   const closeCandidateManager = useCallback(() => setShowCandidateManager(false), []);
 
@@ -509,17 +502,17 @@ export function CriterionCard({
               <div className="fdl-entity-name-candidates">
                 <div className="fdl-entity-name-candidates__header">
                   <span className="fdl-entity-name-candidates__label">
-                    Exact name candidates <span className="fdl-entity-name-candidates__count">({v.candidateNames.length.toLocaleString()})</span>
+                    Selected exact names <span className="fdl-entity-name-candidates__count">({v.candidateNames.length.toLocaleString()} selected / {(v.entityCandidateNames || v.candidateNames).length.toLocaleString()} available)</span>
                   </span>
                   {v.candidateNames.length > 0 && (
                     <div className="fdl-entity-name-candidates__actions">
-                      {v.candidateNames.length > ENTITY_NAMES_INLINE_LIMIT && (
+                      {(v.entityCandidateNames || v.candidateNames).length > ENTITY_NAMES_INLINE_LIMIT && (
                         <button
                           type="button"
                           className="fdl-entity-name-candidates__action"
                           onClick={() => setShowCandidateManager(true)}
                         >
-                          Manage all {v.candidateNames.length.toLocaleString()} names
+                          Manage all {(v.entityCandidateNames || v.candidateNames).length.toLocaleString()} names
                         </button>
                       )}
                       <button
@@ -536,11 +529,16 @@ export function CriterionCard({
                 </div>
                 {v.candidateNames.length ? (
                   <Chips
-                    values={v.candidateNames.slice(0, v.candidateNames.length > ENTITY_NAMES_INLINE_LIMIT ? ENTITY_NAMES_INLINE_PREVIEW : undefined)}
+                    values={v.candidateNames.slice(0, ENTITY_NAMES_INLINE_LIMIT)}
                     onRemove={removeProductCandidate}
                   />
                 ) : (
                   <span className="fdl-entity-name-candidates__empty">No product names selected; this criterion will not match labels.</span>
+                )}
+                {(v.entityCandidateNames || v.candidateNames).length > 25 && (
+                  <div className="fdl-note fdl-note--warn" role="status">
+                    There are more than 25 product-name candidates. Only the first 20 were selected automatically. Review the full list and remove names you do not need; add other names from the table if needed.
+                  </div>
                 )}
               </div>
             )}
@@ -1405,7 +1403,9 @@ export function CriterionCard({
       {showCandidateManager && Array.isArray(v.candidateNames) && (
         <ProductNameCandidateDialog
           names={v.candidateNames}
+          allNames={v.entityCandidateNames || v.candidateNames}
           onRemove={removeProductCandidate}
+          onAdd={addProductCandidate}
           onClearAll={onRemove}
           onClose={closeCandidateManager}
         />
@@ -1416,12 +1416,16 @@ export function CriterionCard({
 
 function ProductNameCandidateDialog({
   names,
+  allNames,
   onRemove,
+  onAdd,
   onClearAll,
   onClose,
 }: {
   names: string[];
+  allNames: string[];
   onRemove: (name: string) => void;
+  onAdd: (name: string) => void;
   onClearAll: () => void;
   onClose: () => void;
 }) {
@@ -1431,8 +1435,9 @@ function ProductNameCandidateDialog({
   const pageSize = 50;
   const filteredNames = useMemo(() => {
     const query = filter.trim().toLocaleLowerCase();
-    return query ? names.filter((name) => name.toLocaleLowerCase().includes(query)) : names;
-  }, [filter, names]);
+    return query ? allNames.filter((name) => name.toLocaleLowerCase().includes(query)) : allNames;
+  }, [filter, allNames]);
+  const selected = useMemo(() => new Set(names.map((name) => name.toLocaleLowerCase())), [names]);
   const pageCount = Math.max(1, Math.ceil(filteredNames.length / pageSize));
   const visibleNames = filteredNames.slice(page * pageSize, (page + 1) * pageSize);
 
@@ -1463,7 +1468,7 @@ function ProductNameCandidateDialog({
             <p className="fdl-candidate-dialog__eyebrow">Product name candidates</p>
             <h2 id={titleId}>Review exact-match names</h2>
             <p className="fdl-candidate-dialog__summary">
-              {names.length.toLocaleString()} names are included in this criterion. Remove any name to exclude it from the search.
+              {names.length.toLocaleString()} selected of {allNames.length.toLocaleString()} available. Add or remove names to control the exact-match search.
             </p>
           </div>
           <button type="button" className="fdl-candidate-dialog__close" onClick={onClose} aria-label="Close name manager">×</button>
@@ -1480,7 +1485,7 @@ function ProductNameCandidateDialog({
             autoFocus
           />
           <span className="fdl-candidate-dialog__count">
-            {filteredNames.length.toLocaleString()} of {names.length.toLocaleString()} names
+            {filteredNames.length.toLocaleString()} of {allNames.length.toLocaleString()} names
           </span>
         </div>
 
@@ -1492,8 +1497,12 @@ function ProductNameCandidateDialog({
                 <tr key={name}>
                   <td>{name}</td>
                   <td>
-                    <button type="button" className="fdl-candidate-dialog__remove" onClick={() => onRemove(name)}>
-                      Remove
+                    <button
+                      type="button"
+                      className={selected.has(name.toLocaleLowerCase()) ? 'fdl-candidate-dialog__remove' : 'fdl-entity-name-candidates__action'}
+                      onClick={() => selected.has(name.toLocaleLowerCase()) ? onRemove(name) : onAdd(name)}
+                    >
+                      {selected.has(name.toLocaleLowerCase()) ? 'Remove' : 'Add'}
                     </button>
                   </td>
                 </tr>
