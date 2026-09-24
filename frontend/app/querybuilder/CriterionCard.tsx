@@ -9,7 +9,7 @@
  * sync, so what the card shows is what the query contains.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { AutoCompleteInput, Chips, isPickSelected, ListAdder, type Option, QuickPicks, Select, TokenInput } from './controls';
 import {
   CRITERION_DEFS,
@@ -52,6 +52,9 @@ const SEARCH_HELP = (
   </div>
 );
 
+const ENTITY_NAMES_INLINE_LIMIT = 20;
+const ENTITY_NAMES_INLINE_PREVIEW = 12;
+
 function labelForOption(options: Option[], value: string) {
   return options.find((o) => o.value === value)?.label || value;
 }
@@ -75,6 +78,7 @@ export function CriterionCard({
   /* One banner on the frame, so every card reports unavailability the same
    * way instead of each body inventing its own note. */
   const unavailable = unsupportedReason(criterion.type, targetDb);
+  const [showCandidateManager, setShowCandidateManager] = useState(false);
 
   const [hierarchies, setHierarchies] = useState<Record<string, string>>({});
   /* LLT names under each selected PT, keyed by `pt:${term}`. A PT
@@ -191,6 +195,21 @@ export function CriterionCard({
     (patch: Record<string, unknown>) => onChange({ ...v, ...patch }),
     [onChange, v],
   );
+  const removeProductCandidate = useCallback((name: string) => {
+    const keep = (items: unknown) => Array.isArray(items)
+      ? items.filter((item) => String(item).toLowerCase() !== name.toLowerCase())
+      : items;
+    const excluded = Array.isArray(v.entityExcludedNames) ? v.entityExcludedNames : [];
+    set({
+      candidateNames: keep(v.candidateNames),
+      entityCandidateNames: keep(v.entityCandidateNames),
+      entityOriginalNames: keep(v.entityOriginalNames),
+      entityExcludedNames: excluded.some((item: unknown) => String(item).toLowerCase() === name.toLowerCase())
+        ? excluded
+        : [...excluded, name],
+    });
+  }, [set, v]);
+  const closeCandidateManager = useCallback(() => setShowCandidateManager(false), []);
 
   const values: string[] = v.values || [];
   const toggle = useCallback(
@@ -488,21 +507,37 @@ export function CriterionCard({
             </div>
             {v.entityNamesResolved && Array.isArray(v.candidateNames) && (
               <div className="fdl-entity-name-candidates">
-                <span className="fdl-entity-name-candidates__label">Exact name candidates</span>
+                <div className="fdl-entity-name-candidates__header">
+                  <span className="fdl-entity-name-candidates__label">
+                    Exact name candidates <span className="fdl-entity-name-candidates__count">({v.candidateNames.length.toLocaleString()})</span>
+                  </span>
+                  {v.candidateNames.length > 0 && (
+                    <div className="fdl-entity-name-candidates__actions">
+                      {v.candidateNames.length > ENTITY_NAMES_INLINE_LIMIT && (
+                        <button
+                          type="button"
+                          className="fdl-entity-name-candidates__action"
+                          onClick={() => setShowCandidateManager(true)}
+                        >
+                          Manage all {v.candidateNames.length.toLocaleString()} names
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="fdl-entity-name-candidates__action fdl-entity-name-candidates__action--clear"
+                        onClick={onRemove}
+                        aria-label="Clear all product-name candidates and remove this criterion"
+                        title="Remove this product-name criterion and all its candidates"
+                      >
+                        Clear all
+                      </button>
+                    </div>
+                  )}
+                </div>
                 {v.candidateNames.length ? (
                   <Chips
-                    values={v.candidateNames}
-                    onRemove={(name) => {
-                      const keep = (items: unknown) => Array.isArray(items)
-                        ? items.filter((item) => String(item).toLowerCase() !== name.toLowerCase())
-                        : items;
-                      set({
-                        candidateNames: keep(v.candidateNames),
-                        entityCandidateNames: keep(v.entityCandidateNames),
-                        entityOriginalNames: keep(v.entityOriginalNames),
-                        entityExcludedNames: [...(v.entityExcludedNames || []), name],
-                      });
-                    }}
+                    values={v.candidateNames.slice(0, v.candidateNames.length > ENTITY_NAMES_INLINE_LIMIT ? ENTITY_NAMES_INLINE_PREVIEW : undefined)}
+                    onRemove={removeProductCandidate}
                   />
                 ) : (
                   <span className="fdl-entity-name-candidates__empty">No product names selected; this criterion will not match labels.</span>
@@ -511,7 +546,7 @@ export function CriterionCard({
             )}
             <p className="fdl-note">
               {v.entityNamesResolved ? (
-                'Each selected name badge is matched as an exact product or generic name. Remove a badge to exclude that name.'
+                'Each selected name badge is matched as an exact product or generic name. Remove a badge to exclude it, or use Clear all to remove this criterion.'
               ) : isExact ? (
                 v.verified !== false ? (
                   'Standardized product name is confirmed. Exact match index scan will be used.'
@@ -1336,6 +1371,7 @@ export function CriterionCard({
     quickPickReason,
     llts,
     options.loading,
+    removeProductCandidate,
     set,
     targetDb,
     toggle,
@@ -1366,6 +1402,117 @@ export function CriterionCard({
         </p>
       ) : null}
       <div className="fdl-card__body">{body}</div>
+      {showCandidateManager && Array.isArray(v.candidateNames) && (
+        <ProductNameCandidateDialog
+          names={v.candidateNames}
+          onRemove={removeProductCandidate}
+          onClearAll={onRemove}
+          onClose={closeCandidateManager}
+        />
+      )}
+    </div>
+  );
+}
+
+function ProductNameCandidateDialog({
+  names,
+  onRemove,
+  onClearAll,
+  onClose,
+}: {
+  names: string[];
+  onRemove: (name: string) => void;
+  onClearAll: () => void;
+  onClose: () => void;
+}) {
+  const titleId = useId();
+  const [filter, setFilter] = useState('');
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
+  const filteredNames = useMemo(() => {
+    const query = filter.trim().toLocaleLowerCase();
+    return query ? names.filter((name) => name.toLocaleLowerCase().includes(query)) : names;
+  }, [filter, names]);
+  const pageCount = Math.max(1, Math.ceil(filteredNames.length / pageSize));
+  const visibleNames = filteredNames.slice(page * pageSize, (page + 1) * pageSize);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, pageCount - 1));
+  }, [pageCount]);
+
+  return (
+    <div className="fdl-candidate-dialog-backdrop" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose();
+    }}>
+      <section className="fdl-candidate-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <header className="fdl-candidate-dialog__header">
+          <div>
+            <p className="fdl-candidate-dialog__eyebrow">Product name candidates</p>
+            <h2 id={titleId}>Review exact-match names</h2>
+            <p className="fdl-candidate-dialog__summary">
+              {names.length.toLocaleString()} names are included in this criterion. Remove any name to exclude it from the search.
+            </p>
+          </div>
+          <button type="button" className="fdl-candidate-dialog__close" onClick={onClose} aria-label="Close name manager">×</button>
+        </header>
+
+        <div className="fdl-candidate-dialog__toolbar">
+          <input
+            className="fdl-input"
+            type="search"
+            value={filter}
+            onChange={(event) => { setFilter(event.target.value); setPage(0); }}
+            placeholder="Filter names..."
+            aria-label="Filter product-name candidates"
+            autoFocus
+          />
+          <span className="fdl-candidate-dialog__count">
+            {filteredNames.length.toLocaleString()} of {names.length.toLocaleString()} names
+          </span>
+        </div>
+
+        <div className="fdl-candidate-dialog__table-wrap">
+          <table className="fdl-candidate-dialog__table">
+            <thead><tr><th scope="col">Product / generic name</th><th scope="col">Action</th></tr></thead>
+            <tbody>
+              {visibleNames.map((name) => (
+                <tr key={name}>
+                  <td>{name}</td>
+                  <td>
+                    <button type="button" className="fdl-candidate-dialog__remove" onClick={() => onRemove(name)}>
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {!visibleNames.length && <tr><td colSpan={2} className="fdl-candidate-dialog__empty">No matching names.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+
+        <footer className="fdl-candidate-dialog__footer">
+          <span>Page {page + 1} of {pageCount}</span>
+          <div className="fdl-candidate-dialog__actions">
+            <button type="button" className="fdl-candidate-dialog__clear" onClick={onClearAll}>Clear all</button>
+            <button type="button" className="fdl-btn fdl-btn--quiet" onClick={() => setPage((current) => Math.max(0, current - 1))} disabled={page === 0}>Previous</button>
+            <button type="button" className="fdl-btn fdl-btn--quiet" onClick={() => setPage((current) => Math.min(pageCount - 1, current + 1))} disabled={page >= pageCount - 1}>Next</button>
+            <button type="button" className="fdl-btn fdl-btn--search" onClick={onClose}>Done</button>
+          </div>
+        </footer>
+      </section>
     </div>
   );
 }
