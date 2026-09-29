@@ -58,10 +58,13 @@ def _media_entries(xml_text):
                     break
         if not filename:
             continue
-        filename = filename.replace("\\", "/").split("/")[-1]
-        if not filename or filename in {".", ".."}:
+        media_path = filename.replace("\\", "/")
+        path_parts = [part for part in media_path.split("/") if part not in ("", ".")]
+        if not path_parts or any(part == ".." for part in path_parts):
             continue
-        entries[media_id] = filename
+        media_path = "/".join(path_parts)
+        filename = path_parts[-1]
+        entries[media_id] = media_path
 
     contexts = {}
     for node in root.iter():
@@ -75,7 +78,8 @@ def _media_entries(xml_text):
         contexts[ref_id] = nearby[:1200]
 
     result = []
-    for ref_id, filename in entries.items():
+    for ref_id, media_path in entries.items():
+        filename = Path(media_path).name
         normalized = filename.lower()
         if not normalized.endswith((".png", ".jpg", ".jpeg", ".gif", ".tif", ".tiff", ".webp")):
             continue
@@ -95,7 +99,7 @@ def _media_entries(xml_text):
             kind = "Dosage form"
         if re.fullmatch(r"(?:image|img|figure)\s*\d*", label, re.I) and context:
             label = context[:72].rstrip(" ,.;:")
-        asset_id = hashlib.sha256(f"{ref_id}:{filename}".encode()).hexdigest()[:24]
+        asset_id = hashlib.sha256(f"{ref_id}:{media_path}".encode()).hexdigest()[:24]
         result.append({"id": asset_id, "filename": filename, "title": label or filename, "category": kind})
     return result, entries
 
@@ -125,14 +129,22 @@ def _read_artwork(set_id, spl_id, asset_id):
     if not asset:
         abort(404, description="Image not found in this label")
 
+    media_path = None
+    for ref_id, candidate_path in inventory[1].items():
+        candidate_id = hashlib.sha256(f"{ref_id}:{candidate_path}".encode()).hexdigest()[:24]
+        if candidate_id == asset_id:
+            media_path = candidate_path
+            break
+    if not media_path:
+        abort(404, description="Image reference not found in this label")
+    filename = Path(media_path).name
+
     local_path = _safe_zip_path(source.get("local_path"))
     if local_path:
-        _, media_entries = inventory
-        ref_id = next((key for key, name in media_entries.items() if name == asset["filename"]), None)
         try:
             with zipfile.ZipFile(local_path) as archive:
                 names = archive.namelist()
-                candidates = [n for n in names if Path(n).name == asset["filename"]]
+                candidates = [n for n in names if Path(n.replace("\\", "/")).name.casefold() == filename.casefold()]
                 if candidates:
                     member = candidates[0]
                     info = archive.getinfo(member)
@@ -146,7 +158,7 @@ def _read_artwork(set_id, spl_id, asset_id):
     # host fixed here; never accept an arbitrary image URL from the browser.
     response = requests.get(
         "https://dailymed.nlm.nih.gov/dailymed/image.cfm",
-        params={"setid": set_id, "name": asset["filename"]},
+        params={"setid": set_id, "name": media_path},
         timeout=(5, 30),
     )
     response.raise_for_status()
