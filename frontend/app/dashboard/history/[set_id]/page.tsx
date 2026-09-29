@@ -43,6 +43,7 @@ const HistoryTrackPage = () => {
     const [error, setError] = useState<string | null>(null);
     const [selectedSplId, setSelectedSplId] = useState<string | null>(null);
     const [diffResults, setDiffResults] = useState<DiffItem[]>([]);
+    const [diffError, setDiffError] = useState<string | null>(null);
     const [expandedSectionKey, setExpandedSectionKey] = useState<string | null>(null);
     const [showFullContentKeys, setShowFullContentKeys] = useState<Record<string, boolean>>({});
     const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
@@ -151,12 +152,15 @@ const HistoryTrackPage = () => {
         const fetchDiff = async () => {
             if (!selectedSplId || !previousRecord) {
                 setDiffResults([]);
+                setDiffError(null);
                 return;
             }
             setIsDiffLoading(true);
+            setDiffError(null);
             try {
                 const res = await fetch(withApiBase(`/api/dashboard/history/diff/${selectedSplId}/${previousRecord.spl_id}`));
                 const data = await res.json();
+                if (!res.ok) throw new Error(data.error || `XML comparison failed (${res.status})`);
                 if (data.diff) {
                     setDiffResults(data.diff);
                 } else {
@@ -164,6 +168,8 @@ const HistoryTrackPage = () => {
                 }
             } catch (err) {
                 console.error("Diff fetch error", err);
+                setDiffResults([]);
+                setDiffError(err instanceof Error ? err.message : "Failed to compare the SPL XML documents.");
             } finally {
                 setIsDiffLoading(false);
             }
@@ -320,18 +326,23 @@ const HistoryTrackPage = () => {
                             <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
                                 <div className="loader"></div>
                             </div>
+                        ) : diffError ? (
+                            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#991b1b' }}>
+                                <h3 style={{ fontSize: '1rem' }}>Could not compare these SPL versions</h3>
+                                <p style={{ fontSize: '0.9rem', maxWidth: '520px', margin: '8px auto' }}>{diffError}</p>
+                            </div>
                         ) : diffResults.length === 0 ? (
                             <div style={{ textAlign: 'center', padding: '80px 0', color: '#64748b' }}>
                                 <div style={{ fontSize: '2.5rem', marginBottom: '15px' }}>ℹ️</div>
-                                <h3 style={{ fontSize: '1rem', color: '#1e293b' }}>No significant updates identified</h3>
+                                <h3 style={{ fontSize: '1rem', color: '#1e293b' }}>No XML changes identified</h3>
                                 <p style={{ fontSize: '0.9rem', maxWidth: '400px', margin: '8px auto' }}>
-                                    No significant updates have been identified in this version compared to the previous one.
+                                    The complete SPL XML documents match after XML formatting normalization, including their image and media fingerprints.
                                 </p>
                             </div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <div style={{ marginBottom: '15px', fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Modified Sections ({diffResults.length})
+                                    SPL XML Change Blocks ({diffResults.length})
                                 </div>
                                 {diffResults.map((item) => {
                                     const isExpanded = expandedSectionKey === item.key;

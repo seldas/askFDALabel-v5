@@ -101,6 +101,14 @@
   overflow-x: auto;
 }
 
+.diffContainer {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
 .paneHeader {
   font-size: 0.65rem;
   color: var(--afl-n-400);
