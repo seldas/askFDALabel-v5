@@ -231,7 +231,7 @@ def _resolve_meddra_locally(value, exact_match, expand_candidates=True):
     return resolved_codes, parent_names, candidate_names, candidate_summaries
 
 
-def _entity_expansions(query, target_db):
+def _entity_expansions(query, target_db, translate_intent=None):
     """Resolve related drug names and bounded MedDRA LLT candidates.
 
     The returned query is a copy. Drug candidates are names with the exact same
@@ -243,6 +243,19 @@ def _entity_expansions(query, target_db):
     expanded = copy.deepcopy(query or {})
     summaries = []
     exact_match = bool(expanded.get('exactMatch'))
+    combination_intent = bool(
+        translate_intent and re.search(r'\b(?:combination|combo|fixed[ -]dose)\b', translate_intent, re.I)
+    )
+    explicit_flexible_match = bool(
+        translate_intent and re.search(
+            r'\b(?:partial|substring|prefix)\s+match\b'
+            r'|\bmatch\s+(?:only\s+)?(?:part|prefix|substring)\b'
+            r'|\b(?:use|with)\s+(?:a\s+)?(?:contains|starts\s+with)\s+(?:match|operator)\b'
+            r'|\bproduct\s+names?\b.{0,30}\b(?:contain|contains|containing|start\s+with|starts\s+with)\b'
+            r'|\b(?:contain|contains|containing)\b.{0,30}\b(?:substring|partial\s+name|name\s+fragment)\b',
+            translate_intent, re.I,
+        )
+    )
 
     use_oracle = _use_oracle(target_db)
     from .compiler import _split_terms
@@ -258,7 +271,15 @@ def _entity_expansions(query, target_db):
             # name. Flexible ingredient fragments (e.g. each side of a fixed
             # dose combination) must remain independent contains predicates;
             # exact-name expansion would exclude the combination products.
-            if ctype == 'productName' and value.get('op', 'equals') == 'equals':
+            product_op = value.get('op', 'equals') if ctype == 'productName' else None
+            probe_flexible_name = (
+                bool(translate_intent)
+                and not exact_match
+                and not combination_intent
+                and not explicit_flexible_match
+                and product_op == 'contains'
+            )
+            if ctype == 'productName' and (product_op == 'equals' or probe_flexible_name):
                 if value.get('entityNamesResolved'):
                     source = value.get('entityOriginalNames') if exact_match else value.get('candidateNames')
                     if isinstance(source, list):
@@ -268,6 +289,12 @@ def _entity_expansions(query, target_db):
                     continue
                 raw_text = str(value.get('text') or '').strip()
                 terms = _split_terms(raw_text)
+                if probe_flexible_name and terms:
+                    # ELSA often chooses `contains` for a plain drug-name
+                    # request. Probe the exact vocabulary path so standard
+                    # names can expand to their product list. If no entity is
+                    # found below, the original flexible operator is restored.
+                    value['op'] = 'equals'
                 if exact_match:
                     if terms:
                         terms = _unique_entity_names(terms)
@@ -468,6 +495,8 @@ def _entity_expansions(query, target_db):
                         value['op'] = 'equals'
                         value['field'] = 'any'
                         value['verified'] = True
+                    elif probe_flexible_name:
+                        value['op'] = product_op
 
             elif ctype == 'meddra':
                 # Resolve vocabulary against local MedDRA for every target. The
@@ -1839,6 +1868,7 @@ Rules:
 6. A drug name goes in "productName", never "identifier". "identifier" is for codes: application number, Set ID, SPL ID, UNII, NDC. If the request provides one or more Set IDs / SPL GUIDs (UUID format), emit them in "identifier" under "setSplGuids" as an array.
 7. Never return an empty "groups" array when medical concepts, drug names, or labeling sections are requested.
 8. When the user explicitly asks for combination/fixed-dose combination products containing multiple ingredients joined by "and" or "with", emit one "productName" criterion per ingredient in the SAME group, with op="contains" for each. These criteria are ANDed by the query builder. Never put the whole conjunction into one productName text value, and do not use equals for these ingredient fragments.
+9. For a plain request to find labels for a named drug or ingredient, prefer op="equals" so the application can resolve it to standardized names and expand the product list. Use op="contains" or "startsWith" only when the user explicitly asks for a partial, substring, or prefix match. The application also attempts entity expansion when you choose "contains" for an ordinary drug-name request, then falls back to that operator if the name cannot be resolved.
 """
 
 
@@ -2356,7 +2386,7 @@ def translate():
 
     query, notes, harvested = _sanitize_translation(parsed, target_db, intent)
     query['exactMatch'] = bool(payload.get('exact_match', False))
-    query, entity_expansions = _entity_expansions(query, target_db)
+    query, entity_expansions = _entity_expansions(query, target_db, translate_intent=intent)
     notes.extend(_entity_expansion_notes(entity_expansions))
 
     raw_prefilters = list(parsed.get('prefilters') or []) + harvested
