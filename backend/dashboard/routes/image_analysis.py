@@ -12,6 +12,7 @@ import threading
 import time
 import zipfile
 from pathlib import Path
+from urllib.parse import urlencode
 
 import requests
 from flask import Blueprint, abort, current_app, jsonify, request, send_file
@@ -156,12 +157,20 @@ def _read_artwork(set_id, spl_id, asset_id):
 
     # The existing label reader also uses DailyMed for SPL media. Keep the
     # host fixed here; never accept an arbitrary image URL from the browser.
-    response = requests.get(
-        "https://dailymed.nlm.nih.gov/dailymed/image.cfm",
-        params={"setid": set_id, "name": media_path},
-        timeout=(5, 30),
-    )
-    response.raise_for_status()
+    try:
+        response = requests.get(
+            "https://dailymed.nlm.nih.gov/dailymed/image.cfm",
+            params={"setid": set_id, "name": media_path},
+            timeout=(5, 30),
+        )
+        response.raise_for_status()
+    except requests.HTTPError as exc:
+        status = exc.response.status_code if exc.response is not None else "unknown"
+        logger.warning("DailyMed image request failed for set_id=%s name=%s status=%s", set_id, media_path, status)
+        raise
+    except requests.RequestException:
+        logger.exception("DailyMed image request failed for set_id=%s name=%s", set_id, media_path)
+        raise
     if len(response.content) > 20 * 1024 * 1024:
         abort(413, description="Label image exceeds the supported size")
     return response.content
@@ -247,7 +256,10 @@ def list_label_images(set_id):
         return jsonify({"error": "Label not found"}), 404
     items = inventory[0]
     for item in items:
-        item["url"] = f"/api/image-analysis/{set_id}/images/{item['id']}" + (f"?spl_id={spl_id}" if spl_id else "")
+        media_path = next((path for ref_id, path in inventory[1].items()
+                           if hashlib.sha256(f"{ref_id}:{path}".encode()).hexdigest()[:24] == item["id"]), None)
+        item["url"] = "https://dailymed.nlm.nih.gov/dailymed/image.cfm?" + urlencode({"setid": set_id, "name": media_path or item["filename"]})
+        item["proxy_url"] = f"/api/image-analysis/{set_id}/images/{item['id']}" + (f"?spl_id={spl_id}" if spl_id else "")
     return jsonify({"images": items, "spl_id": source.get("spl_id"), "source": source.get("origin")})
 
 
@@ -257,6 +269,9 @@ def list_label_images(set_id):
 def get_label_image(set_id, asset_id):
     try:
         raw = _read_artwork(set_id, request.args.get("spl_id"), asset_id)
+    except requests.HTTPError as exc:
+        status = exc.response.status_code if exc.response is not None else 502
+        return jsonify({"error": f"DailyMed could not find this image (HTTP {status})."}), 404 if status == 404 else 502
     except requests.RequestException:
         return jsonify({"error": "The label image is unavailable from local storage or DailyMed."}), 502
     return send_file(io.BytesIO(raw), mimetype=_validated_image_mime(raw), max_age=3600)

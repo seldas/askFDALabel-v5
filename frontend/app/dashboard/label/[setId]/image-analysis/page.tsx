@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm';
 import { useLabel } from '../LabelContext';
 import './image-analysis.css';
 
-type LabelImage = { id: string; filename: string; title: string; category: string; url: string };
+type LabelImage = { id: string; filename: string; title: string; category: string; url: string; proxy_url: string };
 type CompareResult = { style: string; content: string; critical_summary: string };
 
 function apiPath(setId: string, path: string, splId: string | null) {
@@ -21,6 +21,8 @@ export default function ImageAnalysisPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [proxyImageIds, setProxyImageIds] = useState<string[]>([]);
+  const [brokenImageIds, setBrokenImageIds] = useState<string[]>([]);
   const [processResult, setProcessResult] = useState('');
   const [compareOpen, setCompareOpen] = useState(false);
   const [compareId, setCompareId] = useState('');
@@ -29,10 +31,15 @@ export default function ImageAnalysisPage() {
   const [compareCached, setCompareCached] = useState(false);
 
   const selected = useMemo(() => images.find((image) => image.id === selectedId) ?? null, [images, selectedId]);
-  const grouped = useMemo(() => images.reduce<Record<string, LabelImage[]>>((all, image) => {
-    (all[image.category] ||= []).push(image);
-    return all;
-  }, {}), [images]);
+  const imageSrc = (image: LabelImage) => proxyImageIds.includes(image.id) ? image.proxy_url : image.url;
+  const imageFailed = (image: LabelImage) => {
+    if (!proxyImageIds.includes(image.id)) {
+      setProxyImageIds((current) => [...current, image.id]);
+    } else {
+      setBrokenImageIds((current) => current.includes(image.id) ? current : [...current, image.id]);
+      setError(`Could not load ${image.filename} from DailyMed or the local SPL package.`);
+    }
+  };
 
   const refreshImages = useCallback(async () => {
     setLoading(true);
@@ -42,6 +49,8 @@ export default function ImageAnalysisPage() {
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || `Image list failed (${response.status})`);
       setImages(body.images || []);
+      setProxyImageIds([]);
+      setBrokenImageIds([]);
       setSelectedId((current) => body.images?.some((image: LabelImage) => image.id === current) ? current : body.images?.[0]?.id || '');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -108,7 +117,7 @@ export default function ImageAnalysisPage() {
         <>
           <section className="image-review__stage" aria-label="Selected label image">
             {selected && <>
-              <div className="image-review__preview-wrap"><img src={apiPath(setId, `images/${selected.id}`, splId)} alt={selected.title} className="image-review__preview" /></div>
+              <div className="image-review__preview-wrap">{brokenImageIds.includes(selected.id) ? <div className="image-review__image-error">Image unavailable<br /><small>{selected.filename}</small></div> : <img src={imageSrc(selected)} onError={() => imageFailed(selected)} alt={selected.title} className="image-review__preview" />}</div>
               <div className="image-review__caption"><span>{selected.category}</span><strong>{selected.title}</strong><small>{selected.filename}</small></div>
             </>}
           </section>
@@ -116,13 +125,13 @@ export default function ImageAnalysisPage() {
           {processResult && <section className="image-review__result"><div className="image-review__result-title">Image review</div><div className="image-review__markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{processResult}</ReactMarkdown></div></section>}
 
           <nav className="image-review__filmstrip" aria-label="Label images">
-            {Object.entries(grouped).map(([category, items]) => <section className="image-review__group" key={category}>
-              <h2>{category}<span>{items.length}</span></h2>
-              <div className="image-review__cards">{items.map((image) => <button key={image.id} className={`image-review__card ${selectedId === image.id ? 'is-selected' : ''}`} onClick={() => { setSelectedId(image.id); setProcessResult(''); }} aria-pressed={selectedId === image.id}>
-                <img src={apiPath(setId, `images/${image.id}`, splId)} alt="" loading="lazy" />
-                <span>{image.title}</span>
-              </button>)}</div>
-            </section>)}</nav>
+            <div className="image-review__filmstrip-title">Label images <span>{images.length}</span></div>
+            <div className="image-review__cards">{images.map((image) => <button key={image.id} className={`image-review__card ${selectedId === image.id ? 'is-selected' : ''}`} onClick={() => { setSelectedId(image.id); setProcessResult(''); }} aria-pressed={selectedId === image.id}>
+              {brokenImageIds.includes(image.id) ? <span className="image-review__thumb-error">Unavailable</span> : <img src={imageSrc(image)} onError={() => imageFailed(image)} alt="" loading="lazy" />}
+              <span className="image-review__card-category">{image.category}</span>
+              <span className="image-review__card-name">{image.title}</span>
+            </button>)}</div>
+          </nav>
         </>
       )}
 
