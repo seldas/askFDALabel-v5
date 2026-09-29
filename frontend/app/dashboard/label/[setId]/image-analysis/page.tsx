@@ -43,6 +43,7 @@ export default function ImageAnalysisPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [processCached, setProcessCached] = useState(false);
   const [proxyImageIds, setProxyImageIds] = useState<string[]>([]);
   const [brokenImageIds, setBrokenImageIds] = useState<string[]>([]);
   const [processResult, setProcessResult] = useState('');
@@ -84,9 +85,31 @@ export default function ImageAnalysisPage() {
 
   useEffect(() => { void refreshImages(); }, [refreshImages]);
 
+  useEffect(() => {
+    if (!selectedId) return;
+    let cancelled = false;
+    setProcessResult('');
+    setProcessCached(false);
+    (async () => {
+      try {
+        const response = await fetch(apiPath(setId, `process/${selectedId}`, splId));
+        if (!response.ok) return;
+        const body = await response.json();
+        if (!cancelled && body.cached && body.result) {
+          setProcessResult(body.result);
+          setProcessCached(true);
+        }
+      } catch {
+        // Cached results are an enhancement; image selection should still work
+        // if the database lookup is temporarily unavailable.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedId, setId, splId]);
+
   const processImage = async () => {
     if (!selected) return;
-    setBusy(true); setError(''); setProcessResult('');
+    setBusy(true); setError(''); setProcessResult(''); setProcessCached(false);
     try {
       const response = await fetch(apiPath(setId, 'process', null), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -95,6 +118,7 @@ export default function ImageAnalysisPage() {
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || `Image processing failed (${response.status})`);
       setProcessResult(body.result || 'No result returned.');
+      setProcessCached(Boolean(body.cached));
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(false); }
   };
@@ -121,6 +145,14 @@ export default function ImageAnalysisPage() {
 
   return (
     <main className="image-review">
+      {!loading && images.length > 0 && <nav className="image-review__filmstrip" aria-label="Label images">
+        <div className="image-review__filmstrip-title">Select an image <span>{images.length}</span></div>
+              <div className="image-review__cards">{images.map((image) => <button key={image.id} className={`image-review__card ${selectedId === image.id ? 'is-selected' : ''}`} onClick={() => { setSelectedId(image.id); setProcessResult(''); setProcessCached(false); }} aria-pressed={selectedId === image.id}>
+          {brokenImageIds.includes(image.id) ? <span className="image-review__thumb-error">Unavailable</span> : <img src={imageSrc(image)} onError={() => imageFailed(image)} alt="" loading="lazy" />}
+          <span className="image-review__card-category">{image.category}</span>
+          <span className="image-review__card-name">{image.title}</span>
+        </button>)}</div>
+      </nav>}
       <header className="image-review__header">
         <div>
           <div className="image-review__eyebrow">LABEL REVIEW</div>
@@ -138,14 +170,6 @@ export default function ImageAnalysisPage() {
         <div className="image-review__empty">No package images were found in this label’s SPL. The label may contain text only, or its artwork may not be available in the local SPL package.</div>
       ) : (
         <>
-          <nav className="image-review__filmstrip" aria-label="Label images">
-            <div className="image-review__filmstrip-title">Select an image <span>{images.length}</span></div>
-            <div className="image-review__cards">{images.map((image) => <button key={image.id} className={`image-review__card ${selectedId === image.id ? 'is-selected' : ''}`} onClick={() => { setSelectedId(image.id); setProcessResult(''); }} aria-pressed={selectedId === image.id}>
-              {brokenImageIds.includes(image.id) ? <span className="image-review__thumb-error">Unavailable</span> : <img src={imageSrc(image)} onError={() => imageFailed(image)} alt="" loading="lazy" />}
-              <span className="image-review__card-category">{image.category}</span>
-              <span className="image-review__card-name">{image.title}</span>
-            </button>)}</div>
-          </nav>
           <section className="image-review__stage" aria-label="Selected label image">
             {selected && <>
               <div className="image-review__preview-wrap">{brokenImageIds.includes(selected.id) ? <div className="image-review__image-error">Image unavailable<br /><small>{selected.filename}</small></div> : <img src={imageSrc(selected)} onError={() => imageFailed(selected)} alt={selected.title} className="image-review__preview" />}</div>
@@ -153,7 +177,7 @@ export default function ImageAnalysisPage() {
             </>}
           </section>
 
-          {processResult && <section className="image-review__result"><div className="image-review__result-title">Normalized image review</div><div className="image-review__markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{processedSections.normalized}</ReactMarkdown></div>{processedSections.extracted && <details className="image-review__extracted"><summary>Show extracted text</summary><div className="image-review__markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{processedSections.extracted}</ReactMarkdown></div></details>}</section>}
+          {processResult && <section className="image-review__result"><div className="image-review__result-title">Normalized image review {processCached ? <span className="image-review__saved-badge">Saved result</span> : null}</div><div className="image-review__markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{processedSections.normalized}</ReactMarkdown></div>{processedSections.extracted && <details className="image-review__extracted"><summary>Show extracted text</summary><div className="image-review__markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{processedSections.extracted}</ReactMarkdown></div></details>}</section>}
         </>
       )}
 

@@ -169,7 +169,7 @@ export default function LabelLayout({
 
           {data ? (
             <section
-              className={`afl-label-identity${isStale ? ' afl-label-identity--stale' : ''}${headerCollapsed ? ' afl-label-identity--collapsed' : ''}`}
+              className={`afl-label-identity${isStale ? ' afl-label-identity--stale' : ''}${headerCollapsed ? ' afl-label-identity--collapsed' : ''}${activeToolId === 'label-image-analysis' ? ' afl-label-identity--compact' : ''}`}
               aria-label="Label identity"
               style={{
                 background: (data?.openfda_status === 'Archived' || data?.is_latest === false) ? '#fdfbf7' : '#ffffff',

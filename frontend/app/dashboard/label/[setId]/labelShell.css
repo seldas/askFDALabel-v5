@@ -91,6 +91,19 @@
   pointer-events: none;
 }
 
+/* Image review keeps the product name visible while giving the artwork picker
+   the first usable row in the workspace. */
+.afl-label-identity--compact {
+  padding: 8px 14px;
+  margin-bottom: 8px;
+  max-height: 64px;
+}
+.afl-label-identity--compact .afl-label-identity__title { font-size: 1rem; }
+.afl-label-identity--compact .afl-label-identity__generic,
+.afl-label-identity--compact .label-meta-grid,
+.afl-label-identity--compact > .meta-item { display: none !important; }
+.afl-label-identity--compact .afl-label-identity__badges { gap: 4px !important; }
+
 /* Superseded or archived versions read as warm archival paper */
 .afl-label-identity--stale {
   background: #fffdfa;
