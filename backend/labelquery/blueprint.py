@@ -995,90 +995,45 @@ def suggest_meddra():
 def get_meddra_hierarchy():
     term = (request.args.get('term') or '').strip()
     level = (request.args.get('level') or 'pt').lower()
-    target_db = 'local'  # MedDRA vocabulary always comes from the local dictionary.
     if not term:
         return jsonify({'term': term, 'path': [], 'formatted': ''})
 
     try:
-        if target_db == 'oracle':
-            from dashboard.services.fdalabel_db import FDALabelDBService
-            if level == 'llt':
-                sql = """
-                    SELECT mh.SOC_NAME, mh.HLGT_NAME, mh.HLT_NAME, mh.PT_NAME, llt.LLT_NAME
-                    FROM meddra.low_level_term llt
-                    JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE AND mh.PRIMARY_SOC_FG = 'Y'
-                    WHERE UPPER(llt.LLT_NAME) = :t
-                    FETCH NEXT 1 ROWS ONLY
-                """
-            else:
-                sql = """
-                    SELECT mh.SOC_NAME, mh.HLGT_NAME, mh.HLT_NAME, mh.PT_NAME
-                    FROM meddra.meddra_hierarchy mh
-                    WHERE UPPER(mh.PT_NAME) = :t AND mh.PRIMARY_SOC_FG = 'Y'
-                    FETCH NEXT 1 ROWS ONLY
-                """
-            oracle_rows = FDALabelDBService.execute_oracle_query(sql, {'t': term.upper()})
-            if not oracle_rows:
-                # Retry without PRIMARY_SOC_FG filter
-                if level == 'llt':
-                    sql = """
-                        SELECT mh.SOC_NAME, mh.HLGT_NAME, mh.HLT_NAME, mh.PT_NAME, llt.LLT_NAME
-                        FROM meddra.low_level_term llt
-                        JOIN meddra.meddra_hierarchy mh ON mh.PT_CODE = llt.PT_CODE
-                        WHERE UPPER(llt.LLT_NAME) LIKE :t
-                        FETCH NEXT 1 ROWS ONLY
-                    """
-                else:
-                    sql = """
-                        SELECT mh.SOC_NAME, mh.HLGT_NAME, mh.HLT_NAME, mh.PT_NAME
-                        FROM meddra.meddra_hierarchy mh
-                        WHERE UPPER(mh.PT_NAME) LIKE :t
-                        FETCH NEXT 1 ROWS ONLY
-                    """
-                oracle_rows = FDALabelDBService.execute_oracle_query(sql, {'t': f'%{term.upper()}%'})
-
-            if oracle_rows:
-                r = oracle_rows[0]
-                cols = ['SOC_NAME', 'HLGT_NAME', 'HLT_NAME', 'PT_NAME']
-                if level == 'llt' and ('LLT_NAME' in r or 'llt_name' in r):
-                    cols.append('LLT_NAME')
-                path = [r.get(c) or r.get(c.lower()) for c in cols if r.get(c) or r.get(c.lower())]
-                formatted = ' → '.join(path)
-                return jsonify({'term': term, 'level': level, 'path': path, 'formatted': formatted})
+        # MedDRA lookup is deliberately independent of the selected label
+        # database. Oracle searches use local MedDRA codes against Oracle's
+        # occurrence table, so the UI hierarchy must use the same local release.
+        if level == 'llt':
+            sql = """
+                SELECT s.soc_name, g.hlgt_name, t.hlt_name, p.pt_name, l.llt_name
+                FROM public.meddra_llt l
+                JOIN public.meddra_pt p ON p.pt_code = l.pt_code
+                LEFT JOIN public.meddra_mdhier h ON h.pt_code = p.pt_code
+                LEFT JOIN public.meddra_soc s ON s.soc_code = h.soc_code
+                LEFT JOIN public.meddra_hlgt g ON g.hlgt_code = h.hlgt_code
+                LEFT JOIN public.meddra_hlt t ON t.hlt_code = h.hlt_code
+                WHERE LOWER(l.llt_name) = LOWER(%(t)s)
+                LIMIT 1
+            """
         else:
-            # Local PostgreSQL
-            if level == 'llt':
-                sql = """
-                    SELECT s.soc_name, g.hlgt_name, t.hlt_name, p.pt_name, l.llt_name
-                    FROM public.meddra_llt l
-                    JOIN public.meddra_pt p ON p.pt_code = l.pt_code
-                    JOIN public.meddra_mdhier h ON h.pt_code = p.pt_code
-                    JOIN public.meddra_soc s ON s.soc_code = h.soc_code
-                    JOIN public.meddra_hlgt g ON g.hlgt_code = h.hlgt_code
-                    JOIN public.meddra_hlt t ON t.hlt_code = h.hlt_code
-                    WHERE LOWER(l.llt_name) = LOWER(%(t)s)
-                    LIMIT 1
-                """
-            else:
-                sql = """
-                    SELECT s.soc_name, g.hlgt_name, t.hlt_name, p.pt_name
-                    FROM public.meddra_pt p
-                    JOIN public.meddra_mdhier h ON h.pt_code = p.pt_code
-                    JOIN public.meddra_soc s ON s.soc_code = h.soc_code
-                    JOIN public.meddra_hlgt g ON g.hlgt_code = h.hlgt_code
-                    JOIN public.meddra_hlt t ON t.hlt_code = h.hlt_code
-                    WHERE LOWER(p.pt_name) = LOWER(%(t)s)
-                    LIMIT 1
-                """
-            rows = _rows(sql, {'t': term})
-            if rows:
-                r = rows[0]
-                cols = ['soc_name', 'hlgt_name', 'hlt_name', 'pt_name']
-                if level == 'llt' and 'llt_name' in r:
-                    cols.append('llt_name')
-                path = [r[c] for c in cols if r.get(c)]
-                formatted = ' → '.join(path)
-                return jsonify({'term': term, 'level': level, 'path': path, 'formatted': formatted})
+            sql = """
+                SELECT s.soc_name, g.hlgt_name, t.hlt_name, p.pt_name
+                FROM public.meddra_pt p
+                LEFT JOIN public.meddra_mdhier h ON h.pt_code = p.pt_code
+                LEFT JOIN public.meddra_soc s ON s.soc_code = h.soc_code
+                LEFT JOIN public.meddra_hlgt g ON g.hlgt_code = h.hlgt_code
+                LEFT JOIN public.meddra_hlt t ON t.hlt_code = h.hlt_code
+                WHERE LOWER(p.pt_name) = LOWER(%(t)s)
+                LIMIT 1
+            """
+        rows = _rows(sql, {'t': term})
+        if rows:
+            r = rows[0]
+            cols = ['soc_name', 'hlgt_name', 'hlt_name', 'pt_name']
+            if level == 'llt' and 'llt_name' in r:
+                cols.append('llt_name')
+            path = [r[c] for c in cols if r.get(c)]
+            formatted = ' → '.join(path)
+            return jsonify({'term': term, 'level': level, 'path': path, 'formatted': formatted})
 
         return jsonify({'term': term, 'level': level, 'path': [term], 'formatted': term})
     except Exception as e:
@@ -1102,36 +1057,21 @@ def get_meddra_llts():
     gets displayed.
     """
     term = (request.args.get('term') or '').strip()
-    target_db = 'local'  # MedDRA vocabulary always comes from the local dictionary.
     if not term:
         return jsonify({'term': term, 'llts': []})
 
     try:
-        if target_db == 'oracle':
-            from dashboard.services.fdalabel_db import FDALabelDBService
-            rows = FDALabelDBService.execute_oracle_query(
-                """
-                SELECT DISTINCT llt.LLT_NAME AS name
-                FROM meddra.low_level_term llt
-                JOIN meddra.preferred_term pt ON pt.PT_CODE = llt.PT_CODE
-                WHERE UPPER(pt.PT_NAME) = :t
-                ORDER BY name
-                """,
-                {'t': term.upper()},
-            )
-            llts = [r.get('NAME') or r.get('name') for r in rows if r.get('NAME') or r.get('name')]
-        else:
-            rows = _rows(
-                """
-                SELECT DISTINCT l.llt_name AS name
-                FROM public.meddra_llt l
-                JOIN public.meddra_pt p ON p.pt_code = l.pt_code
-                WHERE LOWER(p.pt_name) = LOWER(%(t)s)
-                ORDER BY name
-                """,
-                {'t': term},
-            )
-            llts = [r['name'] for r in rows if r.get('name')]
+        rows = _rows(
+            """
+            SELECT DISTINCT l.llt_name AS name
+            FROM public.meddra_llt l
+            JOIN public.meddra_pt p ON p.pt_code = l.pt_code
+            WHERE LOWER(p.pt_name) = LOWER(%(t)s)
+            ORDER BY name
+            """,
+            {'t': term},
+        )
+        llts = [r['name'] for r in rows if r.get('name')]
 
         return jsonify({'term': term, 'llts': llts, 'count': len(llts)})
     except Exception as e:
@@ -1154,36 +1094,21 @@ def get_meddra_parent_pt():
     the pick alone" rather than as an error worth showing.
     """
     term = (request.args.get('term') or '').strip()
-    target_db = 'local'  # MedDRA vocabulary always comes from the local dictionary.
     if not term:
         return jsonify({'term': term, 'pt': None})
 
     try:
-        if target_db == 'oracle':
-            from dashboard.services.fdalabel_db import FDALabelDBService
-            rows = FDALabelDBService.execute_oracle_query(
-                """
-                SELECT pt.PT_NAME AS name
-                FROM meddra.low_level_term llt
-                JOIN meddra.preferred_term pt ON pt.PT_CODE = llt.PT_CODE
-                WHERE UPPER(llt.LLT_NAME) = :t
-                FETCH NEXT 1 ROWS ONLY
-                """,
-                {'t': term.upper()},
-            )
-            pt = (rows[0].get('NAME') or rows[0].get('name')) if rows else None
-        else:
-            rows = _rows(
-                """
-                SELECT p.pt_name AS name
-                FROM public.meddra_llt l
-                JOIN public.meddra_pt p ON p.pt_code = l.pt_code
-                WHERE LOWER(l.llt_name) = LOWER(%(t)s)
-                LIMIT 1
-                """,
-                {'t': term},
-            )
-            pt = rows[0]['name'] if rows else None
+        rows = _rows(
+            """
+            SELECT p.pt_name AS name
+            FROM public.meddra_llt l
+            JOIN public.meddra_pt p ON p.pt_code = l.pt_code
+            WHERE LOWER(l.llt_name) = LOWER(%(t)s)
+            LIMIT 1
+            """,
+            {'t': term},
+        )
+        pt = rows[0]['name'] if rows else None
 
         return jsonify({'term': term, 'pt': pt})
     except Exception as e:

@@ -294,6 +294,28 @@
 .fdl-term-row__label { color: var(--fdl-muted); font: 700 .7rem var(--fdl-font-mono); text-transform: uppercase; padding-top: 5px; }
 .fdl-term-row__items { display: flex; flex-wrap: wrap; gap: 5px; }
 .fdl-term-badge--off { opacity: .58; }
+.fdl-term-badge--pt { border-color: var(--fdl-blue-700); background: var(--fdl-blue-100); color: var(--fdl-navy-950); font-weight: 700; }
+.fdl-term-badge--direct { border-color: #79aed2; }
+.fdl-term-badge__meta { font-family: var(--fdl-font-mono); font-size: 0.68rem; color: var(--fdl-muted); white-space: nowrap; margin-left: 2px; }
+.fdl-term-badge__act {
+  appearance: none;
+  background: var(--fdl-paper);
+  border: 1px solid var(--fdl-blue-700);
+  border-radius: 2px;
+  cursor: pointer;
+  color: var(--fdl-blue-700);
+  font: 700 0.65rem var(--fdl-font-mono);
+  line-height: 1;
+  padding: 1px 4px;
+  margin-left: 2px;
+  white-space: nowrap;
+  transition: all 0.12s ease;
+}
+.fdl-term-badge__act:hover {
+  background: var(--fdl-navy-800);
+  border-color: var(--fdl-navy-950);
+  color: var(--fdl-paper);
+}
 .fdl-term-badge__x { appearance: none; border: 0; background: transparent; color: inherit; cursor: pointer; }
 
 /* Detected prefilters ---------------------------------------------------- */

@@ -80,6 +80,7 @@ export function CriterionCard({
   const [showCandidateManager, setShowCandidateManager] = useState(false);
 
   const [hierarchies, setHierarchies] = useState<Record<string, string>>({});
+  const [hierarchyLoading, setHierarchyLoading] = useState<Record<string, boolean>>({});
   /* LLT names under each selected PT, keyed by `pt:${term}`. A PT
    * searches its descendants, so showing them is the only way to see how wide
    * a pick really is before running it -- and, now, to drop the ones that do
@@ -89,6 +90,7 @@ export function CriterionCard({
    * "broaden to PT" control. Fetched up front rather than on click so the
    * button can name the term it would swap in. */
   const [parentPts, setParentPts] = useState<Record<string, string | null>>({});
+  const [parentPtLoading, setParentPtLoading] = useState<Record<string, boolean>>({});
 
   /* MedDRA holds two lists at once now: a PT row and an LLT row. `terms` is
    * the old single-level shape, still what /translate writes and what a saved
@@ -130,22 +132,25 @@ export function CriterionCard({
     ];
     wanted.forEach(async ([level, t]) => {
       const key = `${level}:${t}`;
-      if (hierarchies[key]) return;
+      if (key in hierarchies || hierarchyLoading[key]) return;
+      setHierarchyLoading((prev) => ({ ...prev, [key]: true }));
       try {
         const res = await fetch(
           `/api/labelquery/meddra/hierarchy?term=${encodeURIComponent(t)}&level=${level}`,
         );
         if (res.ok) {
           const data = await res.json();
-          if (data.formatted) {
-            setHierarchies((prev) => ({ ...prev, [key]: data.formatted }));
-          }
+          setHierarchies((prev) => ({ ...prev, [key]: data.formatted || t }));
+        } else {
+          setHierarchies((prev) => ({ ...prev, [key]: t }));
         }
       } catch {
-        // ignore fetch error
+        setHierarchies((prev) => ({ ...prev, [key]: t }));
+      } finally {
+        setHierarchyLoading((prev) => ({ ...prev, [key]: false }));
       }
     });
-  }, [criterion.type, meddraPts, meddraLlts, hierarchies]);
+  }, [criterion.type, meddraPts, meddraLlts, hierarchies, hierarchyLoading]);
 
   useEffect(() => {
     // Only a PT has LLTs below it; at LLT level the term is already the leaf.
@@ -174,19 +179,26 @@ export function CriterionCard({
     if (criterion.type !== 'meddra' || meddraLlts.length === 0) return;
     meddraLlts.forEach(async (t: string) => {
       const key = t;
-      if (key in parentPts) return;
+      if (key in parentPts || parentPtLoading[key]) return;
+      setParentPtLoading((prev) => ({ ...prev, [key]: true }));
       try {
         const res = await fetch(
           `/api/labelquery/meddra/parent_pt?term=${encodeURIComponent(t)}`,
         );
         if (!res.ok) return;
         const data = await res.json();
-        setParentPts((prev) => ({ ...prev, [key]: data.pt || null }));
+        setParentPts((prev) => ({
+          ...prev,
+          [key]: data.pt || null,
+          [key.toLowerCase()]: data.pt || null,
+        }));
       } catch {
-        // ignore fetch error
+        setParentPts((prev) => ({ ...prev, [key]: null, [key.toLowerCase()]: null }));
+      } finally {
+        setParentPtLoading((prev) => ({ ...prev, [key]: false }));
       }
     });
-  }, [criterion.type, meddraLlts, parentPts]);
+  }, [criterion.type, meddraLlts, parentPts, parentPtLoading]);
 
   const [showMultiSetIdModal, setShowMultiSetIdModal] = useState(false);
 
@@ -819,7 +831,7 @@ export function CriterionCard({
          * exclusion -- the exclusion only says "not via this PT". */
         const derived = new Map<string, string[]>();
         meddraPts.forEach((pt) => {
-          (llts[`${targetDb}:pt:${pt}`] || []).forEach((llt) => {
+          (llts[`pt:${pt}`] || []).forEach((llt) => {
             derived.set(llt, [...(derived.get(llt) || []), pt]);
           });
         });
@@ -873,7 +885,7 @@ export function CriterionCard({
          * every sibling LLT -- the difference between the labels that use the
          * user's wording and the labels that mean the same thing. */
         const broadenToPt = (llt: string) => {
-          const pt = parentPts[`${targetDb}:${llt}`];
+          const pt = parentPts[llt] || parentPts[llt.toLowerCase()] || parentPts[llt.trim()];
           if (!pt) return;
           set({
             lltTerms: meddraLlts.filter((x) => x !== llt),
@@ -891,7 +903,8 @@ export function CriterionCard({
         const lltBadge = (llt: string, fromPts: string[]) => {
           const excluded = isExcluded(llt);
           const direct = meddraLlts.includes(llt);
-          const parentPt = direct ? parentPts[`${targetDb}:${llt}`] : null;
+          const parentPt = direct ? (parentPts[llt] || parentPts[llt.toLowerCase()] || parentPts[llt.trim()] || null) : null;
+          const lookingUpParent = direct && (parentPtLoading[llt] || parentPtLoading[llt.toLowerCase()]);
           return (
             <span
               key={llt}
@@ -913,6 +926,8 @@ export function CriterionCard({
                 >
                   ↑PT
                 </button>
+              ) : lookingUpParent ? (
+                <span className="fdl-term-badge__meta" title="Looking up parent Preferred Term">…</span>
               ) : null}
               <button
                 type="button"
@@ -1054,9 +1069,9 @@ export function CriterionCard({
                 <span className="fdl-term-row__label">PT</span>
                 <div className="fdl-term-row__items">
                   {meddraPts.map((pt) => {
-                    const expansion = llts[`${targetDb}:pt:${pt}`];
+                    const expansion = llts[`pt:${pt}`];
                     return (
-                      <span key={pt} className="fdl-term-badge fdl-term-badge--pt" title={hierarchies[`${targetDb}:pt:${pt}`] || pt}>
+                      <span key={pt} className="fdl-term-badge fdl-term-badge--pt" title={hierarchies[`pt:${pt}`] || pt}>
                         <span className="fdl-term-badge__name">{pt}</span>
                         <span className="fdl-term-badge__meta">
                           {expansion === undefined
@@ -1100,7 +1115,7 @@ export function CriterionCard({
                         • <strong>{t}</strong> ({lvl.toUpperCase()}):
                       </span>
                       <span className="fdl-meddra-hier-path">
-                        {hierarchies[`${targetDb}:${lvl}:${t}`] || 'Loading hierarchy…'}
+                        {hierarchies[`${lvl}:${t}`] || (hierarchyLoading[`${lvl}:${t}`] ? 'Loading hierarchy…' : t)}
                       </span>
                     </div>
                   ),
