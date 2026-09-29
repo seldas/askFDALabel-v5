@@ -968,7 +968,7 @@ function LabelContent() {
               <h3 id="table-extract-title">Table Data</h3>
             </div>
             <div className="table-extract-modal__actions">
-              <button id="copy-selection-btn" className="button table-extract-modal__copy" type="button"><span>{"\uD83D\uDCCB"}</span> Copy Selection</button>
+              <button id="copy-selection-btn" className="table-extract-modal__copy" type="button"><span>{"\uD83D\uDCCB"}</span> Copy Selection</button>
               <button className="close-modal table-extract-modal__close" id="close-table-extract" type="button" aria-label="Close table extractor">&times;</button>
             </div>
           </div>

@@ -715,7 +715,8 @@ function LabelCompContent() {
             {/* Add Label Button - only show if total selected is < 4 */}
             {filledSlotsCount < 4 && (
               <button
-                className="lc-add-label-btn"
+                type="button"
+                className="afl-btn afl-btn--primary lc-add-label-btn"
                 onClick={() => {
                   const firstEmptyIdx = selectedSlots.findIndex(s => s === null);
                   if (firstEmptyIdx !== -1) {
@@ -734,6 +735,7 @@ function LabelCompContent() {
             <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '1.25rem', borderTop: '1px solid var(--afl-n-100)', paddingTop: '1.25rem' }}>
                <Button
                 variant="success"
+                className="lc-launch-btn"
                 onClick={() => {
                     const activeIds = selectedSlots.filter(s => s !== null).map(s => s!.set_id);
                     const params = new URLSearchParams();

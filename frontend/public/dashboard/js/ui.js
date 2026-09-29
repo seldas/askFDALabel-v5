@@ -394,6 +394,8 @@
       if (cell) selectRange(cell);
     });
 
+    table.addEventListener('dragstart', e => e.preventDefault());
+
     table.addEventListener('copy', e => {
       const tsv = getSelectedTSV();
       if (!tsv) return;

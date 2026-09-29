@@ -948,17 +948,18 @@ html {
     display: none;
     align-items: center;
     gap: 8px;
+    min-height: 38px;
     padding: 9px 14px;
-    border: 0;
+    border: 1px solid var(--fdl-green);
     border-radius: var(--afl-radius-md);
-    background: var(--afl-success-600);
-    color: #fff;
+    background: var(--fdl-green);
+    color: var(--fdl-paper);
     font: inherit;
     font-size: var(--afl-text-sm);
     font-weight: var(--afl-weight-bold);
     cursor: pointer;
 }
-.table-extract-modal__copy:hover { background: var(--afl-success-700); }
+.table-extract-modal__copy:hover { background: var(--fdl-green); filter: brightness(.92); }
 .table-extract-modal__close { border: 0; background: transparent; font-size: 1.8rem; }
 .table-extract-modal__body { min-height: 0; padding: 20px 24px; background: var(--afl-bg-page); }
 .table-extract-modal__body:has(.excel-style-table) { overflow: auto; }
@@ -981,6 +982,9 @@ html {
     border-bottom: 1px solid var(--afl-border);
     text-align: left;
     vertical-align: top;
+    cursor: cell;
+    user-select: none;
+    -webkit-user-select: none;
 }
 .table-extract-modal__body .excel-style-table th {
     position: sticky;
@@ -993,8 +997,8 @@ html {
 .table-extract-modal__body .excel-style-table tr:hover td { background: var(--afl-bg-page); }
 .table-extract-modal__body .excel-style-table td.selected-cell,
 .table-extract-modal__body .excel-style-table th.selected-cell {
-    background: var(--afl-a-100);
-    outline: 2px solid var(--afl-a-500);
+    background: var(--fdl-blue-100);
+    outline: 2px solid var(--fdl-blue-700);
     outline-offset: -2px;
 }
 @media (max-width: 640px) {

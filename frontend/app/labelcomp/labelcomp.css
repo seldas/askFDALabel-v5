@@ -134,22 +134,34 @@
 .lc-add-label-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 8px 14px;
-  background: var(--afl-bg-surface);
-  border: 1px dashed var(--afl-n-300);
-  border-radius: var(--afl-radius-md);
-  color: var(--afl-text-secondary);
-  font-size: var(--afl-text-sm);
-  font-weight: var(--afl-weight-medium);
-  cursor: pointer;
-  transition: all var(--afl-transition);
+  min-height: 38px;
 }
 
-.lc-add-label-btn:hover {
-  border-color: var(--afl-a-500);
-  color: var(--afl-a-500);
-  background-color: var(--afl-bg-page);
+.lc-page .afl-btn.lc-add-label-btn,
+.lc-page .afl-btn.lc-add-label-btn:hover:not(:disabled) {
+  border-color: var(--fdl-blue-700);
+  background: var(--fdl-blue-700);
+  color: var(--fdl-paper);
+}
+
+.lc-page .afl-btn.lc-add-label-btn:hover:not(:disabled),
+.lc-page .afl-btn.lc-launch-btn:hover:not(:disabled) {
+  border-color: var(--fdl-navy-950);
+  background: var(--fdl-navy-950);
+  color: var(--fdl-paper);
+}
+
+.lc-page .afl-btn.lc-launch-btn,
+.lc-page .afl-btn.lc-launch-btn:hover:not(:disabled) {
+  border-color: var(--fdl-green);
+  background: var(--fdl-green);
+  color: var(--fdl-paper);
+}
+
+.lc-page .afl-btn.lc-launch-btn:hover:not(:disabled) {
+  filter: brightness(.92);
 }
 
 /* ---- Toolbar ------------------------------------------------------------ */
