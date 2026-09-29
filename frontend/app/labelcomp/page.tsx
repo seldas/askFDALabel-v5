@@ -414,8 +414,8 @@ function LabelCompContent() {
     if (isSelected) {
       setSelectedLabelsForAdd(prev => prev.filter(l => l.set_id !== label.set_id));
     } else {
-      if (selectedLabelsForAdd.length >= 10) {
-        alert('Maximum 10 labels can be selected.');
+      if (selectedLabelsForAdd.length >= 4) {
+        alert('Maximum 4 labels can be selected for comparison.');
         return;
       }
       setSelectedLabelsForAdd(prev => [...prev, label]);
@@ -1373,165 +1373,51 @@ function LabelCompContent() {
 
       {/* Add Label Modal */}
       {showAddModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '12px', width: '95%', maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto', padding: 'clamp(1rem, 5vw, 2rem)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', position: 'relative' }}>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ margin: 0, color: 'var(--afl-gov-navy)' }}>Add Labels</h3>
-              <button onClick={() => { setShowAddModal(false); setSelectedProject(null); }} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--afl-n-400)' }}>&times;</button>
+        <div className="lc-add-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) { setShowAddModal(false); setSelectedProject(null); } }}>
+          <section className="lc-add-modal" role="dialog" aria-modal="true" aria-labelledby="lc-add-modal-title">
+            <header className="lc-add-modal__header">
+              <div>
+                <span className="lc-add-modal__region">LABEL COMPARISON / INPUT</span>
+                <h3 id="lc-add-modal-title">Add labels to comparison</h3>
+                <p>Select labelings from a project or import one by SPL Set ID.</p>
+              </div>
+              <button type="button" className="lc-add-modal__close" aria-label="Close" onClick={() => { setShowAddModal(false); setSelectedProject(null); }}>×</button>
+            </header>
+
+            <div className="lc-add-modal__selection">
+              <span className="lc-add-modal__field-label">SELECTED FOR COMPARISON</span>
+              <div className="lc-add-modal__chips">
+                {selectedLabelsForAdd.length > 0 ? selectedLabelsForAdd.map((label, i) => (
+                  <span className="lc-add-modal__chip" key={label.set_id}><b>{String(i + 1).padStart(2, '0')}</b><span>{label.brand_name}</span></span>
+                )) : <span className="lc-add-modal__empty-selection">No labels selected. Choose labels from the list below.</span>}
+              </div>
+              <span className="lc-add-modal__count">{selectedLabelsForAdd.length} / 4</span>
             </div>
 
-            {/* Selected Badges Row (Always Visible) */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', flexWrap: 'wrap', backgroundColor: 'var(--afl-n-50)', padding: '12px', borderRadius: '12px', border: '1px solid var(--afl-n-200)', minHeight: '50px' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-500)', alignSelf: 'center', marginRight: '4px' }}>SELECTED:</span>
-                {selectedLabelsForAdd.length > 0 ? (
-                    selectedLabelsForAdd.map((l, i) => (
-                        <div key={l.set_id} className="badge-container">
-                            <div 
-                                style={{ 
-                                    width: '26px', 
-                                    height: '26px', 
-                                    borderRadius: '50%', 
-                                    backgroundColor: 'var(--afl-gov-navy)', 
-                                    color: 'white', 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'center', 
-                                    fontSize: '0.75rem', 
-                                    fontWeight: 800,
-                                    cursor: 'help'
-                                }}
-                            >
-                                {i + 1}
-                            </div>
-                            <div className="badge-tooltip">
-                                <div style={{ color: 'var(--afl-n-400)', fontSize: '0.6rem', marginBottom: '2px', fontWeight: 700, textTransform: 'uppercase' }}>Selected Label</div>
-                                <div style={{ fontWeight: 600 }}>{l.brand_name}</div>
-                                <div style={{ fontSize: '0.7rem', opacity: 0.8, marginTop: '4px' }}>{l.manufacturer_name}</div>
-                            </div>
-                        </div>
-                    ))
-                ) : (
-                    <span style={{ fontSize: '0.8rem', color: 'var(--afl-n-400)', alignSelf: 'center', fontStyle: 'italic' }}>
-                        No labels selected yet. Select from the list below.
-                    </span>
-                )}
+            <div className="lc-add-modal__search-row">
+              <label className="lc-add-modal__search">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="search" placeholder="Filter by drug or manufacturer" value={labelFilter} onChange={(e) => setLabelFilter(e.target.value)} />
+              </label>
+              <Button variant="success" onClick={handleBulkAdd} disabled={selectedLabelsForAdd.length === 0}>Add selected {selectedLabelsForAdd.length > 0 ? `(${selectedLabelsForAdd.length})` : ''}</Button>
             </div>
 
-            {/* Global Search & Add Bar */}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '1.5rem' }}>
-                <div style={{ flex: 1, position: 'relative' }}>
-                    <input 
-                        type="text" 
-                        placeholder="Search labels..."
-                        value={labelFilter}
-                        onChange={(e) => setLabelFilter(e.target.value)}
-                        style={{ 
-                            width: '100%', 
-                            padding: '12px 12px 12px 40px', 
-                            borderRadius: '10px', 
-                            border: '1px solid var(--afl-n-200)', 
-                            fontSize: '0.95rem',
-                            outline: 'none',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                            transition: 'all 0.2s ease'
-                        }}
-                        onFocus={e => e.currentTarget.style.borderColor = 'var(--afl-info-500)'}
-                        onBlur={e => e.currentTarget.style.borderColor = 'var(--afl-n-200)'}
-                    />
-                    <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--afl-n-400)', display: 'flex' }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                      </svg>
-                    </span>
-                </div>
-                <button 
-                    onClick={handleBulkAdd}
-                    disabled={selectedLabelsForAdd.length === 0}
-                    style={{ 
-                        backgroundColor: selectedLabelsForAdd.length > 0 ? 'var(--afl-success-500)' : 'var(--afl-n-300)', 
-                        color: 'white', 
-                        border: 'none', 
-                        padding: '0 24px', 
-                        borderRadius: '10px', 
-                        fontWeight: 700, 
-                        cursor: selectedLabelsForAdd.length > 0 ? 'pointer' : 'not-allowed',
-                        boxShadow: selectedLabelsForAdd.length > 0 ? '0 4px 12px rgba(16, 185, 129, 0.2)' : 'none',
-                        transition: 'all 0.2s ease',
-                        whiteSpace: 'nowrap',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                    }}
-                >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    Add {selectedLabelsForAdd.length > 0 ? `(${selectedLabelsForAdd.length})` : ''}
-                </button>
+            <div className="lc-add-modal__tabs" role="tablist" aria-label="Label source">
+              <button type="button" role="tab" aria-selected={addTab === 'projects'} className={addTab === 'projects' ? 'is-active' : ''} onClick={() => setAddTab('projects')}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7h6l2 2h10v11H3z"/><path d="M3 7V4h7l2 3"/></svg>My Projects
+              </button>
+              <button type="button" role="tab" aria-selected={addTab === 'setid'} className={addTab === 'setid' ? 'is-active' : ''} onClick={() => setAddTab('setid')}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="17" rx="1"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>Import SET-ID
+              </button>
             </div>
-
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', background: 'var(--afl-n-50)', padding: '4px', borderRadius: '12px', border: '1px solid var(--afl-n-100)' }}>
-                <button 
-                    onClick={() => setAddTab('projects')}
-                    style={{ 
-                        flex: 1,
-                        padding: '10px 16px', 
-                        borderRadius: '10px', 
-                        border: 'none', 
-                        backgroundColor: addTab === 'projects' ? 'var(--afl-n-0)' : 'transparent',
-                        color: addTab === 'projects' ? 'var(--afl-n-900)' : 'var(--afl-n-500)',
-                        fontWeight: 700,
-                        fontSize: '0.9rem',
-                        cursor: 'pointer',
-                        boxShadow: addTab === 'projects' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        transition: 'all 0.2s ease'
-                    }}
-                >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                    </svg>
-                    My Projects
-                </button>
-                <button 
-                    onClick={() => setAddTab('setid')}
-                    style={{ 
-                        flex: 1,
-                        padding: '10px 16px', 
-                        borderRadius: '10px', 
-                        border: 'none', 
-                        backgroundColor: addTab === 'setid' ? 'var(--afl-n-0)' : 'transparent',
-                        color: addTab === 'setid' ? 'var(--afl-n-900)' : 'var(--afl-n-500)',
-                        fontWeight: 700,
-                        fontSize: '0.9rem',
-                        cursor: 'pointer',
-                        boxShadow: addTab === 'setid' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        transition: 'all 0.2s ease'
-                    }}
-                >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                      <line x1="16" y1="2" x2="16" y2="6"></line>
-                      <line x1="8" y1="2" x2="8" y2="6"></line>
-                      <line x1="3" y1="10" x2="21" y2="10"></line>
-                    </svg>
-                    Import SET-ID
-                </button>
-            </div>
+            <div className="lc-add-modal__workspace">
 
             {addTab === 'projects' ? (
-                <div>
+                <div className="lc-add-modal__project-workspace">
                     {!session?.is_authenticated ? (
-                        <div style={{ textAlign: 'center', color: 'var(--afl-n-500)', padding: '3rem 2rem', background: 'var(--afl-n-50)', borderRadius: '12px', border: '1px dashed var(--afl-n-200)' }}>
+                        <div className="lc-add-modal__empty-state">
                           <p style={{ margin: '0 0 1rem 0', fontWeight: 600 }}>Sign in to access your projects</p>
-                          <button 
+                            <button className="lc-add-modal__primary-action"
                             onClick={() => openAuthModal('login')}
                             style={{ display: 'inline-block', padding: '10px 24px', background: 'var(--afl-gov-navy)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700 }}
                           >
@@ -1559,171 +1445,88 @@ function LabelCompContent() {
                             {loadingLabels ? (
                                 <p style={{ textAlign: 'center', padding: '3rem', color: 'var(--afl-n-500)' }}>Loading labels...</p>
                             ) : (
-                                <div style={{ maxHeight: '380px', overflowY: 'auto', padding: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }} className="custom-scrollbar">
+                                    <div style={{ maxHeight: '380px', overflowY: 'auto' }} className="custom-scrollbar lc-add-modal__label-list">
                                     {projectLabels
                                       .filter(label => 
                                         !labelFilter || 
                                         (label.brand_name?.toLowerCase() || '').includes(labelFilter.toLowerCase()) || 
                                         (label.manufacturer_name?.toLowerCase() || '').includes(labelFilter.toLowerCase())
                                       )
-                                      .map(label => {
+                                      .map((label, filteredIndex) => {
                                         const isSelected = selectedLabelsForAdd.find(l => l.set_id === label.set_id);
                                         return (
-                                            <div 
+                                            <button type="button"
                                                 key={label.set_id} 
                                                 onClick={() => toggleLabelSelection(label)}
-                                                style={{ 
-                                                    padding: '14px 16px', 
-                                                    borderRadius: '12px',
-                                                    border: '1px solid',
-                                                    borderColor: isSelected ? 'var(--afl-info-500)' : 'var(--afl-n-100)', 
-                                                    display: 'flex', 
-                                                    justifyContent: 'space-between', 
-                                                    alignItems: 'center',
-                                                    cursor: 'pointer',
-                                                    backgroundColor: isSelected ? 'var(--afl-info-50)' : 'var(--afl-n-0)',
-                                                    transition: 'all 0.2s ease',
-                                                    boxShadow: isSelected ? '0 2px 8px rgba(59, 130, 246, 0.1)' : '0 1px 2px rgba(0,0,0,0.02)'
-                                                }}
-                                                onMouseOver={e => !isSelected && (e.currentTarget.style.borderColor = 'var(--afl-n-200)')}
-                                                onMouseOut={e => !isSelected && (e.currentTarget.style.borderColor = 'var(--afl-n-100)')}
+                                                aria-pressed={Boolean(isSelected)}
+                                                className={`lc-add-modal__label-row${isSelected ? ' is-selected' : ''}`}
                                             >
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: isSelected ? 'var(--afl-info-700)' : 'var(--afl-n-800)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label.brand_name}</div>
-                                                    <div style={{ fontSize: '0.8rem', color: isSelected ? 'var(--afl-info-500)' : 'var(--afl-n-500)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label.manufacturer_name}</div>
+                                                <span className="lc-add-modal__row-index">{String(filteredIndex + 1).padStart(2, '0')}</span>
+                                                <div className="lc-add-modal__row-copy">
+                                                    <span className="lc-add-modal__row-name">{label.brand_name}</span>
+                                                    <span className="lc-add-modal__row-meta">{label.manufacturer_name || 'Manufacturer not listed'}</span>
                                                 </div>
-                                                <div style={{ 
-                                                    marginLeft: '16px',
-                                                    width: '22px', 
-                                                    height: '22px', 
-                                                    borderRadius: '6px', 
-                                                    border: '2px solid',
-                                                    borderColor: isSelected ? 'var(--afl-info-500)' : 'var(--afl-n-300)',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    backgroundColor: isSelected ? 'var(--afl-info-500)' : 'white',
-                                                    transition: 'all 0.2s ease'
-                                                }}>
-                                                    {isSelected && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
-                                                </div>
-                                            </div>
+                                                <span className="lc-add-modal__row-state">{isSelected ? 'SELECTED' : 'SELECT'}{isSelected && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m5 12 4 4L19 6"/></svg>}</span>
+                                            </button>
                                         );
                                       })}
                                 </div>
                             )}
                         </div>
                     ) : (
-                        <div style={{ maxHeight: '400px', overflowY: 'auto', padding: '4px', display: 'flex', flexDirection: 'column', gap: '12px' }} className="custom-scrollbar">
+                        <div style={{ maxHeight: '400px', overflowY: 'auto' }} className="custom-scrollbar lc-add-modal__project-list">
                             {loadingProjects ? <p style={{ textAlign: 'center', padding: '3rem', color: 'var(--afl-n-500)' }}>Loading projects...</p> : projects.map(p => (
-                                <div
+                                <button type="button"
                                   key={p.id}
                                   onClick={() => fetchProjectLabels(p)}
-                                  style={{
-                                    padding: '16px 20px',
-                                    borderRadius: '14px',
-                                    border: '1px solid var(--afl-n-100)',
-                                    backgroundColor: 'var(--afl-n-0)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '16px',
-                                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-                                  }}
-                                  onMouseOver={e => {
-                                    e.currentTarget.style.borderColor = 'var(--afl-n-200)';
-                                    e.currentTarget.style.transform = 'translateY(-1px)';
-                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.06)';
-                                  }}
-                                  onMouseOut={e => {
-                                    e.currentTarget.style.borderColor = 'var(--afl-n-100)';
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)';
-                                  }}
+                                  className="lc-add-modal__project-row"
                                 >
-                                  <div style={{ 
-                                    width: '44px', 
-                                    height: '44px', 
-                                    borderRadius: '12px', 
-                                    backgroundColor: p.title === 'Favorite' ? 'var(--afl-warn-50)' : 'var(--afl-a-50)', 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'center',
-                                    color: p.title === 'Favorite' ? 'var(--afl-warn-500)' : 'var(--afl-a-500)'
-                                  }}>
+                                  <span className={`lc-add-modal__project-icon${p.title === 'Favorite' ? ' is-favorite' : ''}`}>
                                     {p.title === 'Favorite' ? (
                                       <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                                     ) : (
                                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                                     )}
-                                  </div>
-                                  <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--afl-n-900)', marginBottom: '2px' }}>{p.title}</div>
-                                    <div style={{ fontSize: '0.85rem', color: 'var(--afl-n-500)', fontWeight: 600 }}>{p.count} labels • {p.role}</div>
-                                  </div>
-                                  <div style={{ color: 'var(--afl-n-300)' }}>
+                                  </span>
+                                  <span className="lc-add-modal__project-copy">
+                                    <b>{p.title}</b>
+                                    <small>{p.count} labels <i>•</i> {p.role}</small>
+                                  </span>
+                                  <span className="lc-add-modal__project-arrow">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                  </div>
-                                </div>
+                                  </span>
+                                </button>
                             ))}
                         </div>
                     )}
                 </div>
             ) : (
-                <div style={{ position: 'relative', padding: '4px' }}>
-                    <p style={{ fontSize: '0.9rem', color: 'var(--afl-n-500)', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+                <div className="lc-add-modal__setid-panel">
+                    <p>
                       Enter the unique SPL SET-ID (UUID) to add a custom labeling.
                     </p>
                     
-                    <div style={{ display: 'flex', gap: '12px', marginBottom: '1.5rem' }}>
-                        <input 
+                    <div className="lc-add-modal__setid-row">
+                        <input className="lc-add-modal__setid-input"
                             type="text" 
                             placeholder="e.g. 01e46f58-8bda-4ff3-ab21-..."
                             value={setIdInput}
                             onChange={(e) => setSetIdInput(e.target.value)}
-                            style={{ 
-                              flex: 1, 
-                              padding: '14px', 
-                              borderRadius: '10px', 
-                              border: '1px solid var(--afl-n-200)', 
-                              outline: 'none', 
-                              fontFamily: 'monospace', 
-                              fontSize: '0.9rem',
-                              backgroundColor: 'var(--afl-n-50)',
-                              transition: 'all 0.2s ease'
-                            }}
-                            onFocus={e => {
-                              e.currentTarget.style.borderColor = 'var(--afl-info-500)';
-                              e.currentTarget.style.backgroundColor = 'var(--afl-n-0)';
-                            }}
-                            onBlur={e => {
-                              e.currentTarget.style.borderColor = 'var(--afl-n-200)';
-                              e.currentTarget.style.backgroundColor = 'var(--afl-n-50)';
-                            }}
                         />
-                        <button 
+                        <button className="lc-add-modal__primary-action"
                             onClick={() => handleAddLabel(setIdInput)}
-                            style={{ 
-                              backgroundColor: 'var(--afl-gov-navy)', 
-                              color: 'white', 
-                              border: 'none', 
-                              padding: '0 28px', 
-                              borderRadius: '10px', 
-                              cursor: 'pointer', 
-                              fontWeight: 700,
-                              boxShadow: '0 4px 12px rgba(0, 46, 93, 0.15)',
-                              transition: 'all 0.2s ease'
-                            }}
-                            onMouseOver={e => e.currentTarget.style.backgroundColor = '#003d7a'}
-                            onMouseOut={e => e.currentTarget.style.backgroundColor = 'var(--afl-gov-navy)'}
                         >
                             Add
                         </button>
                     </div>
                 </div>
             )}
-          </div>
+            </div>
+            <footer className="lc-add-modal__footer">
+              <span>FDA LABELING CATALOG <b>•</b> Compare up to four labeling records</span>
+              <Button variant="secondary" onClick={() => { setShowAddModal(false); setSelectedProject(null); }}>Close</Button>
+            </footer>
+          </section>
         </div>
       )}
 
