@@ -231,6 +231,17 @@ class FavoriteComparison(db.Model):
     title = db.Column(db.String(255), nullable=False)
     timestamp = db.Column(db.DateTime, default=utc_now)
 
+
+class ImageAnalysisCache(db.Model):
+    """Cached comparisons between two images belonging to a stored label."""
+    id = db.Column(db.Integer, primary_key=True)
+    cache_key = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    set_id = db.Column(db.String(100), nullable=False, index=True)
+    spl_id = db.Column(db.String(100), nullable=True)
+    model_name = db.Column(db.String(255), nullable=False)
+    result_json = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+
 class LabelAnnotation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True)

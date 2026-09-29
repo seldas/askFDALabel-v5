@@ -3220,10 +3220,7 @@ def run_assessment_logic(set_id, tox_type, prompt):
             try:
                 meta = extract_metadata_from_xml(xml_content) or {}
                 today_str = utc_now().strftime('%Y%m%d')
-                if provider == "elsa":
-                    model_display = client.get('model_name') or os.getenv("ELSA_MODEL_NAME") or "CLAUDE_4_SONNET"
-                else:
-                    model_display = model
+                model_display = model
                 current_model_str = f"{provider} ({model_display})"
                 from database.models import DrugToxicity
                 

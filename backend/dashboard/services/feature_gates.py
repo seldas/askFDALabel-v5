@@ -196,6 +196,15 @@ FEATURE_CATALOG = [
         default_allow_guest=False,
     ),
     FeatureSpec(
+        key='tool_image_analysis',
+        name='Image Analysis',
+        blurb='Review and compare pharmaceutical label and package artwork with AI.',
+        category='Product Toolbox',
+        enforced_at='Product Toolbox and /api/image-analysis/*',
+        default_min_role=ROLE_USER,
+        default_allow_guest=True,
+    ),
+    FeatureSpec(
         key='tool_deepdive',
         name='Deep Dive',
         blurb='Compare this label against its pharmacologic class peers.',

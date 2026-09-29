@@ -26,7 +26,8 @@ export type IconId =
   | 'building'
   | 'shield'
   | 'external'
-  | 'molecule';
+  | 'molecule'
+  | 'image';
 
 function Svg({ children, size = 20 }: { children: ReactNode; size?: number }) {
   return (
@@ -149,6 +150,13 @@ const PATHS: Record<IconId, ReactNode> = {
       <line x1="12" y1="17" x2="6.2" y2="14" />
       <line x1="4.5" y1="13" x2="4.5" y2="11" />
       <line x1="6.2" y1="10" x2="12" y2="7" />
+    </>
+  ),
+  image: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <path d="m21 15-5-5L5 21" />
     </>
   ),
 };

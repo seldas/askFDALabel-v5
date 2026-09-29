@@ -2,7 +2,7 @@ from google import genai
 from google.genai import types
 from openai import OpenAI
 import requests
-from urllib.parse import quote_plus
+from urllib.parse import urlsplit, urlunsplit
 import json
 import logging
 import os
@@ -16,6 +16,30 @@ from dashboard.services.env_service import EnvService
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logger = logging.getLogger(__name__)
+
+
+def _elsa_openai_base_url(configured_url):
+    """Normalize ELSA's legacy Pixel URL or API root to its OpenAI endpoint."""
+    if not configured_url:
+        return ""
+    parts = urlsplit(configured_url.strip())
+    path = parts.path.rstrip("/")
+    if path.endswith("/model/openai"):
+        endpoint = path
+    elif path.endswith("/engine/runPixel"):
+        endpoint = path[: -len("/engine/runPixel")] + "/model/openai"
+    else:
+        endpoint = path + "/model/openai"
+    return urlunsplit((parts.scheme, parts.netloc, endpoint, parts.query, ""))
+
+
+def _message_text(content):
+    """Extract text for token estimates from OpenAI text or multimodal content."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return " ".join(part.get("text", "") for part in content if isinstance(part, dict))
+    return str(content or "")
 
 def _record_usage(user, model_name, input_tokens, output_tokens):
     if not user or not hasattr(user, 'is_authenticated') or not user.is_authenticated:
@@ -52,6 +76,27 @@ def _check_is_internal():
 
 class AIClientFactory:
     _clients = {} # Cache for clients: (provider, api_key) -> client
+
+    @staticmethod
+    def _get_elsa_client(user_settings=None):
+        elsa_opts = (user_settings or {}).get("elsa", {})
+        elsa_config = {
+            'username': elsa_opts.get("user") or os.getenv("ELSA_API_NAME"),
+            'password': elsa_opts.get("key") or os.getenv("ELSA_API_KEY"),
+            'base_url': _elsa_openai_base_url(elsa_opts.get("url") or os.getenv("ELSA_API_URL")),
+            'model_engine_id': elsa_opts.get("model_id") or os.getenv("ELSA_MODEL_ID"),
+            'model_name': elsa_opts.get("model_name") or os.getenv("ELSA_MODEL_NAME") or "CLAUDE_4_SONNET"
+        }
+        username = elsa_config['username'] or ""
+        password = elsa_config['password'] or ""
+        cache_key = ("elsa", username, password, elsa_config['base_url'])
+        if cache_key not in AIClientFactory._clients:
+            AIClientFactory._clients[cache_key] = OpenAI(
+                api_key=f"{username}:{password}",
+                base_url=elsa_config['base_url'],
+                timeout=600.0,
+            )
+        return AIClientFactory._clients[cache_key], elsa_config['model_engine_id'] or elsa_config['model_name']
 
     @staticmethod
     def get_client(user=None):
@@ -140,15 +185,8 @@ class AIClientFactory:
              return "rapid", rapid_config, model
 
         if provider == 'elsa' or is_internal or 'gemini' not in allowed_providers:
-            elsa_opts = user_settings.get("elsa", {})
-            elsa_config = {
-                'username': elsa_opts.get("user") or os.getenv("ELSA_API_NAME"),
-                'password': elsa_opts.get("key") or os.getenv("ELSA_API_KEY"),
-                'base_url': elsa_opts.get("url") or os.getenv("ELSA_API_URL"),
-                'model_engine_id': elsa_opts.get("model_id") or os.getenv("ELSA_MODEL_ID"),
-                'model_name': elsa_opts.get("model_name") or os.getenv("ELSA_MODEL_NAME") or "CLAUDE_4_SONNET"
-            }
-            return "elsa", elsa_config, elsa_config['model_name']
+            elsa_client, elsa_model = AIClientFactory._get_elsa_client(user_settings)
+            return "elsa", elsa_client, elsa_model
 
         # Default: Gemini (external/public environments only)
         gemini_key = user_settings.get("gemini", {}).get("api_key") or (user.custom_gemini_key if user else None) or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
@@ -167,30 +205,68 @@ def call_llm(user, system_prompt, user_message, history=None, model_override=Non
     max_tokens = kwargs.get("max_tokens", 20000)
     top_p = kwargs.get("top_p", 0.95)
 
-    if provider == "llama":
+    # OpenAI-compatible vision APIs accept image_url parts alongside the user text.
+    # Callers may pass already-formed parts, or image inputs as data URLs / URLs.
+    images = kwargs.get("images") or []
+    if images:
+        if provider not in ("llama", "elsa"):
+            raise ValueError(f"Image input is not supported for the configured AI provider: {provider}")
+        user_content = [{"type": "text", "text": str(user_message or "")}]
+        for image in images:
+            if isinstance(image, str):
+                image_url = image
+            elif isinstance(image, dict) and image.get("type") == "image_url":
+                user_content.append(image)
+                continue
+            elif isinstance(image, dict):
+                image_url = image.get("url") or image.get("data_url")
+                if not image_url and image.get("data"):
+                    mime_type = image.get("mime_type") or "image/jpeg"
+                    image_url = f"data:{mime_type};base64,{image['data']}"
+            else:
+                image_url = None
+            if not image_url:
+                raise ValueError("Each image must be a URL, data URL, or image_url content part")
+            user_content.append({"type": "image_url", "image_url": {"url": image_url}})
+    else:
+        user_content = user_message
+
+    if provider in ("llama", "elsa"):
         messages = []
         supports_system = kwargs.get("supports_system", True)
         if system_prompt:
             if supports_system: messages.append({"role": "system", "content": system_prompt})
-            else: user_message = f"SYSTEM INSTRUCTIONS:\n{system_prompt}\n\nUSER MESSAGE:\n{user_message}"
+            else:
+                if images:
+                    user_content[0]["text"] = f"SYSTEM INSTRUCTIONS:\n{system_prompt}\n\nUSER MESSAGE:\n{user_content[0]['text']}"
+                else:
+                    user_message = f"SYSTEM INSTRUCTIONS:\n{system_prompt}\n\nUSER MESSAGE:\n{user_message}"
         if history:
             for turn in history: messages.append({"role": turn.get('role', 'user'), "content": turn.get('content', '')})
-        messages.append({"role": "user", "content": user_message})
+        messages.append({"role": "user", "content": user_content if images else user_message})
 
         try:
-            vllm_extras = {"repetition_penalty": kwargs.get("repetition_penalty", 1.1), "top_k": kwargs.get("top_k", 50)}
-            response = client.chat.completions.create(
-                model=model, messages=messages, temperature=temperature, 
-                max_tokens=max_tokens, top_p=top_p, extra_body=vllm_extras, 
-                stream=kwargs.get("stream", False)
-            )
+            request_args = {
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "top_p": top_p,
+                "stream": kwargs.get("stream", False),
+            }
+            if provider == "llama":
+                request_args["extra_body"] = {
+                    "repetition_penalty": kwargs.get("repetition_penalty", 1.1),
+                    "top_k": kwargs.get("top_k", 50),
+                }
+            response = client.chat.completions.create(**request_args)
             if kwargs.get("stream", False): return response
             
             if hasattr(response, 'usage') and response.usage:
                 _record_usage(user, model, response.usage.prompt_tokens, response.usage.completion_tokens)
             else:
                 # Fallback to estimate if usage isn't provided
-                est_input = sum(len(m.get("content", "")) for m in messages) // 4
+                est_input = sum(len(_message_text(m.get("content", ""))) for m in messages) // 4
                 est_output = len(response.choices[0].message.content) // 4
                 _record_usage(user, model, est_input, est_output)
                 
@@ -203,30 +279,33 @@ def call_llm(user, system_prompt, user_message, history=None, model_override=Non
             if "elsa" in allowed_providers and provider != "elsa":
                 logger.warning(f"LLM error ({provider}): {e}. Attempting fallback to Elsa.")
                 try:
-                    _, elsa_cfg, elsa_mod = AIClientFactory.get_client(user)
-                    if not isinstance(elsa_cfg, dict) or 'model_engine_id' not in elsa_cfg:
-                        # Direct Elsa config fetch
-                        elsa_cfg = {
-                            'username': os.getenv("ELSA_API_NAME"),
-                            'password': os.getenv("ELSA_API_KEY"),
-                            'base_url': os.getenv("ELSA_API_URL"),
-                            'model_engine_id': os.getenv("ELSA_MODEL_ID"),
-                            'model_name': os.getenv("ELSA_MODEL_NAME") or "CLAUDE_4_SONNET"
-                        }
-                    full_prompt = f"SYSTEM INSTRUCTIONS:\n{system_prompt}\n\n" if system_prompt else ""
+                    fallback_settings = {}
+                    if user and user.is_authenticated and getattr(user, 'is_admin', False) and user.ai_settings:
+                        try:
+                            fallback_settings = json.loads(user.ai_settings)
+                        except Exception:
+                            fallback_settings = {}
+                    elsa_client, elsa_model = AIClientFactory._get_elsa_client(fallback_settings)
+                    fallback_messages = []
+                    if system_prompt:
+                        fallback_messages.append({"role": "system", "content": system_prompt})
                     if history:
-                        full_prompt += "CONVERSATION HISTORY:\n"
-                        for turn in history: full_prompt += f"{turn.get('role', 'user').upper()}: {turn.get('content', '')}\n"
-                        full_prompt += "\n"
-                    full_prompt += f"USER: {user_message}"
-                    cmd = f'''LLM(engine = "{elsa_cfg['model_engine_id']}", command = "<encode>{full_prompt}</encode>", paramValues = [{{"max_completion_tokens": {max_tokens}, "temperature": {temperature}}}])'''
-                    res = requests.post(elsa_cfg['base_url'], headers={"Content-Type": "application/x-www-form-urlencoded"}, data=f'expression={quote_plus(cmd)}', auth=(elsa_cfg['username'], elsa_cfg['password']), verify=False, timeout=(120, 600))
-                    if res.status_code == 200:
-                        ret = json.loads(res.text).get("pixelReturn", [{}])[0].get("output", "")
-                        if isinstance(ret, dict): ret = ret.get("response", "")
-                        if ret:
-                            _record_usage(user, elsa_cfg.get('model_name', 'ELSA'), len(full_prompt) // 4, len(ret) // 4)
-                            return ret
+                        fallback_messages.extend(history)
+                    fallback_messages.append({"role": "user", "content": user_message})
+                    res = elsa_client.chat.completions.create(
+                        model=elsa_model,
+                        messages=fallback_messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        top_p=top_p,
+                    )
+                    ret = res.choices[0].message.content
+                    if ret:
+                        if res.usage:
+                            _record_usage(user, elsa_model, res.usage.prompt_tokens, res.usage.completion_tokens)
+                        else:
+                            _record_usage(user, elsa_model, sum(len(_message_text(m.get("content"))) for m in fallback_messages) // 4, len(ret) // 4)
+                        return ret
                 except Exception as elsa_err:
                     logger.error(f"Elsa fallback failed: {elsa_err}")
 
@@ -318,69 +397,6 @@ def call_llm(user, system_prompt, user_message, history=None, model_override=Non
                 except Exception as fallback_err:
                     logger.error(f"Fallback to Gemini also failed: {fallback_err}")
             raise e
-
-    elif provider == "elsa":
-        full_prompt = f"SYSTEM INSTRUCTIONS:\n{system_prompt}\n\n" if system_prompt else ""
-        if history:
-            full_prompt += "CONVERSATION HISTORY:\n"
-            for turn in history: full_prompt += f"{turn.get('role', 'user').upper()}: {turn.get('content', '')}\n"
-            full_prompt += "\n"
-        full_prompt += f"USER: {user_message}"
-
-        try:
-            command = f'''LLM(engine = "{client['model_engine_id']}", command = "<encode>{full_prompt}</encode>", paramValues = [{{"max_completion_tokens": {max_tokens}, "temperature": {temperature}}}])'''
-            response = requests.post(client['base_url'], 
-                                     headers={"Content-Type": "application/x-www-form-urlencoded"}, 
-                                     data=f'expression={quote_plus(command)}', 
-                                     auth=(client['username'], client['password']), 
-                                     verify=False,
-                                     timeout=(120, 600))
-            if response.status_code != 200:
-                raise Exception(f"Elsa API error: status={response.status_code}, body={response.text[:500]}")
-
-            result = json.loads(response.text)
-
-            pixel_return = result.get("pixelReturn")
-            if not isinstance(pixel_return, list) or not pixel_return:
-                raise Exception(f"Invalid Elsa response: {result}")
-
-            pixel = pixel_return[0]
-            if not isinstance(pixel, dict):
-                raise Exception(f"Invalid Elsa pixelReturn item: {pixel!r}")
-
-            operation_type = pixel.get("operationType", [])
-            output = pixel.get("output")
-
-            if isinstance(operation_type, list) and "ERROR" in operation_type:
-                raise Exception(f"Elsa error: {output}")
-
-            display_model_name = client.get('model_name') or os.getenv("ELSA_MODEL_NAME") or "CLAUDE_4_SONNET"
-
-            if isinstance(output, dict):
-                response_text = output.get("response")
-                prompt_tokens = output.get("numberOfTokensInPrompt")
-                completion_tokens = output.get("numberOfTokensInResponse")
-
-                if isinstance(response_text, str):
-                    if prompt_tokens is not None and completion_tokens is not None:
-                        _record_usage(user, display_model_name, prompt_tokens, completion_tokens)
-                    else:
-                        _record_usage(user, display_model_name, len(full_prompt) // 4, len(response_text) // 4)
-                    return response_text
-                raise Exception(f"Unexpected Elsa output dict: {output!r}")
-
-            if isinstance(output, str):
-                _record_usage(user, display_model_name, len(full_prompt) // 4, len(output) // 4)
-                return output
-
-            raise Exception(f"Unexpected Elsa output type: {type(output).__name__}, value={output!r}")
-
-        except requests.exceptions.Timeout:
-            logger.error("Elsa request timed out")
-            raise Exception("Elsa request timed out")
-        except Exception as e:
-            logger.error(f"Elsa error: {e}")
-            raise
 
     elif provider == "gemini":
         if _check_is_internal():

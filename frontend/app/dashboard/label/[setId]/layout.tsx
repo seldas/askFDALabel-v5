@@ -31,6 +31,7 @@ const SEGMENT_TO_TOOL: Record<string, string> = {
   faers: 'label-faers',
   tox: 'label-tox',
   examine: 'label-examine',
+  'image-analysis': 'label-image-analysis',
   deepdive: 'label-deepdive',
   ro2: 'label-ro2',
   'pv-profile': 'label-pv-profile',
