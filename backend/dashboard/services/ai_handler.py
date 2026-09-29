@@ -1,6 +1,7 @@
 from google import genai
 from google.genai import types
 from openai import OpenAI
+import httpx
 import requests
 from urllib.parse import urlsplit, urlunsplit
 import json
@@ -91,10 +92,18 @@ class AIClientFactory:
         password = elsa_config['password'] or ""
         cache_key = ("elsa", username, password, elsa_config['base_url'])
         if cache_key not in AIClientFactory._clients:
+            # ELSA's internal TLS certificate is not trusted by some local
+            # deployments. Keep certificate verification disabled only on
+            # this ELSA-specific transport; other OpenAI-compatible providers
+            # retain the SDK's default TLS verification.
+            elsa_http_client = httpx.Client(
+                verify=False,
+                timeout=httpx.Timeout(600.0, connect=30.0),
+            )
             AIClientFactory._clients[cache_key] = OpenAI(
                 api_key=f"{username}:{password}",
                 base_url=elsa_config['base_url'],
-                timeout=600.0,
+                http_client=elsa_http_client,
             )
         return AIClientFactory._clients[cache_key], elsa_config['model_engine_id'] or elsa_config['model_name']
 
