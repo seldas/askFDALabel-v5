@@ -13,7 +13,10 @@
 .image-review__empty{display:grid;place-items:center;min-height:220px;padding:28px;border:1px dashed #cbd5e1;border-radius:14px;background:#f8fafc;color:#64748b;text-align:center;line-height:1.6}
 .image-review__stage{display:grid;flex:1 1 auto;grid-template-columns:minmax(0,1fr) 220px;height:clamp(180px,42vh,480px);min-height:180px;overflow:hidden;border:1px solid #dbe3f0;border-radius:14px;background:linear-gradient(135deg,#eff6ff,#f8fafc 54%,#eef2ff);box-shadow:0 12px 34px #0f172a0a}
 .image-review__preview-wrap{display:grid;place-items:center;min-height:0;padding:20px;overflow:auto}
+.image-review__preview-button{position:relative;display:grid;place-items:center;max-width:100%;max-height:100%;padding:0;border:0;background:transparent;cursor:zoom-in}
 .image-review__preview{display:block;max-width:100%;max-height:calc(42vh - 40px);object-fit:contain;filter:drop-shadow(0 8px 14px #0f172a1a)}
+.image-review__preview-button>span{position:absolute;right:8px;bottom:8px;padding:5px 8px;border-radius:6px;background:#0f172acc;color:white;font-size:.66rem;opacity:0;transition:opacity .15s;pointer-events:none}
+.image-review__preview-button:hover>span,.image-review__preview-button:focus-visible>span{opacity:1}
 .image-review__image-error,.image-review__thumb-error{color:#64748b;text-align:center;font-size:.8rem;line-height:1.5}
 .image-review__image-error small{font-size:.7rem}
 .image-review__caption{display:flex;flex-direction:column;justify-content:flex-end;gap:7px;padding:20px;border-left:1px solid #dbe3f0;background:#ffffffbd}
@@ -27,7 +30,7 @@
 .image-review__card{display:flex;flex:0 0 142px;flex-direction:column;gap:4px;scroll-snap-align:start;padding:7px;border:1px solid #dbe3f0;border-radius:10px;background:white;text-align:left;cursor:pointer;transition:border .15s,box-shadow .15s,transform .15s}
 .image-review__card:hover{transform:translateY(-2px);box-shadow:0 7px 18px #0f172a12}
 .image-review__card.is-selected{border:2px solid #2563eb;padding:6px;box-shadow:0 0 0 3px #bfdbfe80}
-.image-review__card img,.image-review__thumb-error{display:grid;place-items:center;width:100%;height:78px;object-fit:contain;border-radius:6px;background:#f1f5f9}
+.image-review__card img,.image-review__thumb-error{display:grid;place-items:center;width:100%;height:78px;object-fit:cover;border-radius:6px;background:#f1f5f9}
 .image-review__card-name{overflow:hidden;color:#334155;font-size:.72rem;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
 .image-review__card-category{overflow:hidden;color:#64748b;font-size:.58rem;text-overflow:ellipsis;white-space:nowrap}
 .image-review__result{padding:16px 18px;border:1px solid #bfdbfe;border-radius:12px;background:#f8fbff}
@@ -63,5 +66,18 @@
 .image-review__compare-result h3{margin:0 0 6px;color:#1e3a8a;font-size:.8rem}
 .image-review__compare-result .is-critical h3{color:#92400e}
 .image-review__compare-result>.image-review__button{margin-top:4px}
-@media(max-width:700px){.image-review{min-height:280px;gap:9px}.image-review__header{flex-direction:column;gap:10px}.image-review__actions{width:100%}.image-review__actions .image-review__button{flex:1}.image-review__stage{flex:0 0 auto;grid-template-columns:minmax(0,1fr) 118px;height:clamp(160px,34vh,300px);min-height:160px}.image-review__preview-wrap{padding:10px}.image-review__caption{justify-content:center;padding:10px;border-left:1px solid #dbe3f0;border-top:0}.image-review__preview{max-height:calc(34vh - 20px)}.image-review__filmstrip{flex-basis:136px}.image-review__card{flex-basis:118px}}
+.image-review__viewer-backdrop{position:fixed;z-index:12100;inset:0;display:grid;place-items:center;padding:16px;background:#020617e8;backdrop-filter:blur(5px)}
+.image-review__viewer{display:flex;flex-direction:column;width:min(1200px,100%);height:min(92vh,1000px);overflow:hidden;border:1px solid #475569;border-radius:14px;background:#0f172a;color:#f8fafc;box-shadow:0 28px 90px #0009}
+.image-review__viewer-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 14px;border-bottom:1px solid #334155}
+.image-review__viewer-toolbar>div:first-child{display:flex;min-width:0;flex-direction:column;gap:3px}
+.image-review__viewer-toolbar strong{overflow:hidden;font-size:.82rem;text-overflow:ellipsis;white-space:nowrap}
+.image-review__viewer-toolbar small{overflow:hidden;color:#94a3b8;font-size:.68rem;text-overflow:ellipsis;white-space:nowrap}
+.image-review__viewer-controls{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.image-review__viewer-controls button{min-width:34px;height:32px;padding:0 9px;border:1px solid #475569;border-radius:7px;background:#1e293b;color:#f8fafc;font-size:.85rem;cursor:pointer}
+.image-review__viewer-controls span{min-width:42px;color:#cbd5e1;font-size:.7rem;text-align:center}
+.image-review__viewer-controls .image-review__viewer-close{margin-left:4px;font-size:1.2rem}
+.image-review__viewer-canvas{display:grid;flex:1;place-items:center;overflow:auto;padding:24px;overscroll-behavior:contain}
+.image-review__viewer-canvas img{max-width:100%;max-height:100%;object-fit:contain;transform-origin:center;transition:transform .12s ease;user-select:none}
+.image-review__viewer-hint{padding:8px 12px;border-top:1px solid #334155;color:#94a3b8;font-size:.66rem;text-align:center}
+@media(max-width:700px){.image-review{min-height:280px;gap:9px}.image-review__header{flex-direction:column;gap:10px}.image-review__actions{width:100%}.image-review__actions .image-review__button{flex:1}.image-review__stage{flex:0 0 auto;grid-template-columns:minmax(0,1fr) 118px;height:clamp(160px,34vh,300px);min-height:160px}.image-review__preview-wrap{padding:10px}.image-review__caption{justify-content:center;padding:10px;border-left:1px solid #dbe3f0;border-top:0}.image-review__preview{max-height:calc(34vh - 20px)}.image-review__filmstrip{flex-basis:136px}.image-review__card{flex-basis:118px}.image-review__viewer-backdrop{padding:6px}.image-review__viewer{height:96vh;border-radius:9px}.image-review__viewer-toolbar{align-items:flex-start;padding:9px}.image-review__viewer-controls{gap:4px}.image-review__viewer-controls button{min-width:30px;height:30px;padding:0 6px}.image-review__viewer-controls .image-review__viewer-close{margin-left:0}.image-review__viewer-canvas{padding:12px}}
 @media(max-height:650px){.image-review__stage{height:34vh;min-height:150px}.image-review__filmstrip{flex-basis:130px}.image-review__card img,.image-review__thumb-error{height:64px}}

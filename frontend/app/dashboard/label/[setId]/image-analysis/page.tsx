@@ -48,6 +48,8 @@ export default function ImageAnalysisPage() {
   const [brokenImageIds, setBrokenImageIds] = useState<string[]>([]);
   const [processResult, setProcessResult] = useState('');
   const [compareOpen, setCompareOpen] = useState(false);
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [imageZoom, setImageZoom] = useState(1);
   const [compareId, setCompareId] = useState('');
   const [upload, setUpload] = useState<File | null>(null);
   const [compareResult, setCompareResult] = useState<CompareResult | null>(null);
@@ -84,6 +86,19 @@ export default function ImageAnalysisPage() {
   }, [setId, splId]);
 
   useEffect(() => { void refreshImages(); }, [refreshImages]);
+
+  useEffect(() => {
+    if (!imageViewerOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setImageViewerOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [imageViewerOpen]);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -172,7 +187,7 @@ export default function ImageAnalysisPage() {
         <>
           <section className="image-review__stage" aria-label="Selected label image">
             {selected && <>
-              <div className="image-review__preview-wrap">{brokenImageIds.includes(selected.id) ? <div className="image-review__image-error">Image unavailable<br /><small>{selected.filename}</small></div> : <img src={imageSrc(selected)} onError={() => imageFailed(selected)} alt={selected.title} className="image-review__preview" />}</div>
+              <div className="image-review__preview-wrap">{brokenImageIds.includes(selected.id) ? <div className="image-review__image-error">Image unavailable<br /><small>{selected.filename}</small></div> : <button className="image-review__preview-button" onClick={() => { setImageZoom(1); setImageViewerOpen(true); }} aria-label="Open image viewer"><img src={imageSrc(selected)} onError={() => imageFailed(selected)} alt={selected.title} className="image-review__preview" /><span>Click to enlarge</span></button>}</div>
               <div className="image-review__caption"><span>{selected.category}</span><strong>{selected.title}</strong><small>{selected.filename}</small></div>
             </>}
           </section>
@@ -202,6 +217,15 @@ export default function ImageAnalysisPage() {
             <article className="is-critical"><h3>Critical Summary</h3><div className="image-review__markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{compareResult.critical_summary || 'No summary returned.'}</ReactMarkdown></div></article>
             <button className="image-review__button image-review__button--secondary" onClick={() => setCompareResult(null)}>Compare another pair</button>
           </div>}
+        </section>
+      </div>}
+      {imageViewerOpen && selected && <div className="image-review__viewer-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setImageViewerOpen(false); }}>
+        <section className="image-review__viewer" role="dialog" aria-modal="true" aria-label={`Image viewer: ${selected.title}`}>
+          <header className="image-review__viewer-toolbar"><div><strong>{selected.title}</strong><small>{selected.filename}</small></div><div className="image-review__viewer-controls"><button onClick={() => setImageZoom((zoom) => Math.max(0.25, +(zoom - 0.25).toFixed(2)))} aria-label="Zoom out">−</button><span>{Math.round(imageZoom * 100)}%</span><button onClick={() => setImageZoom((zoom) => Math.min(4, +(zoom + 0.25).toFixed(2)))} aria-label="Zoom in">+</button><button onClick={() => setImageZoom(1)}>Reset</button><button className="image-review__viewer-close" onClick={() => setImageViewerOpen(false)} aria-label="Close image viewer">×</button></div></header>
+          <div className="image-review__viewer-canvas" onWheel={(event) => { event.preventDefault(); setImageZoom((zoom) => Math.max(0.25, Math.min(4, +(zoom + (event.deltaY < 0 ? 0.15 : -0.15)).toFixed(2)))); }}>
+            <img src={imageSrc(selected)} alt={selected.title} draggable={false} style={{ transform: `scale(${imageZoom})` }} />
+          </div>
+          <div className="image-review__viewer-hint">Use + / − or the mouse wheel to zoom. Scroll to inspect the enlarged image.</div>
         </section>
       </div>}
     </main>
