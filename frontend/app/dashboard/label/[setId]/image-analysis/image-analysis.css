@@ -32,6 +32,9 @@
 .image-review__card-category{overflow:hidden;color:#64748b;font-size:.58rem;text-overflow:ellipsis;white-space:nowrap}
 .image-review__result{padding:16px 18px;border:1px solid #bfdbfe;border-radius:12px;background:#f8fbff}
 .image-review__result-title{margin-bottom:8px;color:#1d4ed8;font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.image-review__extracted{margin-top:12px;padding-top:10px;border-top:1px solid #dbeafe}
+.image-review__extracted summary{color:#475569;font-size:.76rem;font-weight:750;cursor:pointer;user-select:none}
+.image-review__extracted .image-review__markdown{margin-top:9px;padding:10px 12px;border-radius:8px;background:#fff}
 .image-review__markdown{color:#334155;font-size:.81rem;line-height:1.65;overflow-wrap:anywhere}
 .image-review__markdown>:first-child{margin-top:0}
 .image-review__markdown>:last-child{margin-bottom:0}

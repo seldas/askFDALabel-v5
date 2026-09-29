@@ -9,6 +9,28 @@ import './image-analysis.css';
 type LabelImage = { id: string; filename: string; title: string; category: string; url: string; proxy_url: string };
 type CompareResult = { style: string; content: string; critical_summary: string };
 
+function splitProcessReview(text: string) {
+  const sections: { title: string; body: string }[] = [];
+  let current: { title: string; body: string } | null = null;
+  const headingPattern = /^\s*(?:#{1,4}\s*)?(Extracted Text|Original Text|Normalized Product Information|Warnings and Instructions|Uncertainties)\s*:?[ \t]*$/i;
+  for (const line of text.split(/\r?\n/)) {
+    const heading = line.match(headingPattern);
+    if (heading) {
+      if (current) sections.push(current);
+      current = { title: heading[1], body: '' };
+    } else if (current) {
+      current.body += `${current.body ? '\n' : ''}${line}`;
+    } else if (line.trim()) {
+      current = { title: 'Normalized Product Information', body: line };
+    }
+  }
+  if (current) sections.push(current);
+  const extracted = sections.filter((section) => /^(extracted|original) text$/i.test(section.title)).map((section) => section.body.trim()).join('\n\n');
+  const normalized = sections.filter((section) => !/^(extracted|original) text$/i.test(section.title))
+    .map((section) => `## ${section.title}\n\n${section.body.trim()}`).join('\n\n');
+  return { extracted, normalized: normalized || text };
+}
+
 function apiPath(setId: string, path: string, splId: string | null) {
   const query = splId ? `?spl_id=${encodeURIComponent(splId)}` : '';
   return `/api/image-analysis/${encodeURIComponent(setId)}/${path}${query}`;
@@ -31,6 +53,7 @@ export default function ImageAnalysisPage() {
   const [compareCached, setCompareCached] = useState(false);
 
   const selected = useMemo(() => images.find((image) => image.id === selectedId) ?? null, [images, selectedId]);
+  const processedSections = useMemo(() => splitProcessReview(processResult), [processResult]);
   const imageSrc = (image: LabelImage) => proxyImageIds.includes(image.id) ? image.proxy_url : image.url;
   const imageFailed = (image: LabelImage) => {
     if (!proxyImageIds.includes(image.id)) {
@@ -115,6 +138,14 @@ export default function ImageAnalysisPage() {
         <div className="image-review__empty">No package images were found in this label’s SPL. The label may contain text only, or its artwork may not be available in the local SPL package.</div>
       ) : (
         <>
+          <nav className="image-review__filmstrip" aria-label="Label images">
+            <div className="image-review__filmstrip-title">Select an image <span>{images.length}</span></div>
+            <div className="image-review__cards">{images.map((image) => <button key={image.id} className={`image-review__card ${selectedId === image.id ? 'is-selected' : ''}`} onClick={() => { setSelectedId(image.id); setProcessResult(''); }} aria-pressed={selectedId === image.id}>
+              {brokenImageIds.includes(image.id) ? <span className="image-review__thumb-error">Unavailable</span> : <img src={imageSrc(image)} onError={() => imageFailed(image)} alt="" loading="lazy" />}
+              <span className="image-review__card-category">{image.category}</span>
+              <span className="image-review__card-name">{image.title}</span>
+            </button>)}</div>
+          </nav>
           <section className="image-review__stage" aria-label="Selected label image">
             {selected && <>
               <div className="image-review__preview-wrap">{brokenImageIds.includes(selected.id) ? <div className="image-review__image-error">Image unavailable<br /><small>{selected.filename}</small></div> : <img src={imageSrc(selected)} onError={() => imageFailed(selected)} alt={selected.title} className="image-review__preview" />}</div>
@@ -122,16 +153,7 @@ export default function ImageAnalysisPage() {
             </>}
           </section>
 
-          {processResult && <section className="image-review__result"><div className="image-review__result-title">Image review</div><div className="image-review__markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{processResult}</ReactMarkdown></div></section>}
-
-          <nav className="image-review__filmstrip" aria-label="Label images">
-            <div className="image-review__filmstrip-title">Label images <span>{images.length}</span></div>
-            <div className="image-review__cards">{images.map((image) => <button key={image.id} className={`image-review__card ${selectedId === image.id ? 'is-selected' : ''}`} onClick={() => { setSelectedId(image.id); setProcessResult(''); }} aria-pressed={selectedId === image.id}>
-              {brokenImageIds.includes(image.id) ? <span className="image-review__thumb-error">Unavailable</span> : <img src={imageSrc(image)} onError={() => imageFailed(image)} alt="" loading="lazy" />}
-              <span className="image-review__card-category">{image.category}</span>
-              <span className="image-review__card-name">{image.title}</span>
-            </button>)}</div>
-          </nav>
+          {processResult && <section className="image-review__result"><div className="image-review__result-title">Normalized image review</div><div className="image-review__markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{processedSections.normalized}</ReactMarkdown></div>{processedSections.extracted && <details className="image-review__extracted"><summary>Show extracted text</summary><div className="image-review__markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{processedSections.extracted}</ReactMarkdown></div></details>}</section>}
         </>
       )}
 
