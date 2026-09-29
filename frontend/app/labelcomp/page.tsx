@@ -656,7 +656,7 @@ function LabelCompContent() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--afl-bg-page)' }}>
+    <div className="lc-page" style={{ minHeight: '100vh', backgroundColor: 'var(--afl-bg-page)' }}>
       <Header />
 
       <main style={{ maxWidth: '1600px', margin: '0 auto', padding: 'clamp(2rem, 5vh, 4rem) clamp(1rem, 5vw, 2rem)' }}>
@@ -751,8 +751,8 @@ function LabelCompContent() {
         {data && (
           <div className="lc-toolbar">
             <div className="lc-toolbar__tabs">
-              <button onClick={expandAll} className="lc-toolbar-toggle">Expand All</button>
-              <button onClick={collapseAll} className="lc-toolbar-toggle">Collapse All</button>
+              <button type="button" onClick={expandAll} className="lc-toolbar-toggle">Expand All</button>
+              <button type="button" onClick={collapseAll} className="lc-toolbar-toggle">Collapse All</button>
             </div>
 
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>

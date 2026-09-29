@@ -960,16 +960,19 @@ function LabelContent() {
         </div>
       </div>
 
-      <div id="table-extract-modal" className="custom-modal" style={{ display: 'none' }}>
-        <div className="custom-modal-content" style={{ maxWidth: '95%', height: '90vh' }}>
-          <div className="custom-modal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h3 id="table-extract-title" style={{ margin: 0 }}>Table Data</h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                <button id="copy-selection-btn" className="button" style={{ display: 'none', padding: '6px 12px', fontSize: '0.85rem', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', alignItems: 'center', gap: '5px' }}><span>{"\uD83D\uDCCB"}</span> Copy Selection</button>
-                <span className="close-modal" id="close-table-extract" style={{ cursor: 'pointer', fontSize: '1.5rem' }}>&times;</span>
+      <div id="table-extract-modal" className="custom-modal table-extract-modal" style={{ display: 'none' }}>
+        <div className="custom-modal-content table-extract-modal__content">
+          <div className="custom-modal-header table-extract-modal__header">
+            <div className="table-extract-modal__title-group">
+              <span className="table-extract-modal__eyebrow">LABEL TABLE</span>
+              <h3 id="table-extract-title">Table Data</h3>
+            </div>
+            <div className="table-extract-modal__actions">
+              <button id="copy-selection-btn" className="button table-extract-modal__copy" type="button"><span>{"\uD83D\uDCCB"}</span> Copy Selection</button>
+              <button className="close-modal table-extract-modal__close" id="close-table-extract" type="button" aria-label="Close table extractor">&times;</button>
             </div>
           </div>
-          <div className="custom-modal-body" id="table-extract-container"></div>
+          <div className="custom-modal-body table-extract-modal__body" id="table-extract-container"></div>
         </div>
       </div>
 

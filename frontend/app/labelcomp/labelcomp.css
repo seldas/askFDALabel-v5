@@ -42,6 +42,95 @@
   font-size: var(--afl-text-xs);
 }
 
+/* The comparison page still has a few legacy native buttons. Keep them in
+   the same compact, rounded visual language as the shared platform buttons. */
+.lc-page button:not(.afl-btn) {
+  font: inherit;
+}
+
+.lc-page button:focus-visible {
+  outline: 3px solid var(--afl-a-300);
+  outline-offset: 2px;
+}
+
+.lc-page button[style*="backgroundColor: var(--afl-success-500)"],
+.lc-page button[style*="backgroundColor: var(--afl-danger-500)"] {
+  min-width: 38px;
+  min-height: 32px;
+  padding: 6px 10px !important;
+  border-radius: var(--afl-radius-md) !important;
+  font-size: var(--afl-text-xs) !important;
+  font-weight: var(--afl-weight-bold) !important;
+  box-shadow: var(--afl-shadow-xs);
+}
+
+.lc-page .lc-toolbar-toggle {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--afl-border);
+  background: var(--afl-bg-surface);
+  color: var(--afl-text-secondary);
+}
+
+.lc-page .lc-toolbar-toggle:hover {
+  border-color: var(--afl-a-300);
+  color: var(--afl-a-700);
+}
+
+.lc-page .lc-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 9px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--afl-radius-md);
+  font-size: var(--afl-text-sm);
+  font-weight: var(--afl-weight-bold);
+  cursor: pointer;
+  transition: all var(--afl-transition);
+}
+
+.lc-page .lc-action-btn--primary {
+  background: var(--afl-gov-navy);
+  color: white;
+}
+
+.lc-page .lc-action-btn--primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+  box-shadow: var(--afl-shadow-sm);
+}
+
+.lc-page .lc-action-btn--success {
+  background: var(--afl-success-600);
+  color: white;
+}
+
+.lc-page .lc-action-btn--success:hover:not(:disabled) {
+  background: var(--afl-success-700);
+}
+
+.lc-page .lc-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lc-page .lc-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--afl-text-muted);
+  cursor: pointer;
+}
+
+.lc-page .lc-icon-btn:hover { background: var(--afl-bg-sunken); color: var(--afl-text-primary); }
+
 .lc-add-label-btn {
   display: inline-flex;
   align-items: center;

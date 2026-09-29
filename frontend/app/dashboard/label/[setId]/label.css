@@ -911,6 +911,99 @@ html {
     flex-grow: 1;
 }
 
+/* Table Extract is a focused workspace for selecting cells and copying them. */
+.table-extract-modal { padding: 3vh 2vw; box-sizing: border-box; }
+.table-extract-modal__content {
+    width: 100%;
+    max-width: 1500px;
+    height: 94vh;
+    margin: 0 auto;
+    background: var(--afl-bg-surface);
+    border: 1px solid var(--afl-border);
+    border-radius: var(--afl-radius-xl);
+    box-shadow: var(--afl-shadow-lg);
+    overflow: hidden;
+}
+.table-extract-modal__header {
+    flex: 0 0 auto;
+    padding: 18px 24px;
+    background: var(--afl-bg-surface);
+    gap: 20px;
+}
+.table-extract-modal__title-group { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.table-extract-modal__eyebrow {
+    color: var(--afl-a-600);
+    font-size: var(--afl-text-xs);
+    font-weight: var(--afl-weight-bold);
+    letter-spacing: .09em;
+}
+.table-extract-modal__header h3 {
+    margin: 0;
+    color: var(--afl-text-primary);
+    font-size: 1.1rem;
+    font-weight: var(--afl-weight-bold);
+}
+.table-extract-modal__actions { display: flex; align-items: center; gap: 14px; }
+.table-extract-modal__copy {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border: 0;
+    border-radius: var(--afl-radius-md);
+    background: var(--afl-success-600);
+    color: #fff;
+    font: inherit;
+    font-size: var(--afl-text-sm);
+    font-weight: var(--afl-weight-bold);
+    cursor: pointer;
+}
+.table-extract-modal__copy:hover { background: var(--afl-success-700); }
+.table-extract-modal__close { border: 0; background: transparent; font-size: 1.8rem; }
+.table-extract-modal__body { min-height: 0; padding: 20px 24px; background: var(--afl-bg-page); }
+.table-extract-modal__body:has(.excel-style-table) { overflow: auto; }
+.table-extract-modal__body .excel-style-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--afl-bg-surface);
+    border: 1px solid var(--afl-border);
+    border-radius: var(--afl-radius-md);
+    box-shadow: var(--afl-shadow-xs);
+    color: var(--afl-text-primary);
+    font-size: .875rem;
+}
+.table-extract-modal__body .excel-style-table th,
+.table-extract-modal__body .excel-style-table td {
+    min-width: 90px;
+    padding: 10px 12px;
+    border-right: 1px solid var(--afl-border);
+    border-bottom: 1px solid var(--afl-border);
+    text-align: left;
+    vertical-align: top;
+}
+.table-extract-modal__body .excel-style-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--afl-bg-sunken);
+    color: var(--afl-text-secondary);
+    font-weight: var(--afl-weight-bold);
+}
+.table-extract-modal__body .excel-style-table tr:hover td { background: var(--afl-bg-page); }
+.table-extract-modal__body .excel-style-table td.selected-cell,
+.table-extract-modal__body .excel-style-table th.selected-cell {
+    background: var(--afl-a-100);
+    outline: 2px solid var(--afl-a-500);
+    outline-offset: -2px;
+}
+@media (max-width: 640px) {
+    .table-extract-modal { padding: 1vh 2vw; }
+    .table-extract-modal__content { height: 98vh; }
+    .table-extract-modal__header { padding: 14px; }
+    .table-extract-modal__body { padding: 12px; }
+}
+
 /* --- AI Assistant Chatbox --- */
 .chatbox { 
     position: fixed; 

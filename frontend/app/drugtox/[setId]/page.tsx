@@ -34,7 +34,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import '../../dashboard/label/[setId]/label.css';
 
 // Tox-specific color branding
@@ -406,7 +406,7 @@ export default function DrugToxDetailPage() {
                   <Box sx={{ p: 3, backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                           <Typography variant="h6" sx={{ fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <AutoAwesomeIcon sx={{ color: currentAgent.color }} /> {currentAgent.name} Assessment Records
+                              <HealthAndSafetyIcon sx={{ color: currentAgent.color }} /> {currentAgent.name} Assessment Records
                           </Typography>
                           <Button 
                             variant="contained" 
