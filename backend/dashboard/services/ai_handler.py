@@ -260,10 +260,10 @@ def call_llm(user, system_prompt, user_message, history=None, model_override=Non
                 "messages": messages,
                 "temperature": temperature,
                 "max_tokens": max_tokens,
-                "top_p": top_p,
                 "stream": kwargs.get("stream", False),
             }
             if provider == "llama":
+                request_args["top_p"] = top_p
                 request_args["extra_body"] = {
                     "repetition_penalty": kwargs.get("repetition_penalty", 1.1),
                     "top_k": kwargs.get("top_k", 50),
@@ -306,7 +306,6 @@ def call_llm(user, system_prompt, user_message, history=None, model_override=Non
                         messages=fallback_messages,
                         temperature=temperature,
                         max_tokens=max_tokens,
-                        top_p=top_p,
                     )
                     ret = res.choices[0].message.content
                     if ret:
