@@ -24,3 +24,4 @@ celery
 redis
 rdkit
 defusedxml
+python3-saml==1.16.0

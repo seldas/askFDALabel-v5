@@ -28,6 +28,12 @@ def create_app(config_class=Config):
     from dashboard.routes.ro2 import ro2_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/dashboard/auth')
+    from dashboard.routes.saml import saml_bp, acs
+    app.register_blueprint(saml_bp, url_prefix='/api/dashboard/auth/saml')
+    acs_path = os.getenv('SAML_ACS_PATH', '/api/dashboard/auth/saml/acs')
+    if not acs_path.startswith('/') or '?' in acs_path or '<' in acs_path:
+        raise ValueError('SAML_ACS_PATH must be a fixed backend route path')
+    app.add_url_rule(acs_path, 'saml.acs', acs, methods=['POST'])
     app.register_blueprint(main_bp, url_prefix='/api/dashboard')
     app.register_blueprint(api_bp, url_prefix='/api/dashboard')
     app.register_blueprint(admin_bp, url_prefix='/api/dashboard/admin')

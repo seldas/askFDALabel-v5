@@ -24,8 +24,26 @@ server {
     # at the 3,000-row cap -- past nginx's 1 MB default.
     client_max_body_size 16m;
 
+    # Test SAML IdP (removed from rapid-generated configurations).
+    location ^~ /sso/ {
+        proxy_pass http://keycloak:8080;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+    # End test SAML IdP
+
     location = / {
         return 302 /fdalabel-v3/;
+    }
+
+    # Registered FDA ACS, independent of the application's base path.
+    location = /api/auth/saml {
+        proxy_pass http://backend:8842;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 
     location ^~ /fdalabel-v3_api/ {

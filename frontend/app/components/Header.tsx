@@ -537,8 +537,8 @@ export default function Header({
                 className={cx('dropdown-trigger header-chip header-chip--account', activeDropdown === 'user' && 'active')}
                 onClick={() => setActiveDropdown(activeDropdown === 'user' ? null : 'user')}
               >
-                <div className="avatar-circle">{session.username?.[0].toUpperCase()}</div>
-                <span className="username-text">{session.username}</span>
+                <div className="avatar-circle">{(session.display_name || session.username)?.[0].toUpperCase()}</div>
+                <span className="username-text">{session.display_name || session.username}</span>
                 <span className="caret">▼</span>
               </button>
 
@@ -547,9 +547,9 @@ export default function Header({
                   <div className="account-block">
                     <div className="account-label">ACCOUNT</div>
                     <div className="account-identity">
-                      <div className="account-avatar" aria-hidden="true">{session.username?.[0].toUpperCase()}</div>
+                      <div className="account-avatar" aria-hidden="true">{(session.display_name || session.username)?.[0].toUpperCase()}</div>
                       <div>
-                        <div className="account-name">{session.username}</div>
+                        <div className="account-name">{session.display_name || session.username}</div>
                         <div className="account-role">{session?.is_admin ? 'Administrator' : 'Account'}</div>
                       </div>
                     </div>
@@ -595,7 +595,7 @@ export default function Header({
                         Log In
                       </button>
                     )}
-                    {!isGuest && (
+                    {!isGuest && session.auth_method !== 'saml' && (
                       <button onClick={() => { openAuthModal('change_password'); setActiveDropdown(null); }} className="dropdown-item dropdown-item--secondary-action">
                         Change Password
                       </button>

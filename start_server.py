@@ -5,6 +5,7 @@ import argparse
 import re
 import subprocess
 from pathlib import Path
+from deploy.sso_config import KEYCLOAK_IMAGE, prepare_keycloak, resolve_sso
 
 ROOT = Path(__file__).resolve().parent
 APPTAINER_DIR = ROOT / 'deploy' / 'apptainer'
@@ -20,6 +21,7 @@ APPTAINER_INSTANCES = {
     'redis':    'fdalabel-v3-redis',
     'db':       'fdalabel-v3-db',
     'nginx':    'fdalabel-v3-nginx',
+    'keycloak': 'fdalabel-v3-keycloak',
 }
 LEGACY_APPTAINER_INSTANCES = {
     service: f'askfdalabel-{service}'
@@ -85,6 +87,8 @@ def run_apptainer(args, env_vars, local_db):
         services.insert(0, 'db')
     if include_nginx:
         services.append('nginx')
+    if not args.rapid:
+        services.insert(0, 'keycloak')
 
     if args.down:
         # Stop all known instances (both current and legacy naming schemes).
@@ -110,11 +114,22 @@ def run_apptainer(args, env_vars, local_db):
     redis_image    = APPTAINER_IMAGES / 'fdalabel-v3-redis.sif'
     db_image       = APPTAINER_IMAGES / 'fdalabel-v3-db.sif'
     nginx_image    = APPTAINER_IMAGES / 'fdalabel-v3-nginx.sif'
+    keycloak_image = APPTAINER_IMAGES / 'fdalabel-v3-keycloak.sif'
+    sso_config = resolve_sso(env_vars, args.mode, args.rapid, include_nginx, 'apptainer')
+    if not args.rapid:
+        keycloak_folder, keycloak_credentials = prepare_keycloak(ROOT, sso_config)
+        if args.build or not keycloak_image.exists():
+            _build_keycloak = True
+        else:
+            _build_keycloak = False
 
     def _build_sif(sif_path, def_path):
         """Build a SIF image, always passing --force to overwrite without prompting."""
         _run(['apptainer', 'build', '--fakeroot', '--force',
               str(sif_path), str(def_path)], args.dry_run)
+
+    if not args.rapid and _build_keycloak:
+        _build_sif(keycloak_image, APPTAINER_DIR / 'keycloak.def')
 
     # --- Build or refresh custom .def images ---
     if args.build or not backend_image.exists() or not frontend_image.exists():
@@ -182,9 +197,29 @@ def run_apptainer(args, env_vars, local_db):
         'APPTAINERENV_POSTGRES_USER':         pg_user,
         'APPTAINERENV_POSTGRES_PASSWORD':     pg_password,
     })
+    runtime_env.update({'APPTAINERENV_' + k: str(v) for k, v in sso_config.items() if not k.startswith('KEYCLOAK_')})
+    if not args.rapid:
+        runtime_env.update({
+            'APPTAINERENV_KC_HOSTNAME': sso_config['KEYCLOAK_PUBLIC_URL'],
+            'APPTAINERENV_KC_HTTP_RELATIVE_PATH': sso_config['KEYCLOAK_RELATIVE_PATH'],
+            'APPTAINERENV_KC_HTTP_PORT': '8843',
+            'APPTAINERENV_KC_BOOTSTRAP_ADMIN_USERNAME': keycloak_credentials['admin_username'],
+            'APPTAINERENV_KC_BOOTSTRAP_ADMIN_PASSWORD': keycloak_credentials['admin_password'],
+        })
+        if include_nginx:
+            runtime_env['APPTAINERENV_KC_PROXY_HEADERS'] = 'xforwarded'
     old_env = os.environ.copy()
     os.environ.update(runtime_env)
     try:
+        if args.rapid and not args.dry_run and _apptainer_instance_exists(APPTAINER_INSTANCES['keycloak']):
+            _run(['apptainer', 'instance', 'stop', APPTAINER_INSTANCES['keycloak']], check=False)
+        if not args.rapid:
+            _start_apptainer_instance(
+                ['apptainer', 'instance', 'start', '--writable-tmpfs', '--bind',
+                 f'{keycloak_folder / "db"}:/opt/keycloak/data,{keycloak_folder / "import"}:/opt/keycloak/data/import:ro',
+                 str(keycloak_image), APPTAINER_INSTANCES['keycloak']],
+                APPTAINER_INSTANCES['keycloak'], args, restart_on_build=True,
+            )
         # Retire instances from the original naming scheme before launching the
         # canonical fdalabel-v3-* names; host-mounted data is unaffected.
         for service in services:
@@ -213,6 +248,7 @@ def run_apptainer(args, env_vars, local_db):
         )
 
         backend_binds = [
+            f'{ROOT / "deploy"}:/deploy',
             f'{ROOT / "backend"}:/app',
             f'{data_dir}:/data',
             f'{monthly}:/data/monthly_updates',
@@ -265,6 +301,14 @@ def run_apptainer(args, env_vars, local_db):
                 # Remap Docker service names to localhost
                 content = content.replace('http://backend:', 'http://127.0.0.1:')
                 content = content.replace('http://frontend:', 'http://127.0.0.1:')
+                content = content.replace('http://keycloak:8080', 'http://127.0.0.1:8843')
+                if args.rapid:
+                    content = re.sub(r'    # Test SAML IdP.*?    # End test SAML IdP\n', '', content, flags=re.S)
+                if src_name == 'default.conf' and not (cert.exists() and key.exists()):
+                    content = content.replace('default 1;', 'default 0;').replace('"~^http:.*$" 1;', '"~^http:.*$" 0;')
+                    content = content.replace('include /etc/nginx/conf.d/ssl.conf;', '')
+                if src_name == 'ssl.conf.template' and not (cert.exists() and key.exists()):
+                    content = '# SSL disabled: no certificate configured\n'
                 # Use unprivileged ports (rootless Apptainer cannot bind <1024)
                 content = content.replace('listen 80;', 'listen 8080;')
                 content = content.replace('listen 443 ssl;', 'listen 8443 ssl;')
@@ -316,15 +360,12 @@ def run_apptainer(args, env_vars, local_db):
     finally:
         os.environ.clear(); os.environ.update(old_env)
 
-    host = env_vars.get('API_SERVER_HOST') or env_vars.get('NEXT_PUBLIC_API_SERVER_HOST') or 'localhost'
-    if include_nginx:
-        cert = ROOT / 'deploy' / 'nginx' / 'cert.pem'
-        scheme = 'https' if cert.exists() else 'http'
-        app_url = f'{scheme}://{host}/fdalabel-v3/'
-    else:
-        app_url = f'http://{host}:8841/fdalabel-v3/'
+    app_url = sso_config['SSO_PUBLIC_ORIGIN'] + sso_config['SSO_APP_BASE'] + '/'
     print('\n[SUCCESS] AskFDALabel is running with Apptainer.')
     print(f'          UI: {app_url}')
+    if not args.rapid:
+        print(f'          Test SSO: {sso_config["KEYCLOAK_PUBLIC_URL"]}')
+        print(f'          SSO credentials: {keycloak_folder / "credentials.json"}')
     print('          Persistent updates: data/monthly_updates/ (host-owned by the launching user)')
 
 def load_env(path=".env"):
@@ -348,7 +389,11 @@ def dict_to_yaml(data, indent=0):
     spacer = " " * indent
     if isinstance(data, dict):
         for k, v in data.items():
-            if v is None:
+            if v == []:
+                lines.append(f"{spacer}{k}: []")
+            elif v == {}:
+                lines.append(f"{spacer}{k}: {{}}")
+            elif v is None:
                 lines.append(f"{spacer}{k}:")
             elif isinstance(v, (dict, list)):
                 lines.append(f"{spacer}{k}:")
@@ -397,9 +442,35 @@ def dict_to_yaml(data, indent=0):
                     lines.append(f"{spacer}- {item_str}")
     return "\n".join(lines)
 
-def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=False):
+def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=False, env_vars=None):
     """Builds the dictionary representation of docker-compose based on options."""
     services = {}
+    env_vars = load_env(ROOT / '.env') if env_vars is None else env_vars
+    sso_config = resolve_sso(env_vars, mode, rapid, include_nginx)
+    if not rapid:
+        keycloak_folder, credentials = prepare_keycloak(ROOT, sso_config)
+        # Named volumes allow Keycloak's non-root uid to write its persistent DB.
+        services['keycloak'] = {
+            'image': KEYCLOAK_IMAGE,
+            'container_name': 'fdalabel-v3-keycloak',
+            'command': ['start', '--db=dev-file', '--http-enabled=true', '--import-realm'],
+            'environment': {
+                'KC_HOSTNAME': sso_config['KEYCLOAK_PUBLIC_URL'],
+                'KC_HTTP_RELATIVE_PATH': sso_config['KEYCLOAK_RELATIVE_PATH'],
+                'KC_BOOTSTRAP_ADMIN_USERNAME': credentials['admin_username'],
+                'KC_BOOTSTRAP_ADMIN_PASSWORD': credentials['admin_password'],
+                **({'KC_PROXY_HEADERS': 'xforwarded'} if include_nginx else {}),
+            },
+            'volumes': [
+                f'keycloak-{keycloak_folder.name}:/opt/keycloak/data',
+                f'./data/keycloak/{keycloak_folder.name}/import:/opt/keycloak/data/import:ro',
+            ],
+            'restart': 'unless-stopped',
+        }
+        if include_nginx:
+            services['keycloak']['expose'] = ['8080']
+        else:
+            services['keycloak']['ports'] = ['8843:8080']
 
     # 1. Redis Service
     redis_service = {
@@ -454,6 +525,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
 
     # 3. Backend Service
     backend_env = {
+        **{k: v for k, v in sso_config.items() if not k.startswith('KEYCLOAK_')},
         "FLASK_ENV": "development" if mode == "dev" else "production",
         "DATABASE_URL": "${DATABASE_URL:-postgresql://${PG_USERNAME:-afd_user}:${PG_PASSWORD:-afd_password}@${PG_HOST:-db}:${PG_PORT:-5432}/${PG_DATABASE:-fdalabel-v3}}",
         "BACKEND_PORT": 8842,
@@ -512,6 +584,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
         },
         "restart": "always"
     }
+    backend_service['depends_on'] = ['redis'] + ([] if rapid else ['keycloak'])
 
     if not rapid:
         backend_service["build"] = {
@@ -630,7 +703,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
                 "dockerfile": "Dockerfile"
             },
             "container_name": "fdalabel-v3-nginx",
-            "depends_on": ["frontend", "backend"],
+            "depends_on": ["frontend", "backend"] + ([] if rapid else ['keycloak']),
             "ports": ["80:80", "443:443"],
             "healthcheck": {
                 "test": ["CMD-SHELL", "curl -f http://localhost/fdalabel-v3/ || exit 1"],
@@ -648,6 +721,16 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
             },
             "restart": "always"
         }
+        # --rapid --nginx has no test IdP and must not reference its DNS name.
+        if rapid:
+            generated = ROOT / 'data' / 'nginx-rapid'
+            generated.mkdir(parents=True, exist_ok=True)
+            for source in ('default.conf', 'ssl.conf.template'):
+                content = (ROOT / 'deploy' / 'nginx' / source).read_text(encoding='utf-8')
+                content = re.sub(r'    # Test SAML IdP.*?    # End test SAML IdP\n', '', content, flags=re.S)
+                target = generated / ('ssl.conf' if source == 'ssl.conf.template' else source)
+                target.write_text(content, encoding='utf-8')
+            nginx_service['volumes'] = ['./data/nginx-rapid:/etc/nginx/conf.d']
         services["nginx"] = nginx_service
 
     compose_dict = {
@@ -658,6 +741,8 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
             }
         }
     }
+    if not rapid:
+        compose_dict['volumes'] = {f'keycloak-{keycloak_folder.name}': {}}
     return compose_dict
 
 def check_and_prepare_image(image_name, base_image):
@@ -719,7 +804,15 @@ def main():
         args.mode = "prod"
 
     # Load environment variables to resolve DB mode
-    env_vars = load_env()
+    env_vars = load_env(ROOT / '.env')
+    sso = resolve_sso(env_vars, args.mode, args.rapid,
+                      args.nginx or (args.mode == 'prod' and not args.rapid), args.runtime)
+    if args.rapid and not args.down:
+        missing = [key for key in ('FDA_SAML_ENTITY_ID', 'FDA_SAML_ACS_URL') if not env_vars.get(key)]
+        if missing:
+            print('[WARNING] FDA SSO requires registered values: ' + ', '.join(missing))
+            if not args.dry_run:
+                sys.exit(1)
     
     # Resolve local-db option
     if args.local_db is not None:
@@ -748,14 +841,14 @@ def main():
     print(f"  Nginx:      {include_nginx}")
 
     # Generate dictionary structure
-    compose_dict = generate_compose_dict(args.mode, args.efficient, local_db_active, args.rapid, include_nginx)
+    compose_dict = generate_compose_dict(args.mode, args.efficient, local_db_active, args.rapid, include_nginx, env_vars)
     
     # Convert to YAML format
     yaml_content = "# Generated dynamically by start_server.py. Do not edit directly.\n"
     yaml_content += dict_to_yaml(compose_dict) + "\n"
 
     # Write to docker-compose.yml
-    compose_file_path = Path("docker-compose.yml")
+    compose_file_path = ROOT / "docker-compose.yml"
     compose_file_path.write_text(yaml_content, encoding="utf-8")
     print(f"Successfully generated and wrote {compose_file_path.resolve()}")
 
@@ -785,9 +878,9 @@ def main():
 
     # Construct and run docker compose command
     if args.down:
-        cmd = ["docker", "compose", "down"]
+        cmd = ["docker", "compose", "down", "--remove-orphans"]
     else:
-        cmd = ["docker", "compose", "up", "-d"]
+        cmd = ["docker", "compose", "up", "-d", "--remove-orphans"]
         if args.build:
             cmd.append("--build")
 
@@ -795,10 +888,14 @@ def main():
     try:
         subprocess.run(cmd, check=True)
         if not args.down:
-            app_url = "http://localhost/fdalabel-v3/" if args.mode == "prod" and include_nginx else "http://localhost:8841/fdalabel-v3/"
+            app_url = sso['SSO_PUBLIC_ORIGIN'] + sso['SSO_APP_BASE'] + '/'
             print("\n" + "=" * 60)
             print(f"[SUCCESS] askFDALabel ({args.mode.upper()} mode) is up and running!")
             print(f"          Application UI: {app_url}")
+            if not args.rapid:
+                folder, _ = prepare_keycloak(ROOT, sso)
+                print(f'          Test SSO:       {sso["KEYCLOAK_PUBLIC_URL"]}')
+                print(f'          Credentials:    {folder / "credentials.json"}')
             if args.mode == "dev":
                 print(f"          Backend API:    http://localhost:8842/health")
             print("=" * 60)

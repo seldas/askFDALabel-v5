@@ -139,6 +139,9 @@ def change_password():
 
     if not new_password:
         return jsonify({'success': False, 'error': 'Password cannot be empty'}), 400
+
+    if current_user.sso_identities:
+        return jsonify({'success': False, 'error': 'SSO passwords are managed by the identity provider.'}), 403
     
     current_user.set_password(new_password)
     db.session.commit()
@@ -149,6 +152,7 @@ def change_password():
 def session():
     """ Returns current user info as JSON. """
     from dashboard.services.ai_handler import _check_is_internal
+    from dashboard.services.saml_service import public_config
     try:
         is_internal = _check_is_internal()
     except Exception as e:
@@ -165,6 +169,9 @@ def session():
             effective_provider = 'elsa' if 'elsa' in allowed_providers else (allowed_providers[0] if allowed_providers else 'elsa')
 
         return jsonify({
+            **public_config(),
+            'auth_method': 'saml' if current_user.sso_identities else 'password',
+            'display_name': current_user.sso_identities[0].display_name if current_user.sso_identities else current_user.username,
             'is_authenticated': True,
             'id': current_user.id,
             'username': current_user.username,
@@ -209,6 +216,7 @@ def session():
             'allowed_ai_providers': allowed_providers
         })
     return jsonify({
+        **public_config(),
         'is_authenticated': False,
         'is_internal': is_internal,
         'api_server_host': os.getenv("API_SERVER_HOST") or os.getenv("DEV_SERVER_HOST") or "ncshpcgpu01.fda.gov",

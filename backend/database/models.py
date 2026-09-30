@@ -153,12 +153,28 @@ class User(UserMixin, db.Model):
     comparisons = db.relationship('FavoriteComparison', backref='user', lazy=True)
 
     def set_password(self, password):
+        if self.sso_identities:
+            raise ValueError('SSO accounts cannot use local passwords')
         self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 
     def check_password(self, password):
+        if self.sso_identities or self.password_hash == '!sso-only':
+            return False
         return check_password_hash(self.password_hash, password)
 
 # --- User Content Models ---
+
+class SsoIdentity(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    identity_key = db.Column(db.String(64), unique=True, nullable=False)
+    issuer = db.Column(db.Text, nullable=False)
+    subject = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True)
+    email = db.Column(db.String(320))
+    display_name = db.Column(db.Text)
+    office = db.Column(db.Text)
+    user = db.relationship('User', backref=db.backref('sso_identities', cascade='all, delete-orphan'))
+
 
 class SearchHistory(db.Model):
     __tablename__ = 'search_history'

@@ -8,7 +8,7 @@ ENV BACKEND_PORT=8842
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential libpq-dev curl \
+    && apt-get install -y --no-install-recommends build-essential libpq-dev curl libxml2-dev libxmlsec1-dev libxmlsec1-openssl pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # Optimize pip with a BuildKit cache mount

@@ -5,7 +5,7 @@ import { useUser } from '../context/UserContext';
 import Modal from './Modal';
 
 export default function AuthModals() {
-  const { authModal, openAuthModal, refreshSession } = useUser();
+  const { session, authModal, openAuthModal, refreshSession } = useUser();
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
 
@@ -69,6 +69,12 @@ export default function AuthModals() {
         onClose={handleClose}
         title="Sign In"
       >
+        {session?.sso_enabled && (
+          <a href={'/api/dashboard/auth/saml/login?next=' + encodeURIComponent(window.location.pathname + window.location.search)}
+             style={{ display: 'block', textAlign: 'center', padding: '14px', marginBottom: '20px', borderRadius: '12px', background: '#002e5d', color: 'white', fontWeight: 700 }}>
+            Sign in with {session.sso_label}
+          </a>
+        )}
         <form onSubmit={handleAuthAction} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {authError && <div style={{ color: '#ef4444', background: '#fef2f2', padding: '14px', borderRadius: '12px', fontSize: '0.875rem', fontWeight: 500, border: '1px solid #fee2e2' }}>{authError}</div>}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -197,7 +203,7 @@ export default function AuthModals() {
           }}>
             <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <li><strong>Registration is free and encouraged.</strong></li>
-              <li>We may switch to Single Sign-On (SSO) in the future.</li>
+              <li>Single Sign-On is available in deployments configured with an identity provider.</li>
               <li>This tool is under development, and personal data may not be saved and transferred to the prod version.</li>
             </ul>
           </div>

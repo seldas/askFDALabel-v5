@@ -6,6 +6,11 @@ import { usePathname, useRouter } from 'next/navigation';
 export type UserRole = 'user' | 'developer' | 'admin';
 
 export interface UserSession {
+  sso_enabled?: boolean;
+  sso_provider?: string;
+  sso_label?: string;
+  auth_method?: 'saml' | 'password';
+  display_name?: string;
   is_authenticated: boolean;
   id?: number;
   is_admin?: boolean;

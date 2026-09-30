@@ -94,6 +94,8 @@ def update_user(user_id):
     if 'is_active' in data:
         user.is_active = data['is_active']
     if 'password' in data and data['password']:
+        if user.sso_identities:
+            return jsonify({'success': False, 'error': 'SSO passwords are managed by the identity provider.'}), 400
         user.set_password(data['password'])
     if 'username' in data:
         new_username = (data['username'] or '').strip().lower()
