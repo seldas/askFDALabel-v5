@@ -69,6 +69,12 @@ class Config:
     if DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+    # SQLAlchemy 2.x defaults to the 'psycopg' (v3) driver for plain
+    # 'postgresql://' URLs, but this project installs psycopg2-binary (v2).
+    # Pin the dialect to psycopg2 so the import resolves correctly.
+    if DATABASE_URL.startswith("postgresql://") and "+psycopg" not in DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+
     # If running outside Docker container, automatically map container DB host 'db' to 'localhost'
     if not os.path.exists('/.dockerenv'):
         if '@db:' in DATABASE_URL:
