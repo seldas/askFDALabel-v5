@@ -1,17 +1,5 @@
-fdalabel-v3-backend  | WARNING:dashboard.routes.saml:SAML validation failed: errors=['invalid_response'] reason=The Assertion must include an AuthnStatement element
-fdalabel-v3-backend  | WARNING:dashboard.routes.saml:Rejected SAML login response
-fdalabel-v3-backend  | Traceback (most recent call last):
-fdalabel-v3-backend  |   File "/app/dashboard/routes/saml.py", line 70, in acs
-fdalabel-v3-backend  |     raise ValueError('SAML response validation failed')
-fdalabel-v3-backend  | ValueError: SAML response validation failed
-fdalabel-v3-backend  | WARNING:dashboard.routes.saml:Rejected SAML login response
-fdalabel-v3-backend  | Traceback (most recent call last):
-fdalabel-v3-backend  |   File "/app/dashboard/routes/saml.py", line 64, in acs
-fdalabel-v3-backend  |     raise ValueError('Login request expired or already used. Start login again.')
-fdalabel-v3-backend  | ValueError: Login request expired or already used. Start login again.
-fdalabel-v3-backend  | WARNING:dashboard.routes.saml:SAML validation failed: errors=['invalid_response'] reason=The Assertion must include an AuthnStatement element
-fdalabel-v3-backend  | WARNING:dashboard.routes.saml:Rejected SAML login response
-fdalabel-v3-backend  | Traceback (most recent call last):
-fdalabel-v3-backend  |   File "/app/dashboard/routes/saml.py", line 70, in acs
-fdalabel-v3-backend  |     raise ValueError('SAML response validation failed')
-fdalabel-v3-backend  | ValueError: SAML response validation failed
+fdalabel-v3-keycloak  | 2026-09-30 16:29:49,786 WARN  [org.keycloak.events] (executor-thread-4) type="LOGIN_ERROR", realmId="f9c51904-9cb9-4ede-b207-57a0b694fd70", realmName="askfdalabel", clientId="https://ncshpcgpu01.fda.gov/fdalabel-v3_api/api/dashboard/auth/saml/metadata", userId="null", ipAddress="10.0.20.53", error="user_not_found", auth_method="saml", redirect_uri="https://ncshpcgpu01.fda.gov/fdalabel-v3_api/api/dashboard/auth/saml/acs", code_id="zsthPHhI9nBT0ruzEuk6uvKr", username="sso-admin"
+fdalabel-v3-keycloak  | 2026-09-30 16:29:52,891 WARN  [org.keycloak.events] (executor-thread-4) type="LOGIN_ERROR", realmId="f9c51904-9cb9-4ede-b207-57a0b694fd70", realmName="askfdalabel", clientId="https://ncshpcgpu01.fda.gov/fdalabel-v3_api/api/dashboard/auth/saml/metadata", userId="null", ipAddress="10.0.20.53", error="user_not_found", auth_method="saml", redirect_uri="https://ncshpcgpu01.fda.gov/fdalabel-v3_api/api/dashboard/auth/saml/acs", code_id="zsthPHhI9nBT0ruzEuk6uvKr", username="sso-admin"
+fdalabel-v3-keycloak  | 2026-09-30 16:30:10,008 WARN  [org.keycloak.events] (executor-thread-4) type="LOGIN_ERROR", realmId="f9c51904-9cb9-4ede-b207-57a0b694fd70", realmName="askfdalabel", clientId="https://ncshpcgpu01.fda.gov/fdalabel-v3_api/api/dashboard/auth/saml/metadata", userId="a4dbc107-f33b-4df8-979f-f925cb49e75f", ipAddress="10.0.20.53", error="invalid_user_credentials", auth_method="saml", redirect_uri="https://ncshpcgpu01.fda.gov/fdalabel-v3_api/api/dashboard/auth/saml/acs", code_id="zsthPHhI9nBT0ruzEuk6uvKr", username="sso-test"
+fdalabel-v3-keycloak  | 2026-09-30 16:30:41,220 WARN  [org.keycloak.events] (executor-thread-8) type="LOGIN_ERROR", realmId="f9c51904-9cb9-4ede-b207-57a0b694fd70", realmName="askfdalabel", clientId="https://ncshpcgpu01.fda.gov/fdalabel-v3_api/api/dashboard/auth/saml/metadata", userId="a4dbc107-f33b-4df8-979f-f925cb49e75f", ipAddress="10.0.20.53", error="invalid_user_credentials", auth_method="saml", redirect_uri="https://ncshpcgpu01.fda.gov/fdalabel-v3_api/api/dashboard/auth/saml/acs", code_id="zsthPHhI9nBT0ruzEuk6uvKr", username="sso-test"
+fdalabel-v3-keycloak  | 2026-09-30 16:31:10,310 WARN  [org.keycloak.events] (executor-thread-8) type="LOGIN_ERROR", realmId="f9c51904-9cb9-4ede-b207-57a0b694fd70", realmName="askfdalabel", clientId="https://ncshpcgpu01.fda.gov/fdalabel-v3_api/api/dashboard/auth/saml/metadata", userId="null", ipAddress="10.0.20.53", error="user_not_found", auth_method="saml", redirect_uri="https://ncshpcgpu01.fda.gov/fdalabel-v3_api/api/dashboard/auth/saml/acs", code_id="zsthPHhI9nBT0ruzEuk6uvKr", username="sso-admin"
