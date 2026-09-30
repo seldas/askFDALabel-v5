@@ -37,6 +37,19 @@ ALL_IMAGES = [
     "fdalabel-v3-redis:latest",
 ]
 
+RAPID_SSO_FILES = [
+    "deploy/sso_config.py",
+    "deploy/SSO_config/sso2.xml",
+    "deploy/SSO_config/rapid_saml_acs.conf",
+]
+
+
+def validate_sso_files():
+    """Do not produce a migration bundle missing required SSO runtime files."""
+    missing = [name for name in RAPID_SSO_FILES if not (REPO_ROOT / name).is_file()]
+    if missing:
+        raise FileNotFoundError("Required RAPID SSO files missing: " + ", ".join(missing))
+
 def run_cmd(cmd, cwd=REPO_ROOT, check=True):
     """Executes a subprocess command with clear logging."""
     cmd_str = " ".join(cmd) if isinstance(cmd, list) else cmd
@@ -113,6 +126,8 @@ def export_images(target_dir, images_to_export):
         print(f"  + Exported: {targz_path.name} ({size_mb:.1f} MB)")
 
 DATA_EXCLUDE_PATTERNS = [
+    "data/keycloak",
+    "data/keycloak/*",
     "*.tmp",
     "*.temp",
     "*.part",
@@ -185,6 +200,7 @@ def archive_files(zip_path, files_to_include, dirs_to_include, exclude_patterns=
 def export_mounted_files(target_dir):
     """Packages mounted files, configuration, and scripts into rapid_files.zip."""
     print("\n--- Packaging RAPID Config & Mount Files ---")
+    validate_sso_files()
     zip_path = target_dir / "rapid_files.zip"
     files = [
         "start_server.py",
@@ -198,7 +214,9 @@ def export_mounted_files(target_dir):
         "deploy/rapid_migration/import_rapid_package.py",
         "deploy/rapid_migration/export_rapid_package.py",
         "deploy/rapid_migration/README.md",
-    ]
+        "documents/operations/rapid_migration_guide.md",
+        "documents/operations/saml_sso.md",
+    ] + RAPID_SSO_FILES
     dirs = [
         "deploy/nginx",
         "backend/database/scripts",
@@ -243,10 +261,12 @@ def main():
     print(f"  Skip Build:  {args.skip_build}")
     print(f"==================================================")
 
+    validate_sso_files()
     if not args.skip_build:
         build_images(images_to_process)
     else:
         print("[INFO] Skipping build step (--skip-build flag set).")
+        print("[NOTICE] Existing backend/frontend images must already include the current SAML dependencies, login routes and SSO home page.")
 
     export_images(target_dir, images_to_process)
     export_mounted_files(target_dir)

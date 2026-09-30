@@ -158,6 +158,37 @@ def unzip_archive(zip_path, dest_dir, exclude_filenames=None):
 
                 print(f"  + Extracted: {member.filename}")
 
+def report_sso_setup(target_dir):
+    """Report SSO setup still needed without changing the target's environment."""
+    required_files = [
+        "deploy/sso_config.py",
+        "deploy/SSO_config/sso2.xml",
+        "deploy/SSO_config/rapid_saml_acs.conf",
+    ]
+    missing_files = [name for name in required_files if not (target_dir / name).is_file()]
+    if missing_files:
+        print("[WARNING] RAPID SSO files missing: " + ", ".join(missing_files))
+        print("          Re-export the package using the updated exporter before starting RAPID.")
+
+    env_path = target_dir / ".env"
+    if env_path.exists():
+        values = {}
+        for raw_line in env_path.read_text(encoding="utf-8-sig").splitlines():
+            line = raw_line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                values[key.strip()] = value.strip().strip('\"\'')
+        required_values = ("FDA_SAML_ENTITY_ID", "FDA_SAML_ACS_URL", "FDA_SAML_ACS_PATH")
+        missing_values = [key for key in required_values if not values.get(key)]
+        if missing_values:
+            print("[NOTICE] Existing .env needs FDA SSO settings: " + ", ".join(missing_values))
+            print("         Merge the SAML section from .env.rapid.template; preserve existing credentials.")
+
+    print("[NOTICE] Apply deploy/SSO_config/rapid_saml_acs.conf to the external RAPID nginx configuration, then validate and reload nginx.")
+    print("         Keep the SP Entity ID and ACS URL exactly as registered with FDA.")
+    print("         RAPID uses FDA SSO; no Keycloak container or test credentials are required.")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Import Docker images and migration packages for RAPID deployment.")
     parser.add_argument("--include-data", action="store_true", default=False,
@@ -220,12 +251,15 @@ def main():
     else:
         print(f"\n[INFO] Preserved existing .env configuration ({target_env}).")
 
+    report_sso_setup(target_dir)
+
     print("\n==================================================")
     print("[COMPLETE] Migration import finished successfully!")
     print("Next steps:")
-    print("  1. Configure .env:             cp .env.rapid.template .env")
+    print("  1. Configure .env: copy .env.rapid.template only for a new deployment; otherwise merge missing settings.")
     print("  2. (If new DB) Restore DB:    python deploy/rapid_migration/restore_db.py")
-    print("  3. Launch RAPID Server:        python start_server.py --rapid")
+    print("  3. Configure external nginx: deploy/SSO_config/rapid_saml_acs.conf")
+    print("  4. Launch RAPID Server:       python start_server.py --rapid")
     print("==================================================")
 
 if __name__ == "__main__":
