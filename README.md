@@ -150,7 +150,8 @@ python start_server.py --mode dev --down
 - `--runtime apptainer|docker`: Select container runtime (defaults to Apptainer on Linux, Docker on Windows).
 - `--efficient`: Run in low-resource mode with reduced workers and database connection limits.
 - `--local-db true|false`: Run a local PostgreSQL container or connect to an external server.
-- `--rapid`: Production mode without Nginx, pre-configured for remote database connections.
+- `--rapid`: Production mode with bundled Nginx, FDA SSO and prebuilt images, pre-configured for remote database connections.
+- `--no-nginx`: Disable bundled Nginx when an external proxy handles all app/API/SSO routes.
 
 #### Standard Docker Compose:
 Once generated via `python start_server.py --runtime docker --dry-run`, standard Docker commands work directly:

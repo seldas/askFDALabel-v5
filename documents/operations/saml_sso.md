@@ -119,9 +119,28 @@ the upstream sends its POST to Flask. These registered values are required for
 actual rapid startup; `--dry-run` warns about missing values and remains usable.
 Rapid derives its public origin from the registered ACS URL; `SSO_PUBLIC_ORIGIN`
 remains a local/HPC Keycloak setting. The FDA ACS must use HTTPS. Next's existing
-base-path-independent `/api/:path*` rewrite forwards the registered callback to
-Flask in rapid mode. Bundled nginx also forwards `/api/auth/saml` directly to
-Flask when nginx is used. The pre-prod upstream must pass this POST through.
+base-path-independent `/api/:path*` rewrite remains available. `--rapid` now
+starts bundled nginx by default. It generates an exact location from the path
+in `FDA_SAML_ACS_URL`, forwarding the SAML POST to `FDA_SAML_ACS_PATH` on Flask
+without an HTTP redirect. This also supports a registered URL with an external
+API prefix, without changing the existing registration. The normal API route
+serves login and completion. RAPID nginx has no Keycloak upstream; non-rapid
+prod nginx retains `/sso/` for Keycloak.
+
+For direct TLS, set `NGINX_CERT_FILE`/`NGINX_KEY_FILE` for local/HPC and
+`RAPID_NGINX_CERT_FILE`/`RAPID_NGINX_KEY_FILE` for RAPID. Paths are host paths,
+absolute or relative to the repo root. Blank local/HPC settings preserve
+`deploy/nginx/cert.pem` and `key.pem`; blank RAPID settings use
+`deploy/nginx/certs/rapid/cert.pem` and `key.pem`, never the HPC pair. Explicit
+missing files or an incomplete pair fail startup. Provision TLS files separately;
+nginx images and migration archives exclude nginx certificates/private keys. Or terminate
+HTTPS upstream and preserve Host and `X-Forwarded-Proto: https` when forwarding
+to bundled nginx. Docker nginx publishes 80/443; rootless Apptainer uses
+8080/8443. Configuration and certificate changes select a new generated
+configuration folder, recreating Docker nginx on the next startup. Apptainer
+restarts its nginx instance to apply the new binds. Dev still uses direct
+8841/8842 ports by default; `--nginx` opts in. Use `--no-nginx` only when an
+external proxy handles all app/API/ACS routes (and `/sso/` in non-rapid).
 
 The backend reads the repository's `deploy/SSO_config/sso2.xml` from `/deploy`.
 Its IdP issuer is `http://sso2.fda.gov`; preserve this identifier exactly. The
@@ -130,7 +149,7 @@ that channel; merely parsing a signed XML file does not authenticate its origin.
 If required, set **both** `SAML_SP_CERT_FILE` and `SAML_SP_KEY_FILE` to backend
 container paths for SP signing/decryption. `/deploy` is mounted in both runtimes.
 
-Rapid uses prebuilt images: build/package the changed backend and frontend before
+Rapid uses prebuilt images: build/package the changed backend, frontend and nginx before
 deploying them. Existing images do not gain SAML support from `.env` alone.
 The SAML toolkit and XML security libraries are in Docker/Apptainer build files.
 

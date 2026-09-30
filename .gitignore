@@ -1,6 +1,7 @@
 # Credentials and SSL
 cert.pem
 key.pem
+deploy/nginx/certs/
 *.key
 *.crt
 *.pem

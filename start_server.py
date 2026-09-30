@@ -6,6 +6,7 @@ import re
 import subprocess
 from pathlib import Path
 from deploy.sso_config import KEYCLOAK_IMAGE, prepare_keycloak, resolve_sso
+from deploy.nginx_config import generate_nginx_config, resolve_nginx_tls
 
 ROOT = Path(__file__).resolve().parent
 APPTAINER_DIR = ROOT / 'deploy' / 'apptainer'
@@ -46,15 +47,15 @@ def _apptainer_instance_exists(name):
     return result.returncode == 0 and re.search(rf'(?<![\w-]){re.escape(name)}(?![\w-])', result.stdout) is not None
 
 
-def _start_apptainer_instance(command, name, args, restart_on_build=False):
+def _start_apptainer_instance(command, name, args, restart_on_build=False, restart=False):
     """Start an instance once, reusing a healthy already-running instance."""
     if args.dry_run:
         _run(command, dry_run=True)
         return
 
     if _apptainer_instance_exists(name):
-        if restart_on_build and args.build:
-            print(f"[INFO] Replacing {name} because its image was rebuilt.")
+        if restart or (restart_on_build and args.build):
+            print(f"[INFO] Replacing {name} to apply updated image or configuration.")
             _run(['apptainer', 'instance', 'stop', name], check=False)
         else:
             print(f"[INFO] Reusing existing Apptainer instance: {name}")
@@ -80,7 +81,7 @@ def run_apptainer(args, env_vars, local_db):
             print("[ERROR] 'apptainer' was not found. Install Apptainer on the Linux host or use --runtime docker.")
             sys.exit(1)
 
-    include_nginx = getattr(args, 'nginx', False) or (args.mode == 'prod' and not getattr(args, 'rapid', False))
+    include_nginx = nginx_enabled(args)
 
     services = ['redis', 'backend', 'celery', 'frontend']
     if local_db:
@@ -282,37 +283,9 @@ def run_apptainer(args, env_vars, local_db):
             APPTAINER_INSTANCES['frontend'], args, restart_on_build=True,
         )
         if include_nginx:
-            nginx_dir = ROOT / 'deploy' / 'nginx'
-            cert = nginx_dir / 'cert.pem'
-            key  = nginx_dir / 'key.pem'
+            cert, key = resolve_nginx_tls(ROOT, env_vars, args.rapid)
 
-            # Docker uses container DNS names ("backend", "frontend").  Apptainer
-            # shares the host network so we must replace those with 127.0.0.1.
-            # Generate patched copies under deploy/apptainer/nginx_generated/ so
-            # the originals (used by Docker) are never modified.
-            nginx_gen_dir = APPTAINER_DIR / 'nginx_generated'
-            nginx_gen_dir.mkdir(exist_ok=True)
-
-            for src_name, dst_name in [('default.conf', 'default.conf'),
-                                        ('ssl.conf.template', 'ssl.conf')]:
-                src = nginx_dir / src_name
-                dst = nginx_gen_dir / dst_name
-                content = src.read_text()
-                # Remap Docker service names to localhost
-                content = content.replace('http://backend:', 'http://127.0.0.1:')
-                content = content.replace('http://frontend:', 'http://127.0.0.1:')
-                content = content.replace('http://keycloak:8080', 'http://127.0.0.1:8843')
-                if args.rapid:
-                    content = re.sub(r'    # Test SAML IdP.*?    # End test SAML IdP\n', '', content, flags=re.S)
-                if src_name == 'default.conf' and not (cert.exists() and key.exists()):
-                    content = content.replace('default 1;', 'default 0;').replace('"~^http:.*$" 1;', '"~^http:.*$" 0;')
-                    content = content.replace('include /etc/nginx/conf.d/ssl.conf;', '')
-                if src_name == 'ssl.conf.template' and not (cert.exists() and key.exists()):
-                    content = '# SSL disabled: no certificate configured\n'
-                # Use unprivileged ports (rootless Apptainer cannot bind <1024)
-                content = content.replace('listen 80;', 'listen 8080;')
-                content = content.replace('listen 443 ssl;', 'listen 8443 ssl;')
-                dst.write_text(content)
+            nginx_gen_dir = generate_nginx_config(ROOT, sso_config, args.rapid, 'apptainer', env_vars)
 
             # Patch nginx.conf: remove 'user nginx' (rootless) and redirect
             # pid/logs to /tmp which is writable in a rootless Apptainer container.
@@ -347,7 +320,7 @@ def run_apptainer(args, env_vars, local_db):
                 f'{nginx_gen_dir}/default.conf:/etc/nginx/conf.d/default.conf,'
                 f'{nginx_gen_dir}/ssl.conf:/etc/nginx/conf.d/ssl.conf'
             )
-            if cert.exists() and key.exists():
+            if cert is not None:
                 nginx_binds += (
                     f',{cert}:/etc/nginx/certs/cert.pem'
                     f',{key}:/etc/nginx/certs/key.pem'
@@ -355,7 +328,7 @@ def run_apptainer(args, env_vars, local_db):
             _start_apptainer_instance(
                 ['apptainer', 'instance', 'start', '--bind', nginx_binds,
                  str(nginx_image), APPTAINER_INSTANCES['nginx']],
-                APPTAINER_INSTANCES['nginx'], args, restart_on_build=True,
+                APPTAINER_INSTANCES['nginx'], args, restart=True,
             )
     finally:
         os.environ.clear(); os.environ.update(old_env)
@@ -442,9 +415,15 @@ def dict_to_yaml(data, indent=0):
                     lines.append(f"{spacer}- {item_str}")
     return "\n".join(lines)
 
-def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=False, env_vars=None):
+def nginx_enabled(args):
+    return not getattr(args, 'no_nginx', False) and (getattr(args, 'nginx', False) or args.mode == 'prod' or args.rapid)
+
+
+def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=None, env_vars=None):
     """Builds the dictionary representation of docker-compose based on options."""
     services = {}
+    if include_nginx is None:
+        include_nginx = mode == 'prod' or rapid
     env_vars = load_env(ROOT / '.env') if env_vars is None else env_vars
     sso_config = resolve_sso(env_vars, mode, rapid, include_nginx)
     if not rapid:
@@ -706,7 +685,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
             "depends_on": ["frontend", "backend"] + ([] if rapid else ['keycloak']),
             "ports": ["80:80", "443:443"],
             "healthcheck": {
-                "test": ["CMD-SHELL", "curl -f http://localhost/fdalabel-v3/ || exit 1"],
+                "test": ["CMD-SHELL", f"curl -f http://localhost{sso_config['SSO_APP_BASE']}/ || exit 1"],
                 "interval": "30s",
                 "timeout": "5s",
                 "retries": 5,
@@ -721,16 +700,22 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
             },
             "restart": "always"
         }
-        # --rapid --nginx has no test IdP and must not reference its DNS name.
+        generated = generate_nginx_config(ROOT, sso_config, rapid, env=env_vars)
+        nginx_service['volumes'] = [
+            f'./data/{generated.name}:/etc/nginx/conf.d',
+            f'./data/{generated.name}/certs:/etc/nginx/certs:ro',
+        ]
+        cert, key = resolve_nginx_tls(ROOT, env_vars, rapid)
+        if cert is not None:
+            nginx_service['volumes'].extend([
+                {'type': 'bind', 'source': cert.as_posix(), 'target': '/etc/nginx/certs/cert.pem',
+                 'read_only': True, 'bind': {'create_host_path': False}},
+                {'type': 'bind', 'source': key.as_posix(), 'target': '/etc/nginx/certs/key.pem',
+                 'read_only': True, 'bind': {'create_host_path': False}},
+            ])
         if rapid:
-            generated = ROOT / 'data' / 'nginx-rapid'
-            generated.mkdir(parents=True, exist_ok=True)
-            for source in ('default.conf', 'ssl.conf.template'):
-                content = (ROOT / 'deploy' / 'nginx' / source).read_text(encoding='utf-8')
-                content = re.sub(r'    # Test SAML IdP.*?    # End test SAML IdP\n', '', content, flags=re.S)
-                target = generated / ('ssl.conf' if source == 'ssl.conf.template' else source)
-                target.write_text(content, encoding='utf-8')
-            nginx_service['volumes'] = ['./data/nginx-rapid:/etc/nginx/conf.d']
+            # Offline RAPID uses the image loaded from the migration package.
+            nginx_service.pop('build')
         services["nginx"] = nginx_service
 
     compose_dict = {
@@ -794,9 +779,12 @@ def main():
     parser.add_argument("--dry-run", action="store_true",
                         help="Generate docker-compose.yml but do not execute any docker compose commands")
     parser.add_argument("--rapid", action="store_true",
-                        help="Start in rapid mode: no NGINX, no build, uses remote database by default")
-    parser.add_argument("--nginx", action="store_true",
-                        help="Force include and start Nginx service (under deploy/nginx) in the stack")
+                        help="Start in rapid mode: FDA SSO, internal Nginx, prebuilt images and remote database")
+    nginx_flags = parser.add_mutually_exclusive_group()
+    nginx_flags.add_argument("--nginx", action="store_true",
+                        help="Include Nginx (default in prod and rapid; optional in dev)")
+    nginx_flags.add_argument("--no-nginx", action="store_true",
+                             help="Disable bundled Nginx when an external proxy handles routing")
 
     args = parser.parse_args()
 
@@ -806,7 +794,7 @@ def main():
     # Load environment variables to resolve DB mode
     env_vars = load_env(ROOT / '.env')
     sso = resolve_sso(env_vars, args.mode, args.rapid,
-                      args.nginx or (args.mode == 'prod' and not args.rapid), args.runtime)
+                      nginx_enabled(args), args.runtime)
     if args.rapid and not args.down:
         missing = [key for key in ('FDA_SAML_ENTITY_ID', 'FDA_SAML_ACS_URL') if not env_vars.get(key)]
         if missing:
@@ -827,7 +815,7 @@ def main():
         else:
             local_db_active = True # Default fallback
 
-    include_nginx = args.nginx or (args.mode == "prod" and not args.rapid)
+    include_nginx = nginx_enabled(args)
 
     if args.runtime == 'apptainer':
         run_apptainer(args, env_vars, local_db_active)

@@ -4,6 +4,7 @@ import json
 import secrets
 from pathlib import Path
 from urllib.parse import urlsplit
+from deploy.nginx_config import resolve_nginx_tls
 
 KEYCLOAK_IMAGE = 'quay.io/keycloak/keycloak:26.7.4'
 KEYCLOAK_REALM_REVISION = 1
@@ -27,8 +28,8 @@ def resolve_sso(env, mode, rapid=False, nginx=False, runtime='docker'):
         use_public_host = runtime == 'apptainer' or mode == 'prod'
         host = (env.get('API_SERVER_HOST') or env.get('NEXT_PUBLIC_API_SERVER_HOST') or 'localhost') if use_public_host else 'localhost'
         port = ':8443' if runtime == 'apptainer' else ''
-        nginx_dir = Path(__file__).resolve().parent / 'nginx'
-        tls = (nginx_dir / 'cert.pem').exists() and (nginx_dir / 'key.pem').exists()
+        cert, _ = resolve_nginx_tls(Path(__file__).resolve().parents[1], env, rapid) if nginx else (None, None)
+        tls = cert is not None
         origin = f'{"https" if tls else "http"}://{host}{port if tls else (":8080" if runtime == "apptainer" else "")}' if nginx else f'http://{host}:8841'
     app_base = (env.get('NEXT_PUBLIC_APP_BASE') or env.get('NEXT_PUBLIC_DASHBOARD_BASE') or '/fdalabel-v3').rstrip('/')
     api_base = env.get('NEXT_PUBLIC_API_BASE', '/fdalabel-v3_api').rstrip('/')

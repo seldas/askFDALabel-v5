@@ -27,6 +27,7 @@ DEFAULT_RAPID_IMAGES = [
     "fdalabel-v3-backend:latest",
     "fdalabel-v3-frontend:latest",
     "fdalabel-v3-redis:latest",
+    "fdalabel-v3-nginx:latest",
 ]
 
 ALL_IMAGES = [
@@ -39,6 +40,7 @@ ALL_IMAGES = [
 
 RAPID_SSO_FILES = [
     "deploy/sso_config.py",
+    "deploy/nginx_config.py",
     "deploy/SSO_config/sso2.xml",
     "deploy/SSO_config/rapid_saml_acs.conf",
 ]
@@ -224,7 +226,12 @@ def export_mounted_files(target_dir):
         "backend/webtest/history",
         "frontend/public",
     ]
-    archive_files(zip_path, files, dirs, exclude_patterns=["*.pyc", "__pycache__", ".DS_Store", "Thumbs.db", ".env", "*.env"])
+    archive_files(zip_path, files, dirs, exclude_patterns=[
+        "*.pyc", "__pycache__", ".DS_Store", "Thumbs.db", ".env", "*.env",
+        "deploy/nginx/certs", "deploy/nginx/certs/*",
+        "deploy/nginx/*.pem", "deploy/nginx/*.key", "deploy/nginx/*.crt",
+        "deploy/nginx/*.p12", "deploy/nginx/*.pfx",
+    ])
     print(f"[SUCCESS] Created config archive: {zip_path}")
 
 def export_data_folder(target_dir):
@@ -266,7 +273,7 @@ def main():
         build_images(images_to_process)
     else:
         print("[INFO] Skipping build step (--skip-build flag set).")
-        print("[NOTICE] Existing backend/frontend images must already include the current SAML dependencies, login routes and SSO home page.")
+        print("[NOTICE] Existing backend/frontend/nginx images must already include the current SAML dependencies, login routes, SSO home page and nginx entrypoint.")
 
     export_images(target_dir, images_to_process)
     export_mounted_files(target_dir)

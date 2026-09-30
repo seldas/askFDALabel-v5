@@ -162,6 +162,7 @@ def report_sso_setup(target_dir):
     """Report SSO setup still needed without changing the target's environment."""
     required_files = [
         "deploy/sso_config.py",
+        "deploy/nginx_config.py",
         "deploy/SSO_config/sso2.xml",
         "deploy/SSO_config/rapid_saml_acs.conf",
     ]
@@ -184,7 +185,11 @@ def report_sso_setup(target_dir):
             print("[NOTICE] Existing .env needs FDA SSO settings: " + ", ".join(missing_values))
             print("         Merge the SAML section from .env.rapid.template; preserve existing credentials.")
 
-    print("[NOTICE] Apply deploy/SSO_config/rapid_saml_acs.conf to the external RAPID nginx configuration, then validate and reload nginx.")
+    print("[NOTICE] RAPID starts bundled nginx with an ACS route generated from the FDA registration settings.")
+    print("         Configure RAPID_NGINX_CERT_FILE/RAPID_NGINX_KEY_FILE (default: deploy/nginx/certs/rapid/cert.pem and key.pem).")
+    print("         Provision RAPID TLS files separately; packages/images exclude nginx certificates and private keys.")
+    print("         Alternatively terminate HTTPS upstream, preserving Host and X-Forwarded-Proto.")
+    print("         Only with --no-nginx: apply deploy/SSO_config/rapid_saml_acs.conf to your external nginx configuration.")
     print("         Keep the SP Entity ID and ACS URL exactly as registered with FDA.")
     print("         RAPID uses FDA SSO; no Keycloak container or test credentials are required.")
 
@@ -258,7 +263,7 @@ def main():
     print("Next steps:")
     print("  1. Configure .env: copy .env.rapid.template only for a new deployment; otherwise merge missing settings.")
     print("  2. (If new DB) Restore DB:    python deploy/rapid_migration/restore_db.py")
-    print("  3. Configure external nginx: deploy/SSO_config/rapid_saml_acs.conf")
+    print("  3. Configure RAPID nginx TLS paths, or upstream TLS termination.")
     print("  4. Launch RAPID Server:       python start_server.py --rapid")
     print("==================================================")
 

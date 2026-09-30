@@ -8,9 +8,7 @@ COPY ssl.conf.template /etc/nginx/conf.d/ssl.conf
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh && sed -i 's/\r//' /entrypoint.sh
 
-# Use wildcard COPY with a sentinel file (default.conf) to avoid failure if .pem files don't exist
-# cert.pem and key.pem will be in /etc/nginx/certs/ if they exist in build context
-COPY default.conf cert.pem* key.pem* /etc/nginx/certs/
+# TLS certificates are selected per environment and mounted at runtime.
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]

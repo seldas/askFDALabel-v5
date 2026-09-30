@@ -3,15 +3,11 @@
 # Path to the certs
 CERT_SRC="/etc/nginx/certs/cert.pem"
 KEY_SRC="/etc/nginx/certs/key.pem"
-CERT_DEST="/etc/nginx/certs/askfdalabel.crt"
-KEY_DEST="/etc/nginx/certs/askfdalabel.key"
 CONF_FILE="/etc/nginx/conf.d/default.conf"
 SSL_ENABLED="/etc/nginx/conf.d/ssl.conf"
 
 if [ -f "$CERT_SRC" ] && [ -f "$KEY_SRC" ]; then
     echo "Certificates found. Enabling HTTPS."
-    cp "$CERT_SRC" "$CERT_DEST"
-    cp "$KEY_SRC" "$KEY_DEST"
     # Dockerfile installs ssl.conf.template as ssl.conf, already included by nginx.
     # Ensure redirect is enabled in map
     sed -i 's/default 0;/default 1;/g' "$CONF_FILE"

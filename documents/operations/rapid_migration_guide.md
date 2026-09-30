@@ -13,13 +13,13 @@ It packages production Docker images, mount scripts, and configuration files int
 Run on the **source machine** (where the app is built and running):
 
 ```bash
-# Basic export (exports backend, frontend, and redis images + rapid_files.zip)
+# Basic export (exports backend, frontend, redis and nginx + rapid_files.zip)
 python deploy/rapid_migration/export_rapid_package.py
 
 # Include full persistent data directory (data.zip)
 python deploy/rapid_migration/export_rapid_package.py --include-data
 
-# Export all images (including Nginx and DB containers)
+# Export all images (also includes the local DB container)
 python deploy/rapid_migration/export_rapid_package.py --all-images
 ```
 
@@ -27,12 +27,13 @@ python deploy/rapid_migration/export_rapid_package.py --all-images
 - `image_backend.tar.gz`: Compressed backend Docker image.
 - `image_frontend.tar.gz`: Compressed frontend Docker image.
 - `image_redis.tar.gz`: Compressed Redis Docker image.
-- `rapid_files.zip`: Project orchestrator (`start_server.py`), templates, mount scripts, and database initialization utilities. Includes `deploy/sso_config.py`, FDA IdP metadata (`deploy/SSO_config/sso2.xml`), the external nginx ACS snippet (`deploy/SSO_config/rapid_saml_acs.conf`), and migration/SSO documentation.
+- `image_nginx.tar.gz`: Compressed nginx Docker image (included by default).
+- `rapid_files.zip`: Project orchestrator (`start_server.py`), templates, mount scripts, and database initialization utilities. Includes `deploy/sso_config.py`, `deploy/nginx_config.py`, FDA IdP metadata (`deploy/SSO_config/sso2.xml`), the external nginx ACS snippet (`deploy/SSO_config/rapid_saml_acs.conf`), and migration/SSO documentation.
 - `data.zip` (Optional): Application `data/` directory (temporary download files, caches, `spl_cache`, and local/HPC test Keycloak profiles are excluded).
 
-Rebuild backend and frontend images when exporting an SSO update (the default).
+Rebuild backend, frontend and nginx images when exporting an SSO update (the default).
 Use `--skip-build` only if the local images already contain the current SAML
-dependencies, authentication routes, and SSO login page. RAPID uses FDA SSO and
+dependencies, authentication routes, SSO login page, and updated nginx entrypoint. RAPID uses FDA SSO and
 does not need a Keycloak image or test accounts. Export fails if required SSO
 runtime files are missing; diagnostic logs and optional SP private keys are not
 included in the SSO file list.
@@ -73,7 +74,7 @@ cp .env.rapid.template .env
 # 3. Restore database dump (if target is a fresh database)
 python deploy/rapid_migration/restore_db.py
 
-# 4. Configure the external nginx ACS route (see below), validate and reload nginx
+# 4. Configure nginx TLS certificates or upstream TLS termination (see below)
 
 # 5. Launch server in RAPID mode
 python start_server.py --rapid
@@ -81,7 +82,7 @@ python start_server.py --rapid
 
 ### Safety Features of `import_rapid_package.py`:
 - **Protected Environment**: Never overwrites an existing target `.env` file during zip extraction.
-- **SSO Setup Notices**: Reports missing SSO runtime files or blank/missing FDA registration settings in the preserved `.env`, and reminds you to configure external nginx. It does not change environment values or apply nginx configuration automatically.
+- **SSO Setup Notices**: Reports missing SSO runtime files or blank/missing FDA registration settings in the preserved `.env`, and reminds you to configure TLS. It does not change environment values. The startup orchestrator generates the nginx routes.
 - **Automated Schema Healing**: On startup in RAPID mode, backend `ensure_user_schema()` automatically adapts existing databases (e.g. converting legacy `citext` columns to `varchar(100)`).
 
 ### FDA SSO setup on the target
@@ -100,11 +101,22 @@ origin from `FDA_SAML_ACS_URL`, and reads the packaged metadata through the
 the configured `SAML_SP_CERT_FILE` and `SAML_SP_KEY_FILE` separately at paths
 accessible inside the backend container.
 
-The RAPID nginx server is managed outside this package. Copy the location block
-from `deploy/SSO_config/rapid_saml_acs.conf` into its HTTPS server configuration,
-run `nginx -t`, then reload nginx using the host's normal service procedure. Keep
-the existing app and API proxy routes as well; login and completion use those
-routes, while the registered ACS uses the exact `/api/auth/saml` route.
+RAPID starts the bundled nginx by default and generates an exact ACS location
+from `FDA_SAML_ACS_URL`, forwarding the POST directly to `FDA_SAML_ACS_PATH`.
+Login and completion use the normal API routes. No Keycloak route is generated.
+TLS files are provisioned separately on each target and mounted read-only. The
+nginx image and migration archive omit nginx certificates/private keys; RAPID
+never falls back to a local/HPC certificate.
+Configure `RAPID_NGINX_CERT_FILE` and `RAPID_NGINX_KEY_FILE` with RAPID host
+paths (default `deploy/nginx/certs/rapid/cert.pem` and `key.pem`), or terminate TLS upstream
+and preserve Host and `X-Forwarded-Proto: https`. Docker publishes nginx 80/443;
+rootless Apptainer uses 8080/8443. Non-rapid prod retains its Keycloak `/sso/` route.
+
+If an external proxy must handle all routes instead, start with `--no-nginx`.
+Only in that setup, apply `deploy/SSO_config/rapid_saml_acs.conf` to the external
+nginx (adjust for a different registered path), validate and reload it. Keep the
+normal app/API proxy routes too. Existing packages without the nginx image must
+be re-exported or have the rebuilt nginx image transferred before normal rapid startup.
 
 For a new target database, restore the full database dump to preserve users and
 their SSO identity associations. The updated backend creates the SSO identity
