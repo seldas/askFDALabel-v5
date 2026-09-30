@@ -57,6 +57,8 @@ def resolve_sso(env, mode, rapid=False, nginx=False, runtime='docker'):
         config.update({
             'KEYCLOAK_PUBLIC_URL': public,
             'KEYCLOAK_RELATIVE_PATH': relative,
+            'KEYCLOAK_TEST_USERNAME': env.get('KEYCLOAK_TEST_USERNAME') or 'leihong',
+            'KEYCLOAK_TEST_PASSWORD': env.get('KEYCLOAK_TEST_PASSWORD') or '1986414',
             'SAML_IDP_METADATA_URL': internal + '/realms/askfdalabel/protocol/saml/descriptor',
             'SAML_IDP_ENTITY_ID': public + '/realms/askfdalabel',
         })
@@ -95,7 +97,8 @@ def prepare_keycloak(root, config):
     if not credentials_file.exists():
         credentials_file.write_text(json.dumps({
             'admin_username': 'sso-admin', 'admin_password': secrets.token_urlsafe(24),
-            'test_username': 'sso-test', 'test_password': secrets.token_urlsafe(18),
+            'test_username': config['KEYCLOAK_TEST_USERNAME'],
+            'test_password': config['KEYCLOAK_TEST_PASSWORD'],
         }, indent=2), encoding='utf-8')
         credentials_file.chmod(0o600)
     credentials = json.loads(credentials_file.read_text(encoding='utf-8'))

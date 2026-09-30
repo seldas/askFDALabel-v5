@@ -28,8 +28,12 @@ KEYCLOAK_SP_ENTITY_ID=
 Run `python start_server.py --runtime docker --mode dev --build`. Open
 `http://localhost:8841/fdalabel-v3/` and select **Sign in with Test SSO (Keycloak)**.
 Keycloak is at `http://localhost:8843`. The starter prints the credentials file
-path (`data/keycloak/<profile>/credentials.json`); use its `test_username` and
-`test_password`. The separate generated admin credentials open Keycloak's console.
+path (`data/keycloak/<profile>/credentials.json`). The default application test
+login is **leihong / 1986414**, configurable through `KEYCLOAK_TEST_USERNAME` and
+`KEYCLOAK_TEST_PASSWORD` in `.env`. These settings apply to local/HPC Keycloak
+only and do not affect rapid/FDA SSO. The separate randomly generated admin
+credentials open Keycloak's console in the `master` realm; `sso-admin` is not an
+application login in the `askfdalabel` realm.
 Keep the same browser hostname throughout login (do not alternate localhost and
 127.0.0.1). No FDA registration or FDA account is needed.
 
@@ -91,6 +95,13 @@ reusing a realm import with stale ACS URLs. Repeated startup with the same
 configuration preserves accounts and signing keys. If changing SSO configuration
 on Apptainer, stop the old stack with `--down` before starting again; running
 instances otherwise retain their original environment. `--down` keeps IdP data.
+
+Changing either test credential selects a new profile on the next startup, so
+Keycloak imports the requested account rather than skipping an existing realm.
+Old profiles and their users remain stored. Use the credentials path printed by
+the current startup; after a profile change, passwords from older profiles do
+not apply. For Docker, rerun the startup command to recreate the container with
+its new volume. For Apptainer, stop the old instances before starting again.
 
 ### FDA / rapid
 
