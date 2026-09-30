@@ -1,0 +1,168 @@
+import { NextRequest } from 'next/server';
+import { parseSAMLResponse, SAMLUser } from '@/lib/authentication/saml';
+import { getLogger } from '@/logging';
+import { db } from '@/lib/data-access/database';
+import { AuthenticatedUser } from '@/lib/authentication/authenticated-user';
+import { COOKIE_NAME, createSessionToken, SESSION_MAX_AGE_SECONDS } from '@/lib/authentication/jwt';
+import { shortRandomString } from '@/lib/util/strings';
+
+const log = getLogger('auth');
+const devMode = process.env.NODE_ENV === 'development';
+const autoCreateUsers = 'true';
+
+
+export async function POST(request: NextRequest) {
+  try {
+    const rawBody = await request.text();
+    const params = new URLSearchParams(rawBody);
+    const samlResponse = params.get('SAMLResponse');
+
+    if (!samlResponse) {
+      return createSamlRedirectResponse('/auth/error?error=MissingSAMLResponse');
+    }
+
+    console.log("Parsing SAML response...");
+    const user = await parseSAMLResponse(samlResponse);
+    if (!user) {
+      return createSamlRedirectResponse('/auth/error?error=UserNotFound');
+    }
+    const res = await findOrCreateUser(user)
+    if(!res.success || !res.user){
+      return createSamlRedirectResponse(`/auth/error?error=${res.message}`)
+    }
+
+    const authenticatedUser: AuthenticatedUser = {
+      username: res.user.username,
+      fda_uid: res.user.fda_uid,
+      first_name: res.user.first_name,
+      last_name: res.user.last_name,
+      is_general_admin: res.user.is_general_admin,
+    };
+
+
+    const sessionToken = await createSessionToken(authenticatedUser);
+    return createSamlRedirectResponse('/', sessionToken);
+
+  } catch (error) {
+    console.error('SAML callback error:', error);
+    return createSamlRedirectResponse('/auth/error?error=SAMLCallbackFailed');
+  }
+}
+
+
+async function findOrCreateUser(user: SAMLUser):Promise<{success: boolean, message: string, user?: AuthenticatedUser}> {
+  const lowerCaseEmail = user.email.toLowerCase()
+  let dbUser = await db()
+    .selectFrom('appuser')
+    .select([
+      'username',
+      'fda_uid',
+      'fda_dn',
+      'first_name',
+      'last_name',
+      'middle_initials',
+      'is_general_admin',
+      'password',
+      'disabled'
+    ])
+    .where((eb) => eb.fn('lower', ['username']), '=', lowerCaseEmail)
+    .executeTakeFirst();
+
+  if (!dbUser) {
+    // User doesn't exist - create new user if auto-creation is enabled
+    if (autoCreateUsers) {
+      log.info(`Creating new user: ${lowerCaseEmail}`);
+
+      try {
+        await db()
+          .insertInto('appuser')
+          .values({
+            username: lowerCaseEmail,
+            fda_uid: shortRandomString(12),
+            fda_dn: null,
+            first_name: user.name.split(".")[0] ?? "NA",
+            last_name: user.name.split(".")[1] ?? "NA",
+            middle_initials: null,
+            is_general_admin: devMode? true: false, // new user is not admin by default
+            disabled: devMode? false: true, // new user is disable by default
+            password: undefined,
+          })
+          .execute();
+
+        // Fetch the newly created user
+        dbUser = await db()
+          .selectFrom('appuser')
+          .select([
+            'username',
+            'fda_uid',
+            'fda_dn',
+            'first_name',
+            'last_name',
+            'middle_initials',
+            'is_general_admin',
+            'password',
+            'disabled'
+          ])
+          .where((eb) => eb.fn('lower', ['username']), '=', lowerCaseEmail)
+          .executeTakeFirst();
+
+        log.info(`Successfully created new user: ${lowerCaseEmail}`);
+      } catch (dbError) {
+        console.log(`Failed to create user ${lowerCaseEmail}:`, dbError);
+        return {success: false, message: 'UserCreateFailed'} ;
+      }
+    } else {
+      // Auto-creation disabled - user not found
+      log.warn(`User not found and auto-creation disabled: ${lowerCaseEmail}`);
+      return {success: false, message: 'UserNotFound'} ; 
+    }
+  }
+  
+  if (dbUser === undefined) {
+    log.warn('Error forming user account info.');
+    return {success: false, message: 'MalformedUser'};
+  }
+
+  if (dbUser?.disabled) {
+    log.warn(`User account is disabled: ${lowerCaseEmail}`);
+    return {success: false, message: 'ACCOUNTDISABLED'} ; 
+  }
+
+
+  const userInfo: AuthenticatedUser = {
+    ...dbUser,
+    password: dbUser.password == null ? undefined : dbUser.password
+  }
+
+  return {success: true, message: 'Success', user: userInfo}
+}
+
+// Create a utility function
+function createSamlRedirectResponse(location: string, sessionToken?: string) {
+  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const response = new Response(null, {
+    status: 302,
+    headers: { Location: `${baseUrl}${location}` }
+  });
+
+  if (sessionToken) {
+    response.headers.set('Set-Cookie',
+      `${COOKIE_NAME}=${sessionToken}; HttpOnly; ${!devMode ? 'Secure; ' : ''}SameSite=Lax; Max-Age=${SESSION_MAX_AGE_SECONDS}; Path=/`
+    );
+    response.headers.append('Set-Cookie',
+      'auth_state=; HttpOnly; SameSite=Lax; Max-Age=0; Path=/'
+    );
+
+    //set new login flag to display welcome dialog
+    response.headers.append(
+      'Set-Cookie',
+      `just_logged_in=1; ${!devMode ? 'Secure; ' : ''}SameSite=Lax; Max-Age=60; Path=/`
+    );
+
+  }
+
+  return response;
+}
+
+# Entity Id : https://askfdalabel-nctr.preprod.fda.gov 
+# ACS URL: https://askfdalabel-nctr.preprod.fda.gov/api/auth/saml 
