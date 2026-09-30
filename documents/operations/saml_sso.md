@@ -35,6 +35,14 @@ Keep the same browser hostname throughout login (do not alternate localhost and
 
 ### HPC
 
+Docker `--mode prod` now derives its default public host from `API_SERVER_HOST`
+(falling back to `NEXT_PUBLIC_API_SERVER_HOST`). A matching `NEXT_PUBLIC_WIDGET_HOST`
+provides the public scheme and port, including upstream HTTPS termination.
+With the repository's HPC settings this produces `https://ncshpcgpu01.fda.gov`
+and Keycloak at `https://ncshpcgpu01.fda.gov/sso`. Docker dev keeps localhost by
+default. An explicit `SSO_PUBLIC_ORIGIN` always overrides those Keycloak defaults;
+remove a leftover localhost override when deploying to HPC.
+
 Set the origin to the exact address used by browsers, for example:
 
 ```
@@ -57,6 +65,14 @@ Without nginx (`--mode dev`), the default Keycloak address is
 host port 8843. If an HPC proxy provides the browser-facing address instead, set
 `KEYCLOAK_PUBLIC_URL` to that address and preserve its configured path. Do not expose the app at
 an HPC address while leaving the IdP hostname set to localhost.
+
+After correcting an old localhost deployment, run the startup command again with
+`--build`. Docker recreates services with the corrected URLs and selects a new
+Keycloak profile, so use the credentials path printed by this startup (the old
+profile and its data are preserved). Start a fresh login from the HPC URL;
+previous AuthnRequests cannot be reused. If ACS still reports failure, inspect
+the backend's `SAML validation failed` log for the toolkit's validation reason;
+the public error remains generic and SAML XML is not logged.
 
 Docker uses private named volumes for Keycloak's file DB; Apptainer uses
 `data/keycloak/<profile>/db`. URL configurations get distinct profiles to avoid

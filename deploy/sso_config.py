@@ -15,8 +15,16 @@ def resolve_sso(env, mode, rapid=False, nginx=False, runtime='docker'):
     if rapid and registered_acs:
         parsed_acs = urlsplit(registered_acs)
         origin = f'{parsed_acs.scheme}://{parsed_acs.netloc}'
+    # Docker prod is also used on HPC. Use its configured public address rather
+    # than publishing localhost in the realm issuer, ACS and completion URLs.
+    if not origin and not rapid and runtime == 'docker' and mode == 'prod':
+        host = env.get('API_SERVER_HOST') or env.get('NEXT_PUBLIC_API_SERVER_HOST')
+        widget = urlsplit(env.get('NEXT_PUBLIC_WIDGET_HOST', ''))
+        if widget.scheme in ('http', 'https') and widget.netloc and (not host or widget.hostname == host):
+            origin = f'{widget.scheme}://{widget.netloc}'
     if not origin:
-        host = (env.get('API_SERVER_HOST') or 'localhost') if runtime == 'apptainer' else 'localhost'
+        use_public_host = runtime == 'apptainer' or mode == 'prod'
+        host = (env.get('API_SERVER_HOST') or env.get('NEXT_PUBLIC_API_SERVER_HOST') or 'localhost') if use_public_host else 'localhost'
         port = ':8443' if runtime == 'apptainer' else ''
         nginx_dir = Path(__file__).resolve().parent / 'nginx'
         tls = (nginx_dir / 'cert.pem').exists() and (nginx_dir / 'key.pem').exists()

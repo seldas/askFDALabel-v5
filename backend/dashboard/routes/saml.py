@@ -9,6 +9,7 @@ import hashlib
 import logging
 import secrets
 import time
+from urllib.parse import urlencode, urlsplit
 
 from flask import Blueprint, Response, jsonify, redirect, request, session
 from flask_login import login_user
@@ -31,6 +32,12 @@ def private_response(response):
 @rate_limit('10 per minute')
 def login():
     try:
+        if saml.public_config()['sso_enabled']:
+            canonical = saml.endpoint('/login')
+            if urlsplit(request.host_url).hostname != urlsplit(canonical).hostname:
+                # Start the flow on the same host as ACS so the browser-bound
+                # session cookie will be available when login completes.
+                return redirect(canonical + '?' + urlencode({'next': saml.safe_next(request.args.get('next'))}))
         auth = saml.toolkit()
         token = secrets.token_urlsafe(32)
         url = auth.login(return_to=token)
@@ -58,6 +65,8 @@ def acs():
         auth = saml.toolkit(request.form.to_dict())
         auth.process_response(request_id=flow['request_id'])
         if auth.get_errors() or not auth.is_authenticated():
+            logger.warning('SAML validation failed: errors=%s reason=%s',
+                           auth.get_errors(), (auth.get_last_error_reason() or '')[:1024])
             raise ValueError('SAML response validation failed')
         subject = auth.get_nameid()
         attrs = auth.get_attributes()
