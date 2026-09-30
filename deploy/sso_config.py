@@ -6,6 +6,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 KEYCLOAK_IMAGE = 'quay.io/keycloak/keycloak:26.7.4'
+KEYCLOAK_REALM_REVISION = 1
 AUTH_PATH = '/api/dashboard/auth/saml'
 
 
@@ -81,7 +82,10 @@ def resolve_sso(env, mode, rapid=False, nginx=False, runtime='docker'):
 
 def prepare_keycloak(root, config):
     """One persistent realm per URL configuration; import never silently goes stale."""
-    profile = hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()[:12]
+    # Keycloak skips imports into an existing realm. Version the profile when
+    # the realm template changes so restarting actually applies those changes.
+    profile_data = {'config': config, 'realm_revision': KEYCLOAK_REALM_REVISION}
+    profile = hashlib.sha256(json.dumps(profile_data, sort_keys=True).encode()).hexdigest()[:12]
     folder = Path(root) / 'data' / 'keycloak' / profile
     (folder / 'import').mkdir(parents=True, exist_ok=True)
     (folder / 'import').chmod(0o755)
@@ -106,6 +110,7 @@ def prepare_keycloak(root, config):
                 'saml_assertion_consumer_url_post': config['SAML_ACS_URL'],
                 'saml.force.post.binding': 'true', 'saml.server.signature': 'true',
                 'saml.assertion.signature': 'true', 'saml.client.signature': 'false',
+                'saml.authnstatement': 'true',
                 'saml.signature.algorithm': 'RSA_SHA256', 'saml_name_id_format': 'username',
                 'saml_force_name_id_format': 'true',
             },

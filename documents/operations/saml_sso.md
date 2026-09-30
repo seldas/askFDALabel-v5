@@ -74,6 +74,17 @@ previous AuthnRequests cannot be reused. If ACS still reports failure, inspect
 the backend's `SAML validation failed` log for the toolkit's validation reason;
 the public error remains generic and SAML XML is not logged.
 
+If the log says `The Assertion must include an AuthnStatement element`, enable
+**Include AuthnStatement** in Keycloak's `askfdalabel` realm, on the application's
+SAML client under **SAML capabilities**, and save. Start a fresh login after
+changing it; refreshing the failed POST reuses an already-consumed request.
+The generated client explicitly sets `saml.authnstatement=true`.
+Realm template revisions select a new profile because Keycloak skips startup
+imports for an existing realm. Restarting Docker with the corrected code uses
+the new profile and generated credentials; old profiles and their data remain.
+To keep existing Keycloak users/passwords, enable the option in the existing
+realm through its admin console instead of switching profiles.
+
 Docker uses private named volumes for Keycloak's file DB; Apptainer uses
 `data/keycloak/<profile>/db`. URL configurations get distinct profiles to avoid
 reusing a realm import with stale ACS URLs. Repeated startup with the same
