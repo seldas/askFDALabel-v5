@@ -71,9 +71,17 @@ export default function AuthModals() {
       >
         {session?.sso_enabled && (
           <a href={'/api/dashboard/auth/saml/login?next=' + encodeURIComponent(window.location.pathname + window.location.search)}
-             style={{ display: 'block', textAlign: 'center', padding: '14px', marginBottom: '20px', borderRadius: '12px', background: '#002e5d', color: 'white', fontWeight: 700 }}>
+             style={{ display: 'block', textAlign: 'center', padding: '16px', marginBottom: '12px', borderRadius: '2px', background: '#0759a5', color: 'white', fontWeight: 700, textDecoration: 'none' }}>
             Sign in with {session.sso_label}
           </a>
+        )}
+        {session?.sso_enabled && (
+          <div style={{ marginBottom: '20px' }}>
+            <p style={{ color: '#475569', fontSize: '0.875rem', lineHeight: 1.6, margin: '0 0 24px' }}>
+              Please use SSO as your primary login method. Account password login and guest access will be disabled in the future.
+            </p>
+            <p style={{ borderTop: '1px solid #dce4ec', paddingTop: '16px', color: '#64748b', fontSize: '0.8rem', margin: 0 }}>Other option: account login</p>
+          </div>
         )}
         <form onSubmit={handleAuthAction} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {authError && <div style={{ color: '#ef4444', background: '#fef2f2', padding: '14px', borderRadius: '12px', fontSize: '0.875rem', fontWeight: 500, border: '1px solid #fee2e2' }}>{authError}</div>}
@@ -124,17 +132,17 @@ export default function AuthModals() {
               padding: '16px', 
               borderRadius: '16px', 
               border: 'none', 
-              backgroundColor: '#002e5d', 
-              color: 'white', 
+              backgroundColor: session?.sso_enabled ? '#f3f6f8' : '#002e5d',
+              color: session?.sso_enabled ? '#475569' : 'white',
               fontWeight: 800, 
               fontSize: '1rem',
               cursor: authLoading ? 'not-allowed' : 'pointer',
               opacity: authLoading ? 0.7 : 1,
-              boxShadow: '0 8px 20px -4px rgba(0, 46, 93, 0.3)',
+              boxShadow: session?.sso_enabled ? 'none' : '0 8px 20px -4px rgba(0, 46, 93, 0.3)',
               transition: 'all 0.2s'
             }}
           >
-            {authLoading ? 'Signing in...' : 'Sign In'}
+            {authLoading ? 'Signing in...' : 'Sign in with account'}
           </button>
           <div style={{ textAlign: 'center', fontSize: '0.875rem', color: '#64748b' }}>
             Don't have an account? <button type="button" onClick={() => { openAuthModal('register'); setAuthError(null); setShowPassword(false); }} style={{ color: '#3b82f6', fontWeight: 700, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>Create one</button>

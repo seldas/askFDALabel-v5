@@ -1,140 +1,72 @@
 'use client';
 
-import React from 'react';
 import { withAppBase } from '../utils/appPaths';
+import styles from './StartPage.module.css';
 
 interface StartPageProps {
   onLogin: () => void;
   onSignUp: () => void;
   onGuest: () => void;
+  ssoEnabled: boolean;
 }
 
-export default function StartPage({ onLogin, onSignUp, onGuest }: StartPageProps) {
+export default function StartPage({ onLogin, onSignUp, onGuest, ssoEnabled }: StartPageProps) {
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: '#f3f6f8',
-      padding: '2rem'
-    }}>
-      <div style={{
-        background: 'white',
-        maxWidth: '600px',
-        width: '100%',
-        borderRadius: '0',
-        boxShadow: 'none',
-        padding: '3rem',
-        border: '1px solid #b8c8d7',
-        borderTop: '3px solid #071f3d'
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <img 
-            src={withAppBase("/askFDALabel_hero.png")}
-            alt="AskFDALabel"
-            style={{ maxWidth: '80%', height: 'auto', marginBottom: '1.5rem' }}
-          />
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#071f3d', marginBottom: '1rem' }}>
-            Welcome to AskFDALabel
-          </h1>
-        </div>
+    <main className={styles.page}>
+      <section className={styles.card} aria-labelledby="welcome-title">
+        <header className={styles.header}>
+          <img src={withAppBase('/askFDALabel_hero.png')} alt="AskFDALabel" className={styles.logo} />
+          <h1 id="welcome-title">Welcome to AskFDALabel</h1>
+          <p>Sign in to explore FDA labeling and your workspace.</p>
+        </header>
 
-        <div style={{
-          background: '#fff1f1',
-          border: '1px solid #f7d2d2',
-          borderRadius: '0',
-          borderTop: '3px solid #b50909',
-          padding: '1rem 1.5rem',
-          marginBottom: '2rem'
-        }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#991b1b', margin: '0 0 0.5rem 0' }}>
-            FDA Internal System Disclaimer
-          </h2>
-          <p style={{ margin: 0, fontSize: '0.9rem', color: '#7f1d1d', lineHeight: 1.5 }}>
-            For authorized use only. Content may be subject to internal FDA policies. This tool is under development and subject to change without notice.  
+        <aside className={styles.notice} aria-labelledby="sso-notice-title">
+          <span className={styles.noticeLabel}>LOGIN UPDATE</span>
+          <h2 id="sso-notice-title">We’re moving to Single Sign-On</h2>
+          <p>
+            We are implementing Single Sign-On (SSO). Please use SSO as your primary
+            login method. Account password login and guest access will be disabled
+            in the future.
           </p>
+        </aside>
+
+        <div className={styles.primary}>
+          {ssoEnabled ? (
+            <>
+              <a href="/api/dashboard/auth/saml/login" className={styles.ssoButton}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                  <path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z" />
+                  <path d="m8.5 12 2.5 2.5 4.5-5" />
+                </svg>
+                Sign in with SSO
+                <span aria-hidden="true">→</span>
+              </a>
+              <p className={styles.primaryHint}>Recommended login method</p>
+            </>
+          ) : (
+            <p className={styles.unavailable}>SSO is not available on this deployment yet. Use an option below to sign in.</p>
+          )}
         </div>
 
-        <div style={{ marginBottom: '2.5rem', textAlign: 'center' }}>
-          <p style={{ margin: 0, fontSize: '0.95rem', color: '#475569', lineHeight: 1.6 }}>
-            Login is required to use this system. If you do not have an account or just want to try it out, you can continue as a guest.
-          </p>
+        <div className={styles.alternatives}>
+          <p className={styles.alternativesLabel}>Other ways to access AskFDALabel</p>
+          <div className={styles.alternativeLinks}>
+            <button type="button" onClick={onLogin}>Account login</button>
+            <button type="button" onClick={onGuest}>Continue as guest</button>
+            <button type="button" onClick={onSignUp}>Sign up</button>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <button 
-            onClick={onLogin}
-            style={{
-              width: '100%',
-              padding: '12px',
-            background: '#0759a5',
-              color: 'white',
-              border: 'none',
-            borderRadius: '2px',
-              fontSize: '1rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'background 0.2s'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.background = '#071f3d'}
-            onMouseOut={(e) => e.currentTarget.style.background = '#0759a5'}
-          >
-            Login
-          </button>
-          
-            <button 
-              onClick={onGuest}
-              style={{
-                width: '100%',
-                padding: '12px',
-                background: 'white',
-                color: '#334155',
-                border: '1px solid #b8c8d7',
-                borderRadius: '2px',
-                fontSize: '0.95rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = '#edf4fa';
-                e.currentTarget.style.borderColor = '#0071bc';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = 'white';
-                e.currentTarget.style.borderColor = '#b8c8d7';
-              }}
-            >
-              Continue as Guest
-            </button>
-        </div>
+        <p className={styles.disclaimer}>
+          <strong>FDA internal system · Authorized use only.</strong>{' '}
+          Content may be subject to internal FDA policies. This tool is under development and subject to change.
+        </p>
+      </section>
 
-        <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.9rem', color: '#64748b' }}>
-          Don't have an account?{' '}
-          <button 
-            onClick={onSignUp}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#0759a5',
-              fontWeight: 600,
-              cursor: 'pointer',
-              padding: 0,
-              textDecoration: 'underline'
-            }}
-          >
-            Sign up
-          </button>
-        </div>
-      </div>
-
-      <div style={{ marginTop: '3rem', textAlign: 'center', fontSize: '0.85rem', color: '#94a3b8', maxWidth: '600px', lineHeight: '1.6' }}>
-        AskFDALabel &copy; 2026. FDA/NCTR This is an on-going research effort that is not for official use yet.
-        <br />
-        Please contact us (<a href="mailto:Leihong.wu@fda.hhs.gov" style={{ color: '#0759a5', textDecoration: 'none' }}>Leihong.wu@fda.hhs.gov</a>) for more details about this project.
-      </div>
-    </div>
+      <footer className={styles.footer}>
+        <p>AskFDALabel &copy; 2026 · FDA/NCTR. An ongoing research effort, not yet for official use.</p>
+        <p>For more information, contact <a href="mailto:Leihong.wu@fda.hhs.gov">Leihong.wu@fda.hhs.gov</a>.</p>
+      </footer>
+    </main>
   );
 }
