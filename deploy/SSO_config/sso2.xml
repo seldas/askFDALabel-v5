@@ -1,0 +1,54 @@
+<md:EntityDescriptor ID="tY5zDqZlDzJX.iteiLOSQfuZ8Og" cacheDuration="PT1440M" entityID="http://sso2.fda.gov" xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"><ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+<ds:SignedInfo>
+<ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+<ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+<ds:Reference URI="#tY5zDqZlDzJX.iteiLOSQfuZ8Og">
+<ds:Transforms>
+<ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+<ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+</ds:Transforms>
+<ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+<ds:DigestValue>FguZ58UjzUqkxcvf9ld/uhTxlHrcy9JBIUNu6EDbmSU=</ds:DigestValue>
+</ds:Reference>
+</ds:SignedInfo>
+<ds:SignatureValue>
+MwvfeL34J7Hp56Uxpd1okBVIcNl6Z8GKzZLk++4zNUvBxaNfJTQ28Ye5iNp/9TvdWVVym4X8fqA2&#13;
+jo6Nl2fS0LUzk1Rb1CyXoaFV9b6YhpbP+0UVrtMIAs77yAUWFCBNrwF/QsoOFZq2gNPZpBbctTe+&#13;
+90MGiElIhE5taiWnvby9Xczc2QP3V2x4KxEcSqYjm4RPUh3KbzoiVn1voMevi794IGBLyl90drKf&#13;
+2h413HfDEldzIuVPwTlNX4jB+KgGWRMogZdWhsBi+D6S31t1vyUP9DtMq8TIZsRCP01r/Z9QCLIk&#13;
+afhHDO2SkNIoTqT6fqam8tn1JaosFkmu7cCzxw==
+</ds:SignatureValue>
+<ds:KeyInfo>
+<ds:X509Data>
+<ds:X509Certificate>
+MIIDwzCCAqugAwIBAgIGAZy/aoipMA0GCSqGSIb3DQEBCwUAMHYxCzAJBgNVBAYTAlVTMREwDwYD&#13;
+VQQIEwhNYXJ5bGFuZDEWMBQGA1UEBxMNU2lsdmVyIFNwcmluZzElMCMGA1UEChMcRm9vZCBhbmQg&#13;
+RHJ1ZyBBZG1pbmlzdHJhdGlvbjEVMBMGA1UEAxMMc3NvMi5mZGEuZ292MB4XDTI2MDMwNTE5MTIz&#13;
+NloXDTI4MDMwNDE5MTIzNlowdjELMAkGA1UEBhMCVVMxETAPBgNVBAgTCE1hcnlsYW5kMRYwFAYD&#13;
+VQQHEw1TaWx2ZXIgU3ByaW5nMSUwIwYDVQQKExxGb29kIGFuZCBEcnVnIEFkbWluaXN0cmF0aW9u&#13;
+MRUwEwYDVQQDEwxzc28yLmZkYS5nb3YwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDr&#13;
+TOBpiiyas8apbX1ibNtd6kEIEqM5+oDB1pq1QHcQeMGjOP/pAS3m6y71hZ6Y0gSw+1FawAf8tRgu&#13;
+cSvC/5/4JNx1mmWhfVwp0QU8+TMEcYOxeAiWfLrN9dAAVUC/MbVGJqJN25IsFdDj3PQ/k5Cat9j0&#13;
+75rvDZSuFpM89S8EjC8nkygfputWRQ11Pv5B4hHrNhnIBOmUMfo9LyKAe7QSfNn8CiKvmuCgd4Y8&#13;
+nlqv2rKyYwPHIUE4Hf8D2c6Pg7fZlcjn57u286tSTc9mT3ZN2kU7dTolFSOZB88mTuulmid40aPp&#13;
+eFTEuyvnggZxcQLrcPDVLKjYKB8q/EUIFSzfAgMBAAGjVzBVMD4GA1UdEQQ3MDWCD3NzbzJhbHQu&#13;
+ZmRhLmdvdoIQc3NvMi1taWcuZmRhLmdvdoIQc3NvLW10bHMuZmRhLmdvdjATBgNVHSUEDDAKBggr&#13;
+BgEFBQcDATANBgkqhkiG9w0BAQsFAAOCAQEAUFsvus72tmHJpaMxx2/AZPUf0LBzcluCEXMUdMZ6&#13;
+xhlZe0tM5hYyYYDaqI1OsZACfrntDkN74/1NoOVNW0BIAnoJNDbJ8KQdHGAcKGqEcEQuF+l8AqLB&#13;
+G5dxEaJDwpiYErNZgVuGqV1I85yJeLuOBRK0HpcmRhZnGrtc34zn4PP1i9Kzi/rKkUMCnROMz863&#13;
+EvTpibSnGuItjoAzcwgB+MPPB7HU2mIZqUBr+zBjAg95Dm6xU6q7xka7xo5Qc2gra/czetczZSot&#13;
+3XjvPt8rjlwQerAJ2HuNyQJJD+1U9x8IkIDezdYKRY/cvfN+6/Fx82pXo1Q1dymQZjmC7MlAqw==
+</ds:X509Certificate>
+</ds:X509Data>
+<ds:KeyValue>
+<ds:RSAKeyValue>
+<ds:Modulus>60zgaYosmrPGqW19YmzbXepBCBKjOfqAwdaatUB3EHjBozj/6QEt5usu9YWemNIEsPtRWsAH/LUY&#13;
+LnErwv+f+CTcdZploX1cKdEFPPkzBHGDsXgIlny6zfXQAFVAvzG1RiaiTduSLBXQ49z0P5OQmrfY&#13;
+9O+a7w2UrhaTPPUvBIwvJ5MoH6brVkUNdT7+QeIR6zYZyATplDH6PS8igHu0EnzZ/Aoir5rgoHeG&#13;
+PJ5ar9qysmMDxyFBOB3/A9nOj4O32ZXI5+e7tvOrUk3PZk92TdpFO3U6JRUjmQfPJk7rpZoneNGj&#13;
+6XhUxLsr54IGcXEC63Dw1Syo2CgfKvxFCBUs3w==</ds:Modulus>
+<ds:Exponent>AQAB</ds:Exponent>
+</ds:RSAKeyValue>
+</ds:KeyValue>
+</ds:KeyInfo>
+</ds:Signature><md:IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol" WantAuthnRequestsSigned="false"><md:KeyDescriptor use="signing"><ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:X509Data><ds:X509Certificate>MIIDwzCCAqugAwIBAgIGAZy/aoipMA0GCSqGSIb3DQEBCwUAMHYxCzAJBgNVBAYTAlVTMREwDwYDVQQIEwhNYXJ5bGFuZDEWMBQGA1UEBxMNU2lsdmVyIFNwcmluZzElMCMGA1UEChMcRm9vZCBhbmQgRHJ1ZyBBZG1pbmlzdHJhdGlvbjEVMBMGA1UEAxMMc3NvMi5mZGEuZ292MB4XDTI2MDMwNTE5MTIzNloXDTI4MDMwNDE5MTIzNlowdjELMAkGA1UEBhMCVVMxETAPBgNVBAgTCE1hcnlsYW5kMRYwFAYDVQQHEw1TaWx2ZXIgU3ByaW5nMSUwIwYDVQQKExxGb29kIGFuZCBEcnVnIEFkbWluaXN0cmF0aW9uMRUwEwYDVQQDEwxzc28yLmZkYS5nb3YwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDrTOBpiiyas8apbX1ibNtd6kEIEqM5+oDB1pq1QHcQeMGjOP/pAS3m6y71hZ6Y0gSw+1FawAf8tRgucSvC/5/4JNx1mmWhfVwp0QU8+TMEcYOxeAiWfLrN9dAAVUC/MbVGJqJN25IsFdDj3PQ/k5Cat9j075rvDZSuFpM89S8EjC8nkygfputWRQ11Pv5B4hHrNhnIBOmUMfo9LyKAe7QSfNn8CiKvmuCgd4Y8nlqv2rKyYwPHIUE4Hf8D2c6Pg7fZlcjn57u286tSTc9mT3ZN2kU7dTolFSOZB88mTuulmid40aPpeFTEuyvnggZxcQLrcPDVLKjYKB8q/EUIFSzfAgMBAAGjVzBVMD4GA1UdEQQ3MDWCD3NzbzJhbHQuZmRhLmdvdoIQc3NvMi1taWcuZmRhLmdvdoIQc3NvLW10bHMuZmRhLmdvdjATBgNVHSUEDDAKBggrBgEFBQcDATANBgkqhkiG9w0BAQsFAAOCAQEAUFsvus72tmHJpaMxx2/AZPUf0LBzcluCEXMUdMZ6xhlZe0tM5hYyYYDaqI1OsZACfrntDkN74/1NoOVNW0BIAnoJNDbJ8KQdHGAcKGqEcEQuF+l8AqLBG5dxEaJDwpiYErNZgVuGqV1I85yJeLuOBRK0HpcmRhZnGrtc34zn4PP1i9Kzi/rKkUMCnROMz863EvTpibSnGuItjoAzcwgB+MPPB7HU2mIZqUBr+zBjAg95Dm6xU6q7xka7xo5Qc2gra/czetczZSot3XjvPt8rjlwQerAJ2HuNyQJJD+1U9x8IkIDezdYKRY/cvfN+6/Fx82pXo1Q1dymQZjmC7MlAqw==</ds:X509Certificate></ds:X509Data></ds:KeyInfo></md:KeyDescriptor><md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified</md:NameIDFormat><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://sso2.fda.gov/idp/SSO.saml2"/><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://sso2.fda.gov/idp/SSO.saml2"/><saml:Attribute Name="Email" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:unspecified" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"/><saml:Attribute Name="Office Info" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:unspecified" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"/><saml:Attribute Name="Name" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:unspecified" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"/></md:IDPSSODescriptor><md:ContactPerson contactType="administrative"><md:Company>Food and Drug Administration</md:Company><md:GivenName>FDA</md:GivenName><md:SurName>SSO Identity Services</md:SurName><md:EmailAddress>FDA-SSO-Identity-Services@fda.hhs.gov</md:EmailAddress></md:ContactPerson></md:EntityDescriptor>

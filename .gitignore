@@ -69,3 +69,6 @@ deploy/rapid_migration/*.zip
 
 #apptainer
 deploy/**/*.sif
+
+#FDA SSO
+#deploy/SSO_config/sso2.xml
