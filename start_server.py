@@ -701,18 +701,22 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
             "restart": "always"
         }
         generated = generate_nginx_config(ROOT, sso_config, rapid, env=env_vars)
-        nginx_service['volumes'] = [
-            f'./data/{generated.name}:/etc/nginx/conf.d',
-            f'./data/{generated.name}/certs:/etc/nginx/certs:ro',
-        ]
         cert, key = resolve_nginx_tls(ROOT, env_vars, rapid)
         if cert is not None:
-            nginx_service['volumes'].extend([
+            # Mount cert files directly; no parent-dir volume needed — the Dockerfile already
+            # creates /etc/nginx/certs, and individual file bind-mounts don't conflict.
+            nginx_service['volumes'] = [
+                f'./data/{generated.name}:/etc/nginx/conf.d',
                 {'type': 'bind', 'source': cert.as_posix(), 'target': '/etc/nginx/certs/cert.pem',
                  'read_only': True, 'bind': {'create_host_path': False}},
                 {'type': 'bind', 'source': key.as_posix(), 'target': '/etc/nginx/certs/key.pem',
                  'read_only': True, 'bind': {'create_host_path': False}},
-            ])
+            ]
+        else:
+            # No TLS certs — mount the conf.d directory only.
+            nginx_service['volumes'] = [
+                f'./data/{generated.name}:/etc/nginx/conf.d',
+            ]
         if rapid:
             # Offline RAPID uses the image loaded from the migration package.
             nginx_service.pop('build')

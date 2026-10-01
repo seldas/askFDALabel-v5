@@ -32,6 +32,13 @@ class FDALabelDBService:
             dsn = current_app.config.get('DATABASE_URL')
             if not dsn:
                 return None
+            # SQLAlchemy uses "postgresql+psycopg2://..." but psycopg2.connect()
+            # only understands plain libpq URIs ("postgresql://..." or "postgres://...").
+            # Strip the driver token so both formats work.
+            if dsn.startswith("postgresql+"):
+                dsn = "postgresql" + dsn[dsn.index("://"):]
+            elif dsn.startswith("postgres+"):
+                dsn = "postgres" + dsn[dsn.index("://"):]
             connection = psycopg2.connect(dsn, cursor_factory=RealDictCursor)
             return connection
         except Exception as e:
