@@ -1,0 +1,36 @@
+/* Management shares the application's Federal Scientific LW tokens. */
+.management-main { max-width: var(--fdl-page-max); margin: 0 auto; padding: 1.5rem; }
+.management-title { margin: 0 0 1rem; padding-bottom: 0.75rem; border-bottom: 3px solid var(--fdl-blue-600); color: var(--fdl-navy-950); font-size: 1.5rem; font-weight: 700; }
+.management-workstation { display: grid; grid-template-columns: 220px minmax(0, 1fr); align-items: start; border: 1px solid var(--fdl-line); background: var(--fdl-paper); }
+.management-nav { display: flex; flex-direction: column; padding: 0.5rem 0; }
+.management-content { min-width: 0; display: flex; flex-direction: column; gap: 1rem; padding: 1.25rem; border-left: 1px solid var(--fdl-line); }
+.management-container .sidebar-tab { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 42px; padding: 10px 12px; border: 0; border-left: 3px solid transparent; background: transparent; color: var(--fdl-ink-soft); font-size: 0.85rem; font-weight: 600; text-align: left; cursor: pointer; }
+.management-container .sidebar-tab:hover:not(:disabled) { background: var(--fdl-canvas); }
+.management-container .sidebar-tab.active { border-left-color: var(--fdl-blue-600); background: var(--fdl-blue-050); color: var(--fdl-blue-700); }
+.management-container .sidebar-tab svg { flex-shrink: 0; }
+.management-container .mgmt-card, .management-container .mgmt-section { background: var(--fdl-paper); min-width: 0; }
+.management-container .section-title { margin: 0 0 1rem; padding-bottom: 0.65rem; border-bottom: 2px solid var(--fdl-blue-600); color: var(--fdl-navy-950); font-size: 1.15rem; font-weight: 700; }
+.management-container .mgmt-form { margin-bottom: 1rem; padding: 1rem; border: 1px solid var(--fdl-line-soft); background: var(--fdl-canvas); }
+.management-container :is(.mgmt-input, .mgmt-input-sm, .mgmt-select) { min-width: 0; min-height: 34px; padding: 6px 10px; border: 1px solid var(--fdl-line); border-radius: 2px; background: var(--fdl-paper); color: var(--fdl-ink); font-size: 0.85rem; }
+.management-container :is(.mgmt-input, .mgmt-input-sm) { flex: 1; }
+.management-container :is(.btn-primary, .btn-primary-sm, .btn-ghost, .btn-danger-ghost, .btn-update) { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 6px 12px; border: 1px solid var(--fdl-line); border-radius: 2px; background: var(--fdl-paper); color: var(--fdl-ink-soft); font-size: 0.85rem; font-weight: 600; line-height: 1.4; cursor: pointer; box-shadow: none; transition: background 120ms, border-color 120ms; }
+.management-container :is(.btn-primary, .btn-primary-sm) { border-color: var(--fdl-blue-700); background: var(--fdl-blue-700); color: var(--fdl-paper); }
+.management-container :is(.btn-primary, .btn-primary-sm):hover:not(:disabled) { background: var(--fdl-navy-800); border-color: var(--fdl-navy-800); }
+.management-container :is(.btn-ghost, .btn-update):hover:not(:disabled) { background: var(--fdl-blue-050); border-color: var(--fdl-blue-700); }
+.management-container .btn-danger-ghost { color: var(--fdl-red); border-color: var(--fdl-red); }
+.management-container .btn-danger-ghost:hover:not(:disabled) { background: var(--fdl-red-050); }
+.management-container .btn-primary-sm { min-height: 28px; padding: 4px 10px; font-size: 0.8rem; }
+.management-container :is(button, input, select):disabled { opacity: 0.55; cursor: not-allowed; }
+.management-container :is(button, input, select, textarea):focus-visible { outline: 3px solid var(--fdl-blue-600); outline-offset: 2px; }
+.management-container .user-table-wrapper { overflow-x: auto; border: 1px solid var(--fdl-line); }
+.management-container .user-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; }
+.management-container .user-table th { padding: 10px 12px; border-bottom: 1px solid var(--fdl-line); background: var(--fdl-blue-050); color: var(--fdl-navy-800); font-size: 0.8rem; font-weight: 700; }
+.management-container .user-table td { padding: 10px 12px; border-bottom: 1px solid var(--fdl-line-soft); color: var(--fdl-ink-soft); vertical-align: middle; }
+.management-container .user-table tr:last-child td { border-bottom: 0; }
+.management-container .user-table tbody tr:hover { background: var(--fdl-canvas); }
+.management-container .update-grid { display: flex; flex-direction: column; gap: 10px; }
+.management-container .update-item { display: flex; align-items: center; padding: 1rem; border: 1px solid var(--fdl-line-soft); border-radius: 2px; background: var(--fdl-canvas); }
+.management-container .provider-panel { border-left: 3px solid var(--fdl-line) !important; }
+.management-container .provider-panel.is-selected { border-left-color: var(--fdl-blue-600) !important; }
+@media (max-width: 1439px) { .management-workstation { grid-template-columns: 190px minmax(0, 1fr); } .management-content { padding: 1rem; } }
+@media (max-width: 1099px) { .management-main { padding: 1rem; } .management-workstation { grid-template-columns: 170px minmax(0, 1fr); } .management-container .sidebar-tab { font-size: 0.8rem; gap: 8px; } }
