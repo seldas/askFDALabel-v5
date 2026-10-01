@@ -30,6 +30,8 @@ The query builder implements **11 distinct regulatory criteria dimensions**:
 
 ## 3. Query Compilation & Execution
 
+Drug-name and MedDRA autocomplete ignore case and treat ASCII hyphens and spaces as interchangeable. Flexible drug-name searches (contains, prefix, and excludes) use the same rule on PostgreSQL and Oracle: `Dry Clox` can match `Dry-Clox`, but `dryclox` does not match either separated spelling. Exact product-name criteria and the query's Exact match vocabulary resolution keep their literal separators. Returned names retain their stored spelling; no data rewrite or schema migration is required.
+
 - **Compiler**: `backend/labelquery/compiler.py` translates user-assembled UI criteria cards into optimized SQL `WHERE` clauses.
 - **Boolean Combination**: Criteria can be chained via `AND` / `OR` logic with parenthetical grouping.
 - **Export Formats**: Query results can be downloaded in streaming CSV, Excel (`.xlsx`), or structured JSON.

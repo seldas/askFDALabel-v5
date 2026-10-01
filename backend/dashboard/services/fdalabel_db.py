@@ -6,6 +6,7 @@ import threading
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import current_app
+from dashboard.services.name_matching import NameSearchParams
 
 # Graceful import for oracledb
 try:
@@ -353,17 +354,15 @@ class FDALabelDBService:
             c_type = "doc_type" if is_pg else "DOCUMENT_TYPE"
             
             where_clauses = []
+            search = NameSearchParams(oracle=not is_pg)
             params = {}
 
             if filters.get("drugNames"):
                 drug_clauses = []
-                for i, drug in enumerate(filters["drugNames"]):
-                    key = f"drug_{i}"
-                    params[key] = f"%{drug}%"
-                    if is_pg:
-                        drug_clauses.append(f"({c_prod} ILIKE %(drug_{i})s OR {c_gen} ILIKE %(drug_{i})s OR {c_ingr} ILIKE %(drug_{i})s)")
-                    else:
-                        drug_clauses.append(f"(UPPER({c_prod}) LIKE UPPER(:drug_{i}) OR UPPER({c_gen}) LIKE UPPER(:drug_{i}) OR UPPER({c_ingr}) LIKE UPPER(:drug_{i}))")
+                for drug in filters["drugNames"]:
+                    drug_clauses.append("(" + " OR ".join(
+                        search.match(col, f"%{drug}%") for col in (c_prod, c_gen, c_ingr)
+                    ) + ")")
                 where_clauses.append(f"({ ' OR '.join(drug_clauses) })")
 
             if filters.get("ndcs"):
@@ -440,7 +439,7 @@ class FDALabelDBService:
                     ) WHERE ROWNUM <= {fetch_limit}
                 """
 
-            cursor.execute(sql, params)
+            cursor.execute(sql, search.for_sql(sql, params))
             rows = cursor.fetchall()
             
             if len(rows) > limit:
@@ -507,18 +506,19 @@ class FDALabelDBService:
         try:
             cursor = conn.cursor()
             q = f"%{query}%"
+            search = NameSearchParams(oracle=cls._db_type == 'oracle')
             if cls._db_type == 'oracle':
-                sql = """
+                sql = f"""
                     SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, 
                            MARKET_CATEGORIES, APPR_NUM, NDC_CODES, EFF_TIME, ACT_INGR_NAMES, 
                            DOCUMENT_TYPE as LABELING_TYPE, DOSAGE_FORMS,
                            ROUTES_OF_ADMINISTRATION as ROUTES, EPC, 0 as IS_RLD, 0 as IS_RS
                     FROM druglabel.DGV_SUM_SPL
-                    WHERE UPPER(TITLE) LIKE UPPER(:q) OR UPPER(PRODUCT_NAMES) LIKE UPPER(:q) OR
-                          UPPER(PRODUCT_NORMD_GENERIC_NAMES) LIKE UPPER(:q) OR UPPER(ACT_INGR_NAMES) LIKE UPPER(:q) OR NDC_CODES LIKE :q_exact OR UPPER(SET_ID) = UPPER(:q_exact_id)
+                    WHERE {search.match('TITLE', q)} OR {search.match('PRODUCT_NAMES', q)} OR
+                          {search.match('PRODUCT_NORMD_GENERIC_NAMES', q)} OR {search.match('ACT_INGR_NAMES', q)} OR NDC_CODES LIKE :q_exact OR UPPER(SET_ID) = UPPER(:q_exact_id)
                     OFFSET :skip ROWS FETCH NEXT :limit ROWS ONLY
                 """
-                cursor.execute(sql, {"q": q, "q_exact": query, "q_exact_id": query, "skip": skip, "limit": limit})
+                cursor.execute(sql, search.for_sql(sql, {"q": q, "q_exact": query, "q_exact_id": query, "skip": skip, "limit": limit}))
                 rows = cursor.fetchall()
                 for r in rows:
                     results.append({
@@ -535,14 +535,14 @@ class FDALabelDBService:
                     SELECT set_id, product_names, generic_names, manufacturer, market_categories, appr_num,
                            ndc_codes, revised_date, active_ingredients, doc_type, dosage_forms, routes, epc, is_rld, is_rs
                     FROM {schema}sum_spl
-                    WHERE (product_names ILIKE %(q)s OR generic_names ILIKE %(q)s
-                           OR active_ingredients ILIKE %(q)s OR manufacturer ILIKE %(q)s
+                    WHERE ({search.match('product_names', q)} OR {search.match('generic_names', q)}
+                           OR {search.match('active_ingredients', q)} OR manufacturer ILIKE %(q)s
                            OR ndc_codes ILIKE %(q)s OR set_id ILIKE %(q_exact_id)s)
                     AND is_latest = TRUE
                     LIMIT %(limit)s OFFSET %(skip)s
                 """
                 params = {"q": q, "q_exact_id": query, "limit": limit, "skip": skip}
-                cursor.execute(sql, params)
+                cursor.execute(sql, search.for_sql(sql, params))
                 rows = cursor.fetchall()
                 for r in rows:
                     results.append({
@@ -654,15 +654,16 @@ class FDALabelDBService:
         try:
             cursor = conn.cursor()
             q = f"%{query}%"
+            search = NameSearchParams(oracle=cls._db_type == 'oracle')
             if cls._db_type == 'oracle':
-                where = """
-                    UPPER(TITLE) LIKE UPPER(:q) OR UPPER(PRODUCT_NAMES) LIKE UPPER(:q) OR
-                    UPPER(PRODUCT_NORMD_GENERIC_NAMES) LIKE UPPER(:q) OR UPPER(ACT_INGR_NAMES) LIKE UPPER(:q)
+                where = f"""
+                    {search.match('TITLE', q)} OR {search.match('PRODUCT_NAMES', q)} OR
+                    {search.match('PRODUCT_NORMD_GENERIC_NAMES', q)} OR {search.match('ACT_INGR_NAMES', q)}
                     OR NDC_CODES LIKE :q_exact OR UPPER(SET_ID) = UPPER(:q_exact_id)
                     OR UPPER(APPR_NUM) LIKE UPPER(:q)
                 """
                 count_sql = f"SELECT COUNT(*) FROM druglabel.DGV_SUM_SPL WHERE {where}"
-                cursor.execute(count_sql, {"q": q, "q_exact": query, "q_exact_id": query})
+                cursor.execute(count_sql, search.for_sql(count_sql, {"q": q, "q_exact": query, "q_exact_id": query}))
                 total_count = cls._get_count(cursor.fetchone())
 
                 if total_count > 0:
@@ -675,7 +676,7 @@ class FDALabelDBService:
                         WHERE {where}
                         OFFSET :skip ROWS FETCH NEXT :limit ROWS ONLY
                     """
-                    cursor.execute(sql, {"q": q, "q_exact": query, "q_exact_id": query, "skip": skip, "limit": limit})
+                    cursor.execute(sql, search.for_sql(sql, {"q": q, "q_exact": query, "q_exact_id": query, "skip": skip, "limit": limit}))
                     rows = cursor.fetchall()
                     for r in rows:
                         results.append({
@@ -688,9 +689,9 @@ class FDALabelDBService:
                         })
             else:
                 schema = "labeling."
-                where = """
-                    (product_names ILIKE %(q)s OR generic_names ILIKE %(q)s
-                     OR active_ingredients ILIKE %(q)s OR manufacturer ILIKE %(q)s
+                where = f"""
+                    ({search.match('product_names', q)} OR {search.match('generic_names', q)}
+                     OR {search.match('active_ingredients', q)} OR manufacturer ILIKE %(q)s
                      OR ndc_codes ILIKE %(q)s OR set_id ILIKE %(q_exact_id)s
                      -- appr_num is stored as "NDA 021540", and _classify_query
                      -- already recognises that shape as an identifier query --
@@ -700,7 +701,7 @@ class FDALabelDBService:
                     AND is_latest = TRUE
                 """
                 count_sql = f"SELECT COUNT(*) FROM {schema}sum_spl WHERE {where}"
-                cursor.execute(count_sql, {"q": q, "q_exact_id": query})
+                cursor.execute(count_sql, search.for_sql(count_sql, {"q": q, "q_exact_id": query}))
                 total_count = cls._get_count(cursor.fetchone())
 
                 if total_count > 0:
@@ -711,7 +712,7 @@ class FDALabelDBService:
                         WHERE {where}
                         LIMIT %(limit)s OFFSET %(skip)s
                     """
-                    cursor.execute(sql, {"q": q, "q_exact_id": query, "limit": limit, "skip": skip})
+                    cursor.execute(sql, search.for_sql(sql, {"q": q, "q_exact_id": query, "limit": limit, "skip": skip}))
                     rows = cursor.fetchall()
                     for r in rows:
                         results.append({
@@ -1136,23 +1137,24 @@ class FDALabelDBService:
         try:
             cursor = conn.cursor()
             q = f"%{query_term}%"
+            search = NameSearchParams(oracle=cls._db_type == 'oracle')
             if cls._db_type == 'oracle':
                 # Priority 1: SPL GUID match
                 spl_where = ["UPPER(SPL_GUID) = UPPER(:sid)"]
                 if human_rx_only: spl_where.append("DOCUMENT_TYPE_LOINC_CODE IN ('34391-3', '48401-4', '48402-2')")
                 if rld_only: spl_where.append("EXISTS (SELECT 1 FROM druglabel.sum_spl_rld rld WHERE rld.SPL_ID = druglabel.DGV_SUM_SPL.SPL_ID)")
                 sql_spl = f"SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, APPR_NUM, NDC_CODES, EFF_TIME, MARKET_CATEGORIES, DOCUMENT_TYPE, SPL_GUID as SPL_ID FROM druglabel.DGV_SUM_SPL WHERE {' AND '.join(spl_where)}"
-                cursor.execute(sql_spl, {"sid": query_term})
+                cursor.execute(sql_spl, search.for_sql(sql_spl, {"sid": query_term}))
                 rows = cursor.fetchall()
                 
                 if not rows:
                     # Priority 2: Regular search
-                    where = ["(UPPER(PRODUCT_NAMES) LIKE UPPER(:q) OR UPPER(PRODUCT_NORMD_GENERIC_NAMES) LIKE UPPER(:q) OR UPPER(ACT_INGR_NAMES) LIKE UPPER(:q) OR UPPER(SET_ID) = UPPER(:sid) OR UPPER(APPR_NUM) LIKE UPPER(:q))"]
+                    where = [f"({search.match('PRODUCT_NAMES', q)} OR {search.match('PRODUCT_NORMD_GENERIC_NAMES', q)} OR {search.match('ACT_INGR_NAMES', q)} OR UPPER(SET_ID) = UPPER(:sid) OR UPPER(APPR_NUM) LIKE UPPER(:q))"]
                     params = {"q": q, "sid": query_term}
                     if human_rx_only: where.append("DOCUMENT_TYPE_LOINC_CODE IN ('34391-3', '48401-4', '48402-2')")
                     if rld_only: where.append("EXISTS (SELECT 1 FROM druglabel.sum_spl_rld rld WHERE rld.SPL_ID = druglabel.DGV_SUM_SPL.SPL_ID)")
                     sql = f"SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, APPR_NUM, NDC_CODES, EFF_TIME, MARKET_CATEGORIES, DOCUMENT_TYPE, SPL_GUID as SPL_ID FROM druglabel.DGV_SUM_SPL WHERE {' AND '.join(where)} ORDER BY EFF_TIME DESC"
-                    cursor.execute(sql, params)
+                    cursor.execute(sql, search.for_sql(sql, params))
                     rows = cursor.fetchall()
             else:
                 schema = "labeling."
@@ -1172,12 +1174,12 @@ class FDALabelDBService:
                     FROM {schema}sum_spl s 
                     WHERE {' AND '.join(spl_where)}
                 """
-                cursor.execute(sql_spl, params)
+                cursor.execute(sql_spl, search.for_sql(sql_spl, params))
                 rows = cursor.fetchall()
                 
                 if not rows:
                     # Priority 2: Regular search (strict is_latest = TRUE)
-                    where = ["(product_names ILIKE %(q)s OR generic_names ILIKE %(q)s OR active_ingredients ILIKE %(q)s OR set_id ILIKE %(sid)s OR appr_num ILIKE %(q)s)", "is_latest = TRUE"]
+                    where = [f"({search.match('product_names', q)} OR {search.match('generic_names', q)} OR {search.match('active_ingredients', q)} OR set_id ILIKE %(sid)s OR appr_num ILIKE %(q)s)", "is_latest = TRUE"]
                     if human_rx_only: where.append("(doc_type ILIKE '%%HUMAN PRESCRIPTION%%' OR doc_type IN ('34391-3', '48401-4', '48402-2'))")
                     if rld_only and rs_only: where.append("(is_rld = 1 OR is_rs = 1)")
                     elif rld_only: where.append("is_rld = 1")
@@ -1192,7 +1194,7 @@ class FDALabelDBService:
                         ORDER BY s.revised_date DESC 
                         LIMIT %(limit)s OFFSET %(offset)s
                     """
-                    cursor.execute(sql, params)
+                    cursor.execute(sql, search.for_sql(sql, params))
                     rows = cursor.fetchall()
             
             results = []
@@ -1239,30 +1241,31 @@ class FDALabelDBService:
         try:
             cursor = conn.cursor()
             q = f"%{query}%"
+            search = NameSearchParams(oracle=cls._db_type == 'oracle')
             if cls._db_type == 'oracle':
-                where = ["(UPPER(PRODUCT_NAMES) LIKE UPPER(:q) OR UPPER(PRODUCT_NORMD_GENERIC_NAMES) LIKE UPPER(:q))"]
+                where = [f"({search.match('PRODUCT_NAMES', q)} OR {search.match('PRODUCT_NORMD_GENERIC_NAMES', q)})"]
                 if human_rx_only: where.append("DOCUMENT_TYPE_LOINC_CODE IN ('34391-3', '48401-4', '48402-2')")
                 if rld_only: where.append("EXISTS (SELECT 1 FROM druglabel.sum_spl_rld rld WHERE rld.SPL_ID = druglabel.DGV_SUM_SPL.SPL_ID)")
                 sql = f"SELECT DISTINCT PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES FROM druglabel.DGV_SUM_SPL WHERE {' AND '.join(where)} FETCH NEXT 50 ROWS ONLY"
-                cursor.execute(sql, {"q": q})
+                cursor.execute(sql, search.for_sql(sql, {"q": q}))
             else:
                 schema = "labeling."
-                where = ["(product_names ILIKE %(q)s OR generic_names ILIKE %(q)s)", "is_latest = TRUE"]
+                where = [f"({search.match('product_names', q)} OR {search.match('generic_names', q)})", "is_latest = TRUE"]
                 if human_rx_only: where.append("(doc_type ILIKE '%%HUMAN PRESCRIPTION%%' OR doc_type IN ('34391-3', '48401-4', '48402-2'))")
                 if rld_only and rs_only: where.append("(is_rld = 1 OR is_rs = 1)")
                 elif rld_only: where.append("is_rld = 1")
                 elif rs_only: where.append("is_rs = 1")
                 sql = f"SELECT DISTINCT product_names, generic_names FROM {schema}sum_spl WHERE {' AND '.join(where)} LIMIT 50"
-                cursor.execute(sql, {"q": q})
+                cursor.execute(sql, search.for_sql(sql, {"q": q}))
             rows = cursor.fetchall()
             suggestions = set()
-            qu = query.upper()
+            qu = query.upper().replace('-', ' ')
             for r in rows:
                 p = (r[0] if cls._db_type == 'oracle' else r['product_names']) or ""
                 g = (r[1] if cls._db_type == 'oracle' else r['generic_names']) or ""
                 for n in (p.split(';') + g.split(';')):
                     n = n.strip()
-                    if n and qu in n.upper():
+                    if n and qu in n.upper().replace('-', ' '):
                         suggestions.add(n)
                         if len(suggestions) >= limit: break
                 if len(suggestions) >= limit: break
@@ -1743,16 +1746,17 @@ class FDALabelDBService:
         try:
             cursor = conn.cursor()
             q = f"%{query_term}%"
+            search = NameSearchParams(oracle=cls._db_type == 'oracle')
             if cls._db_type == 'oracle':
                 # Priority 1: SPL ID match
-                spl_sql = "SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, APPR_NUM, NDC_CODES, EFF_TIME, MARKET_CATEGORIES, DOCUMENT_TYPE, ROUTES_OF_ADMINISTRATION as ROUTES, DOSAGE_FORMS, EPC, ACT_INGR_NAMES, SPL_GUID as SPL_ID FROM druglabel.DGV_SUM_SPL WHERE UPPER(SPL_GUID) = UPPER(:sid)"
-                cursor.execute(spl_sql, {"sid": query_term})
+                spl_sql = f"SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, APPR_NUM, NDC_CODES, EFF_TIME, MARKET_CATEGORIES, DOCUMENT_TYPE, ROUTES_OF_ADMINISTRATION as ROUTES, DOSAGE_FORMS, EPC, ACT_INGR_NAMES, SPL_GUID as SPL_ID FROM druglabel.DGV_SUM_SPL WHERE UPPER(SPL_GUID) = UPPER(:sid)"
+                cursor.execute(spl_sql, search.for_sql(spl_sql, {"sid": query_term}))
                 rows = cursor.fetchall()
                 
                 if not rows:
                     # Priority 2: Regular search
-                    sql = "SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, APPR_NUM, NDC_CODES, EFF_TIME, MARKET_CATEGORIES, DOCUMENT_TYPE, ROUTES_OF_ADMINISTRATION as ROUTES, DOSAGE_FORMS, EPC, ACT_INGR_NAMES, SPL_GUID as SPL_ID FROM druglabel.DGV_SUM_SPL WHERE UPPER(PRODUCT_NAMES) LIKE UPPER(:q) OR UPPER(PRODUCT_NORMD_GENERIC_NAMES) LIKE UPPER(:q) OR UPPER(SET_ID) = UPPER(:sid) OR UPPER(APPR_NUM) LIKE UPPER(:q) ORDER BY EFF_TIME DESC"
-                    cursor.execute(sql, {"q": q, "sid": query_term})
+                    sql = f"SELECT SET_ID, PRODUCT_NAMES, PRODUCT_NORMD_GENERIC_NAMES, AUTHOR_ORG_NORMD_NAME, APPR_NUM, NDC_CODES, EFF_TIME, MARKET_CATEGORIES, DOCUMENT_TYPE, ROUTES_OF_ADMINISTRATION as ROUTES, DOSAGE_FORMS, EPC, ACT_INGR_NAMES, SPL_GUID as SPL_ID FROM druglabel.DGV_SUM_SPL WHERE {search.match('PRODUCT_NAMES', q)} OR {search.match('PRODUCT_NORMD_GENERIC_NAMES', q)} OR UPPER(SET_ID) = UPPER(:sid) OR UPPER(APPR_NUM) LIKE UPPER(:q) ORDER BY EFF_TIME DESC"
+                    cursor.execute(sql, search.for_sql(sql, {"q": q, "sid": query_term}))
                     rows = cursor.fetchall()
                 
                 results = []
@@ -1762,13 +1766,13 @@ class FDALabelDBService:
                 schema = "labeling."
                 # Priority 1: SPL ID match
                 spl_sql = f"SELECT set_id, product_names, generic_names, manufacturer, appr_num, ndc_codes, revised_date, market_categories, doc_type, routes, dosage_forms, epc, active_ingredients, spl_id FROM {schema}sum_spl WHERE spl_id = %(sid)s"
-                cursor.execute(spl_sql, {"sid": query_term})
+                cursor.execute(spl_sql, search.for_sql(spl_sql, {"sid": query_term}))
                 rows = cursor.fetchall()
                 
                 if not rows:
                     # Priority 2: Regular search
-                    sql = f"SELECT set_id, product_names, generic_names, manufacturer, appr_num, ndc_codes, revised_date, market_categories, doc_type, routes, dosage_forms, epc, active_ingredients, spl_id FROM {schema}sum_spl WHERE (product_names ILIKE %(q)s OR generic_names ILIKE %(q)s OR set_id = %(sid)s OR appr_num ILIKE %(q)s) AND is_latest = TRUE ORDER BY revised_date DESC"
-                    cursor.execute(sql, {"q": q, "sid": query_term})
+                    sql = f"SELECT set_id, product_names, generic_names, manufacturer, appr_num, ndc_codes, revised_date, market_categories, doc_type, routes, dosage_forms, epc, active_ingredients, spl_id FROM {schema}sum_spl WHERE ({search.match('product_names', q)} OR {search.match('generic_names', q)} OR set_id = %(sid)s OR appr_num ILIKE %(q)s) AND is_latest = TRUE ORDER BY revised_date DESC"
+                    cursor.execute(sql, search.for_sql(sql, {"q": q, "sid": query_term}))
                     rows = cursor.fetchall()
                 
                 results = []

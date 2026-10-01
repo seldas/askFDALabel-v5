@@ -24,6 +24,7 @@ remains is a predicate over ``sum_spl`` alone, which is why compilation returns
 a single WHERE clause and no separate section half.
 """
 
+from dashboard.services.name_matching import name_match_sql
 import re
 
 # Columns whose values are "; "-joined lists (see db_07_import_labels.py), so a
@@ -285,7 +286,12 @@ def _c_product_name(criterion, bag, warnings):
     else:
         patterns = [f'%{t}%' for t in terms]
 
-    return _like_any(columns, patterns, bag, negate=(op == 'notContains'))
+    # Exact name criteria keep their literal spelling; flexible searches allow
+    # a space wherever the name has a hyphen (and vice versa).
+    clauses = [name_match_sql(f"COALESCE({col}, '')" if op == 'notContains' else col, pattern, bag.add, exact=(op == 'equals'))
+               for col in columns for pattern in patterns]
+    match = '(' + ' OR '.join(clauses) + ')'
+    return f'NOT {match}' if op == 'notContains' else match
 
 
 def _c_full_text(criterion, bag, warnings):

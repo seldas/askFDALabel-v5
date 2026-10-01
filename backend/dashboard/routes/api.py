@@ -35,7 +35,8 @@ from dashboard.config import Config
 from dashboard.services.fdalabel_db import FDALabelDBService
 from dashboard.services.spl_version_diff import compare_spl_xml
 from dashboard.services.deep_dive_service import DeepDiveService
-from sqlalchemy import func
+from sqlalchemy import func, or_
+from dashboard.services.name_matching import separator_variants
 from dashboard.services.meddra_matcher import scan_label_for_meddra
 
 logger = logging.getLogger(__name__)
@@ -1795,9 +1796,12 @@ def meddra_search():
     
     try:
         # Search for PTs starting with or containing the query
-        results = MeddraPT.query.filter(
-            MeddraPT.pt_name.ilike(f'%{query}%')
-        ).order_by(MeddraPT.pt_name).limit(10).all()
+        variants = separator_variants(query)
+        if variants is None:
+            match = func.replace(MeddraPT.pt_name, '-', ' ').ilike(f"%{query.replace('-', ' ')}%")
+        else:
+            match = or_(*(MeddraPT.pt_name.ilike(f'%{name}%') for name in variants))
+        results = MeddraPT.query.filter(match).order_by(MeddraPT.pt_name).limit(10).all()
         
         return jsonify([pt.pt_name for pt in results])
     except Exception as e:

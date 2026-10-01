@@ -24,6 +24,7 @@ from flask_login import current_user
 
 from dashboard.services.fdalabel_db import FDALabelDBService
 from dashboard.services import feature_gates
+from dashboard.services.name_matching import NameSearchParams
 from .compiler import (
     CLASS_TYPE_FILTERS,
     COMMON_FULLTEXT_WORDS,
@@ -125,9 +126,10 @@ def _resolve_meddra_locally(value, exact_match, expand_candidates=True):
 
     pt_rows = []
     if pt_names:
+        search = NameSearchParams()
+        matches = ' OR '.join(search.match('pt_name', name, equals=True, exact=exact_match) for name in pt_names)
         pt_rows.extend(_rows(
-            "SELECT pt_code, pt_name FROM public.meddra_pt WHERE UPPER(pt_name) = ANY(%(names)s)",
-            {'names': pt_names},
+            f"SELECT pt_code, pt_name FROM public.meddra_pt WHERE {matches}", search.params,
         ))
     if pt_codes:
         pt_rows.extend(_rows(
@@ -143,10 +145,9 @@ def _resolve_meddra_locally(value, exact_match, expand_candidates=True):
         JOIN public.meddra_pt p ON p.pt_code = l.pt_code
     """
     if llt_names:
-        llt_rows.extend(_rows(
-            llt_select + " WHERE UPPER(l.llt_name) = ANY(%(names)s)",
-            {'names': llt_names},
-        ))
+        search = NameSearchParams()
+        matches = ' OR '.join(search.match('l.llt_name', name, equals=True, exact=exact_match) for name in llt_names)
+        llt_rows.extend(_rows(llt_select + f" WHERE {matches}", search.params))
     if llt_codes:
         llt_rows.extend(_rows(
             llt_select + " WHERE l.llt_code = ANY(%(codes)s)",
@@ -317,14 +318,16 @@ def _entity_expansions(query, target_db, translate_intent=None):
                     try:
                         if use_oracle:
                             from dashboard.services.fdalabel_db import FDALabelDBService
-                            bind = {'name': term.upper()}
+                            search = NameSearchParams(oracle=True)
+                            trade_match = search.match('p.NAME', term, equals=True)
+                            generic_match = search.match('p.NORMD_GENERIC_NAME', term, equals=True)
                             ingr_rows = FDALabelDBService.execute_oracle_query(
-                                """
+                                f"""
                                 SELECT DISTINCT ai.SPL_ID, ai.UNII
                                 FROM druglabel.SUM_SPL_ACT_INGR_UNII ai
                                 JOIN druglabel.SPL_PROD p ON p.SPL_ID = ai.SPL_ID
-                                WHERE (UPPER(p.NAME) = :name OR UPPER(p.NORMD_GENERIC_NAME) = :name)
-                                """, bind)
+                                WHERE ({trade_match} OR {generic_match})
+                                """, search.params)
                             resolved_any = resolved_any or bool(ingr_rows)
                             sets = {}
                             incomplete = set()
@@ -385,20 +388,22 @@ def _entity_expansions(query, target_db, translate_intent=None):
                                     ):
                                         candidate_name_groups[category].update(item[key])
                         else:
+                            search = NameSearchParams()
+                            entity_match = search.match('TRIM(n)', term, equals=True)
                             matched = _rows(
-                                """
+                                f"""
                                 SELECT DISTINCT s.spl_id
                                 FROM labeling.sum_spl s
                                 WHERE s.is_latest = TRUE AND (
                                     EXISTS (
                                         SELECT 1 FROM unnest(string_to_array(COALESCE(s.product_names, ''), ';')) n
-                                        WHERE UPPER(TRIM(n)) = UPPER(%(name)s)
+                                        WHERE {entity_match}
                                     ) OR EXISTS (
                                         SELECT 1 FROM unnest(string_to_array(COALESCE(s.generic_names, ''), ';')) n
-                                        WHERE UPPER(TRIM(n)) = UPPER(%(name)s)
+                                        WHERE {entity_match}
                                     )
                                 )
-                                """, {'name': term})
+                                """, search.params)
                             spl_ids = [r['spl_id'] for r in matched if r.get('spl_id')]
                             if not spl_ids:
                                 all_names.append(term)
@@ -868,11 +873,14 @@ def suggest_product_name():
             pattern = f"%{q.upper()}%"
             prefix_pattern = f"{q.upper()}%"
             exact_q = q.upper()
+            search = NameSearchParams({'p': pattern, 'prefix_p': prefix_pattern, 'exact_q': exact_q}, oracle=True)
+            trade_match = search.match('NAME', pattern) if field != 'generic' else ''
+            generic_match = search.match('NORMD_GENERIC_NAME', pattern) if field != 'trade' else ''
 
             if field == 'trade':
-                sql = """
+                sql = f"""
                     SELECT DISTINCT NAME AS VALUE FROM druglabel.SPL_PROD
-                    WHERE UPPER(NAME) LIKE :p AND NAME IS NOT NULL
+                    WHERE {trade_match} AND NAME IS NOT NULL
                     ORDER BY 
                         CASE WHEN UPPER(NAME) = :exact_q THEN 1 
                              WHEN UPPER(NAME) LIKE :prefix_p THEN 2 
@@ -881,9 +889,9 @@ def suggest_product_name():
                     FETCH NEXT 40 ROWS ONLY
                 """
             elif field == 'generic':
-                sql = """
+                sql = f"""
                     SELECT DISTINCT NORMD_GENERIC_NAME AS VALUE FROM druglabel.SPL_PROD
-                    WHERE UPPER(NORMD_GENERIC_NAME) LIKE :p AND NORMD_GENERIC_NAME IS NOT NULL
+                    WHERE {generic_match} AND NORMD_GENERIC_NAME IS NOT NULL
                     ORDER BY 
                         CASE WHEN UPPER(NORMD_GENERIC_NAME) = :exact_q THEN 1 
                              WHEN UPPER(NORMD_GENERIC_NAME) LIKE :prefix_p THEN 2 
@@ -892,13 +900,13 @@ def suggest_product_name():
                     FETCH NEXT 40 ROWS ONLY
                 """
             else:
-                sql = """
+                sql = f"""
                     WITH candidates AS (
                         SELECT DISTINCT NORMD_GENERIC_NAME AS val FROM druglabel.SPL_PROD 
-                        WHERE UPPER(NORMD_GENERIC_NAME) LIKE :p AND NORMD_GENERIC_NAME IS NOT NULL
+                        WHERE {generic_match} AND NORMD_GENERIC_NAME IS NOT NULL
                         UNION
                         SELECT DISTINCT NAME AS val FROM druglabel.SPL_PROD 
-                        WHERE UPPER(NAME) LIKE :p AND NAME IS NOT NULL
+                        WHERE {trade_match} AND NAME IS NOT NULL
                     )
                     SELECT val AS VALUE FROM candidates
                     ORDER BY 
@@ -908,11 +916,7 @@ def suggest_product_name():
                         LENGTH(val), val
                     FETCH NEXT 40 ROWS ONLY
                 """
-            rows = FDALabelDBService.execute_oracle_query(sql, {
-                'p': pattern,
-                'prefix_p': prefix_pattern,
-                'exact_q': exact_q,
-            })
+            rows = FDALabelDBService.execute_oracle_query(sql, search.for_sql(sql))
             suggestions = [r.get('VALUE') for r in rows if r.get('VALUE')]
             return jsonify({'suggestions': suggestions})
         else:
@@ -924,13 +928,16 @@ def suggest_product_name():
             else:
                 col_sql = "COALESCE(s.product_names, '') || '; ' || COALESCE(s.generic_names, '')"
 
+            search = NameSearchParams({'q': q, 'pattern': pattern})
+            source_match = search.match(col_sql, pattern)
+            value_match = search.match('value', pattern)
             sql = f"""
                 SELECT DISTINCT value FROM (
                     SELECT TRIM(unnest(string_to_array({col_sql}, ';'))) AS value
                     FROM labeling.sum_spl s
-                    WHERE s.is_latest = TRUE AND ({col_sql} ILIKE %(pattern)s)
+                    WHERE s.is_latest = TRUE AND {source_match}
                 ) t
-                WHERE value ILIKE %(pattern)s AND value <> ''
+                WHERE {value_match} AND value <> ''
                 ORDER BY 
                     CASE WHEN lower(value) = lower(%(q)s) THEN 1 
                          WHEN lower(value) ILIKE (lower(%(q)s) || '%%') THEN 2 
@@ -938,7 +945,7 @@ def suggest_product_name():
                     LENGTH(value) ASC, value ASC
                 LIMIT 40;
             """
-            rows = _rows(sql, {'pattern': pattern, 'q': q})
+            rows = _rows(sql, search.params)
             return jsonify({'suggestions': [r['value'] for r in rows]})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1008,12 +1015,14 @@ def suggest_meddra():
 
     try:
         table, column = _MEDDRA_LEVELS[level]
+        search = NameSearchParams()
+        match = search.match(column, f'%{q}%')
         rows = _rows(
             f"""
             SELECT DISTINCT {column} AS name FROM public.{table}
-            WHERE {column} ILIKE %(q)s ORDER BY name LIMIT 30
+            WHERE {match} ORDER BY name LIMIT 30
             """,
-            {'q': f'%{q}%'},
+            search.params,
         )
         return jsonify({'suggestions': [r['name'] for r in rows]})
     except Exception as e:
@@ -1028,11 +1037,14 @@ def get_meddra_hierarchy():
         return jsonify({'term': term, 'path': [], 'formatted': ''})
 
     try:
+        search = NameSearchParams()
+        pt_match = search.match('p.pt_name', term, equals=True)
+        llt_match = search.match('l.llt_name', term, equals=True)
         # MedDRA lookup is deliberately independent of the selected label
         # database. Oracle searches use local MedDRA codes against Oracle's
         # occurrence table, so the UI hierarchy must use the same local release.
         if level == 'llt':
-            sql = """
+            sql = f"""
                 SELECT s.soc_name, g.hlgt_name, t.hlt_name, p.pt_name, l.llt_name
                 FROM public.meddra_llt l
                 JOIN public.meddra_pt p ON p.pt_code = l.pt_code
@@ -1040,21 +1052,21 @@ def get_meddra_hierarchy():
                 LEFT JOIN public.meddra_soc s ON s.soc_code = h.soc_code
                 LEFT JOIN public.meddra_hlgt g ON g.hlgt_code = h.hlgt_code
                 LEFT JOIN public.meddra_hlt t ON t.hlt_code = h.hlt_code
-                WHERE LOWER(l.llt_name) = LOWER(%(t)s)
+                WHERE {llt_match}
                 LIMIT 1
             """
         else:
-            sql = """
+            sql = f"""
                 SELECT s.soc_name, g.hlgt_name, t.hlt_name, p.pt_name
                 FROM public.meddra_pt p
                 LEFT JOIN public.meddra_mdhier h ON h.pt_code = p.pt_code
                 LEFT JOIN public.meddra_soc s ON s.soc_code = h.soc_code
                 LEFT JOIN public.meddra_hlgt g ON g.hlgt_code = h.hlgt_code
                 LEFT JOIN public.meddra_hlt t ON t.hlt_code = h.hlt_code
-                WHERE LOWER(p.pt_name) = LOWER(%(t)s)
+                WHERE {pt_match}
                 LIMIT 1
             """
-        rows = _rows(sql, {'t': term})
+        rows = _rows(sql, search.params)
         if rows:
             r = rows[0]
             cols = ['soc_name', 'hlgt_name', 'hlt_name', 'pt_name']
@@ -1090,15 +1102,17 @@ def get_meddra_llts():
         return jsonify({'term': term, 'llts': []})
 
     try:
+        search = NameSearchParams()
+        pt_match = search.match('p.pt_name', term, equals=True)
         rows = _rows(
-            """
+            f"""
             SELECT DISTINCT l.llt_name AS name
             FROM public.meddra_llt l
             JOIN public.meddra_pt p ON p.pt_code = l.pt_code
-            WHERE LOWER(p.pt_name) = LOWER(%(t)s)
+            WHERE {pt_match}
             ORDER BY name
             """,
-            {'t': term},
+            search.params,
         )
         llts = [r['name'] for r in rows if r.get('name')]
 
@@ -1127,15 +1141,17 @@ def get_meddra_parent_pt():
         return jsonify({'term': term, 'pt': None})
 
     try:
+        search = NameSearchParams()
+        llt_match = search.match('l.llt_name', term, equals=True)
         rows = _rows(
-            """
+            f"""
             SELECT p.pt_name AS name
             FROM public.meddra_llt l
             JOIN public.meddra_pt p ON p.pt_code = l.pt_code
-            WHERE LOWER(l.llt_name) = LOWER(%(t)s)
+            WHERE {llt_match}
             LIMIT 1
             """,
-            {'t': term},
+            search.params,
         )
         pt = rows[0]['name'] if rows else None
 
