@@ -25,6 +25,7 @@ only speaks for the Oracle path.
 """
 
 import re
+from dashboard.services.name_matching import name_match_sql
 from .compiler import TITLE_TO_LOINCS, COMMON_FULLTEXT_WORDS, is_common_fulltext_query
 from .facets import CATEGORY_CRITERION
 
@@ -399,31 +400,33 @@ def _compile_product_name(value, bag, base_table=BASE_TABLE_HUMAN):
         term_up = term.upper()
         if op == 'equals':
             pat = term_up
-            eq_op = '='
         elif op == 'startsWith':
             pat = f'{term_up}%'
-            eq_op = 'LIKE'
         else:
             pat = f'%{term_up}%'
-            eq_op = 'LIKE'
-        p = bag.add(pat)
+        def match(column):
+            if op == 'equals':
+                return f'UPPER({column}) = {bag.add(pat)}'
+            return name_match_sql(column, pat, bag.add, oracle=True)
 
-        if has_moiety_column:
-            moiety_pred = f'UPPER(s.ACT_MOIETY_NAMES) {eq_op} {p}'
+        if field in ('trade', 'generic'):
+            moiety_pred = None
+        elif has_moiety_column:
+            moiety_pred = match('s.ACT_MOIETY_NAMES')
         else:
             moiety_pred = (
                 'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_ACT_MOIETY_NAME mn '
-                f'WHERE mn.SPL_ID = s.SPL_ID AND UPPER(mn.ACTIVE_MOIETY_NAME) {eq_op} {p})'
+                f"WHERE mn.SPL_ID = s.SPL_ID AND {match('mn.ACTIVE_MOIETY_NAME')})"
             )
 
         if field == 'trade':
-            sub = f'UPPER(p.NAME) {eq_op} {p}'
+            sub = match('p.NAME')
         elif field == 'generic':
-            sub = f'UPPER(p.NORMD_GENERIC_NAME) {eq_op} {p}'
+            sub = match('p.NORMD_GENERIC_NAME')
         elif field == 'unii':
-            sub = f'(UPPER(s.ACT_INGR_NAMES) {eq_op} {p} OR {moiety_pred})'
+            sub = f"({match('s.ACT_INGR_NAMES')} OR {moiety_pred})"
         else:
-            sub = f'(UPPER(p.NAME) {eq_op} {p} OR UPPER(p.NORMD_GENERIC_NAME) {eq_op} {p} OR UPPER(s.ACT_INGR_NAMES) {eq_op} {p} OR {moiety_pred})'
+            sub = f"({match('p.NAME')} OR {match('p.NORMD_GENERIC_NAME')} OR {match('s.ACT_INGR_NAMES')} OR {moiety_pred})"
 
         if op == 'notContains':
             clauses.append(
@@ -558,22 +561,22 @@ def _meddra_llt_codes_sql(level, term, bag, exclude_sql=''):
 
     # Text MedDRA term
     if '%' in t_clean:
-        p_pattern = bag.add(f"%{t_clean.strip('%').upper()}%")
+        pattern = f"%{t_clean.strip('%').upper()}%"
         match_op = 'LIKE'
     else:
-        p_pattern = bag.add(t_clean.upper())
+        pattern = t_clean.upper()
         match_op = '='
 
     if level == 'llt':
         return (
             f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
-            f"WHERE UPPER(llt.LLT_NAME) {match_op} {p_pattern}"
+            f"WHERE {name_match_sql('llt.LLT_NAME', pattern, bag.add, oracle=True, equals=(match_op == '='))}"
         )
     if level == 'pt':
         return (
             f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
             f"JOIN meddra.preferred_term pt ON pt.PT_CODE = llt.PT_CODE "
-            f"WHERE UPPER(pt.PT_NAME) {match_op} {p_pattern}{exclude_sql}"
+            f"WHERE {name_match_sql('pt.PT_NAME', pattern, bag.add, oracle=True, equals=(match_op == '='))}{exclude_sql}"
         )
     # Levels above PT (HLT, HLGT, SOC) are disabled
     return None
