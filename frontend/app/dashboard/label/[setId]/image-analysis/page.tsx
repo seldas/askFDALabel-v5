@@ -44,6 +44,7 @@ export default function ImageAnalysisPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [processCached, setProcessCached] = useState(false);
+  const [hasProcessed, setHasProcessed] = useState(false);
   const [proxyImageIds, setProxyImageIds] = useState<string[]>([]);
   const [brokenImageIds, setBrokenImageIds] = useState<string[]>([]);
   const [processResult, setProcessResult] = useState('');
@@ -105,6 +106,7 @@ export default function ImageAnalysisPage() {
     let cancelled = false;
     setProcessResult('');
     setProcessCached(false);
+    setHasProcessed(false);
     (async () => {
       try {
         const response = await fetch(apiPath(setId, `process/${selectedId}`, splId));
@@ -113,6 +115,8 @@ export default function ImageAnalysisPage() {
         if (!cancelled && body.cached && body.result) {
           setProcessResult(body.result);
           setProcessCached(true);
+          // Don't set hasProcessed — saved results loaded on init don't make
+          // the button say "Re-analyse" yet; only a user-triggered run does.
         }
       } catch {
         // Cached results are an enhancement; image selection should still work
@@ -124,16 +128,18 @@ export default function ImageAnalysisPage() {
 
   const processImage = async () => {
     if (!selected) return;
+    const force = hasProcessed && !!processResult;
     setBusy(true); setError(''); setProcessResult(''); setProcessCached(false);
     try {
       const response = await fetch(apiPath(setId, 'process', null), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_id: selected.id, spl_id: splId }),
+        body: JSON.stringify({ image_id: selected.id, spl_id: splId, force }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || `Image processing failed (${response.status})`);
       setProcessResult(body.result || 'No result returned.');
       setProcessCached(Boolean(body.cached));
+      setHasProcessed(true);
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(false); }
   };
@@ -162,7 +168,7 @@ export default function ImageAnalysisPage() {
     <main className="image-review">
       {!loading && images.length > 0 && <nav className="image-review__filmstrip" aria-label="Label images">
         <div className="image-review__filmstrip-title">Select an image <span>{images.length}</span></div>
-              <div className="image-review__cards">{images.map((image) => <button key={image.id} className={`image-review__card ${selectedId === image.id ? 'is-selected' : ''}`} onClick={() => { setSelectedId(image.id); setProcessResult(''); setProcessCached(false); }} aria-pressed={selectedId === image.id}>
+              <div className="image-review__cards">{images.map((image) => <button key={image.id} className={`image-review__card ${selectedId === image.id ? 'is-selected' : ''}`} onClick={() => { setSelectedId(image.id); setProcessResult(''); setProcessCached(false); setHasProcessed(false); }} aria-pressed={selectedId === image.id}>
           {brokenImageIds.includes(image.id) ? <span className="image-review__thumb-error">Unavailable</span> : <img src={imageSrc(image)} onError={() => imageFailed(image)} alt="" loading="lazy" />}
           <span className="image-review__card-category">{image.category}</span>
           <span className="image-review__card-name">{image.title}</span>
@@ -176,7 +182,7 @@ export default function ImageAnalysisPage() {
         </div>
         <div className="image-review__actions">
           <button className="image-review__button image-review__button--secondary" onClick={() => { setCompareOpen(true); setCompareResult(null); setCompareId(''); setUpload(null); }} disabled={!selected}>Compare</button>
-          <button className="image-review__button image-review__button--primary" onClick={processImage} disabled={!selected || busy}>{busy ? 'Processing…' : 'Process image'}</button>
+          <button className="image-review__button image-review__button--primary" onClick={processImage} disabled={!selected || busy}>{busy ? 'Processing…' : hasProcessed && processResult ? 'Re-analyse' : 'Process image'}</button>
         </div>
       </header>
 

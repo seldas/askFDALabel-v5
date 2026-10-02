@@ -179,7 +179,14 @@ class AIClientFactory:
 
              cache_key = (provider, api_key, base_url)
              if cache_key not in AIClientFactory._clients:
-                 AIClientFactory._clients[cache_key] = OpenAI(api_key=api_key, base_url=base_url, timeout=30.0)
+                 # Use a generous timeout: vision inference + large base64 payloads
+                 # easily exceed 30 s, which causes vLLM to receive a truncated
+                 # message and respond "did not receive an image".
+                 AIClientFactory._clients[cache_key] = OpenAI(
+                     api_key=api_key,
+                     base_url=base_url,
+                     timeout=httpx.Timeout(600.0, connect=30.0),
+                 )
              return "llama", AIClientFactory._clients[cache_key], model
 
         if provider == 'rapid':
@@ -218,6 +225,10 @@ def call_llm(user, system_prompt, user_message, history=None, model_override=Non
     # Callers may pass already-formed parts, or image inputs as data URLs / URLs.
     images = kwargs.get("images") or []
     if images:
+        # vllm and ollama both implement the OpenAI vision format — they are
+        # handled by the same llama/elsa code path.  "vllm", "ollama", and
+        # "customized" all return "llama" as the provider token from get_client(),
+        # so the only check needed here is the normalised token name.
         if provider not in ("llama", "elsa"):
             raise ValueError(f"Image input is not supported for the configured AI provider: {provider}")
         user_content = [{"type": "text", "text": str(user_message or "")}]
@@ -264,10 +275,15 @@ def call_llm(user, system_prompt, user_message, history=None, model_override=Non
             }
             if provider == "llama":
                 request_args["top_p"] = top_p
-                request_args["extra_body"] = {
-                    "repetition_penalty": kwargs.get("repetition_penalty", 1.1),
-                    "top_k": kwargs.get("top_k", 50),
-                }
+                # extra_body parameters (repetition_penalty, top_k) are llama/vllm
+                # sampling extensions — skip them when images are attached because
+                # some vLLM vision endpoints reject unrecognised extra fields and
+                # respond with "did not receive an image" instead of a proper error.
+                if not images:
+                    request_args["extra_body"] = {
+                        "repetition_penalty": kwargs.get("repetition_penalty", 1.1),
+                        "top_k": kwargs.get("top_k", 50),
+                    }
             response = client.chat.completions.create(**request_args)
             if kwargs.get("stream", False): return response
             
