@@ -1,0 +1,26 @@
+.faers-analysis { color: var(--fdl-ink); }
+.faers-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-top:16px; padding:12px; background:var(--fdl-canvas); border:1px solid var(--fdl-line); }
+.faers-button, .faers-toggle button { min-height:34px; padding:6px 12px; border:1px solid var(--fdl-line); border-radius:var(--fdl-radius-sm, 2px); background:var(--fdl-paper); color:var(--fdl-ink); font:inherit; font-size:.82rem; font-weight:600; cursor:pointer; }
+.faers-button-primary, .faers-toggle button[aria-pressed="true"] { background:var(--fdl-blue-700); border-color:var(--fdl-blue-700); color:var(--fdl-paper); }
+.faers-button:hover:not(:disabled), .faers-toggle button:hover { border-color:var(--fdl-blue-700); }
+.faers-button-primary:hover:not(:disabled) { background:var(--fdl-navy-800); }
+.faers-button:disabled { opacity:.5; cursor:not-allowed; }
+.faers-button:focus-visible, .faers-toggle button:focus-visible, .faers-ai-options input:focus-visible { outline:2px solid var(--fdl-blue-600); outline-offset:2px; }
+.faers-toggle { display:flex; gap:4px; }
+.faers-description { font-size:.82rem; color:var(--fdl-muted); line-height:1.5; margin:12px 0 20px; }
+.faers-ai-options { display:grid; gap:12px; color:var(--fdl-ink); }
+.faers-ai-options label { display:flex; align-items:center; gap:8px; font-size:.85rem; }
+.faers-ai-options input { accent-color:var(--fdl-blue-700); }
+.faers-ai-options input[type="number"] { width:80px; padding:6px; border:1px solid var(--fdl-line); border-radius:2px; background:var(--fdl-paper); color:var(--fdl-ink); }
+.faers-ai-preview { padding:12px; border:1px solid var(--fdl-line); background:var(--fdl-canvas); color:var(--fdl-ink); font-size:.85rem; }
+.faers-ai-preview ol { max-height:260px; overflow:auto; padding-left:28px; margin-bottom:0; }
+.faers-ai-preview li { padding:5px 0; }
+.faers-ai-preview li span:last-child { margin-left:12px; color:var(--fdl-muted); white-space:nowrap; }
+.faers-ai-warning { padding:10px; border-left:3px solid var(--fdl-blue-700); background:var(--fdl-paper); line-height:1.5; }
+.faers-modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+.faers-analysis .modal-content { border-radius:var(--fdl-radius-sm, 2px); border:1px solid var(--fdl-line); background:var(--fdl-paper); box-shadow:none; }
+.faers-analysis .modal-header { border-bottom:1px solid var(--fdl-line); }
+.faers-analysis .modal-header h3 { color:var(--fdl-ink) !important; }
+.faers-analysis .modal-header button { border-radius:2px !important; background:var(--fdl-canvas) !important; color:var(--fdl-muted) !important; }
+.faers-analysis .coverage-table { color:var(--fdl-ink); }
+.faers-analysis .coverage-table td > div { border-radius:var(--fdl-radius-sm, 2px) !important; }

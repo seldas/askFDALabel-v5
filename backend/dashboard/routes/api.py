@@ -2564,8 +2564,8 @@ def api_faers_trends():
 @api_bp.route('/faers/emerging', methods=['POST'])
 def api_faers_emerging():
     """
-    Identifies 'emerging' AEs: terms present in the last 5 years but absent 6-10 years ago.
-    Also scans the current label (set_id) for these terms.
+    Returns all-time AEs and emerging AEs (recent five years, absent in the preceding five).
+    Scans the current label (set_id) for exact matches across both cohorts.
     """
     data = request.get_json()
     drug_name = data.get('drug_name')
@@ -2587,8 +2587,10 @@ def api_faers_emerging():
     p2_start = (now - timedelta(days=10*365)).strftime('%Y%m%d')
 
     try:
-        def fetch_counts(start, end):
-            query = f'{search_term} AND receivedate:[{start} TO {end}]'
+        def fetch_counts(start=None, end=None):
+            query = search_term
+            if start and end:
+                query += f' AND receivedate:[{start} TO {end}]'
             params = {
                 'search': query,
                 'count': 'patient.reaction.reactionmeddrapt.exact',
@@ -2603,16 +2605,21 @@ def api_faers_emerging():
             elif resp.status_code == 404:
                 return {}
             else:
-                logger.warning(f"openFDA error {resp.status_code} for period {start}-{end}")
-                return {}
+                resp.raise_for_status()
 
         counts_recent = fetch_counts(p1_start, p1_end)
         counts_prev = fetch_counts(p2_start, p2_end)
 
-        emerging = []
-        for term, count in counts_recent.items():
-            if term not in counts_prev:
-                emerging.append({'term': term, 'count': count, 'prev_count': 0, 'label_matches': []})
+        counts_all = fetch_counts()
+        emerging_terms = set(counts_recent) - set(counts_prev)
+        # Include recent terms even if they fall outside the all-time top 1000.
+        emerging = [
+            {'term': term, 'count': counts_all.get(term, count),
+             'recent_count': counts_recent.get(term, 0),
+             'prev_count': counts_prev.get(term, 0),
+             'is_emerging': term in emerging_terms, 'label_matches': []}
+            for term, count in (counts_all | counts_recent).items()
+        ]
 
         # Sort by count desc
         emerging.sort(key=lambda x: x['count'], reverse=True)
@@ -2668,9 +2675,11 @@ def api_faers_emerging():
                     logger.error(f"Error scanning XML for emerging AEs: {xml_err}")
 
         return jsonify({
-            'emerging': emerging,
+            'emerging': [dict(ae, count=ae['recent_count']) for ae in emerging if ae['is_emerging']],
+            'all_time': emerging,
             'metadata': {
                 'drug': clean_name,
+                'term_limit_per_period': 1000,
                 'recent_period': [p1_start, p1_end],
                 'previous_period': [p2_start, p2_end]
             }
@@ -2727,7 +2736,7 @@ def api_faers_ai_rematch():
 
         prompt = f"""
         Analyze the provided drug labeling text for the drug "{drug_name}".
-        We have a list of adverse event (AE) terms (MedDRA Preferred Terms) reported in FAERS that were NOT found via direct string matching in the label.
+        We have a list of adverse event (AE) terms (MedDRA Preferred Terms) reported in FAERS for semantic validation against the label.
         
         TASK: For each term, determine if it is SEMANTICALLY mentioned or related in the labeling (e.g., as a different synonym, a broader category, or mentioned in a specific clinical context).
         
@@ -2766,7 +2775,10 @@ def api_faers_ai_rematch():
         # Save to DB (Upsert)
         existing = AeAiAssessment.query.filter_by(set_id=set_id, drug_name=drug_name).first()
         if existing:
-            existing.result_json = json.dumps(result_list)
+            previous_results = json.loads(existing.result_json)
+            merged_results = {r['term'].upper(): r for r in previous_results}
+            merged_results.update({r['term'].upper(): r for r in result_list})
+            existing.result_json = json.dumps(list(merged_results.values()))
             existing.min_count = min_count
             existing.timestamp = utc_now()
         else:

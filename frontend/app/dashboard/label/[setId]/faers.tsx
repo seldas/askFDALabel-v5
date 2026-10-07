@@ -14,6 +14,8 @@ import {
   Area
 } from 'recharts';
 import './analysis.css';
+import Modal from '../../../components/Modal';
+import './faers.css';
 
 interface LabelMatch {
   section: string;
@@ -31,6 +33,8 @@ interface EmergingAe {
   term: string;
   count: number;
   prev_count: number;
+  recent_count: number;
+  is_emerging: boolean;
   soc: string;
   hlt: string;
   soc_abbrev: string;
@@ -58,7 +62,12 @@ function EmergingAeAnalysis({
   const [data, setData] = useState<EmergingAe[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [aiMinCount, setAiMinCount] = useState(10);
-  const [hasAiResult, setHasAiResult] = useState(false);
+  const [scope, setScope] = useState<'all' | 'emerging'>('emerging');
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [useCountThreshold, setUseCountThreshold] = useState(true);
+  const [emergingOnly, setEmergingOnly] = useState(true);
+  const [excludeExact, setExcludeExact] = useState(true);
+  const [skipAnalyzed, setSkipAnalyzed] = useState(false);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -84,23 +93,17 @@ function EmergingAeAnalysis({
     });
   };
 
-  useEffect(() => {
-    if (setId && drugName) {
-        checkExistingAiResults();
-    }
-  }, [setId, drugName]);
-
   // Automated scan when tab is active
   useEffect(() => {
-    if (activeTab === 'faers-view' && drugName && !data && !loading) {
+    if (activeTab === 'faers-view' && drugName && !data && !loading && !error) {
         runAnalysis();
     }
-  }, [activeTab, drugName, data, loading]);
+  }, [activeTab, drugName, data, loading, error]);
 
   // Reset to first page when data or itemsPerPage changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [data, itemsPerPage]);
+  }, [data, itemsPerPage, scope, activeFilters]);
 
   useEffect(() => {
     if (selectedAe) {
@@ -166,26 +169,10 @@ function EmergingAeAnalysis({
   };
 
 
-  const checkExistingAiResults = async () => {
-    try {
-        const resp = await fetch(`/api/dashboard/faers/ai_results?set_id=${setId}&drug_name=${encodeURIComponent(drugName || '')}`);
-        const json = await resp.json();
-        if (json.results) {
-            setHasAiResult(true);
-            setAiMinCount(json.min_count || 10);
-            if (data) {
-                applyAiResults(data, json.results);
-            }
-        }
-    } catch (e) {
-        console.error("Failed to check AI results", e);
-    }
-  };
-
   const applyAiResults = (currentData: EmergingAe[], aiResults: AiMatch[]) => {
     const updated = currentData.map(ae => {
         const aiMatch = aiResults.find(r => r.term.toUpperCase() === ae.term.toUpperCase());
-        return { ...ae, ai_match: aiMatch };
+        return { ...ae, ai_match: aiMatch || ae.ai_match };
     });
     setData(updated);
   };
@@ -206,18 +193,9 @@ function EmergingAeAnalysis({
       }
       const json = await resp.json();
       
-      // If we have existing AI results, apply them now
-      if (hasAiResult) {
-          const aiResp = await fetch(`/api/dashboard/faers/ai_results?set_id=${setId}&drug_name=${encodeURIComponent(drugName || '')}`);
-          const aiJson = await aiResp.json();
-          if (aiJson.results) {
-              applyAiResults(json.emerging, aiJson.results);
-          } else {
-              setData(json.emerging);
-          }
-      } else {
-          setData(json.emerging);
-      }
+      const aiResp = await fetch(`/api/dashboard/faers/ai_results?set_id=${setId}&drug_name=${encodeURIComponent(drugName || '')}`);
+      const aiJson = aiResp.ok ? await aiResp.json() : {};
+      applyAiResults(json.all_time, aiJson.results || []);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -228,16 +206,10 @@ function EmergingAeAnalysis({
   const runAiMatch = async () => {
     if (!data || !setId || !drugName) return;
     
-    // Identify undocumented terms with count >= aiMinCount
-    const targetTerms = data
-        .filter(ae => ae.label_matches.length === 0 && ae.count >= aiMinCount)
-        .map(ae => ({ term: ae.term, count: ae.count }));
-
-    if (targetTerms.length === 0) {
-        alert(`No undocumented terms found with report count >= ${aiMinCount}`);
-        return;
-    }
-
+    const targetTerms = aiCandidates.map(ae => ({ term: ae.term, count: candidateCount(ae) }));
+    if (!targetTerms.length) return;
+    setAiModalOpen(false);
+    setError(null);
     setAiLoading(true);
     try {
         const resp = await fetch('/api/dashboard/faers/ai_rematch', {
@@ -247,7 +219,7 @@ function EmergingAeAnalysis({
                 set_id: setId,
                 drug_name: drugName,
                 terms: targetTerms,
-                min_count: aiMinCount
+                min_count: useCountThreshold ? aiMinCount + 1 : 0
             })
         });
         if (!resp.ok) {
@@ -256,16 +228,25 @@ function EmergingAeAnalysis({
         }
         const json = await resp.json();
         applyAiResults(data, json.results);
-        setHasAiResult(true);
+
     } catch (err: any) {
-        alert("AI Semantic Matching Error: " + err.message);
+        setError("AI Semantic Matching Error: " + err.message);
     } finally {
         setAiLoading(false);
     }
   };
 
+  const candidateCount = (ae: EmergingAe) => emergingOnly ? ae.recent_count : ae.count;
+  const aiCandidates = (data || []).filter(ae =>
+    (!emergingOnly || ae.is_emerging) &&
+    (!useCountThreshold || candidateCount(ae) > aiMinCount) &&
+    (!excludeExact || ae.label_matches.length === 0) &&
+    (!skipAnalyzed || !ae.ai_match)
+  ).sort((a, b) => candidateCount(b) - candidateCount(a));
+
   // Pagination & Filtering Logic
   const filteredData = data ? data.filter(ae => {
+    if (scope === 'emerging' && !ae.is_emerging) return false;
     const isExact = ae.label_matches && ae.label_matches.length > 0;
     const isSemantic = ae.ai_match?.found === true;
     const isNone = !isExact && !isSemantic;
@@ -274,7 +255,7 @@ function EmergingAeAnalysis({
     if (activeFilters.has('semantic') && isSemantic) return true;
     if (activeFilters.has('none') && isNone) return true;
     return false;
-  }) : [];
+  }).sort((a, b) => scope === 'emerging' ? b.recent_count - a.recent_count : b.count - a.count) : [];
 
   const totalItems = filteredData.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -282,11 +263,11 @@ function EmergingAeAnalysis({
   const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
 
   return (
-    <div className="chart-card full-width" style={{ marginTop: '0', borderTop: 'none', paddingTop: '0' }}>
+    <div className="chart-card full-width faers-analysis" style={{ marginTop: '0', borderTop: 'none', paddingTop: '0' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--afl-n-50)', padding: '14px 20px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--afl-n-200)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '1.3rem' }}>🆕</span>
-            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--afl-n-900)' }}>Emerging Adverse Events (Last 5 Years Only)</h3>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--afl-n-900)' }}>{scope === 'emerging' ? 'Emerging Adverse Events' : 'All-time Adverse Events'}</h3>
         </div>
         {loading && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -296,78 +277,44 @@ function EmergingAeAnalysis({
         )}
       </div>
 
-      <div style={{ 
-          marginTop: '16px', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between', 
-          background: 'var(--afl-info-50)', 
-          padding: '10px 16px', 
-          borderRadius: 'var(--fdl-radius-sm, 2px)', 
-          border: '1px solid var(--afl-info-100)' 
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.1rem' }}>🤖</span>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-info-700)' }}>AI Semantic Matcher</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--afl-info-500)' }}>Min Reports:</label>
-                <input 
-                    type="number" 
-                    value={aiMinCount} 
-                    onChange={(e) => setAiMinCount(parseInt(e.target.value) || 0)}
-                    style={{ 
-                        width: '60px', 
-                        padding: '2px 6px', 
-                        borderRadius: 'var(--fdl-radius-sm, 2px)', 
-                        border: '1px solid var(--afl-info-200)', 
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
-                        color: 'var(--afl-info-700)'
-                    }} 
-                />
-            </div>
+      <div className="faers-toolbar">
+        <div className="faers-toggle" role="group" aria-label="Adverse event reporting period">
+          <button aria-pressed={scope === 'all'} onClick={() => { setScope('all'); setSelectedAe(null); setTrendData([]); }}>All-time AE</button>
+          <button aria-pressed={scope === 'emerging'} onClick={() => { setScope('emerging'); setSelectedAe(null); setTrendData([]); }}>Emerging AE</button>
         </div>
-        <button 
-            onClick={runAiMatch} 
-            disabled={aiLoading || !data}
-            style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 14px',
-                borderRadius: 'var(--fdl-radius-sm, 2px)',
-                backgroundColor: aiLoading ? 'var(--afl-n-200)' : 'var(--afl-info-500)',
-                color: 'white',
-                border: 'none',
-                fontWeight: 700,
-                fontSize: '0.75rem',
-                cursor: aiLoading ? 'not-allowed' : 'pointer',
-                transition: 'all 0.15s ease'
-            }}
-        >
-            {aiLoading ? (
-                <>
-                    <div className="loader" style={{ width: '12px', height: '12px', borderWidth: '2px', borderTopColor: 'white' }}></div>
-                    Evaluating Top Candidates...
-                </>
-            ) : (
-                <>
-                    <span>⚡</span> Run Semantic Analysis
-                </>
-            )}
+        <button className="faers-button faers-button-primary" onClick={() => { setEmergingOnly(scope === 'emerging'); setAiModalOpen(true); }} disabled={aiLoading || loading || !data || !setId}>
+          {aiLoading ? 'Analyzing AEs…' : 'Run Semantic Analysis'}
         </button>
       </div>
-      
-      <p style={{ fontSize: '0.8rem', color: 'var(--afl-n-500)', marginTop: '12px', marginBottom: '20px', maxWidth: '900px', lineHeight: '1.5', padding: '0 4px' }}>
-        Identifies reactions present in the <strong>recent 5 years</strong> of reports but absent in the previous 5 years. 
-        String matching verifies exact label presence; <strong>AI Semantic Matcher</strong> uses LLMs to find undocumented terms mentioned via synonyms or clinical context.
+      <p className="faers-description">
+        {scope === 'emerging' ? 'Reactions reported in the recent five years but absent in the preceding five years. Counts reflect the recent period.' : 'Reactions across all available FAERS reporting years. Counts reflect all-time reports.'}
+        {' '}Exact matching checks label text; semantic AI checks synonyms and clinical context. Each period retrieves up to 1,000 terms from openFDA.
       </p>
+      <Modal isOpen={aiModalOpen} onClose={() => setAiModalOpen(false)} title="Configure AI Semantic Analysis">
+        <div className="faers-ai-options">
+          <label><input type="checkbox" checked={useCountThreshold} onChange={e => setUseCountThreshold(e.target.checked)} /> Occurrence &gt;
+            <input aria-label="Occurrence threshold" type="number" min="0" step="1" disabled={!useCountThreshold} value={aiMinCount} onChange={e => setAiMinCount(Math.max(0, Math.floor(Number(e.target.value) || 0)))} />
+          </label>
+          <label><input type="checkbox" checked={emergingOnly} onChange={e => setEmergingOnly(e.target.checked)} /> Emerging AE only</label>
+          <label><input type="checkbox" checked={excludeExact} onChange={e => setExcludeExact(e.target.checked)} /> Exclude exact label matches</label>
+          <label><input type="checkbox" checked={skipAnalyzed} onChange={e => setSkipAnalyzed(e.target.checked)} /> Skip previously analyzed AEs</label>
+        </div>
+        <p className="faers-description">Occurrence uses {emergingOnly ? 'recent five-year' : 'all-time'} report counts. These options determine the submitted list independently of table match filters.</p>
+        <div aria-live="polite" className="faers-ai-preview">
+          <strong>{aiCandidates.length} AEs will be sent</strong>
+          {aiCandidates.length > 30 && <p className="faers-ai-warning">Too many AEs may degrade AI performance. Showing the first 30; all {aiCandidates.length} selected AEs will be sent. Increase the threshold or narrow the selection to reduce the list.</p>}
+          {aiCandidates.length === 0 ? <p>No AEs match these options.</p> : <ol>{aiCandidates.slice(0, 30).map(ae => <li key={ae.term}><span>{ae.term}</span><span>{candidateCount(ae).toLocaleString()} reports</span></li>)}</ol>}
+        </div>
+        <div className="faers-modal-actions">
+          <button className="faers-button" onClick={() => setAiModalOpen(false)}>Cancel</button>
+          <button className="faers-button faers-button-primary" disabled={!aiCandidates.length || aiLoading} onClick={runAiMatch}>Analyze {aiCandidates.length} AEs</button>
+        </div>
+      </Modal>
 
       {error && (
         <div style={{ backgroundColor: 'var(--afl-danger-50)', border: '1px solid var(--afl-danger-100)', color: 'var(--afl-danger-700)', padding: '10px 14px', borderRadius: 'var(--fdl-radius-sm, 2px)', marginBottom: '16px', marginTop: '16px', fontSize: '0.8rem' }}>
           {error}
+          {!data && <button className="faers-button" style={{ marginLeft: 12 }} disabled={loading} onClick={runAnalysis}>Retry</button>}
         </div>
       )}
 
@@ -430,7 +377,7 @@ function EmergingAeAnalysis({
           <table className="coverage-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--afl-n-200)', background: 'var(--afl-n-100)' }}>
-                <th style={{ padding: '10px 12px', width: '22%' }}>Emerging AE (MedDRA PT)</th>
+                <th style={{ padding: '10px 12px', width: '22%' }}>AE (MedDRA PT)</th>
                 <th style={{ padding: '10px 12px', width: '8%' }}>Reports</th>
                 <th style={{ padding: '10px 12px', width: '18%' }}>SOC Hierarchy</th>
                 <th style={{ padding: '10px 12px', width: '26%' }}>Direct Match Context</th>
@@ -460,7 +407,7 @@ function EmergingAeAnalysis({
                   </td>
                   <td style={{ padding: '12px' }}>
                     <span style={{ background: 'var(--afl-n-100)', padding: '2px 8px', borderRadius: '4px', fontWeight: 800, color: 'var(--afl-n-700)', fontSize: '0.75rem' }}>
-                        {ae.count}
+                        {scope === 'emerging' ? ae.recent_count : ae.count}
                     </span>
                   </td>
                   <td style={{ padding: '12px' }}>
@@ -512,7 +459,7 @@ function EmergingAeAnalysis({
                         </div>
                     ) : (
                         <div style={{ fontSize: '0.75rem', color: 'var(--afl-n-400)', fontStyle: 'italic', padding: '10px', textAlign: 'center', border: '1px dashed var(--afl-n-200)', borderRadius: '8px' }}>
-                            {ae.label_matches.length > 0 ? 'Verified by exact match' : (ae.count < aiMinCount ? 'Below AI count threshold' : 'Pending AI evaluation')}
+                            {ae.label_matches.length > 0 ? 'Verified by exact match' : 'Pending AI evaluation'}
                         </div>
                     )}
                   </td>
@@ -520,7 +467,7 @@ function EmergingAeAnalysis({
               )) : (
                 <tr>
                   <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--afl-n-400)', fontStyle: 'italic' }}>
-                    No entirely new AE terms found in the recent period for this drug.
+                    No AE terms match the selected reporting period and match filters.
                   </td>
                 </tr>
               )}
@@ -598,11 +545,11 @@ function EmergingAeAnalysis({
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--afl-n-800)' }}>
-                    {selectedAe ? `Cumulative Reporting Trend: ${selectedAe.term}` : 'Select an AE term above to view reporting trend'}
+                    {selectedAe ? `Recent Five-year Reporting Trend: ${selectedAe.term}` : 'Select an AE term above to view reporting trend'}
                 </h4>
                 {selectedAe && (
                     <div style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)', fontWeight: 600 }}>
-                        Total Reports: <span style={{ color: 'var(--afl-gov-blue)', fontWeight: 800 }}>{selectedAe.count}</span>
+                        Recent Five-year Reports: <span style={{ color: 'var(--afl-gov-blue)', fontWeight: 800 }}>{selectedAe.recent_count}</span>
                     </div>
                 )}
             </div>
