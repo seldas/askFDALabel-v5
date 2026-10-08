@@ -34,6 +34,10 @@ else:
     data_dir = repo_root / 'data'
 
 from pg_utils import PGUtils
+try:
+    from spl_lineage import xml_version, LINEAGE_SQL
+except ImportError:
+    from database.scripts.spl_lineage import xml_version, LINEAGE_SQL
 from psycopg2 import sql
 from psycopg2.extras import execute_values
 
@@ -255,7 +259,7 @@ def parse_spl_zip(zip_path):
 
         # Extract version number
         ver_el = root.find('ns:versionNumber', NS)
-        version_number = int(ver_el.get('value')) if ver_el is not None and ver_el.get('value').isdigit() else 1
+        version_number = xml_version(root)
 
         # Extract doc_type (document code / displayName)
         code_el = root.find('ns:code', NS)
@@ -846,20 +850,7 @@ def refresh_query_options_cache():
 
 def refresh_version_lineage():
     print("Refreshing SPL version lineage tracking...")
-    PGUtils.execute_query("""
-        -- Reset latest status
-        UPDATE labeling.sum_spl SET is_latest = FALSE;
-
-        -- Identify and mark latest version per set_id
-        WITH latest_version AS (
-            SELECT spl_id, ROW_NUMBER() OVER(PARTITION BY set_id ORDER BY version_number DESC, revised_date DESC) as rn
-            FROM labeling.sum_spl
-        )
-        UPDATE labeling.sum_spl s
-        SET is_latest = TRUE
-        FROM latest_version l
-        WHERE s.spl_id = l.spl_id AND l.rn = 1;
-    """)
+    PGUtils.execute_query(LINEAGE_SQL)
 
 
 def refresh_epc_mappings():

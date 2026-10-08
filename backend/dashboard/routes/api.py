@@ -58,14 +58,17 @@ def get_label_history(set_id):
         sql = """
             SELECT 
                 s.spl_id, s.set_id, s.product_names, s.generic_names, 
-                s.revised_date, s.version_number, s.is_latest,
+                s.revised_date, s.version_number, s.is_latest, s.parent_spl_id,
+                EXISTS (SELECT 1 FROM labeling.sum_spl h WHERE h.set_id = s.set_id
+                    GROUP BY h.version_number
+                    HAVING h.version_number IS NULL OR h.version_number <= 0 OR COUNT(*) > 1) AS order_uncertain,
                 a.executive_summary, a.is_regulatory_notable, a.last_analyzed_at
             FROM labeling.sum_spl s
             LEFT JOIN labeling.history_analysis a
               ON s.spl_id = a.current_spl_id
              AND a.raw_prompt_version = 'whole-spl-xml-v1'
             WHERE s.set_id = %s
-            ORDER BY s.version_number DESC, s.revised_date DESC
+            ORDER BY s.version_number DESC NULLS LAST, s.revised_date DESC NULLS LAST, s.spl_id
         """
         cursor.execute(sql, (set_id,))
         rows = cursor.fetchall()
@@ -81,6 +84,8 @@ def get_label_history(set_id):
                 'generic_names': r['generic_names'],
                 'revised_date': r['revised_date'],
                 'version_number': r['version_number'],
+                'parent_spl_id': r['parent_spl_id'],
+                'order_uncertain': bool(r['order_uncertain']),
                 'is_latest': bool(r['is_latest']),
                 'has_analysis': bool(r['executive_summary']),
                 'executive_summary': r['executive_summary'],
@@ -108,7 +113,10 @@ def get_label_history_by_appr_num(appr_num):
         sql = """
             SELECT 
                 s.spl_id, s.set_id, s.product_names, s.generic_names, 
-                s.revised_date, s.version_number, s.is_latest,
+                s.revised_date, s.version_number, s.is_latest, s.parent_spl_id,
+                EXISTS (SELECT 1 FROM labeling.sum_spl h WHERE h.set_id = s.set_id
+                    GROUP BY h.version_number
+                    HAVING h.version_number IS NULL OR h.version_number <= 0 OR COUNT(*) > 1) AS order_uncertain,
                 a.executive_summary, a.is_regulatory_notable, a.last_analyzed_at
             FROM labeling.sum_spl s
             LEFT JOIN labeling.history_analysis a
@@ -123,7 +131,7 @@ def get_label_history_by_appr_num(appr_num):
                 WHERE regexp_replace(UPPER(TRIM(app_no)), '[^A-Z0-9]', '', 'g')
                     = regexp_replace(UPPER(%s), '[^A-Z0-9]', '', 'g')
             )
-            ORDER BY s.version_number DESC, s.revised_date DESC
+            ORDER BY s.version_number DESC NULLS LAST, s.revised_date DESC NULLS LAST, s.spl_id
         """
         cursor.execute(sql, (appr_num,))
         rows = cursor.fetchall()
@@ -139,6 +147,8 @@ def get_label_history_by_appr_num(appr_num):
                 'generic_names': r['generic_names'],
                 'revised_date': r['revised_date'],
                 'version_number': r['version_number'],
+                'parent_spl_id': r['parent_spl_id'],
+                'order_uncertain': bool(r['order_uncertain']),
                 'is_latest': bool(r['is_latest']),
                 'has_analysis': bool(r['executive_summary']),
                 'executive_summary': r['executive_summary'],

@@ -1,3 +1,4 @@
+from database.scripts.spl_lineage import xml_version, LINEAGE_SQL
 import os
 import sys
 import argparse
@@ -181,7 +182,7 @@ def parse_spl_file(file_path, ob_dict, is_archived=False):
                 'dosage_forms': "; ".join(set(filter(None, dosage_forms))), 'ndc_codes': "; ".join(set(filter(None, ndc_codes))),
                 'revised_date': revised_date, 'effective_time_raw': effective_time_raw,
                 'initial_approval_year': initial_approval_year, 'is_rld': is_rld, 'is_rs': is_rs,
-                'local_path': os.path.basename(file_path)
+                'local_path': os.path.basename(file_path), 'version_number': xml_version(root)
             },
             'ingr_map': ingr_map,
             'spl_id': spl_id,
@@ -330,11 +331,9 @@ def import_labels():
             ob_dict = load_orange_book(app)
             
             # Get existing to avoid duplicates if not forcing
-            existing = set()
             existing_spls = set()
             if not args.force:
                 res = db.session.execute(text("SELECT set_id, revised_date, spl_id FROM labeling.sum_spl")).fetchall()
-                existing = {(r[0], r[1]) for r in res}
                 existing_spls = {r[2] for r in res}
 
             batch_size = 200
@@ -351,10 +350,11 @@ def import_labels():
                     data = future.result()
                     if not data: continue
                     
-                    if (data['set_id'], data['revised_date']) in existing or data['spl_id'] in existing_spls:
+                    if data['spl_id'] in existing_spls:
                         skipped += 1
                         continue
                     
+                    existing_spls.add(data['spl_id'])
                     meta_batch.append(data['metadata'])
                     ingr_batch.extend(data['ingr_map'])
                     spl_id_batch.append(data['spl_id'])
@@ -383,43 +383,9 @@ def import_labels():
 
             update_progress(task_id, 95, "Refreshing version lineage...")
             try:
-                db.session.execute(text("""
-                    WITH ranked AS (
-                        SELECT
-                            spl_id,
-                            set_id,
-                            revised_date,
-                            imported_at,
-                            ROW_NUMBER() OVER (
-                                PARTITION BY set_id
-                                ORDER BY revised_date ASC NULLS LAST,
-                                         imported_at ASC,
-                                         spl_id ASC
-                            ) AS version_number,
-                            LAG(spl_id) OVER (
-                                PARTITION BY set_id
-                                ORDER BY revised_date ASC NULLS LAST,
-                                         imported_at ASC,
-                                         spl_id ASC
-                            ) AS parent_spl_id,
-                            CASE
-                                WHEN ROW_NUMBER() OVER (
-                                    PARTITION BY set_id
-                                    ORDER BY revised_date DESC NULLS LAST,
-                                             imported_at DESC,
-                                             spl_id DESC
-                                ) = 1
-                                THEN TRUE ELSE FALSE
-                            END AS is_latest
-                        FROM labeling.sum_spl
-                    )
-                    UPDATE labeling.sum_spl s
-                    SET version_number = r.version_number,
-                        parent_spl_id = r.parent_spl_id,
-                        is_latest = r.is_latest
-                    FROM ranked r
-                    WHERE s.spl_id = r.spl_id
-                """))
+                for statement in LINEAGE_SQL.split(';'):
+                    if statement.strip():
+                        db.session.execute(text(statement))
                 db.session.commit()
                 print("  [+] Version lineage metadata updated.")
             except Exception as e:

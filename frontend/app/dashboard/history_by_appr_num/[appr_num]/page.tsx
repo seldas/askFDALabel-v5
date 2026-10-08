@@ -14,7 +14,9 @@ interface HistoryRecord {
     product_names: string;
     generic_names: string;
     revised_date: string;
-    version_number: number;
+    version_number: number | null;
+    parent_spl_id: string | null;
+    order_uncertain: boolean;
     is_latest: boolean;
     has_analysis: boolean;
     executive_summary: string | null;
@@ -141,12 +143,13 @@ const HistoryTrackPage = () => {
 
     const previousRecord = useMemo(() => {
         if (!selectedSplId || !activeRecord) return null;
+        if (activeRecord.order_uncertain || activeRecord.version_number == null) return null;
         const setHistory = groupedData.bySetId[activeRecord.set_id] || [];
-        const idx = setHistory.findIndex(h => h.spl_id === selectedSplId);
-        if (idx !== -1 && idx < setHistory.length - 1) {
-            return setHistory[idx + 1]; 
-        }
-        return null;
+        if (setHistory.some(r => r.version_number == null)) return null;
+        const lower = setHistory.filter(r => r.version_number! < activeRecord.version_number!);
+        const previous = lower[0];
+        if (!previous || setHistory.filter(r => r.version_number === previous.version_number).length !== 1) return null;
+        return previous;
     }, [groupedData, selectedSplId, activeRecord]);
 
     // Fetch diff whenever selectedSplId changes
@@ -196,7 +199,7 @@ const HistoryTrackPage = () => {
             <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 <Header />
                 <main style={{ flex: 1, padding: '40px', textAlign: 'center' }}>
-                    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '40px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                    <div style={{ maxWidth: '600px', margin: '8px auto', padding: '40px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                         <h2 style={{ color: '#ef4444', marginBottom: '10px' }}>History Not Found</h2>
                         <p style={{ color: '#64748b' }}>{error || "No version history exists for this Application Number in the local archive."}</p>
                         <button 
@@ -236,11 +239,11 @@ const HistoryTrackPage = () => {
                                 {appr_num} - Version Comparison
                             </h1>
                             <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '2px' }}>
-                                Comparing <strong>v{activeRecord?.version_number}</strong> ({activeRecord?.revised_date}) 
+                                Comparing <strong>SPL version {activeRecord?.version_number ?? "unknown"}</strong> ({activeRecord?.revised_date})
                                 {previousRecord ? (
-                                    <> vs <strong>v{previousRecord.version_number}</strong> ({previousRecord.revised_date})</>
+                                    <> vs <strong>SPL version {previousRecord.version_number ?? "unknown"}</strong> ({previousRecord.revised_date})</>
                                 ) : (
-                                    <> (Initial Version)</>
+                                    <> (No verified predecessor)</>
                                 )}
                                 <span style={{ marginLeft: '12px', padding: '2px 8px', backgroundColor: '#f1f5f9', borderRadius: '4px', fontWeight: 600 }}>SetID: {activeRecord?.set_id}</span>
                             </div>
@@ -320,9 +323,9 @@ const HistoryTrackPage = () => {
                         {!previousRecord ? (
                             <div style={{ padding: '80px 0', textAlign: 'center' }}>
                                 <div style={{ fontSize: '2.5rem', marginBottom: '15px' }}>🚀</div>
-                                <h2 style={{ color: '#1e293b', fontSize: '1.1rem' }}>Initial Version</h2>
+                                <h2 style={{ color: '#1e293b', fontSize: '1.1rem' }}>No verified predecessor</h2>
                                 <p style={{ color: '#64748b', maxWidth: '400px', margin: '8px auto', fontSize: '0.9rem' }}>
-                                    This is the earliest recorded version for this SetID. Select a newer version to see changes.
+                                    No unambiguous predecessor is available. Missing or duplicate SPL versions prevent automatic comparison.
                                 </p>
                             </div>
                         ) : isDiffLoading ? (
@@ -375,7 +378,7 @@ const HistoryTrackPage = () => {
                                                 <div className={styles.diffGrid}>
                                                     {/* OLD VERSION PANE */}
                                                     <div className={styles.diffPane}>
-                                                        <div className={styles.paneHeader}>PREVIOUS (v{previousRecord?.version_number})</div>
+                                                        <div className={styles.paneHeader}>PREVIOUS (SPL version {previousRecord?.version_number ?? "unknown"})</div>
                                                         <div className={`${styles.longContentContainer} ${showFull ? styles.contentExpanded : ''}`}>
                                                             <div 
                                                                 className={`diff-content ${styles.diffContainer}`}
@@ -388,7 +391,7 @@ const HistoryTrackPage = () => {
 
                                                     {/* NEW VERSION PANE */}
                                                     <div className={styles.diffPane}>
-                                                        <div className={styles.paneHeader}>CURRENT (v{activeRecord?.version_number})</div>
+                                                        <div className={styles.paneHeader}>CURRENT (SPL version {activeRecord?.version_number ?? "unknown"})</div>
                                                         <div className={`${styles.longContentContainer} ${showFull ? styles.contentExpanded : ''}`}>
                                                             <div 
                                                                 className={`diff-content ${styles.diffContainer}`}
@@ -475,7 +478,7 @@ const HistoryTrackPage = () => {
                         )}
                         {isTimelineCollapsed && (
                             <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                                Selected: <strong>v{activeRecord?.version_number}</strong> ({activeRecord?.revised_date})
+                                Selected: <strong>SPL version {activeRecord?.version_number ?? "unknown"}</strong> ({activeRecord?.revised_date})
                             </div>
                         )}
                     </div>
@@ -542,25 +545,26 @@ const HistoryTrackPage = () => {
                                                     </div>
                                                 </td>
                                                 {groupedData.sortedDates.map(date => {
-                                                    const record = groupedData.bySetId[setId].find(r => r.revised_date === date);
-                                                    const isSelected = record?.spl_id === selectedSplId;
+                                                    const records = groupedData.bySetId[setId].filter(r => r.revised_date === date);
                                                     return (
                                                         <td key={date} style={{ position: 'relative', padding: '0 10px', textAlign: 'center', verticalAlign: 'middle', borderBottom: '1px solid #f1f5f9' }}>
                                                             {/* Connector line (horizontal) */}
                                                             <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: '1px', backgroundColor: '#f1f5f9', zIndex: 1 }}></div>
                                                             
-                                                            {record && (
-                                                                <div 
+                                                            {records.map(record => {
+                                                                const isSelected = record.spl_id === selectedSplId;
+                                                                return <div key={record.spl_id}
                                                                     onClick={() => setSelectedSplId(record.spl_id)}
                                                                     style={{
                                                                         position: 'relative',
                                                                         zIndex: 5,
-                                                                        width: '24px',
+                                                                        minWidth: '64px',
+                                                                        padding: '0 6px',
                                                                         height: '24px',
-                                                                        borderRadius: '50%',
+                                                                        borderRadius: '6px',
                                                                         backgroundColor: isSelected ? '#1e40af' : (record.is_latest ? '#10b981' : '#fff'),
                                                                         border: `2px solid ${isSelected ? '#1e40af' : (record.is_latest ? '#10b981' : '#cbd5e1')}`,
-                                                                        margin: '0 auto',
+                                                                        margin: '8px auto',
                                                                         cursor: 'pointer',
                                                                         display: 'flex',
                                                                         alignItems: 'center',
@@ -570,17 +574,17 @@ const HistoryTrackPage = () => {
                                                                     }}
                                                                     onMouseOver={e => e.currentTarget.style.transform = 'scale(1.2)'}
                                                                     onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
-                                                                    title={`v${record.version_number} - ${record.revised_date}`}
+                                                                    title={`SPL version ${record.version_number ?? "unknown"} · ${record.revised_date} · ${record.spl_id}${record.order_uncertain ? " · Order uncertain" : ""}`}
                                                                 >
                                                                     <span style={{ fontSize: '0.65rem', fontWeight: 800, color: isSelected || record.is_latest ? '#fff' : '#64748b' }}>
-                                                                        {record.version_number}
+                                                                        SPL {record.version_number ?? "?"}{record.order_uncertain ? " ⚠" : ""}
                                                                     </span>
                                                                     
                                                                     {record.is_regulatory_notable && (
                                                                         <div style={{ position: 'absolute', top: '-10px', right: '-10px', fontSize: '0.8rem' }} title="Regulatory Notable Change">⚠️</div>
                                                                     )}
-                                                                </div>
-                                                            )}
+                                                                </div>;
+                                                            })}
                                                         </td>
                                                     );
                                                 })}

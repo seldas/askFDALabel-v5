@@ -22,6 +22,10 @@ else:
     sys.path.append(str(repo_root))
 
 from pg_utils import PGUtils
+try:
+    from spl_lineage import xml_version, LINEAGE_SQL
+except ImportError:
+    from database.scripts.spl_lineage import xml_version, LINEAGE_SQL
 from psycopg2 import sql
 from psycopg2.extras import execute_values
 
@@ -62,6 +66,8 @@ def parse_spl_xml(xml_path):
 
         if not spl_id or not set_id:
             return None
+
+        version_number = xml_version(root)
 
         eff_val_el = root.find('ns:effectiveTime', NS)
         eff_val = eff_val_el.get('value') if eff_val_el is not None else ""
@@ -210,7 +216,8 @@ def parse_spl_xml(xml_path):
             initial_approval_year,
             is_rld,
             is_rs,
-            os.path.basename(xml_path)
+            os.path.basename(xml_path),
+            version_number
         )
 
         return {
@@ -284,43 +291,7 @@ def refresh_version_lineage():
 
     try:
         with conn.cursor() as cur:
-            cur.execute("""
-                WITH ranked AS (
-                    SELECT
-                        spl_id,
-                        set_id,
-                        revised_date,
-                        imported_at,
-                        ROW_NUMBER() OVER (
-                            PARTITION BY set_id
-                            ORDER BY revised_date ASC NULLS LAST,
-                                     imported_at ASC,
-                                     spl_id ASC
-                        ) AS version_number,
-                        LAG(spl_id) OVER (
-                            PARTITION BY set_id
-                            ORDER BY revised_date ASC NULLS LAST,
-                                     imported_at ASC,
-                                     spl_id ASC
-                        ) AS parent_spl_id,
-                        CASE
-                            WHEN ROW_NUMBER() OVER (
-                                PARTITION BY set_id
-                                ORDER BY revised_date DESC NULLS LAST,
-                                         imported_at DESC,
-                                         spl_id DESC
-                            ) = 1
-                            THEN TRUE ELSE FALSE
-                        END AS is_latest
-                    FROM labeling.sum_spl
-                )
-                UPDATE labeling.sum_spl s
-                SET version_number = r.version_number,
-                    parent_spl_id = r.parent_spl_id,
-                    is_latest = r.is_latest
-                FROM ranked r
-                WHERE s.spl_id = r.spl_id
-            """)
+            cur.execute(LINEAGE_SQL)
 
         conn.commit()
         print("Version lineage metadata updated.")
@@ -383,7 +354,7 @@ def _flush_batches(meta_batch, ingr_batch, reload_spl_ids):
                 'appr_num', 'active_ingredients', 'market_categories', 'doc_type',
                 'routes', 'dosage_forms', 'epc', 'ndc_codes', 'revised_date',
                 'effective_time_raw', 'initial_approval_year', 'is_rld', 'is_rs',
-                'local_path'
+                'local_path', 'version_number'
             ]
 
             insert_sql = sql.SQL("""
@@ -407,6 +378,7 @@ def _flush_batches(meta_batch, ingr_batch, reload_spl_ids):
                     is_rld = EXCLUDED.is_rld,
                     is_rs = EXCLUDED.is_rs,
                     local_path = EXCLUDED.local_path,
+                    version_number = EXCLUDED.version_number,
                     imported_at = CURRENT_TIMESTAMP
             """).format(cols=sql.SQL(', ').join(map(sql.Identifier, cols)))
 
