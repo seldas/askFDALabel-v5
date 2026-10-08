@@ -2,6 +2,39 @@
 
 ## 1. Overview
 
+### LabelingAE viewer: verified Section View prototype
+
+The external annotation viewer has **List View**, **Section View**, and **Raw JSON** tabs.
+Section View groups annotations by their section ID, provides search/classification/SOC
+filters, and displays details for selected spans. Overlaps retain all annotations.
+It renders canonical plain text, rather than preserving the original SPL table layout.
+
+The current upstream example contains offsets and hashes but no canonical text.
+Consequently it cannot enable highlights by itself. The annotation service must supply
+`canonical_text` at the payload root (or `document.canonical_text`), or export the same
+UTF-8 text for the viewer's **Load canonical text** control. The file stays in the browser.
+Do not trim or change line endings when exporting it.
+
+The supported offset contract is `basis: canonical_text`, `indexing: 0-based`,
+`interval: half-open`, `normalization: NFC`, and `unit: unicode_code_points`.
+The `unit` field is a required addition to the existing example contract; the service
+must confirm its offset units rather than the viewer assuming JavaScript string indices.
+Document and offset `canonicalization_version` values must agree. The viewer verifies
+SHA-256 of the exact UTF-8 canonical text against `document.canonical_text_sha256`,
+and compares `document.set_id` and `document.spl_id` with the open label's XML identity
+and any requested version pin. It validates section bounds and each annotation's
+extracted term (case-insensitively) at the supplied offsets. Unresolved spans remain
+inspectable without highlights. Parent/subsection ranges are not concatenated, avoiding
+duplicate text and offset shifts.
+
+**Try Section View example** loads a clearly labeled synthetic document, including
+overlapping annotations and a repeated unannotated term. **Refresh** returns to the
+live response. This example does not represent findings for the open product.
+
+Automatic live text retrieval awaits a documented canonical-text endpoint or a shared
+canonicalizer from the annotation service. No guessed endpoint or fuzzy term matching
+is used to create verified highlights.
+
 The **Labeling Adverse Events (Labeling AE)** module (`/dashboard/label/[setId]/labeling-ae`) is a pharmacovigilance tool that extracts, structures, and visualizes adverse events documented within FDA drug labeling.
 
 It maps textual adverse event mentions directly into the **Medical Dictionary for Regulatory Activities (MedDRA)** hierarchy, providing safety reviewers with an interactive explorer that connects regulatory terminology to exact text locations in the prescribing information.

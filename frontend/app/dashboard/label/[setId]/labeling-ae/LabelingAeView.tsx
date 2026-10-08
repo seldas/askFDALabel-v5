@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import './labeling-ae.css';
+import SectionView from './SectionView';
+import { SECTION_DEMO } from './sectionDemo';
 
 interface LabelingAeViewProps {
   setId: string;
@@ -88,7 +90,7 @@ const INLINE_FALLBACK_DATA = {
 export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeViewProps) {
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'smart' | 'json'>('smart');
+  const [activeTab, setActiveTab] = useState<'list' | 'section' | 'json'>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedArrayKey, setSelectedArrayKey] = useState<string>('annotations');
   const [copied, setCopied] = useState(false);
@@ -173,7 +175,7 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
       Object.entries(payload).forEach(([key, val]) => {
         if (Array.isArray(val)) {
           arrKeys.push(key);
-        } else if (val !== null && typeof val !== 'object') {
+        } else if (key !== 'canonical_text' && val !== null && typeof val !== 'object') {
           scalars.push([key, val]);
         }
       });
@@ -273,7 +275,7 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const drugTitle = labelMeta?.brand_name || labelMeta?.drug_name || setId;
+  const drugTitle = isDemo ? (payload?.document?.title || 'Example document — not the open product') : (labelMeta?.brand_name || labelMeta?.drug_name || setId);
   const summary = payload?.summary;
 
   return (
@@ -303,10 +305,16 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
         <div className="afl-ae-header__actions">
           <div className="afl-ae-tabs">
             <button
-              className={`afl-ae-tab ${activeTab === 'smart' ? 'afl-ae-tab--active' : ''}`}
-              onClick={() => setActiveTab('smart')}
+              className={`afl-ae-tab ${activeTab === 'list' ? 'afl-ae-tab--active' : ''}`}
+              onClick={() => setActiveTab('list')}
             >
-              Smart View
+              List View
+            </button>
+            <button
+              className={`afl-ae-tab ${activeTab === 'section' ? 'afl-ae-tab--active' : ''}`}
+              onClick={() => setActiveTab('section')}
+            >
+              Section View
             </button>
             <button
               className={`afl-ae-tab ${activeTab === 'json' ? 'afl-ae-tab--active' : ''}`}
@@ -324,6 +332,12 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
           >
             {loading ? 'Fetching…' : '↻ Refresh'}
           </button>
+
+          <button className="afl-ae-btn afl-ae-btn--secondary" disabled={loading} onClick={() => {
+            setResponse({ status: 'success', set_id: setId, server: 'Synthetic section example', data: { ...SECTION_DEMO } });
+            setIsDemo(true);
+            setActiveTab('section');
+          }}>Try Section View example</button>
 
           {payload && (
             <button
@@ -462,9 +476,9 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
             <div className="afl-ae-metric-card">
               <div className="afl-ae-metric-card__label">Set ID</div>
               <div className="afl-ae-metric-card__value" style={{ fontSize: '0.9rem', fontFamily: 'monospace' }}>
-                {setId.slice(0, 14)}…
+                {(isDemo ? payload?.document?.set_id || 'Example' : setId).slice(0, 14)}…
               </div>
-              <div className="afl-ae-metric-card__sub">Target SPL</div>
+              <div className="afl-ae-metric-card__sub">{isDemo ? 'Example SPL' : 'Target SPL'}</div>
             </div>
           </div>
 
@@ -485,8 +499,12 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
             </div>
           )}
 
-          {/* Smart View (Tables & Cards) */}
-          {activeTab === 'smart' && (
+          {activeTab === 'section' && (
+            <SectionView key={`${setId}:${splId || ''}:${isDemo}`} payload={payload} setId={setId} splId={splId} labelXml={labelMeta?.label_xml_raw} demo={isDemo} />
+          )}
+
+          {/* List View (Tables & Cards) */}
+          {activeTab === 'list' && (
             <div className="afl-ae-card">
               <div className="afl-ae-card__header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
