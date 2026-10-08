@@ -5,6 +5,17 @@ export interface SourceSection {
   observed_section_name?: string;
 }
 
+export interface SectionNode {
+  tag?: string;
+  attributes?: Record<string, string | number>;
+  children?: SectionNode[];
+  text?: string;
+  start?: number;
+  end?: number;
+}
+
+export interface SectionContent { text: string; nodes: SectionNode[] }
+
 const children = (element: Element, name: string) => Array.from(element.children).filter(child => child.localName === name);
 const normalized = (text: string) => text.normalize('NFC').replace(/\s+/g, ' ').trim().toLowerCase();
 
@@ -32,33 +43,67 @@ function sectionMatches(element: Element, section: SourceSection) {
     (!section.observed_section_name || normalized(section.observed_section_name) === normalized(title));
 }
 
-function narrative(node: Node): string {
-  if (node.nodeType === 3) return node.textContent || '';
-  if (node.nodeType !== 1) return '';
-  const element = node as Element;
-  if (element.localName === 'br') return '\n';
-  const value = Array.from(element.childNodes).map(narrative).join('');
-  if (['paragraph', 'item', 'tr', 'caption'].includes(element.localName)) return `${value}\n`;
-  if (['td', 'th'].includes(element.localName)) return `${value}\t`;
-  return value;
-}
-
-function sectionText(element: Element): string {
-  const title = children(element, 'title')[0]?.textContent || '';
-  const body = children(element, 'text').map(narrative).join('\n');
-  const nested = children(element, 'component').flatMap(component => children(component, 'section').map(sectionText));
-  return [title, body, ...nested].filter(Boolean).join('\n').normalize('NFC');
+function sectionContent(element: Element): SectionContent {
+  let text = '';
+  let position = 0;
+  const append = (value: string) => { text += value; position += Array.from(value).length; };
+  const tags: Record<string, string> = { paragraph: 'p', list: 'ul', item: 'li', table: 'table', thead: 'thead', tbody: 'tbody', tfoot: 'tfoot', tr: 'tr', td: 'td', th: 'th', caption: 'caption', colgroup: 'colgroup', col: 'col', content: 'span', linkHtml: 'span', sub: 'sub', sup: 'sup', br: 'br', title: 'h4' };
+  const convert = (node: Node): SectionNode[] => {
+    if (node.nodeType === 3) {
+      const value = (node.textContent || '').normalize('NFC');
+      if (/^(table|thead|tbody|tfoot|tr|colgroup)$/.test(node.parentElement?.localName || '') && /^\s*$/.test(value)) return [];
+      const start = position;
+      append(value);
+      return [{ text: value, start, end: position }];
+    }
+    if (node.nodeType !== 1) return [];
+    const item = node as Element;
+    if (['script', 'style', 'renderMultiMedia', 'observationMedia'].includes(item.localName)) return [];
+    let tag = tags[item.localName];
+    if (!tag) return Array.from(item.childNodes).flatMap(convert);
+    if (tag === 'ul' && item.getAttribute('listType') === 'ordered') tag = 'ol';
+    const attributes: Record<string, string | number> = {};
+    for (const [xmlAttribute, htmlAttribute] of [['colspan', 'colSpan'], ['rowspan', 'rowSpan'], ['span', 'span']]) {
+      const value = item.getAttribute(xmlAttribute);
+      if (value && /^\d{1,3}$/.test(value) && Number(value) > 0) attributes[htmlAttribute] = Number(value);
+    }
+    const styles = (item.getAttribute('styleCode') || '').split(/\s+/);
+    attributes.className = styles.filter(style => ['Bold', 'Italics', 'Underline', 'Lrule', 'Rrule', 'Toprule', 'Botrule'].includes(style)).map(style => `spl-${style.toLowerCase()}`).join(' ');
+    let childNodes = Array.from(item.childNodes).flatMap(convert);
+    if (tag === 'table') {
+      const grouped: SectionNode[] = [];
+      for (const child of childNodes) {
+        if (child.tag === 'tr') {
+          const previous = grouped[grouped.length - 1];
+          if (previous?.tag === 'tbody' && previous.attributes?.['data-generated'] === 'true') previous.children!.push(child);
+          else grouped.push({ tag: 'tbody', attributes: { 'data-generated': 'true' }, children: [child] });
+        } else grouped.push(child);
+      }
+      childNodes = grouped;
+    }
+    if (['td', 'th'].includes(tag)) append('\u0000'); // A match must never cross table cells.
+    else if (['p', 'li', 'tr', 'h4', 'caption', 'br'].includes(tag)) append('\n');
+    return [{ tag, attributes, children: childNodes }];
+  };
+  const build = (section: Element): SectionNode[] => [
+    ...children(section, 'title').flatMap(convert),
+    ...children(section, 'text').flatMap(body => Array.from(body.childNodes).flatMap(convert)),
+    ...children(section, 'component').flatMap(component => children(component, 'section').flatMap(build)),
+  ];
+  const nodes = build(element);
+  return { text, nodes };
 }
 
 export function extractSourceSections(xml: string, sections: SourceSection[], setId: string, splId: string, requestedSplId?: string | null) {
   const document = new DOMParser().parseFromString(xml, 'application/xml');
-  if (document.querySelector('parsererror')) return { error: 'The label XML could not be parsed.', texts: {} as Record<string, string> };
+  if (document.querySelector('parsererror')) return { error: 'The label XML could not be parsed.', texts: {} as Record<string, string>, contents: {} as Record<string, SectionContent> };
   const root = document.documentElement;
   if (children(root, 'id')[0]?.getAttribute('root') !== splId || children(root, 'setId')[0]?.getAttribute('root') !== setId || (requestedSplId && requestedSplId !== splId)) {
-    return { error: 'The annotation document and the open label are different SPL versions.', texts: {} as Record<string, string> };
+    return { error: 'The annotation document and the open label are different SPL versions.', texts: {} as Record<string, string>, contents: {} as Record<string, SectionContent> };
   }
   const allSections = Array.from(document.getElementsByTagNameNS('*', 'section'));
   const texts: Record<string, string> = {};
+  const contents: Record<string, SectionContent> = {};
   for (const section of sections) {
     let match = section.xml_path ? resolvePath(document, section.xml_path) : null;
     if (match && !sectionMatches(match, section)) match = null;
@@ -66,9 +111,9 @@ export function extractSourceSections(xml: string, sections: SourceSection[], se
       const candidates = allSections.filter(element => sectionMatches(element, section));
       if (candidates.length === 1) match = candidates[0];
     }
-    if (match) texts[section.id] = sectionText(match);
+    if (match) { contents[section.id] = sectionContent(match); texts[section.id] = contents[section.id].text; }
   }
-  return { error: '', texts };
+  return { error: '', texts, contents };
 }
 
 // Search a whitespace/case-normalized view, retaining positions in displayed text.

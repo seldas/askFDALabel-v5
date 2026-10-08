@@ -2,6 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { alignUniqueTerm, extractSourceSections } from './sectionAlignment';
+import type { SectionContent } from './sectionAlignment';
+import FormattedSection from './FormattedSection';
 
 type Section = { id: string; start: number; end: number; observed_section_name?: string; name?: string; path?: string; xml_path?: string; loinc_code?: string };
 type Annotation = { id: string; start: number; end: number; term: string; section?: { id?: string }; display_classification?: string; coding?: { name?: string; code?: string; soc_name?: string } };
@@ -15,7 +17,7 @@ export default function SectionView({ payload, setId, splId, labelXml, demo }: {
   const [query, setQuery] = useState('');
   const [classification, setClassification] = useState('all');
   const [soc, setSoc] = useState('all');
-  const [source, setSource] = useState<{ payload: any; xml: string; texts: Record<string, string>; error: string } | null>(null);
+  const [source, setSource] = useState<{ payload: any; xml: string; texts: Record<string, string>; contents: Record<string, SectionContent>; error: string } | null>(null);
   const sections: Section[] = Array.isArray(payload.sections) ? payload.sections : [];
   const annotations: Annotation[] = Array.isArray(payload.annotations) ? payload.annotations : [];
   const text = uploadedText ?? payload.canonical_text ?? payload.document?.canonical_text;
@@ -32,7 +34,7 @@ export default function SectionView({ payload, setId, splId, labelXml, demo }: {
       const extracted = extractSourceSections(sourceXml, Array.isArray(payload.sections) ? payload.sections : [], doc?.set_id, doc?.spl_id, demo ? null : splId);
       if (!demo && doc?.set_id !== setId) { setSource(null); return; }
       setSource({ payload, xml: sourceXml, ...extracted });
-    } catch { setSource({ payload, xml: sourceXml, texts: {}, error: 'The source sections could not be read.' }); }
+    } catch { setSource({ payload, xml: sourceXml, texts: {}, contents: {}, error: 'The source sections could not be read.' }); }
   }, [payload, doc, sourceXml, setId, splId, demo]);
 
   useEffect(() => {
@@ -109,7 +111,7 @@ export default function SectionView({ payload, setId, splId, labelXml, demo }: {
       <article className="afl-ae-section-reader">
         <h3>{section?.observed_section_name || section?.name || 'No sections available'}</h3>
         {section && <p>{filtered.length} annotations · {located.length} {aligned ? 'aligned' : 'verified'} locations</p>}
-        {(verified || aligned) && section && validRange(displayStart, displayEnd) ? <div className="afl-ae-section-text">{points.slice(0, -1).map((start, i) => {
+        {aligned && section && source?.contents[section.id] ? <FormattedSection nodes={source.contents[section.id].nodes} spans={located} onSelect={setSelectedIds} /> : (verified || aligned) && section && validRange(displayStart, displayEnd) ? <div className="afl-ae-section-text">{points.slice(0, -1).map((start, i) => {
           const end = points[i + 1];
           const matches = located.filter(a => a.start < end && a.end > start);
           const fragment = characters.slice(start, end).join('');

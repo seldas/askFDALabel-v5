@@ -15,6 +15,19 @@
 .afl-ae-section-reader { padding: 20px; min-width: 0; }
 .afl-ae-section-reader h3, .afl-ae-section-details h3 { margin-top: 0; }
 .afl-ae-section-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.9; }
+.afl-ae-section-html { overflow-x: auto; line-height: 1.7; overflow-wrap: anywhere; }
+.afl-ae-section-html table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+.afl-ae-section-html th, .afl-ae-section-html td { border: 1px solid var(--fdl-line, #cbd5e1); padding: 8px 12px; vertical-align: top; }
+.afl-ae-section-html th { background: var(--fdl-canvas, #f8fafc); font-weight: 700; }
+.afl-ae-section-html caption { text-align: left; font-weight: 700; margin-bottom: 8px; }
+.afl-ae-section-html .spl-bold { font-weight: 700; }
+.afl-ae-section-html .spl-italics { font-style: italic; }
+.afl-ae-section-html .spl-underline { text-decoration: underline; }
+.afl-ae-section-html .spl-toprule { border-top: 2px solid currentColor; }
+.afl-ae-section-html .spl-botrule { border-bottom: 2px solid currentColor; }
+.afl-ae-section-html .spl-lrule { border-left: 2px solid currentColor; }
+.afl-ae-section-html .spl-rrule { border-right: 2px solid currentColor; }
+.afl-ae-section-html .afl-ae-inline-mark { white-space: pre-wrap; }
 .afl-ae-inline-mark { font: inherit; line-height: inherit; padding: 0; border: 0; border-radius: 2px; cursor: pointer; color: inherit; }
 .afl-ae-inline-mark.meddra { background: #dbeafe; box-shadow: inset 0 -2px #2563eb; }
 .afl-ae-inline-mark.rxbert { background: #ede9fe; box-shadow: inset 0 -2px #7c3aed; }

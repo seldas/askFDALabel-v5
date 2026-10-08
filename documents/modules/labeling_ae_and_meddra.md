@@ -7,7 +7,11 @@
 The external annotation viewer has **List View**, **Section View**, and **Raw JSON** tabs.
 Section View groups annotations by their section ID, provides search/classification/SOC
 filters, and displays details for selected spans. Overlaps retain all annotations.
-It renders section plain text, rather than preserving the original SPL table layout.
+The aligned view preserves SPL narrative structure: tables (including merged cells),
+captions, lists, paragraphs, inline emphasis, and sub/superscripts. A safe tag and
+attribute allowlist converts XML into React elements; source HTML is never injected.
+Images and the original publisher's full stylesheet are not reproduced by this renderer.
+The optional canonical-only view continues to display plain text.
 
 By default, when canonical text is absent, the viewer extracts sections from the XML
 already loaded by the label workspace. That XML follows the standard local-storage /
@@ -20,7 +24,11 @@ concatenating separately extracted child sections into a single offset space.
 
 Terms are aligned within that section using NFC-normalized text, case-insensitive
 matching, whitespace normalization, and word boundaries. A character map translates
-matches back to positions in the displayed section. Only a unique occurrence is
+matches back to positions in the section's individual text nodes. Highlights split
+across inline nodes without replacing any enclosing layout elements. Table cells are
+separated by hard boundaries in the searchable projection, so text from adjacent cells
+cannot form a false AE phrase. Projection offsets include these structural separators
+and are used only for rendering; the JSON offsets are unchanged. Only a unique occurrence is
 highlighted. Repeated terms remain unresolved, even if one occurs near the JSON offset;
 exact term equality alone cannot prove which repeated occurrence was annotated.
 These locations are labeled **Aligned section text**, distinct from hash-verified
@@ -47,7 +55,7 @@ inspectable without highlights. Parent/subsection ranges are not concatenated, a
 duplicate text and offset shifts.
 
 **Try Section View example** loads a clearly labeled synthetic document, including
-split XML text nodes, shifted whitespace, overlapping annotations and repeated terms
+split XML text nodes, shifted whitespace, merged table cells, overlapping annotations and repeated terms
 that intentionally remain unresolved. **Refresh** returns to the
 live response. This example does not represent findings for the open product.
 
