@@ -24,9 +24,9 @@ export default function StartPage({ onLogin, onSignUp, onGuest, ssoEnabled }: St
           <span className={styles.noticeLabel}>LOGIN UPDATE</span>
           <h2 id="sso-notice-title">We’re moving to Single Sign-On</h2>
           <p>
-            We are implementing Single Sign-On (SSO). Please use SSO as your primary
-            login method. Account password login and guest access will be disabled
-            in the future.
+            We are working on moving to Single Sign-On (SSO), but it is not ready yet.
+            Until SSO is available, please continue using Account login to sign in,
+            or Sign up to create an account and use askFDALabel.
           </p>
         </aside>
 
