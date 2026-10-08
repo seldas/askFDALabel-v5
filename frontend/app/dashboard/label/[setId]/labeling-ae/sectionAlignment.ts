@@ -117,8 +117,8 @@ export function extractSourceSections(xml: string, sections: SourceSection[], se
 }
 
 // Search a whitespace/case-normalized view, retaining positions in displayed text.
-// A nearby offset is never enough to resolve a repeated phrase.
-export function alignUniqueTerm(text: string, term: string): { start: number; end: number; reason: string } {
+// Repeated phrases use a section-relative offset hint and remain explicitly heuristic.
+export function alignUniqueTerm(text: string, term: string, expectedStart?: number): { start: number; end: number; reason: string; nearest?: boolean } {
   const characters = Array.from(text);
   const view: string[] = [];
   const positions: number[] = [];
@@ -139,5 +139,9 @@ export function alignUniqueTerm(text: string, term: string): { start: number; en
     matches.push({ start: positions[index], end: positions[index + needle.length - 1] + 1 });
   }
   if (matches.length === 1) return { ...matches[0], reason: 'Unique term match in the same SPL section' };
+  if (matches.length > 1 && Number.isInteger(expectedStart) && expectedStart! >= 0) {
+    const closest = matches.reduce((best, candidate) => Math.abs(candidate.start - expectedStart!) < Math.abs(best.start - expectedStart!) ? candidate : best);
+    return { ...closest, nearest: true, reason: `Nearest match · ${matches.length} occurrences · estimated position (ties use the earlier occurrence)` };
+  }
   return { start: -1, end: -1, reason: matches.length ? `${matches.length} occurrences; location is ambiguous` : 'Extracted term not found in this section' };
 }

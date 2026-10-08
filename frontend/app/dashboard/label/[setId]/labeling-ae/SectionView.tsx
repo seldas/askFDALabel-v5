@@ -79,12 +79,15 @@ export default function SectionView({ payload, setId, splId, labelXml, demo }: {
   const filtered = scoped.filter(a => (classification === 'all' || a.display_classification === classification) && (soc === 'all' || a.coding?.soc_name === soc) && (!query || `${a.term} ${a.coding?.name ?? ''} ${a.coding?.soc_name ?? ''}`.toLowerCase().includes(query.toLowerCase())));
   const alignments = useMemo(() => {
     const result = new Map<string, ReturnType<typeof alignUniqueTerm>>();
-    if (aligned && sourceText) scoped.forEach(a => result.set(a.id, alignUniqueTerm(sourceText, a.term || '')));
+    if (aligned && sourceText) scoped.forEach(a => {
+      const hint = Number.isInteger(a.start) && Number.isInteger(section?.start) ? a.start - section.start : undefined;
+      result.set(a.id, alignUniqueTerm(sourceText, a.term || '', hint));
+    });
     return result;
   }, [aligned, sourceText, annotations, section]); // Compute before filters so filtering cannot resolve ambiguity.
   const located = aligned ? filtered.flatMap(a => {
     const match = alignments.get(a.id);
-    return match && match.start >= 0 ? [{ ...a, start: match.start, end: match.end }] : [];
+    return match && match.start >= 0 ? [{ ...a, start: match.start, end: match.end, nearest: match.nearest }] : [];
   }) : verified && section && validRange(section.start, section.end) ? filtered.filter(a => validRange(a.start, a.end) && a.start >= section.start && a.end <= section.end && characters.slice(a.start, a.end).join('').toLowerCase() === a.term?.normalize('NFC').toLowerCase()) : [];
   const locatedIds = new Set(located.map(a => a.id));
   const selected = filtered.filter(a => selectedIds.includes(a.id));
@@ -93,7 +96,7 @@ export default function SectionView({ payload, setId, splId, labelXml, demo }: {
   return <div className="afl-ae-card">
     <div className="afl-ae-card__header"><h3 className="afl-ae-card__title">Section View</h3><span>{demo ? 'Example document' : `Annotated SPL: ${doc?.spl_id ?? 'Unknown'}`}</span></div>
     <div className="afl-ae-section-status" role="status">
-      <strong>{verified ? '✓ Verified canonical text' : aligned ? 'Aligned section text' : 'Highlights unavailable'}</strong><p>{aligned ? `${demo ? 'Text comes from the synthetic example XML.' : 'Text comes from the exact SPL version opened in this workspace.'} Highlights identify unique term matches within the matched section; repeated phrases remain unresolved.` : verification}</p>
+      <strong>{verified ? '✓ Verified canonical text' : aligned ? 'Aligned section text' : 'Highlights unavailable'}</strong><p>{aligned ? `${demo ? 'Text comes from the synthetic example XML.' : 'Text comes from the exact SPL version opened in this workspace.'} Repeated terms use the nearest section-relative offset and are tagged as estimated matches.` : verification}</p>
       <details><summary>Verify original canonical offsets</summary><label className="afl-ae-text-upload">Load canonical text <input type="file" accept=".txt,text/plain" onChange={async e => {
         const file = e.target.files?.[0];
         if (file) { try { setVerifiedSource(null); setUploadedText(await file.text()); } catch { setVerification('Could not read this text file.'); } }
@@ -121,9 +124,9 @@ export default function SectionView({ payload, setId, splId, labelXml, demo }: {
           return <button key={start} className={`afl-ae-inline-mark ${rx && meddra ? 'overlap' : rx ? 'rxbert' : 'meddra'}`} aria-label={`Show annotations for ${fragment}`} title={matches.map(a => `${a.term}: ${a.coding?.name || a.display_classification}`).join('\n')} onClick={() => setSelectedIds(matches.map(a => a.id))}>{fragment}</button>;
         })}</div> : <p>{source?.error || 'This section could not be aligned to the open label. You can still inspect its extracted annotations below.'}</p>}
         {filtered.length > located.length && (verified || aligned) && <p>{filtered.length - located.length} annotations could not be located safely and are shown below without highlights.</p>}
-        <div className="afl-ae-section-annotations">{filtered.map(a => <button key={a.id} onClick={() => setSelectedIds([a.id])}>{a.term}<small>{a.display_classification}{aligned ? ` · ${alignments.get(a.id)?.reason || 'Unresolved location'}` : verified && !locatedIds.has(a.id) ? ' · Unresolved location' : ''}</small></button>)}</div>
+        <div className="afl-ae-section-annotations">{filtered.map(a => <button key={a.id} onClick={() => setSelectedIds([a.id])}>{a.term}{alignments.get(a.id)?.nearest && <span className="afl-ae-nearest-tag">Nearest match / 就近匹配</span>}<small>{a.display_classification}{aligned ? ` · ${alignments.get(a.id)?.reason || 'Unresolved location'}` : verified && !locatedIds.has(a.id) ? ' · Unresolved location' : ''}</small></button>)}</div>
       </article>
-      <aside className="afl-ae-section-details"><h3>Annotation details</h3>{selected.length ? selected.map(a => <div key={a.id}><h4>{a.term}</h4><p>{a.display_classification}</p><p>{a.coding?.name || 'No MedDRA PT supplied'}</p>{a.coding?.code && <p>PT: {a.coding.code}</p>}<p>{a.coding?.soc_name}</p><small>Original JSON offsets: [{a.start}, {a.end})</small>{aligned && <p>{locatedIds.has(a.id) ? `Aligned section offsets: [${alignments.get(a.id)?.start}, ${alignments.get(a.id)?.end})` : alignments.get(a.id)?.reason}</p>}</div>) : <p>Select a highlight or annotation to inspect it.</p>}</aside>
+      <aside className="afl-ae-section-details"><h3>Annotation details</h3>{selected.length ? selected.map(a => <div key={a.id}><h4>{a.term}</h4>{alignments.get(a.id)?.nearest && <span className="afl-ae-nearest-tag">Nearest match / 就近匹配</span>}<p>{a.display_classification}</p><p>{a.coding?.name || 'No MedDRA PT supplied'}</p>{a.coding?.code && <p>PT: {a.coding.code}</p>}<p>{a.coding?.soc_name}</p><small>Original JSON offsets: [{a.start}, {a.end})</small>{aligned && <p>{locatedIds.has(a.id) ? `Aligned section offsets: [${alignments.get(a.id)?.start}, ${alignments.get(a.id)?.end})` : alignments.get(a.id)?.reason}</p>}</div>) : <p>Select a highlight or annotation to inspect it.</p>}</aside>
     </div>
   </div>;
 }

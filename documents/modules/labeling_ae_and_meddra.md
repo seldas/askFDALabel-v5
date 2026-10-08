@@ -28,9 +28,11 @@ matches back to positions in the section's individual text nodes. Highlights spl
 across inline nodes without replacing any enclosing layout elements. Table cells are
 separated by hard boundaries in the searchable projection, so text from adjacent cells
 cannot form a false AE phrase. Projection offsets include these structural separators
-and are used only for rendering; the JSON offsets are unchanged. Only a unique occurrence is
-highlighted. Repeated terms remain unresolved, even if one occurs near the JSON offset;
-exact term equality alone cannot prove which repeated occurrence was annotated.
+and are used only for rendering; the JSON offsets are unchanged. Unique occurrences are
+highlighted directly. Repeated terms choose the occurrence nearest to
+`annotation.start - section.start`, with ties choosing the earlier occurrence. These
+heuristic locations display a **Nearest match / 就近匹配** tag in the highlight,
+annotation list, and details. Missing or invalid offset hints leave repeated terms unresolved.
 These locations are labeled **Aligned section text**, distinct from hash-verified
 canonical locations. Original JSON offsets are preserved, and the detail panel shows
 the new section-relative offsets separately. Filters never change alignment decisions.
@@ -56,12 +58,12 @@ duplicate text and offset shifts.
 
 **Try Section View example** loads a clearly labeled synthetic document, including
 split XML text nodes, shifted whitespace, merged table cells, overlapping annotations and repeated terms
-that intentionally remain unresolved. **Refresh** returns to the
+that demonstrate tagged nearest matches. **Refresh** returns to the
 live response. This example does not represent findings for the open product.
 
 Canonical verification remains an optional stricter path. Original canonical text or
 surrounding context from the producer would allow repeated occurrences to be resolved
-reliably in a future extension. No guessed endpoint or nearest-term fallback is used.
+reliably in a future extension. Nearest matches are estimates, not canonical verification.
 
 The **Labeling Adverse Events (Labeling AE)** module (`/dashboard/label/[setId]/labeling-ae`) is a pharmacovigilance tool that extracts, structures, and visualizes adverse events documented within FDA drug labeling.
 

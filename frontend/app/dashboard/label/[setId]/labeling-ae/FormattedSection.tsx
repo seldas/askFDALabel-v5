@@ -1,7 +1,7 @@
 import React from 'react';
 import type { SectionNode } from './sectionAlignment';
 
-type Span = { id: string; start: number; end: number; term: string; display_classification?: string };
+type Span = { id: string; start: number; end: number; term: string; display_classification?: string; nearest?: boolean };
 
 export default function FormattedSection({ nodes, spans, onSelect }: { nodes: SectionNode[]; spans: Span[]; onSelect: (ids: string[]) => void }) {
   const render = (node: SectionNode, key: string): React.ReactNode => {
@@ -18,7 +18,8 @@ export default function FormattedSection({ nodes, spans, onSelect }: { nodes: Se
         if (!matches.length) return <React.Fragment key={from}>{fragment}</React.Fragment>;
         const rx = matches.some(span => span.display_classification?.includes('RxBERT'));
         const meddra = matches.some(span => span.display_classification?.includes('MedDRA'));
-        return <button key={from} type="button" className={`afl-ae-inline-mark ${rx && meddra ? 'overlap' : rx ? 'rxbert' : 'meddra'}`} aria-label={`Show annotations for ${matches.map(span => span.term).join(', ')}`} title={matches.map(span => `${span.term}: ${span.display_classification}`).join('\n')} onClick={() => onSelect(matches.map(span => span.id))}>{fragment}</button>;
+        const nearest = matches.some(span => span.nearest);
+        return <button key={from} type="button" className={`afl-ae-inline-mark ${rx && meddra ? 'overlap' : rx ? 'rxbert' : 'meddra'} ${nearest ? 'afl-ae-inline-mark--nearest' : ''}`} aria-label={`Show annotations for ${matches.map(span => span.term).join(', ')}${nearest ? ' (Nearest match / 就近匹配)' : ''}`} title={matches.map(span => `${span.term}: ${span.display_classification}${span.nearest ? ' · Nearest match / 就近匹配 (estimated)' : ''}`).join('\n')} onClick={() => onSelect(matches.map(span => span.id))}>{fragment}{nearest && <span className="afl-ae-nearest-tag">Nearest match / 就近匹配</span>}</button>;
       })}</React.Fragment>;
     }
     return React.createElement(node.tag!, { ...node.attributes, key }, node.tag === 'br' || node.tag === 'col' ? undefined : node.children?.map((child, i) => render(child, `${key}.${i}`)));
