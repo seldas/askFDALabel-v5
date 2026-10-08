@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { alignUniqueTerm, extractSourceSections } from './sectionAlignment';
 
-type Section = { id: string; start: number; end: number; observed_section_name?: string; name?: string; path?: string };
+type Section = { id: string; start: number; end: number; observed_section_name?: string; name?: string; path?: string; xml_path?: string; loinc_code?: string };
 type Annotation = { id: string; start: number; end: number; term: string; section?: { id?: string }; display_classification?: string; coding?: { name?: string; code?: string; soc_name?: string } };
 
 export default function SectionView({ payload, setId, splId, labelXml, demo }: { payload: any; setId: string; splId?: string | null; labelXml?: string; demo: boolean }) {
@@ -14,14 +15,25 @@ export default function SectionView({ payload, setId, splId, labelXml, demo }: {
   const [query, setQuery] = useState('');
   const [classification, setClassification] = useState('all');
   const [soc, setSoc] = useState('all');
+  const [source, setSource] = useState<{ payload: any; xml: string; texts: Record<string, string>; error: string } | null>(null);
   const sections: Section[] = Array.isArray(payload.sections) ? payload.sections : [];
   const annotations: Annotation[] = Array.isArray(payload.annotations) ? payload.annotations : [];
   const text = uploadedText ?? payload.canonical_text ?? payload.document?.canonical_text;
   const doc = payload.document;
   const offsets = payload.offsets;
+  const sourceXml = demo ? payload.example_xml : labelXml;
   const verified = verifiedSource?.text === text && verifiedSource?.payload === payload;
 
   useEffect(() => { setUploadedText(null); setSelectedSection(''); setSelectedIds([]); }, [payload]);
+
+  useEffect(() => {
+    if (!sourceXml) { setSource(null); return; }
+    try {
+      const extracted = extractSourceSections(sourceXml, Array.isArray(payload.sections) ? payload.sections : [], doc?.set_id, doc?.spl_id, demo ? null : splId);
+      if (!demo && doc?.set_id !== setId) { setSource(null); return; }
+      setSource({ payload, xml: sourceXml, ...extracted });
+    } catch { setSource({ payload, xml: sourceXml, texts: {}, error: 'The source sections could not be read.' }); }
+  }, [payload, doc, sourceXml, setId, splId, demo]);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,25 +64,39 @@ export default function SectionView({ payload, setId, splId, labelXml, demo }: {
     return () => { cancelled = true; };
   }, [text, doc, offsets, setId, splId, labelXml, demo, payload]);
 
-  // Offset units must be Unicode code points, as used by the service's Python parser.
-  const characters = useMemo(() => typeof text === 'string' ? Array.from(text) : [], [text]);
-  const validRange = (start: number, end: number) => Number.isInteger(start) && Number.isInteger(end) && start >= 0 && end > start && end <= characters.length;
   const section = sections.find(s => s.id === selectedSection) ?? sections[0];
+  const sourceText = source && source.payload === payload && source.xml === sourceXml && !source.error && section ? source.texts[section.id] : undefined;
+  const aligned = typeof text !== 'string' && typeof sourceText === 'string';
+  const displayText = aligned ? sourceText : text;
+  // Canonical and reconstructed display ranges both use Unicode code points.
+  const characters = useMemo(() => typeof displayText === 'string' ? Array.from(displayText) : [], [displayText]);
+  const validRange = (start: number, end: number) => Number.isInteger(start) && Number.isInteger(end) && start >= 0 && end > start && end <= characters.length;
+  const displayStart = aligned ? 0 : section?.start ?? 0;
+  const displayEnd = aligned ? characters.length : section?.end ?? 0;
   const scoped = annotations.filter(a => a.section?.id === section?.id);
   const filtered = scoped.filter(a => (classification === 'all' || a.display_classification === classification) && (soc === 'all' || a.coding?.soc_name === soc) && (!query || `${a.term} ${a.coding?.name ?? ''} ${a.coding?.soc_name ?? ''}`.toLowerCase().includes(query.toLowerCase())));
-  const located = verified && section && validRange(section.start, section.end) ? filtered.filter(a => validRange(a.start, a.end) && a.start >= section.start && a.end <= section.end && characters.slice(a.start, a.end).join('').toLowerCase() === a.term?.normalize('NFC').toLowerCase()) : [];
+  const alignments = useMemo(() => {
+    const result = new Map<string, ReturnType<typeof alignUniqueTerm>>();
+    if (aligned && sourceText) scoped.forEach(a => result.set(a.id, alignUniqueTerm(sourceText, a.term || '')));
+    return result;
+  }, [aligned, sourceText, annotations, section]); // Compute before filters so filtering cannot resolve ambiguity.
+  const located = aligned ? filtered.flatMap(a => {
+    const match = alignments.get(a.id);
+    return match && match.start >= 0 ? [{ ...a, start: match.start, end: match.end }] : [];
+  }) : verified && section && validRange(section.start, section.end) ? filtered.filter(a => validRange(a.start, a.end) && a.start >= section.start && a.end <= section.end && characters.slice(a.start, a.end).join('').toLowerCase() === a.term?.normalize('NFC').toLowerCase()) : [];
+  const locatedIds = new Set(located.map(a => a.id));
   const selected = filtered.filter(a => selectedIds.includes(a.id));
-  const points = section ? Array.from(new Set([section.start, section.end, ...located.flatMap(a => [a.start, a.end])])).sort((a, b) => a - b) : [];
+  const points = section ? Array.from(new Set([displayStart, displayEnd, ...located.flatMap(a => [a.start, a.end])])).sort((a, b) => a - b) : [];
 
   return <div className="afl-ae-card">
     <div className="afl-ae-card__header"><h3 className="afl-ae-card__title">Section View</h3><span>{demo ? 'Example document' : `Annotated SPL: ${doc?.spl_id ?? 'Unknown'}`}</span></div>
     <div className="afl-ae-section-status" role="status">
-      <strong>{verified ? '✓ Verified text' : 'Highlights unavailable'}</strong><p>{verification}</p>
-      <label className="afl-ae-text-upload">Load canonical text <input type="file" accept=".txt,text/plain" onChange={async e => {
+      <strong>{verified ? '✓ Verified canonical text' : aligned ? 'Aligned section text' : 'Highlights unavailable'}</strong><p>{aligned ? `${demo ? 'Text comes from the synthetic example XML.' : 'Text comes from the exact SPL version opened in this workspace.'} Highlights identify unique term matches within the matched section; repeated phrases remain unresolved.` : verification}</p>
+      <details><summary>Verify original canonical offsets</summary><label className="afl-ae-text-upload">Load canonical text <input type="file" accept=".txt,text/plain" onChange={async e => {
         const file = e.target.files?.[0];
         if (file) { try { setVerifiedSource(null); setUploadedText(await file.text()); } catch { setVerification('Could not read this text file.'); } }
         e.target.value = '';
-      }} /></label>
+      }} /></label></details>
     </div>
     <div className="afl-ae-section-filters">
       <input className="afl-ae-search-input" aria-label="Search section annotations" placeholder="Search annotations…" value={query} onChange={e => setQuery(e.target.value)} />
@@ -82,8 +108,8 @@ export default function SectionView({ payload, setId, splId, labelXml, demo }: {
       <nav className="afl-ae-section-nav" aria-label="Label sections">{sections.map(s => <button key={s.id} aria-pressed={s.id === section?.id} onClick={() => { setSelectedSection(s.id); setSelectedIds([]); }}><span>{s.observed_section_name || s.name || s.id}</span><small>{annotations.filter(a => a.section?.id === s.id).length}</small></button>)}</nav>
       <article className="afl-ae-section-reader">
         <h3>{section?.observed_section_name || section?.name || 'No sections available'}</h3>
-        {section && <p>{filtered.length} annotations · {located.length} verified locations</p>}
-        {verified && section && validRange(section.start, section.end) ? <div className="afl-ae-section-text">{points.slice(0, -1).map((start, i) => {
+        {section && <p>{filtered.length} annotations · {located.length} {aligned ? 'aligned' : 'verified'} locations</p>}
+        {(verified || aligned) && section && validRange(displayStart, displayEnd) ? <div className="afl-ae-section-text">{points.slice(0, -1).map((start, i) => {
           const end = points[i + 1];
           const matches = located.filter(a => a.start < end && a.end > start);
           const fragment = characters.slice(start, end).join('');
@@ -91,11 +117,11 @@ export default function SectionView({ payload, setId, splId, labelXml, demo }: {
           const rx = matches.some(a => a.display_classification?.includes('RxBERT'));
           const meddra = matches.some(a => a.display_classification?.includes('MedDRA'));
           return <button key={start} className={`afl-ae-inline-mark ${rx && meddra ? 'overlap' : rx ? 'rxbert' : 'meddra'}`} aria-label={`Show annotations for ${fragment}`} title={matches.map(a => `${a.term}: ${a.coding?.name || a.display_classification}`).join('\n')} onClick={() => setSelectedIds(matches.map(a => a.id))}>{fragment}</button>;
-        })}</div> : <p>Section text will appear once its source is verified. You can still inspect the section’s extracted annotations below.</p>}
-        {filtered.length > located.length && verified && <p>{filtered.length - located.length} annotations could not be located safely and are shown below without highlights.</p>}
-        <div className="afl-ae-section-annotations">{filtered.map(a => <button key={a.id} onClick={() => setSelectedIds([a.id])}>{a.term}<small>{a.display_classification}{verified && !located.includes(a) ? ' · Unresolved location' : ''}</small></button>)}</div>
+        })}</div> : <p>{source?.error || 'This section could not be aligned to the open label. You can still inspect its extracted annotations below.'}</p>}
+        {filtered.length > located.length && (verified || aligned) && <p>{filtered.length - located.length} annotations could not be located safely and are shown below without highlights.</p>}
+        <div className="afl-ae-section-annotations">{filtered.map(a => <button key={a.id} onClick={() => setSelectedIds([a.id])}>{a.term}<small>{a.display_classification}{aligned ? ` · ${alignments.get(a.id)?.reason || 'Unresolved location'}` : verified && !locatedIds.has(a.id) ? ' · Unresolved location' : ''}</small></button>)}</div>
       </article>
-      <aside className="afl-ae-section-details"><h3>Annotation details</h3>{selected.length ? selected.map(a => <div key={a.id}><h4>{a.term}</h4><p>{a.display_classification}</p><p>{a.coding?.name || 'No MedDRA PT supplied'}</p>{a.coding?.code && <p>PT: {a.coding.code}</p>}<p>{a.coding?.soc_name}</p><small>Offsets: [{a.start}, {a.end})</small></div>) : <p>Select a highlight or annotation to inspect it.</p>}</aside>
+      <aside className="afl-ae-section-details"><h3>Annotation details</h3>{selected.length ? selected.map(a => <div key={a.id}><h4>{a.term}</h4><p>{a.display_classification}</p><p>{a.coding?.name || 'No MedDRA PT supplied'}</p>{a.coding?.code && <p>PT: {a.coding.code}</p>}<p>{a.coding?.soc_name}</p><small>Original JSON offsets: [{a.start}, {a.end})</small>{aligned && <p>{locatedIds.has(a.id) ? `Aligned section offsets: [${alignments.get(a.id)?.start}, ${alignments.get(a.id)?.end})` : alignments.get(a.id)?.reason}</p>}</div>) : <p>Select a highlight or annotation to inspect it.</p>}</aside>
     </div>
   </div>;
 }

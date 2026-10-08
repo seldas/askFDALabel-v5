@@ -1,11 +1,11 @@
 // Synthetic UI fixture; never presented as annotations for the open product.
 const canonicalText = '6 ADVERSE REACTIONS\nNausea and headache were reported.\nNausea was also reported during follow-up.';
-const section = { id: 'demo-section', name: 'ADVERSE REACTIONS', observed_section_name: '6 ADVERSE REACTIONS', start: 0, end: canonicalText.length };
+const section = { id: 'demo-section', name: 'ADVERSE REACTIONS', observed_section_name: '6 ADVERSE REACTIONS', loinc_code: '34084-4', xml_path: '/document/component/structuredBody/component[1]/section', start: 0, end: canonicalText.length };
 const nausea = canonicalText.indexOf('Nausea');
 const headache = canonicalText.indexOf('headache');
 
 export const SECTION_DEMO = {
-  canonical_text: canonicalText,
+  example_xml: '<document xmlns="urn:hl7-org:v3"><id root="synthetic-example"/><setId root="synthetic-example"/><component><structuredBody><component><section><code code="34084-4"/><title>6 ADVERSE REACTIONS</title><text><paragraph>Nausea and    head<content>ache</content> were reported.</paragraph><paragraph>Nausea was also reported during follow-up.</paragraph></text></section></component></structuredBody></component></document>',
   document: {
     set_id: 'synthetic-example', spl_id: 'synthetic-example', canonicalization_version: 'demo-1',
     canonical_text_sha256: '07e7770442cc426afae7829311b76a98aff2b7ec675a81a15ea95c6c731e015c',

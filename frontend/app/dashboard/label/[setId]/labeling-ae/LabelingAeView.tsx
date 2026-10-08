@@ -175,7 +175,7 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
       Object.entries(payload).forEach(([key, val]) => {
         if (Array.isArray(val)) {
           arrKeys.push(key);
-        } else if (key !== 'canonical_text' && val !== null && typeof val !== 'object') {
+        } else if (!['canonical_text', 'example_xml'].includes(key) && val !== null && typeof val !== 'object') {
           scalars.push([key, val]);
         }
       });

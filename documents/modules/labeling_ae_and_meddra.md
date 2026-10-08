@@ -2,20 +2,39 @@
 
 ## 1. Overview
 
-### LabelingAE viewer: verified Section View prototype
+### LabelingAE viewer: Section View alignment
 
 The external annotation viewer has **List View**, **Section View**, and **Raw JSON** tabs.
 Section View groups annotations by their section ID, provides search/classification/SOC
 filters, and displays details for selected spans. Overlaps retain all annotations.
-It renders canonical plain text, rather than preserving the original SPL table layout.
+It renders section plain text, rather than preserving the original SPL table layout.
+
+By default, when canonical text is absent, the viewer extracts sections from the XML
+already loaded by the label workspace. That XML follows the standard local-storage /
+Oracle resolution cascade; the viewer adds no new Oracle query. It verifies the XML's
+document ID and set ID against the annotation document and any requested version pin.
+It follows each section's `xml_path`, validating its LOINC code and observed title.
+If the path fails, a unique section with matching metadata may be used. Ambiguous
+sections are not selected. Parent sections include their nested narratives without
+concatenating separately extracted child sections into a single offset space.
+
+Terms are aligned within that section using NFC-normalized text, case-insensitive
+matching, whitespace normalization, and word boundaries. A character map translates
+matches back to positions in the displayed section. Only a unique occurrence is
+highlighted. Repeated terms remain unresolved, even if one occurs near the JSON offset;
+exact term equality alone cannot prove which repeated occurrence was annotated.
+These locations are labeled **Aligned section text**, distinct from hash-verified
+canonical locations. Original JSON offsets are preserved, and the detail panel shows
+the new section-relative offsets separately. Filters never change alignment decisions.
 
 The current upstream example contains offsets and hashes but no canonical text.
-Consequently it cannot enable highlights by itself. The annotation service must supply
+It supports section alignment as described above. To verify original canonical offsets,
+the annotation service can supply
 `canonical_text` at the payload root (or `document.canonical_text`), or export the same
-UTF-8 text for the viewer's **Load canonical text** control. The file stays in the browser.
+UTF-8 text for **Verify original canonical offsets → Load canonical text**. The file stays in the browser.
 Do not trim or change line endings when exporting it.
 
-The supported offset contract is `basis: canonical_text`, `indexing: 0-based`,
+For canonical verification, the supported offset contract is `basis: canonical_text`, `indexing: 0-based`,
 `interval: half-open`, `normalization: NFC`, and `unit: unicode_code_points`.
 The `unit` field is a required addition to the existing example contract; the service
 must confirm its offset units rather than the viewer assuming JavaScript string indices.
@@ -28,12 +47,13 @@ inspectable without highlights. Parent/subsection ranges are not concatenated, a
 duplicate text and offset shifts.
 
 **Try Section View example** loads a clearly labeled synthetic document, including
-overlapping annotations and a repeated unannotated term. **Refresh** returns to the
+split XML text nodes, shifted whitespace, overlapping annotations and repeated terms
+that intentionally remain unresolved. **Refresh** returns to the
 live response. This example does not represent findings for the open product.
 
-Automatic live text retrieval awaits a documented canonical-text endpoint or a shared
-canonicalizer from the annotation service. No guessed endpoint or fuzzy term matching
-is used to create verified highlights.
+Canonical verification remains an optional stricter path. Original canonical text or
+surrounding context from the producer would allow repeated occurrences to be resolved
+reliably in a future extension. No guessed endpoint or nearest-term fallback is used.
 
 The **Labeling Adverse Events (Labeling AE)** module (`/dashboard/label/[setId]/labeling-ae`) is a pharmacovigilance tool that extracts, structures, and visualizes adverse events documented within FDA drug labeling.
 
