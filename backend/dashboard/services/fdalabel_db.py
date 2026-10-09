@@ -833,7 +833,7 @@ class FDALabelDBService:
                     sql = f"SELECT * FROM {schema}sum_spl WHERE spl_id = %s LIMIT 1"
                     cursor.execute(sql, (spl_id,))
                 else:
-                    sql = f"SELECT * FROM {schema}sum_spl WHERE set_id = %s ORDER BY revised_date DESC LIMIT 1"
+                    sql = f"SELECT * FROM {schema}sum_spl WHERE set_id = %s ORDER BY revised_date DESC NULLS LAST, version_number DESC NULLS LAST, spl_id LIMIT 1"
                     cursor.execute(sql, (set_id,))
                 r = cursor.fetchone()
                 if r:
@@ -937,7 +937,7 @@ class FDALabelDBService:
                 SELECT spl_id, set_id, local_path, revised_date
                   FROM labeling.sum_spl
                  WHERE set_id = %(set_id)s OR spl_id = %(spl_id)s
-                 ORDER BY (spl_id = %(spl_id)s) DESC, revised_date DESC
+                 ORDER BY (spl_id = %(spl_id)s) DESC, revised_date DESC NULLS LAST, version_number DESC NULLS LAST, spl_id
                 """,
                 {'set_id': set_id, 'spl_id': spl_id},
             )

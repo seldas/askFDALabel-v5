@@ -49,32 +49,46 @@ python backend/database/scripts/db_12_drop_fulltext_search.py
 This is a one-way migration that reclaims hundreds of gigabytes of disk space and aligns the database with the modern v5 schema.
 # Repairing SPL revision history
 
-SPL `version_number` is the root XML `<versionNumber>` value. It is never generated
-from revision dates, import timestamps, or UUID order. Missing/invalid values are NULL.
-All label import paths preserve this value and deduplicate by SPL ID, allowing multiple
-SPL documents on the same date. Timelines show every document in a date cell, labeled
-**SPL version**, with unknown/ambiguous order flagged. Version numbers are meaningful
-within a Set ID, not across all products under an application number.
+Imports preserve the XML `<versionNumber>` and deduplicate by SPL ID. Revision history
+orders by `revised_date` first; only records on the same date need XML versions to break
+ties. Import time and UUID order never establish revision order. Timelines show every
+SPL on the same date, and comparisons use the stored `parent_spl_id`.
 
-Older archive/admin imports overwrote version numbers with archive row numbers. Audit
-and repair them using exact local XML or SPL-ID cache files:
+The optimized repair command has two phases:
+
+1. PostgreSQL identifies `(set_id, revised_date)` groups containing multiple SPL IDs.
+   Only these candidates have their exact local XML/cache read. Python fetches candidates
+   in bounded batches and reports a progress bar, completed/total counts, elapsed time,
+   and ETA. Missing or invalid candidate XML produces an unknown version.
+2. Metadata-only batches recalculate lineage using dates, then versions for same-day
+   ties. No XML is loaded for unique-date records, and their stored versions are not
+   revalidated by this command. Progress is reported in Set IDs. Only changed parent
+   and latest flags are written. A `--set-id` scope restricts both phases' source queries.
 
 ```bash
+# Read-only audit
 python backend/database/scripts/db_13_repair_spl_versions.py
-python backend/database/scripts/db_13_repair_spl_versions.py --apply
-# Optional: restrict audit/repair to one Set ID
+# Apply, with bounded batches (default batch size: 100)
+python backend/database/scripts/db_13_repair_spl_versions.py --apply --batch-size 100
+# Restrict both phases to one Set ID
 python backend/database/scripts/db_13_repair_spl_versions.py --set-id SET_ID --apply
 ```
 
-The default audit is read-only. Apply writes original versions, parent IDs, latest flags,
-and storage paths to `data/version_repair/before-*.json` before changes. It checks XML
-document/set IDs and refuses to commit if records changed during the audit. It does not
-substitute another version or fetch Oracle/DailyMed content. Unverifiable versions become
-NULL. For a Set ID with any unknown/duplicate version, automatic parent/latest flags are
-cleared and automatic comparisons are disabled; this can exclude that set from queries
-restricted to `is_latest`. Reimport its exact XML to restore verified lineage. Previously
-skipped same-day documents need to be imported from their available source files.
+Apply writes JSONL backups of changed values to `data/version_repair/before-*.jsonl`
+before each write batch. It uses short transactions and row locks for lineage batches,
+not a database-wide table lock. Version updates skip concurrent changes to audited
+identity, date, version, or file paths and report conflicts; rerun to re-audit conflicts.
+Commits occur per batch, so an interrupted run may have applied earlier batches.
+Rerunning is safe and writes only remaining differences. Planning still scans database
+metadata, but never loads all SPL rows or XML into Python memory.
 
-For unambiguous sets, parents follow ascending XML version number, allowing gaps in
-the locally stored sequence. The highest known version is the latest **stored** SPL;
-this does not assert that all published versions are present locally.
+A same-day group with unknown, nonpositive, or duplicate versions has uncertain order:
+its members get no automatic parent, and none is marked latest if it is the newest day.
+A later unambiguous day can still be latest, but its first record is not automatically
+linked to an ambiguous preceding group. Missing revision dates also prevent a reliable
+latest designation. Unknown versions on distinct known dates do not block date ordering.
+The latest flag means latest **stored** SPL, not completeness of the publication archive.
+
+The script does not fetch Oracle/DailyMed or substitute sibling XML. Previously skipped
+same-day records must still be imported from their available source files. Audit lineage
+counts use stored versions; apply rechecks lineage after the same-day XML corrections.

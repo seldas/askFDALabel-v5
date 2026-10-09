@@ -59,16 +59,18 @@ def get_label_history(set_id):
             SELECT 
                 s.spl_id, s.set_id, s.product_names, s.generic_names, 
                 s.revised_date, s.version_number, s.is_latest, s.parent_spl_id,
-                EXISTS (SELECT 1 FROM labeling.sum_spl h WHERE h.set_id = s.set_id
+                (s.revised_date IS NULL OR s.revised_date = '' OR
+                 ((SELECT COUNT(*) FROM labeling.sum_spl h WHERE h.set_id = s.set_id AND h.revised_date = s.revised_date) > 1
+                  AND EXISTS (SELECT 1 FROM labeling.sum_spl h WHERE h.set_id = s.set_id AND h.revised_date = s.revised_date
                     GROUP BY h.version_number
-                    HAVING h.version_number IS NULL OR h.version_number <= 0 OR COUNT(*) > 1) AS order_uncertain,
+                    HAVING h.version_number IS NULL OR h.version_number <= 0 OR COUNT(*) > 1))) AS order_uncertain,
                 a.executive_summary, a.is_regulatory_notable, a.last_analyzed_at
             FROM labeling.sum_spl s
             LEFT JOIN labeling.history_analysis a
               ON s.spl_id = a.current_spl_id
              AND a.raw_prompt_version = 'whole-spl-xml-v1'
             WHERE s.set_id = %s
-            ORDER BY s.version_number DESC NULLS LAST, s.revised_date DESC NULLS LAST, s.spl_id
+            ORDER BY s.revised_date DESC NULLS LAST, s.version_number DESC NULLS LAST, s.spl_id
         """
         cursor.execute(sql, (set_id,))
         rows = cursor.fetchall()
@@ -114,9 +116,11 @@ def get_label_history_by_appr_num(appr_num):
             SELECT 
                 s.spl_id, s.set_id, s.product_names, s.generic_names, 
                 s.revised_date, s.version_number, s.is_latest, s.parent_spl_id,
-                EXISTS (SELECT 1 FROM labeling.sum_spl h WHERE h.set_id = s.set_id
+                (s.revised_date IS NULL OR s.revised_date = '' OR
+                 ((SELECT COUNT(*) FROM labeling.sum_spl h WHERE h.set_id = s.set_id AND h.revised_date = s.revised_date) > 1
+                  AND EXISTS (SELECT 1 FROM labeling.sum_spl h WHERE h.set_id = s.set_id AND h.revised_date = s.revised_date
                     GROUP BY h.version_number
-                    HAVING h.version_number IS NULL OR h.version_number <= 0 OR COUNT(*) > 1) AS order_uncertain,
+                    HAVING h.version_number IS NULL OR h.version_number <= 0 OR COUNT(*) > 1))) AS order_uncertain,
                 a.executive_summary, a.is_regulatory_notable, a.last_analyzed_at
             FROM labeling.sum_spl s
             LEFT JOIN labeling.history_analysis a
@@ -131,7 +135,7 @@ def get_label_history_by_appr_num(appr_num):
                 WHERE regexp_replace(UPPER(TRIM(app_no)), '[^A-Z0-9]', '', 'g')
                     = regexp_replace(UPPER(%s), '[^A-Z0-9]', '', 'g')
             )
-            ORDER BY s.version_number DESC NULLS LAST, s.revised_date DESC NULLS LAST, s.spl_id
+            ORDER BY s.revised_date DESC NULLS LAST, s.version_number DESC NULLS LAST, s.spl_id
         """
         cursor.execute(sql, (appr_num,))
         rows = cursor.fetchall()

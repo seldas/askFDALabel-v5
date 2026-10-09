@@ -125,7 +125,7 @@ const HistoryTrackPage = () => {
         });
 
         Object.values(bySetId).forEach(list => {
-            list.sort((a, b) => (b.version_number || 0) - (a.version_number || 0));
+            list.sort((a, b) => (b.revised_date || '').localeCompare(a.revised_date || '') || (b.version_number || 0) - (a.version_number || 0) || a.spl_id.localeCompare(b.spl_id));
         });
 
         const sortedDates = Array.from(allDatesSet).sort((a, b) => 
@@ -141,13 +141,9 @@ const HistoryTrackPage = () => {
 
     const previousRecord = useMemo(() => {
         if (!selectedSplId || !activeRecord) return null;
-        if (activeRecord.order_uncertain || activeRecord.version_number == null) return null;
+        if (activeRecord.order_uncertain || !activeRecord.parent_spl_id) return null;
         const setHistory = groupedData.bySetId[activeRecord.set_id] || [];
-        if (setHistory.some(r => r.version_number == null)) return null;
-        const lower = setHistory.filter(r => r.version_number! < activeRecord.version_number!);
-        const previous = lower[0];
-        if (!previous || setHistory.filter(r => r.version_number === previous.version_number).length !== 1) return null;
-        return previous;
+        return setHistory.find(record => record.spl_id === activeRecord.parent_spl_id) || null;
     }, [groupedData, selectedSplId, activeRecord]);
 
     // Fetch diff whenever selectedSplId changes
