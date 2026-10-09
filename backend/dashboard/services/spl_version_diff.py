@@ -63,9 +63,7 @@ def _semantic_records(xml_text):
             else:
                 sentences = re.split(r'(?<=[.!?])\s+(?=[A-Z])', value)
                 for index, sentence in enumerate(sentences):
-                    neighbors = sentences[max(0, index - 1):index] + sentences[index + 1:index + 2]
-                    add(f'{path}/sentence[{index + 1}]', section, 'sentence', sentence,
-                        {'neighbors': neighbors} if neighbors else None)
+                    add(f'{path}/sentence[{index + 1}]', section, 'sentence', sentence)
         elif not narrative:
             add(path, section, 'text', re.sub(r'\s+', ' ', element.text or '').strip())
         counts = {}
@@ -84,24 +82,99 @@ def _semantic_records(xml_text):
     return records
 
 
-def structured_spl_changes(previous_xml, current_xml):
+def compact_spl_changes(previous_xml, current_xml):
+    """Group content-matched changes by section; share context per change/table.
+
+    Source paths are retained separately for debugging, not repeated in the AI
+    input. Positional indexes never participate in content matching.
+    """
     old = _semantic_records(previous_xml)
     new = _semantic_records(current_xml)
-    # Context is attached only to changed records, not used to manufacture changes.
-    def signature(record):
-        return json.dumps({key: value for key, value in record.items() if key != 'context'}, sort_keys=True)
 
-    matcher = difflib.SequenceMatcher(None, list(map(signature, old)), list(map(signature, new)), autojunk=False)
-    changes = []
-    for tag, a, b, c, d in matcher.get_opcodes():
-        if tag == 'equal':
-            continue
-        previous = old[a:b]
-        current = new[c:d]
-        changes.append({'change_id': f'C{len(changes) + 1}',
-                        'change_type': {'insert': 'Addition', 'delete': 'Deletion', 'replace': 'Modification'}[tag],
-                        'previous': previous, 'current': current})
-    return json.dumps(changes, ensure_ascii=False, separators=(',', ':'))
+    def section_key(record):
+        codes = re.findall(r'/section\[code=([^\]]+)\]', record['path'])
+        return ('codes', tuple(codes)) if codes else ('title', record['section'])
+
+    def signature(record):
+        location = re.sub(r'\[\d+\]', '', record['path'])
+        return (location, record['kind'], json.dumps(record['value'], sort_keys=True, ensure_ascii=False))
+
+    def groups(records):
+        result = {}
+        for record in records:
+            result.setdefault(section_key(record), []).append(record)
+        return result
+
+    old_groups, new_groups = groups(old), groups(new)
+    output, sources = [], {}
+    change_number = 0
+    old_order = [key for key in old_groups if key in new_groups]
+    new_order = [key for key in new_groups if key in old_groups]
+    if old_order != new_order:
+        def section_names(keys, grouped):
+            return ' | '.join(grouped[key][0]['section'] or 'Document metadata' for key in keys)
+
+        change_number += 1
+        output.append('SECTION: Document structure\nC1\n- Section order: '
+                      + section_names(old_order, old_groups) + '\n+ Section order: '
+                      + section_names(new_order, new_groups))
+        sources['C1'] = {
+            'previous_paths': [old_groups[key][0]['path'] for key in old_order],
+            'current_paths': [new_groups[key][0]['path'] for key in new_order],
+        }
+    for key in dict.fromkeys([*old_groups, *new_groups]):
+        previous, current = old_groups.get(key, []), new_groups.get(key, [])
+        matcher = difflib.SequenceMatcher(None, list(map(signature, previous)),
+                                        list(map(signature, current)), autojunk=False)
+        section_output, tables = [], {}
+
+        def render(record, side):
+            value = record['value']
+            if record['kind'] == 'attributes':
+                # Attribute-bearing element identity matters; numeric positions
+                # are retained in the source map rather than the prompt.
+                name = re.sub(r'\[\d+\]', '', record['path']).rsplit('/', 1)[-1]
+                value = name + ' ' + json.dumps(value, ensure_ascii=False, separators=(',', ':'))
+            elif record['kind'] == 'empty_element':
+                value = '<' + value + '/>'
+            prefix = ''
+            context = record.get('context', {})
+            if 'headers' in context:
+                table_match = re.match(r'^(.*?/table(?:\[\d+\])?)(?:/|$)', record['path'])
+                table_path = table_match.group(1) if table_match else record['path']
+                # Different before/after headers or notes must both be retained.
+                table_key = (table_path, json.dumps(context, sort_keys=True))
+                if table_key not in tables:
+                    table_id = f'T{len(tables) + 1}'
+                    tables[table_key] = table_id
+                    section_output.append(f'{table_id} ({side}) headers: ' + ' ; '.join(context['headers']))
+                    if context['notes']:
+                        section_output.append(f'{table_id} notes: ' + ' ; '.join(context['notes']))
+                prefix = tables[table_key] + ' | '
+            return prefix + str(value)
+
+        # One neighboring record on each side, shared by a whole change block.
+        for group in matcher.get_grouped_opcodes(n=1):
+            change_number += 1
+            change_id = f'C{change_number}'
+            section_output.append(change_id)
+            source = {'previous_paths': [], 'current_paths': []}
+            sources[change_id] = source
+            for tag, a, b, c, d in group:
+                if tag == 'equal':
+                    for record in current[c:d]:
+                        section_output.append('  ' + render(record, 'current'))
+                else:
+                    for record in previous[a:b]:
+                        section_output.append('- ' + render(record, 'previous'))
+                        source['previous_paths'].append(record['path'])
+                    for record in current[c:d]:
+                        section_output.append('+ ' + render(record, 'current'))
+                        source['current_paths'].append(record['path'])
+        if section_output:
+            titles = list(dict.fromkeys(record['section'] or 'Document metadata' for record in previous + current))
+            output.append('SECTION: ' + ' -> '.join(titles) + '\n' + '\n'.join(section_output))
+    return '\n\n'.join(output), sources
 
 
 def _load_exact_spl_xml(spl_id):
@@ -188,12 +261,15 @@ def compare_spl_xml(current_spl_id, previous_spl_id, *, include_analysis=False):
     previous_lines = canonical_spl_lines(previous_xml)
     matcher = difflib.SequenceMatcher(None, previous_lines, current_lines, autojunk=True)
     results = []
+    xml_diff = []
 
     for index, group in enumerate(matcher.get_grouped_opcodes(n=3), start=1):
         old_html, new_html, plain = _render_group(previous_lines, current_lines, group)
         changed = any(tag != 'equal' for tag, *_ in group)
         if not changed:
             continue
+        if include_analysis:
+            xml_diff.append(plain)
         old_line = group[0][1] + 1
         new_line = group[0][3] + 1
         results.append({
@@ -205,9 +281,11 @@ def compare_spl_xml(current_spl_id, previous_spl_id, *, include_analysis=False):
             'is_deletion': all(tag in {'equal', 'delete'} for tag, *_ in group),
         })
 
+    compact_diff, sources = compact_spl_changes(previous_xml, current_xml) if include_analysis else ('', {})
     return {
         'diff': results,
-        'ai_diff': structured_spl_changes(previous_xml, current_xml) if include_analysis else None,
+        'analysis_candidates': {'xml_diff': '\n\n'.join(xml_diff), 'compact_diff': compact_diff} if include_analysis else {},
+        'analysis_sources': sources,
         'current_lines': len(current_lines),
         'previous_lines': len(previous_lines),
     }

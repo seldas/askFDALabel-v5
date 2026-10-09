@@ -68,7 +68,7 @@ def get_label_history(set_id):
             FROM labeling.sum_spl s
             LEFT JOIN labeling.history_analysis a
               ON s.spl_id = a.current_spl_id
-             AND a.raw_prompt_version = 'structured-spl-diff-v2'
+             AND a.raw_prompt_version = 'compact-spl-diff-v3'
             WHERE s.set_id = %s
             ORDER BY s.revised_date DESC NULLS LAST, s.version_number DESC NULLS LAST, s.spl_id
         """
@@ -125,7 +125,7 @@ def get_label_history_by_appr_num(appr_num):
             FROM labeling.sum_spl s
             LEFT JOIN labeling.history_analysis a
               ON s.spl_id = a.current_spl_id
-             AND a.raw_prompt_version = 'structured-spl-diff-v2'
+             AND a.raw_prompt_version = 'compact-spl-diff-v3'
             -- Application numbers are stored in more than one presentation
             -- (for example, NDA205767, NDA 205767, or a semicolon-separated
             -- list). Match a normalized individual application identifier.
@@ -204,7 +204,7 @@ def analyze_history_changes():
                 row = cursor.fetchone()
                 cursor.close()
                 conn.close()
-                if (row and row.get('raw_prompt_version') == 'structured-spl-diff-v2'
+                if (row and row.get('raw_prompt_version') == 'compact-spl-diff-v3'
                         and row.get('previous_spl_id') == previous_spl_id):
                     return jsonify({
                         'success': True,
@@ -227,7 +227,6 @@ def analyze_history_changes():
             }
             return jsonify({'success': True, 'analysis_json': analysis_data})
 
-        ai_diff = comparison['ai_diff']
         max_xml_diff_chars = 180000
         drug_name = meta_new.get('brand_name', 'Unknown Drug')
         system_prompt = (
@@ -242,11 +241,10 @@ def analyze_history_changes():
             'comparison_scope': 'complete SPL XML document',
             'current_xml_line_count': comparison['current_lines'],
             'previous_xml_line_count': comparison['previous_lines'],
-            'structured_changes': json.loads(ai_diff),
         }
-        user_message = f"""
+        message_template = f"""
 Compare the previous and current complete SPL XML for {drug_name}.
-The supplied data contains structured changes extracted across the entire XML document. Each change has an ID, XML paths, section titles, and previous/current values. Narrative changes retain complete sentences and neighboring sentences; changed table rows retain headers and notes. Unchanged records are omitted. Context is supporting information, not itself a change. Inline image bytes are represented by media type, byte count, and SHA-256 fingerprint, so identify image/media additions, removals, and replacements when present. Ignore XML indentation and formatting-only changes that do not alter content. Review every supplied change ID, including changes outside clinical sections. Group related changes without omitting meaningful changes. Do not infer clinical meaning from image fingerprints alone.
+The supplied diff covers the entire XML document, including metadata and nonclinical sections. In compact format, SECTION identifies the section, C identifies a change block, and T identifies shared table headers/notes. A minus line is previous content, a plus line is current content, and an unprefixed line is unchanged supporting context. In XML format, the same minus/plus convention applies to XML lines. Review every meaningful change; group related changes. Inline image bytes are represented by media type, byte count, and SHA-256 fingerprint; do not infer clinical meaning from fingerprints alone. Ignore formatting-only changes.
 
 DATA:
 {json.dumps(comparison_payload, ensure_ascii=False, separators=(',', ':'))}
@@ -267,7 +265,19 @@ Return JSON only:
 }}
 """.strip()
 
+        # Compare complete prompt sizes, including the format label and metadata.
+        candidates = [
+            (kind, message_template + f'\n\nDIFF FORMAT: {kind}\n' + diff)
+            for kind, diff in comparison['analysis_candidates'].items()
+            if diff.strip()
+        ]
+        # Empty semantic changes must never mask structural XML changes.
+        if not candidates:
+            return jsonify({'error': 'No analysis input could be generated. Use LabelComp for manual review.'}), 422
+        input_format, user_message = min(candidates, key=lambda item: len(item[1]))
         input_chars = len(system_prompt) + len(user_message)
+        logger.info('SPL analysis input: format=%s chars=%s candidates=%s', input_format, input_chars,
+                    {kind: len(system_prompt) + len(message) for kind, message in candidates})
         if input_chars > max_xml_diff_chars:
             return jsonify({
                 'error': (
@@ -309,7 +319,7 @@ Return JSON only:
             meta_new['set_id'], current_spl_id, previous_spl_id,
             analysis_data.get('executive_summary'),
             analysis_data.get('regulatory_notable', False),
-            json.dumps(analysis_data), 'structured-spl-diff-v2',
+            json.dumps(analysis_data), 'compact-spl-diff-v3',
         ))
         conn.commit()
         cursor.close()
@@ -332,7 +342,7 @@ def get_history_analysis(spl_id):
             
         cursor = conn.cursor()
         sql = """SELECT * FROM labeling.history_analysis
-                 WHERE current_spl_id = %s AND raw_prompt_version = 'structured-spl-diff-v2'"""
+                 WHERE current_spl_id = %s AND raw_prompt_version = 'compact-spl-diff-v3'"""
         cursor.execute(sql, (spl_id,))
         row = cursor.fetchone()
         cursor.close()
