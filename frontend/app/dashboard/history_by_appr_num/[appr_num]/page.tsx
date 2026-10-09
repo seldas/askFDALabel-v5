@@ -252,6 +252,16 @@ const HistoryTrackPage = () => {
                             >
                                 View Label
                             </button>
+                            <a
+                                href={previousRecord
+                                    ? `/labelcomp?set_ids=${previousRecord.set_id}&set_ids=${activeRecord?.set_id}&spl_ids=${previousRecord.spl_id}&spl_ids=${activeRecord?.spl_id}`
+                                    : `/labelcomp?set_ids=${activeRecord?.set_id}&spl_ids=${activeRecord?.spl_id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ padding: '6px 14px', backgroundColor: '#fff', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', textDecoration: 'none' }}
+                            >
+                                LabelComp ↗
+                            </a>
                             <button 
                                 onClick={handleAnalyze}
                                 disabled={isAnalyzing || !previousRecord || (diffResults.length === 0 && !isDiffLoading)}
@@ -292,27 +302,7 @@ const HistoryTrackPage = () => {
                                 <p style={{ color: '#92400e', lineHeight: 1.5, fontSize: '0.9rem', marginBottom: '15px' }}>
                                     {activeRecord.executive_summary}
                                 </p>
-                                {previousRecord && (
-                                    <a 
-                                        href={withAppBase(`/labelcomp?set_ids=${previousRecord?.set_id}&set_ids=${activeRecord?.set_id}&spl_ids=${previousRecord?.spl_id}&spl_ids=${activeRecord?.spl_id}`)} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        style={{
-                                            display: 'inline-block',
-                                            padding: '6px 12px',
-                                            backgroundColor: '#2563eb',
-                                            color: '#fff',
-                                            border: 'none',
-                                            borderRadius: '6px',
-                                            fontWeight: 600,
-                                            fontSize: '0.8rem',
-                                            cursor: 'pointer',
-                                            textDecoration: 'none'
-                                        }}
-                                    >
-                                        Deep Comparison View ↗
-                                    </a>
-                                )}
+
                             </div>
                         )}
 
