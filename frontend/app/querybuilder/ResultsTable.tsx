@@ -18,6 +18,21 @@ import { labelRoute } from '../platform/context';
 import { fdaLabelSplDocUrl } from '../platform/fdalabel';
 import type { TargetDb } from './types';
 
+function DetailCodes({ value }: { value: string | null | undefined }) {
+  const codes = [...new Set((value || '').split(';').map(code => code.trim()).filter(Boolean))];
+  if (!codes.length) return <span className="fdl-detail-missing">Not available</span>;
+  const render = (items: string[]) => <span className="fdl-detail-codes">{items.map(code => <code key={code}>{code}</code>)}</span>;
+  return <>{render(codes.slice(0, 6))}{codes.length > 6 && <details className="fdl-detail-more"><summary>Show {codes.length - 6} more codes</summary>{render(codes.slice(6))}</details>}</>;
+}
+
+function RecordIdentifier({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  return <div><dt>{label}</dt><dd><code>{value || 'Not available'}</code>{value && <button type="button" aria-label={`Copy ${label}`} onClick={async event => {
+    event.stopPropagation();
+    try { await navigator.clipboard.writeText(value); setCopied(true); } catch { setCopied(false); }
+  }}>{copied ? 'Copied' : 'Copy'}</button>}</dd></div>;
+}
+
 export interface LabelRow {
   set_id: string;
   spl_id: string;
@@ -731,115 +746,46 @@ export function ResultsTable({
                             </div>
 
                             <div className="fdl-label-card__grid">
-                              <div className="fdl-card-section">
-                                <div className="fdl-card-section__head">Product Identification</div>
+                              <section className="fdl-card-section">
+                                <h3 className="fdl-card-section__head">Product &amp; Composition</h3>
                                 <dl className="fdl-card-dl">
-                                  <dt>Trade Name:</dt>
-                                  <dd>{joined(row.product_names) || '—'}</dd>
-                                  <dt>Generic Name:</dt>
-                                  <dd>{joined(row.generic_names) || '—'}</dd>
+                                  <dt>Ingredients</dt><dd>{joined(row.active_ingredients) || 'Not available'}</dd>
+                                  <dt>Ingredient UNIIs</dt><dd><DetailCodes value={row.active_uniis} /></dd>
+                                  {(row.active_moiety || row.active_moiety_uniis) && <>
+                                    <dt>Active moiety</dt><dd>{joined(row.active_moiety) || 'Not available'}</dd>
+                                    <dt>Moiety UNIIs</dt><dd><DetailCodes value={row.active_moiety_uniis} /></dd>
+                                  </>}
+                                  <dt>Dosage forms</dt><dd>{joined(row.dosage_forms) || 'Not available'}</dd>
+                                  <dt>Routes</dt><dd>{joined(row.routes) || 'Not available'}</dd>
+                                  <dt>Pharmacologic class</dt><dd>{joined(row.epc) || 'Not available'}</dd>
                                 </dl>
-                              </div>
-
-                              <div className="fdl-card-section">
-                                <div className="fdl-card-section__head">Active Ingredients &amp; Moieties</div>
+                              </section>
+                              <section className="fdl-card-section">
+                                <h3 className="fdl-card-section__head">Regulatory &amp; Marketing</h3>
                                 <dl className="fdl-card-dl">
-                                  <dt>Active Ingredients:</dt>
-                                  <dd>{joined(row.active_ingredients) || '—'}</dd>
-                                  <dt>Ingr. UNII Code(s):</dt>
-                                  <dd>
-                                    {row.active_uniis ? (
-                                      <span className="fdl-unii">
-                                        {row.active_uniis.split(';').map((u) => (
-                                          <code key={u.trim()}>{u.trim()}</code>
-                                        ))}
-                                      </span>
-                                    ) : (
-                                      '—'
-                                    )}
-                                  </dd>
-                                  {(row.active_moiety || row.active_moiety_uniis) ? (
-                                    <>
-                                      <dt>Active Moiety:</dt>
-                                      <dd>{joined(row.active_moiety) || '—'}</dd>
-                                      {row.active_moiety_uniis ? (
-                                        <>
-                                          <dt>Moiety UNII(s):</dt>
-                                          <dd>
-                                            <span className="fdl-unii">
-                                              {row.active_moiety_uniis.split(';').map((u) => (
-                                                <code key={u.trim()}>{u.trim()}</code>
-                                              ))}
-                                            </span>
-                                          </dd>
-                                        </>
-                                      ) : null}
-                                    </>
-                                  ) : null}
+                                  <dt>Application</dt><dd>{joined(row.appr_num) || 'Not available'}</dd>
+                                  <dt>Labeler / Manufacturer</dt><dd>{row.manufacturer || 'Not available'}</dd>
+                                  <dt>Marketing category</dt><dd>{joined(row.market_categories) || 'Not available'}</dd>
+                                  <dt>Initial approval</dt><dd>{row.initial_approval_year || 'Not available'}</dd>
+                                  <dt>RLD</dt><dd>{row.is_rld == null ? 'Not available' : row.is_rld ? 'Yes' : 'No'}</dd>
                                 </dl>
-                              </div>
-
-                              <div className="fdl-card-section">
-                                <div className="fdl-card-section__head">NDC Codes</div>
+                              </section>
+                              <section className="fdl-card-section fdl-card-section--ndc">
+                                <h3 className="fdl-card-section__head">NDC Codes</h3>
                                 <dl className="fdl-card-dl">
-                                  <dt>NDC Code(s):</dt>
-                                  <dd>
-                                    <div>{joined(row.ndc_codes) || '—'}</div>
-                                    {row.ndc3_codes ? (
-                                      <div style={{ marginTop: '4px', fontSize: '0.8rem', color: '#475569' }}>
-                                        <strong>NDC3 (3-Segment):</strong> {joined(row.ndc3_codes)}
-                                      </div>
-                                    ) : null}
-                                  </dd>
+                                  <dt>NDC</dt><dd><DetailCodes value={row.ndc_codes} /></dd>
+                                  <dt>NDC3 (3-segment)</dt><dd><DetailCodes value={row.ndc3_codes} /></dd>
                                 </dl>
-                              </div>
-
-                              <div className="fdl-card-section">
-                                <div className="fdl-card-section__head">Regulatory & Marketing</div>
-                                <dl className="fdl-card-dl">
-                                  <dt>Application Number:</dt>
-                                  <dd>{joined(row.appr_num) || '—'}</dd>
-                                  <dt>Labeler / Manufacturer:</dt>
-                                  <dd>{row.manufacturer || '—'}</dd>
-                                  <dt>Marketing Category:</dt>
-                                  <dd>{joined(row.market_categories) || '—'}</dd>
-                                  <dt>Initial Approval Year:</dt>
-                                  <dd>{row.initial_approval_year || '—'}</dd>
-                                  <dt>Reference Listed Drug:</dt>
-                                  <dd>{row.is_rld ? 'Yes (RLD)' : 'No'}</dd>
-                                </dl>
-                              </div>
-
-                              <div className="fdl-card-section">
-                                <div className="fdl-card-section__head">Clinical Specifications</div>
-                                <dl className="fdl-card-dl">
-                                  <dt>Labeling Type:</dt>
-                                  <dd>{row.doc_type || '—'}</dd>
-                                  <dt>Dosage Form(s):</dt>
-                                  <dd>{joined(row.dosage_forms) || '—'}</dd>
-                                  <dt>Route(s) of Admin:</dt>
-                                  <dd>{joined(row.routes) || '—'}</dd>
-                                  <dt>Pharmacologic Class:</dt>
-                                  <dd>{joined(row.epc) || '—'}</dd>
-                                </dl>
-                              </div>
-
-                              <div className="fdl-card-section">
-                                <div className="fdl-card-section__head">Identifiers & Dates</div>
-                                <dl className="fdl-card-dl">
-                                  <dt>Set ID:</dt>
-                                  <dd>
-                                    <code className="fdl-code-sm">{row.set_id}</code>
-                                  </dd>
-                                  <dt>SPL ID:</dt>
-                                  <dd>
-                                    <code className="fdl-code-sm">{row.spl_id}</code>
-                                  </dd>
-                                  <dt>Most Recent SPL Date:</dt>
-                                  <dd>{(row.revised_date || '').replace(/-/g, '/') || '—'}</dd>
-                                </dl>
-                              </div>
+                              </section>
                             </div>
+                            <footer className="fdl-label-card__record">
+                              <span className="fdl-label-card__record-title">Label record</span>
+                              <dl>
+                                <div><dt>Revised date</dt><dd>{row.revised_date || 'Not available'}</dd></div>
+                                <RecordIdentifier label="Set ID" value={row.set_id} />
+                                <RecordIdentifier label="SPL ID" value={row.spl_id} />
+                              </dl>
+                            </footer>
                           </div>
                         </td>
                       </tr>
