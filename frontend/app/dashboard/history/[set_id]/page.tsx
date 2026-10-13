@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
@@ -44,6 +44,10 @@ const HistoryTrackPage = () => {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [selectedSplId, setSelectedSplId] = useState<string | null>(null);
+    const [baselineSelection, setBaselineSelection] = useState<{ current: string; previous: string } | null>(null);
+    const [pairSummary, setPairSummary] = useState<{ pair: string; text: string } | null>(null);
+    const activePairRef = useRef('');
+    const analysisController = useRef<AbortController | null>(null);
     const [diffResults, setDiffResults] = useState<DiffItem[]>([]);
     const [diffError, setDiffError] = useState<string | null>(null);
     const [expandedSectionKey, setExpandedSectionKey] = useState<string | null>(null);
@@ -66,9 +70,7 @@ const HistoryTrackPage = () => {
             const data = await res.json();
             if (data.results) {
                 setHistory(data.results);
-                if (data.results.length > 0 && !selectedSplId) {
-                    setSelectedSplId(data.results[0].spl_id);
-                }
+                setSelectedSplId(current => current || data.results[0]?.spl_id || null);
             } else if (data.error) {
                 setError(data.error);
             }
@@ -78,7 +80,7 @@ const HistoryTrackPage = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [set_id, selectedSplId]);
+    }, [set_id]);
 
     // Fetch lineage
     useEffect(() => {
@@ -87,11 +89,15 @@ const HistoryTrackPage = () => {
 
     const handleAnalyze = async () => {
         if (!selectedSplId || !previousRecord) return;
-        
+
+        const pair = `${selectedSplId}/${previousRecord.spl_id}`;
+        const controller = new AbortController();
+        analysisController.current = controller;
         setIsAnalyzing(true);
         try {
             const res = await fetch(withApiBase('/api/dashboard/history/analyze'), {
                 method: 'POST',
+                signal: controller.signal,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     current_spl_id: selectedSplId,
@@ -101,23 +107,25 @@ const HistoryTrackPage = () => {
             });
             const data = await res.json();
             if (data.success) {
-                // Refresh history to show the summary
-                await fetchHistory();
-            } else {
+                if (activePairRef.current === pair && !controller.signal.aborted) {
+                    setPairSummary({ pair, text: data.analysis_json.executive_summary });
+                }
+            } else if (activePairRef.current === pair && !controller.signal.aborted) {
                 alert("Analysis failed: " + (data.error || "Unknown error"));
             }
         } catch (err) {
+            if (controller.signal.aborted || activePairRef.current !== pair) return;
             console.error("Analysis trigger error", err);
             alert("Failed to start analysis.");
         } finally {
-            setIsAnalyzing(false);
+            if (analysisController.current === controller) setIsAnalyzing(false);
         }
     };
 
     const groupedData = useMemo(() => {
         const bySetId: Record<string, HistoryRecord[]> = {};
         const allDatesSet = new Set<string>();
-        
+
         history.forEach(h => {
             if (!bySetId[h.set_id]) bySetId[h.set_id] = [];
             bySetId[h.set_id].push(h);
@@ -139,42 +147,71 @@ const HistoryTrackPage = () => {
         history.find(h => h.spl_id === selectedSplId), 
     [history, selectedSplId]);
 
-    const previousRecord = useMemo(() => {
-        if (!selectedSplId || !activeRecord) return null;
-        if (activeRecord.order_uncertain || !activeRecord.parent_spl_id) return null;
-        const setHistory = groupedData.bySetId[activeRecord.set_id] || [];
-        return setHistory.find(record => record.spl_id === activeRecord.parent_spl_id) || null;
-    }, [groupedData, selectedSplId, activeRecord]);
-
-    // Fetch diff whenever selectedSplId changes
-    useEffect(() => {
-        const fetchDiff = async () => {
-            if (!selectedSplId || !previousRecord) {
-                setDiffResults([]);
-                setDiffError(null);
-                return;
+    const earlierRecords = useMemo(() => {
+        if (!activeRecord) return [];
+        return (groupedData.bySetId[activeRecord.set_id] || []).filter(record => {
+            if (record.spl_id === activeRecord.spl_id) return false;
+            if (record.spl_id === activeRecord.parent_spl_id) return true;
+            // Do not infer ordering from the SPL UUID when dates/versions are ambiguous.
+            if (!record.revised_date || !activeRecord.revised_date) return false;
+            if (record.revised_date !== activeRecord.revised_date) {
+                return record.revised_date < activeRecord.revised_date;
             }
-            setIsDiffLoading(true);
-            setDiffError(null);
+            return !record.order_uncertain && !activeRecord.order_uncertain
+                && (record.version_number || 0) > 0
+                && (record.version_number || 0) < (activeRecord.version_number || 0);
+        });
+    }, [groupedData, activeRecord]);
+
+    const previousRecord = earlierRecords.find(record => record.spl_id === (
+        baselineSelection?.current === selectedSplId
+            ? baselineSelection.previous
+            : activeRecord?.parent_spl_id
+    )) || null;
+    const pairKey = previousRecord ? `${selectedSplId}/${previousRecord.spl_id}` : '';
+    activePairRef.current = pairKey;
+
+    // Each comparison owns its requests; a late response cannot replace a newer pair.
+    useEffect(() => {
+        const controller = new AbortController();
+        analysisController.current?.abort();
+        analysisController.current = null;
+        setIsAnalyzing(false);
+        setPairSummary(null);
+        setDiffResults([]);
+        setDiffError(null);
+        setExpandedSectionKey(null);
+        setShowFullContentKeys({});
+        setIsDiffLoading(Boolean(pairKey));
+        if (!pairKey) return () => controller.abort();
+
+        const fetchDiff = async () => {
             try {
-                const res = await fetch(withApiBase(`/api/dashboard/history/diff/${selectedSplId}/${previousRecord.spl_id}`));
+                const res = await fetch(`/api/dashboard/history/diff/${pairKey}`, { signal: controller.signal });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || `XML comparison failed (${res.status})`);
-                if (data.diff) {
-                    setDiffResults(data.diff);
-                } else {
-                    setDiffResults([]);
-                }
+                if (!controller.signal.aborted) setDiffResults(data.diff || []);
             } catch (err) {
-                console.error("Diff fetch error", err);
-                setDiffResults([]);
-                setDiffError(err instanceof Error ? err.message : "Failed to compare the SPL XML documents.");
+                if (!controller.signal.aborted) setDiffError(err instanceof Error ? err.message : 'Failed to compare the SPL XML documents.');
             } finally {
-                setIsDiffLoading(false);
+                if (!controller.signal.aborted) setIsDiffLoading(false);
             }
         };
-        fetchDiff();
-    }, [selectedSplId, previousRecord]);
+        const fetchSummary = async () => {
+            try {
+                const res = await fetch(`/api/dashboard/history/analysis/${selectedSplId}?previous_spl_id=${previousRecord?.spl_id}`, { signal: controller.signal });
+                const data = await res.json();
+                if (res.ok && data.found && !controller.signal.aborted && !analysisController.current) {
+                    setPairSummary({ pair: pairKey, text: data.analysis.executive_summary });
+                }
+            } catch (err) {
+                if (!controller.signal.aborted) console.error('Summary fetch error', err);
+            }
+        };
+        void fetchDiff();
+        void fetchSummary();
+        return () => { controller.abort(); analysisController.current?.abort(); };
+    }, [pairKey, selectedSplId, previousRecord?.spl_id]);
 
     if (isLoading) {
         return (
@@ -220,7 +257,7 @@ const HistoryTrackPage = () => {
                         padding: '15px 40px', 
                         borderBottom: '1px solid #f1f5f9', 
                         display: 'flex', 
-                        justifyContent: 'space-between', 
+                        justifyContent: 'space-between',
                         alignItems: 'center',
                         position: 'sticky',
                         top: 0,
@@ -242,7 +279,24 @@ const HistoryTrackPage = () => {
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '10px' }}>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <label style={{ fontSize: '0.8rem', color: '#475569' }}>
+                                Compare with{' '}
+                                <select
+                                    aria-label="Compare with an earlier label version"
+                                    value={previousRecord?.spl_id || ''}
+                                    disabled={earlierRecords.length === 0}
+                                    onChange={event => setBaselineSelection({ current: selectedSplId!, previous: event.target.value })}
+                                    style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', backgroundColor: '#fff', color: '#475569', maxWidth: '300px' }}
+                                >
+                                    {!previousRecord && <option value="" disabled>{earlierRecords.length ? 'Select an earlier version' : 'No earlier version'}</option>}
+                                    {earlierRecords.map(record => (
+                                        <option key={record.spl_id} value={record.spl_id}>
+                                            SPL {record.version_number ?? '?'} · {record.revised_date || 'Unknown date'} · {record.spl_id.slice(0, 8)}{record.spl_id === activeRecord?.parent_spl_id ? ' (Previous version)' : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
                             <button 
                                 onClick={() => window.open(withAppBase(`/dashboard/label/${activeRecord?.set_id}?spl_id=${activeRecord?.spl_id}`), '_blank')}
                                 style={{ padding: '6px 14px', backgroundColor: '#fff', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
@@ -261,16 +315,16 @@ const HistoryTrackPage = () => {
                             </a>
                             <button 
                                 onClick={handleAnalyze}
-                                disabled={isAnalyzing || !previousRecord || (diffResults.length === 0 && !isDiffLoading)}
+                                disabled={isAnalyzing || !previousRecord || isDiffLoading || !!diffError || diffResults.length === 0}
                                 style={{ 
                                     padding: '6px 14px', 
-                                    backgroundColor: (isAnalyzing || (diffResults.length === 0 && !isDiffLoading)) ? '#94a3b8' : '#1e40af', 
+                                    backgroundColor: (isAnalyzing || !previousRecord || isDiffLoading || !!diffError || diffResults.length === 0) ? '#94a3b8' : '#1e40af',
                                     color: '#fff', 
                                     border: 'none', 
                                     borderRadius: '6px', 
                                     fontWeight: 600, 
                                     fontSize: '0.8rem', 
-                                    cursor: (isAnalyzing || (diffResults.length === 0 && !isDiffLoading)) ? 'not-allowed' : 'pointer',
+                                    cursor: (isAnalyzing || !previousRecord || isDiffLoading || !!diffError || diffResults.length === 0) ? 'not-allowed' : 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '6px'
@@ -282,7 +336,7 @@ const HistoryTrackPage = () => {
                     </div>
 
                     <div style={{ padding: '30px 40px' }}>
-                        {activeRecord?.has_analysis && activeRecord.executive_summary && (
+                        {pairSummary?.pair === pairKey && pairSummary.text && (
                             <div style={{ 
                                 backgroundColor: '#fffbeb', 
                                 border: '1px solid #fde68a', 
@@ -297,7 +351,7 @@ const HistoryTrackPage = () => {
                                     </h3>
                                 </div>
                                 <p style={{ color: '#92400e', lineHeight: 1.5, fontSize: '0.9rem', marginBottom: '15px' }}>
-                                    {activeRecord.executive_summary}
+                                    {pairSummary.text}
                                 </p>
 
                             </div>
@@ -308,7 +362,7 @@ const HistoryTrackPage = () => {
                                 <div style={{ fontSize: '2.5rem', marginBottom: '15px' }}>🚀</div>
                                 <h2 style={{ color: '#1e293b', fontSize: '1.1rem' }}>No verified predecessor</h2>
                                 <p style={{ color: '#64748b', maxWidth: '400px', margin: '8px auto', fontSize: '0.9rem' }}>
-                                    No unambiguous predecessor is available. This may be the earliest stored SPL or its revision order may be uncertain.
+                                    Select an earlier version above to compare. If none is available, this is the earliest stored SPL or its revision order is uncertain.
                                 </p>
                             </div>
                         ) : isDiffLoading ? (
@@ -356,12 +410,12 @@ const HistoryTrackPage = () => {
                                                     {!item.is_addition && !item.is_deletion && <span style={{ fontSize: '0.6rem', padding: '2px 6px', backgroundColor: '#f1f5f9', color: '#64748b', borderRadius: '4px', fontWeight: 800 }}>CHANGED</span>}
                                                 </div>
                                             </div>
-                                            
+
                                             <div className={`${styles.accordionContent} ${isExpanded ? styles.accordionContentExpanded : ''}`}>
                                                 <div className={styles.diffGrid}>
                                                     {/* OLD VERSION PANE */}
                                                     <div className={styles.diffPane}>
-                                                        <div className={styles.paneHeader}>PREVIOUS (SPL version {previousRecord?.version_number ?? "unknown"})</div>
+                                                        <div className={styles.paneHeader}>BASELINE (SPL version {previousRecord?.version_number ?? "unknown"})</div>
                                                         <div className={`${styles.longContentContainer} ${showFull ? styles.contentExpanded : ''}`}>
                                                             <div 
                                                                 className={`diff-content ${styles.diffContainer}`}
@@ -476,7 +530,7 @@ const HistoryTrackPage = () => {
                                                             {records.map(record => {
                                                                 const isSelected = record.spl_id === selectedSplId;
                                                                 return <div key={record.spl_id}
-                                                                    onClick={() => setSelectedSplId(record.spl_id)}
+                                                                    onClick={() => { setBaselineSelection(null); setSelectedSplId(record.spl_id); }}
                                                                     style={{
                                                                         position: 'relative',
                                                                         zIndex: 5,

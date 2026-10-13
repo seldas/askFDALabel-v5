@@ -69,6 +69,7 @@ def get_label_history(set_id):
             LEFT JOIN labeling.history_analysis a
               ON s.spl_id = a.current_spl_id
              AND a.raw_prompt_version = 'compact-spl-diff-v3'
+             AND a.previous_spl_id = s.parent_spl_id
             WHERE s.set_id = %s
             ORDER BY s.revised_date DESC NULLS LAST, s.version_number DESC NULLS LAST, s.spl_id
         """
@@ -126,6 +127,7 @@ def get_label_history_by_appr_num(appr_num):
             LEFT JOIN labeling.history_analysis a
               ON s.spl_id = a.current_spl_id
              AND a.raw_prompt_version = 'compact-spl-diff-v3'
+             AND a.previous_spl_id = s.parent_spl_id
             -- Application numbers are stored in more than one presentation
             -- (for example, NDA205767, NDA 205767, or a semicolon-separated
             -- list). Match a normalized individual application identifier.
@@ -165,6 +167,32 @@ def get_label_history_by_appr_num(appr_num):
         logger.exception(f"Error fetching label history for application number {appr_num}: {e}")
         return jsonify({'error': str(e)}), 500
 
+def _validate_history_comparison_set(current_spl_id, previous_spl_id):
+    """Archive comparisons are restricted to two versions of the same Set-ID."""
+    conn = FDALabelDBService.get_connection(force_local=True)
+    if not conn:
+        return jsonify({'error': 'Local database not connected'}), 503
+    try:
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "SELECT spl_id, set_id FROM labeling.sum_spl WHERE spl_id IN (%s, %s)",
+                (current_spl_id, previous_spl_id),
+            )
+            records = {row['spl_id']: row['set_id'] for row in cursor.fetchall()}
+        finally:
+            cursor.close()
+    finally:
+        conn.close()
+    if current_spl_id not in records or previous_spl_id not in records:
+        return jsonify({'error': 'Label version not found in the local archive'}), 404
+    if records[current_spl_id] != records[previous_spl_id]:
+        return jsonify({'error': 'Archive comparison across different Set-IDs is not supported'}), 400
+    if current_spl_id == previous_spl_id:
+        return jsonify({'error': 'Select a different earlier label version'}), 400
+    return None
+
+
 @api_bp.route('/history/diff/<spl_id1>/<spl_id2>')
 def get_history_diff(spl_id1, spl_id2):
     """
@@ -173,6 +201,9 @@ def get_history_diff(spl_id1, spl_id2):
     spl_id2: The older version (Previous)
     """
     try:
+        validation_error = _validate_history_comparison_set(spl_id1, spl_id2)
+        if validation_error is not None:
+            return validation_error
         comparison = compare_spl_xml(spl_id1, spl_id2)
         if comparison is None:
             return jsonify({'error': 'Could not retrieve the exact SPL XML for one or both versions'}), 404
@@ -193,6 +224,9 @@ def analyze_history_changes():
         return jsonify({'error': 'Missing spl_ids'}), 400
 
     try:
+        validation_error = _validate_history_comparison_set(current_spl_id, previous_spl_id)
+        if validation_error is not None:
+            return validation_error
         if not force_refresh:
             conn = FDALabelDBService.get_connection()
             if conn:
@@ -343,7 +377,12 @@ def get_history_analysis(spl_id):
         cursor = conn.cursor()
         sql = """SELECT * FROM labeling.history_analysis
                  WHERE current_spl_id = %s AND raw_prompt_version = 'compact-spl-diff-v3'"""
-        cursor.execute(sql, (spl_id,))
+        previous_spl_id = request.args.get('previous_spl_id')
+        if previous_spl_id:
+            sql += ' AND previous_spl_id = %s'
+            cursor.execute(sql, (spl_id, previous_spl_id))
+        else:
+            cursor.execute(sql, (spl_id,))
         row = cursor.fetchone()
         cursor.close()
         conn.close()
