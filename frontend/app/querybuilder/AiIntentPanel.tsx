@@ -370,7 +370,6 @@ export function AiIntentPanel({
           </div>
           <label
             className="fdl-ai__quick-search"
-            title="Generate query conditions from your input and search automatically, skipping criteria confirmation."
           >
             <input
               type="checkbox"
