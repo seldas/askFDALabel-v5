@@ -368,43 +368,50 @@ export function AiIntentPanel({
               </button>
             ))}
           </div>
-          <label
-            className="fdl-ai__quick-search"
-          >
-            <input
-              type="checkbox"
-              checked={quickSearch}
-              disabled={disabled || busy || refining}
-              onChange={(event) => setQuickSearch(event.target.checked)}
-              aria-describedby="quick-search-tooltip"
-            />
-            <span>Quick search</span>
-            <span className="fdl-ai__quick-search-info" tabIndex={0}>
-              <InfoIcon />
-              <span id="quick-search-tooltip" role="tooltip" className="fdl-ai__quick-search-tooltip">
-                Generate query conditions from your input and search automatically, skipping criteria confirmation.
-              </span>
-            </span>
-          </label>
-          <div className="fdl-ai__external-instructions">
-            <button
-              type="button"
-              className="fdl-link"
-              disabled={disabled || busy || refining || options.loading}
-              title="Download instructions for an external AI chat model, then paste its structured response here."
-              onClick={() => {
-                const blob = new Blob([externalAiInstructions(targetDb, options, exactMatch)], { type: 'text/plain;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const anchor = document.createElement('a');
-                anchor.href = url;
-                anchor.download = `fdalabel-external-ai-instructions-v1-${targetDb}.txt`;
-                anchor.click();
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
-              }}
+          <div className="fdl-ai__query-options">
+            <label
+              className="fdl-ai__quick-search"
             >
-              Download External AI Instructions
-            </button>
-            <span>Use in ChatGPT, Gemini, or another AI chat. Paste its query response here to restore criteria.</span>
+              <input
+                type="checkbox"
+                checked={quickSearch}
+                disabled={disabled || busy || refining}
+                onChange={(event) => setQuickSearch(event.target.checked)}
+                aria-describedby="quick-search-tooltip"
+              />
+              <span>Quick search</span>
+              <span className="fdl-ai__quick-search-info" tabIndex={0}>
+                <InfoIcon />
+                <span id="quick-search-tooltip" role="tooltip" className="fdl-ai__quick-search-tooltip">
+                  Generate query conditions from your input and search automatically, skipping criteria confirmation.
+                </span>
+              </span>
+            </label>
+            <div className="fdl-ai__external-instructions">
+              <button
+                type="button"
+                className="fdl-link"
+                disabled={disabled || busy || refining || options.loading}
+                aria-describedby="external-ai-instructions-tooltip"
+                onClick={() => {
+                  const blob = new Blob([externalAiInstructions(targetDb, options, exactMatch)], { type: 'text/plain;charset=utf-8' });
+                  const url = URL.createObjectURL(blob);
+                  const anchor = document.createElement('a');
+                  anchor.href = url;
+                  anchor.download = `fdalabel-external-ai-instructions-v1-${targetDb}.txt`;
+                  anchor.click();
+                  setTimeout(() => URL.revokeObjectURL(url), 1000);
+                }}
+              >
+                Download External AI Instructions
+              </button>
+              <span className="fdl-ai__quick-search-info" tabIndex={0} aria-describedby="external-ai-instructions-tooltip">
+                <InfoIcon />
+                <span id="external-ai-instructions-tooltip" role="tooltip" className="fdl-ai__quick-search-tooltip">
+                  Download instructions for Elsa, Gemini, or other AI chat tools. Paste the generated query response here to restore criteria.
+                </span>
+              </span>
+            </div>
           </div>
         </>
       )}
