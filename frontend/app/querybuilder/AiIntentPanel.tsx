@@ -5,6 +5,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { LabelQuery, PreFilter, TargetDb } from './types';
 import { fromWire, fromWirePrefilters } from './types';
+import { EXTERNAL_QUERY_START, externalAiInstructions, parseExternalQuery } from './externalAiQuery';
+import type { OptionLists } from './CriterionCard';
 import { QUERY_CODE_PREFIX, decodeQueryCode, type SavedQuery } from './queryCode';
 import { PreFilterChips } from './PreFilterChips';
 
@@ -125,6 +127,7 @@ export function AiIntentPanel({
   onQuery,
   onQuickSearch,
   onImportQuery,
+  options,
   prefilters,
   onPrefiltersChange,
   onTogglePrefilter,
@@ -136,6 +139,7 @@ export function AiIntentPanel({
   onQuery: (query: LabelQuery) => void;
   onQuickSearch: (query: LabelQuery, prefilters: PreFilter[]) => void;
   onImportQuery: (saved: SavedQuery, searchImmediately: boolean) => void;
+  options: OptionLists;
   /* Categorical picks the model read out of the description. They are held by
    * the page rather than here, because the same list is rendered again under
    * the criteria cards and merged into the query at search time. */
@@ -201,6 +205,18 @@ export function AiIntentPanel({
     }, 500);
 
     try {
+      if (trimmed.includes(EXTERNAL_QUERY_START)) {
+        const saved = parseExternalQuery(trimmed);
+        onImportQuery(saved, quickSearch && saved.unsupported.length === 0);
+        setActivePrompt('Imported from external AI');
+        setIsFolded(true);
+        setNotes([
+          'External AI query imported. Drug names and MedDRA terms still require vocabulary confirmation.',
+          ...saved.notes,
+          ...saved.unsupported.map(item => `Warning: unsupported condition — ${item}. Review before searching.`),
+        ]);
+        return;
+      }
       if (trimmed.startsWith('FDALABEL-')) {
         const saved = await decodeQueryCode(trimmed);
         onImportQuery(saved, quickSearch);
@@ -300,7 +316,7 @@ export function AiIntentPanel({
               rows={2}
               value={intent}
               disabled={disabled || busy}
-              placeholder="Describe a search, paste SET-IDs, or paste an FDALABEL-Q1 query code to restore a saved query..."
+              placeholder="Describe a search, paste SET-IDs, or paste a query code / external AI query to restore criteria..."
               onChange={(e) => setIntent(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -326,7 +342,7 @@ export function AiIntentPanel({
               ) : (
                 <>
                   <AssistantIcon size={16} />
-                  <span>{quickSearch ? 'Search' : intent.trim().startsWith(QUERY_CODE_PREFIX) ? 'Restore Query' : 'Build Criteria'}</span>
+                  <span>{quickSearch ? 'Search' : (intent.trim().startsWith(QUERY_CODE_PREFIX) || intent.includes(EXTERNAL_QUERY_START)) ? 'Restore Query' : 'Build Criteria'}</span>
                 </>
               )}
             </button>
@@ -371,6 +387,26 @@ export function AiIntentPanel({
               </span>
             </span>
           </label>
+          <div className="fdl-ai__external-instructions">
+            <button
+              type="button"
+              className="fdl-link"
+              disabled={disabled || busy || refining || options.loading}
+              title="Download instructions for an external AI chat model, then paste its structured response here."
+              onClick={() => {
+                const blob = new Blob([externalAiInstructions(targetDb, options, exactMatch)], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const anchor = document.createElement('a');
+                anchor.href = url;
+                anchor.download = `fdalabel-external-ai-instructions-v1-${targetDb}.txt`;
+                anchor.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+              }}
+            >
+              Download External AI Instructions
+            </button>
+            <span>Use in ChatGPT, Gemini, or another AI chat. Paste its query response here to restore criteria.</span>
+          </div>
         </>
       )}
 

@@ -26,6 +26,7 @@ import {
   type SortState,
 } from '../querybuilder/ResultsTable';
 import type { OptionLists } from '../querybuilder/CriterionCard';
+import { QueryCodeDialog } from '../querybuilder/QueryCodeDialog';
 import { encodeQueryCode } from '../querybuilder/queryCode';
 import { QUERY_PARAM, decodeQuery, encodeQuery, resultsPath } from '../querybuilder/queryUrl';
 import { fromWire, stripFacetFilters, toWire, type LabelQuery, type TargetDb, type WireQuery } from '../querybuilder/types';
@@ -141,6 +142,7 @@ function ResultsPage() {
   const [offset, setOffset] = useState(0);
   const [sortState, setSortState] = useState<SortState>({ sort: 'revised_date', dir: 'desc' });
   const [copied, setCopied] = useState(false);
+  const [queryCodeDialog, setQueryCodeDialog] = useState<{ code: string; copied: boolean } | null>(null);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [sqlOpen, setSqlOpen] = useState(false);
   const [sqlCopied, setSqlCopied] = useState(false);
@@ -425,8 +427,16 @@ function ResultsPage() {
   const copyQueryCode = useCallback(async () => {
     try {
       if (!activeWireQuery) return;
-      await navigator.clipboard.writeText(await encodeQueryCode(activeWireQuery, currentTargetDb));
-      setCopied(true);
+      const code = await encodeQueryCode(activeWireQuery, currentTargetDb);
+      let clipboardCopied = false;
+      try {
+        await navigator.clipboard.writeText(code);
+        clipboardCopied = true;
+      } catch {
+        // Keep the generated code available for manual copying.
+      }
+      setQueryCodeDialog({ code, copied: clipboardCopied });
+      setCopied(clipboardCopied);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       setError('Could not copy the query code. Please try again.');
@@ -921,6 +931,14 @@ function ResultsPage() {
           </div>
         </div>
       </main>
+
+      {queryCodeDialog && (
+        <QueryCodeDialog
+          code={queryCodeDialog.code}
+          initialCopied={queryCodeDialog.copied}
+          onClose={() => setQueryCodeDialog(null)}
+        />
+      )}
 
       {/* Customized Result Truncation Warning Modal (>3000 results) */}
       {is3000WarningOpen && (

@@ -394,6 +394,7 @@ function HomePage() {
           onQuery={setQuery}
           onQuickSearch={runSearch}
           onImportQuery={importQueryCode}
+          options={options}
           prefilters={prefilters}
           onPrefiltersChange={setPrefilters}
           onTogglePrefilter={(id) => setPrefilters((prev) => togglePrefilter(prev, id))}
