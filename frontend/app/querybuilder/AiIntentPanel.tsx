@@ -1,17 +1,11 @@
 'use client';
 
-/*
- * Free-text intent → criteria.
- *
- * This fills the panel below and stops there. It never runs the search: the
- * point is that the analyst sees, checks, and edits the criteria the model
- * chose before any query executes, which is also why translation notes are
- * surfaced prominently rather than swallowed.
- */
+/* Free-text intent → criteria, with optional immediate search. */
 
 import { useEffect, useRef, useState } from 'react';
 import type { LabelQuery, PreFilter, TargetDb } from './types';
 import { fromWire, fromWirePrefilters } from './types';
+import { QUERY_CODE_PREFIX, decodeQueryCode, type SavedQuery } from './queryCode';
 import { PreFilterChips } from './PreFilterChips';
 
 /* Clean SVG icons for professional scientific workbench */
@@ -129,6 +123,8 @@ function getLiveStatusText(sec: number): string {
 
 export function AiIntentPanel({
   onQuery,
+  onQuickSearch,
+  onImportQuery,
   prefilters,
   onPrefiltersChange,
   onTogglePrefilter,
@@ -138,6 +134,8 @@ export function AiIntentPanel({
   exactMatch = false,
 }: {
   onQuery: (query: LabelQuery) => void;
+  onQuickSearch: (query: LabelQuery, prefilters: PreFilter[]) => void;
+  onImportQuery: (saved: SavedQuery, searchImmediately: boolean) => void;
   /* Categorical picks the model read out of the description. They are held by
    * the page rather than here, because the same list is rendered again under
    * the criteria cards and merged into the query at search time. */
@@ -152,6 +150,7 @@ export function AiIntentPanel({
   exactMatch?: boolean;
 }) {
   const [intent, setIntent] = useState('');
+  const [quickSearch, setQuickSearch] = useState(false);
   const [busy, setBusy] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [refining, setRefining] = useState(false);
@@ -186,7 +185,7 @@ export function AiIntentPanel({
 
   const translate = async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed || busy || refining) return;
+    if (!trimmed || disabled || busy || refining) return;
 
     const startTime = Date.now();
     setBusy(true);
@@ -202,6 +201,14 @@ export function AiIntentPanel({
     }, 500);
 
     try {
+      if (trimmed.startsWith('FDALABEL-')) {
+        const saved = await decodeQueryCode(trimmed);
+        onImportQuery(saved, quickSearch);
+        setActivePrompt('Restored from query code');
+        setIsFolded(true);
+        setNotes(['Query conditions and filters restored from the saved code.']);
+        return;
+      }
       const res = await fetch('/api/labelquery/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -212,14 +219,17 @@ export function AiIntentPanel({
         setNotes(json.notes || []);
         throw new Error(json.error || `Translation failed (${res.status})`);
       }
-      onQuery(fromWire(json.query));
-      onPrefiltersChange(fromWirePrefilters(json.prefilters));
+      const translatedQuery = fromWire(json.query);
+      const translatedPrefilters = fromWirePrefilters(json.prefilters);
+      onQuery(translatedQuery);
+      onPrefiltersChange(translatedPrefilters);
       setNotes(json.notes || []);
       setActivePrompt(trimmed);
       setIsFolded(true);
 
       const totalSec = ((Date.now() - startTime) / 1000).toFixed(1);
       setCompletionToast({ duration: `${totalSec}s`, timestamp: Date.now() });
+      if (quickSearch) onQuickSearch(translatedQuery, translatedPrefilters);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -265,7 +275,9 @@ export function AiIntentPanel({
           </div>
           {!isFolded && (
             <p className="fdl-ai__lede">
-              Enter clinical intent, active ingredients, application categories, or MedDRA adverse events in plain English. The query assistant maps terminology and translates your input into structured criteria below for verification before execution.
+              Enter clinical intent, active ingredients, application categories, or MedDRA adverse events in plain English. {quickSearch
+                ? 'The query assistant maps terminology, builds criteria, and searches automatically.'
+                : 'The query assistant maps terminology and translates your input into structured criteria below for verification before execution.'}
             </p>
           )}
         </div>
@@ -288,7 +300,7 @@ export function AiIntentPanel({
               rows={2}
               value={intent}
               disabled={disabled || busy}
-              placeholder="e.g. Lipitor or Metformin with oral route, or paste multiple SET-IDs, or Metformin with Boxed Warning lactic acidosis..."
+              placeholder="Describe a search, paste SET-IDs, or paste an FDALABEL-Q1 query code to restore a saved query..."
               onChange={(e) => setIntent(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -300,7 +312,7 @@ export function AiIntentPanel({
             <button
               type="button"
               className="fdl-btn fdl-btn--ai"
-              disabled={disabled || busy || !intent.trim()}
+              disabled={disabled || busy || refining || !intent.trim()}
               onClick={() => translate(intent)}
               style={{
                 minWidth: busy ? '160px' : '136px',
@@ -314,7 +326,7 @@ export function AiIntentPanel({
               ) : (
                 <>
                   <AssistantIcon size={16} />
-                  <span>Build Criteria</span>
+                  <span>{quickSearch ? 'Search' : intent.trim().startsWith(QUERY_CODE_PREFIX) ? 'Restore Query' : 'Build Criteria'}</span>
                 </>
               )}
             </button>
@@ -329,7 +341,7 @@ export function AiIntentPanel({
                 key={ex.prompt}
                 type="button"
                 className="fdl-link"
-                disabled={busy || refining}
+                disabled={disabled || busy || refining}
                 onClick={() => {
                   setIntent(ex.prompt);
                   translate(ex.prompt);
@@ -340,6 +352,25 @@ export function AiIntentPanel({
               </button>
             ))}
           </div>
+          <label
+            className="fdl-ai__quick-search"
+            title="Generate query conditions from your input and search automatically, skipping criteria confirmation."
+          >
+            <input
+              type="checkbox"
+              checked={quickSearch}
+              disabled={disabled || busy || refining}
+              onChange={(event) => setQuickSearch(event.target.checked)}
+              aria-describedby="quick-search-tooltip"
+            />
+            <span>Quick search</span>
+            <span className="fdl-ai__quick-search-info" tabIndex={0}>
+              <InfoIcon />
+              <span id="quick-search-tooltip" role="tooltip" className="fdl-ai__quick-search-tooltip">
+                Generate query conditions from your input and search automatically, skipping criteria confirmation.
+              </span>
+            </span>
+          </label>
         </>
       )}
 
@@ -425,7 +456,7 @@ export function AiIntentPanel({
           </div>
 
           <p className="fdl-ai-response-card__hint">
-            Review the populated criteria in the cards below before clicking <strong>Search Labels »</strong>.
+            {quickSearch ? 'Search runs automatically using the generated criteria.' : <>Review the populated criteria in the cards below before clicking <strong>Search Labels »</strong>.</>}
           </p>
         </div>
       )}

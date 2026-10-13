@@ -12,8 +12,8 @@
  * all still reachable from the header.
  *
  * The AI panel on top is an accelerator, not a second search: it writes into
- * the same criteria tree and stops, so a translated query is reviewed and
- * edited before anything executes.
+ * the same criteria tree. Queries are reviewed before execution by default;
+ * Quick search lets the user opt into immediate execution.
  */
 
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
@@ -25,6 +25,7 @@ import { useUser } from './context/UserContext';
 import { useCapabilities } from './platform/capabilities';
 import { Page } from './platform/primitives';
 import { withAppBase } from './utils/appPaths';
+import type { SavedQuery } from './querybuilder/queryCode';
 import { AiIntentPanel } from './querybuilder/AiIntentPanel';
 import type { OptionLists } from './querybuilder/CriterionCard';
 import { PreFilterChips } from './querybuilder/PreFilterChips';
@@ -194,20 +195,36 @@ function HomePage() {
     };
   }, [isAuthed, targetDb]);
 
-  const runSearch = useCallback(() => {
+  const runSearch = useCallback((searchQuery: LabelQuery = query, searchPrefilters: PreFilter[] = prefilters, searchTargetDb: TargetDb = targetDb) => {
     setError(null);
     try {
       /* Ticked pre-filters are folded in only here, on the way out. They land
        * as ordinary categorical criteria, so the results sidebar shows them
        * ticked and the header reads filtered / backbone total. */
-      const wire = toWire(applyPrefilters(query, prefilters), targetDb);
+      const wire = toWire(applyPrefilters(searchQuery, searchPrefilters), searchTargetDb);
       window.localStorage.setItem(LAST_QUERY_KEY, JSON.stringify(wire));
       setHasSaved(true);
-      window.location.href = withAppBase(resultsPath(wire, targetDb));
+      window.location.href = withAppBase(resultsPath(wire, searchTargetDb));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
   }, [query, prefilters, targetDb]);
+
+  const importQueryCode = useCallback((saved: SavedQuery, searchImmediately: boolean) => {
+    const restored = fromWire(saved.query);
+    const restoredTarget = canSelectDb ? saved.targetDb : targetDb;
+    if (restoredTarget !== 'local' && !oracleAvailable) {
+      throw new Error('The saved query requires an Oracle database that is unavailable in this environment.');
+    }
+    if (!canSelectDb && saved.targetDb !== targetDb) {
+      throw new Error('The saved query uses a database scope your account cannot select.');
+    }
+    setQuery(restored);
+    setPrefilters([]);
+    setTargetDb(restoredTarget);
+    setError(null);
+    if (searchImmediately) runSearch(restored, [], restoredTarget);
+  }, [canSelectDb, targetDb, oracleAvailable, runSearch]);
 
   const restoreLast = useCallback(() => {
     const raw = window.localStorage.getItem(LAST_QUERY_KEY);
@@ -350,7 +367,7 @@ function HomePage() {
       <button
         type="button"
         className="fdl-btn fdl-btn--search"
-        onClick={runSearch}
+        onClick={() => runSearch()}
         disabled={hasBlockers}
         style={hasBlockers ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
         title={
@@ -375,6 +392,8 @@ function HomePage() {
       <main className="fdl-shell">
         <AiIntentPanel
           onQuery={setQuery}
+          onQuickSearch={runSearch}
+          onImportQuery={importQueryCode}
           prefilters={prefilters}
           onPrefiltersChange={setPrefilters}
           onTogglePrefilter={(id) => setPrefilters((prev) => togglePrefilter(prev, id))}

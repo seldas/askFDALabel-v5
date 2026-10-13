@@ -26,6 +26,7 @@ import {
   type SortState,
 } from '../querybuilder/ResultsTable';
 import type { OptionLists } from '../querybuilder/CriterionCard';
+import { encodeQueryCode } from '../querybuilder/queryCode';
 import { QUERY_PARAM, decodeQuery, encodeQuery, resultsPath } from '../querybuilder/queryUrl';
 import { fromWire, stripFacetFilters, toWire, type LabelQuery, type TargetDb, type WireQuery } from '../querybuilder/types';
 import { withAppBase } from '../utils/appPaths';
@@ -421,15 +422,16 @@ function ResultsPage() {
     [downloading, activeWireQuery, sortState, currentTargetDb],
   );
 
-  const copyPermalink = useCallback(async () => {
+  const copyQueryCode = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      if (!activeWireQuery) return;
+      await navigator.clipboard.writeText(await encodeQueryCode(activeWireQuery, currentTargetDb));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      setError('Could not copy the link. Copy it from the address bar instead.');
+      setError('Could not copy the query code. Please try again.');
     }
-  }, []);
+  }, [activeWireQuery, currentTargetDb]);
 
   const handleInitiateTaskCreation = () => {
     if (!session?.is_authenticated) {
@@ -709,7 +711,9 @@ function ResultsPage() {
 
                     <button
                       type="button"
-                      onClick={() => { setExportOpen(false); copyPermalink(); }}
+                      onClick={() => { setExportOpen(false); copyQueryCode(); }}
+                      disabled={!activeWireQuery}
+                      title="Copy a query code to paste into the AI Query Builder and restore this search"
                       style={{
                         width: '100%',
                         display: 'flex',
@@ -727,7 +731,7 @@ function ResultsPage() {
                       }}
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                      <span>{copied ? 'Link Copied!' : 'Copy Permanent Link'}</span>
+                      <span>{copied ? 'Query Code Copied!' : 'Copy Query Code'}</span>
                     </button>
 
                     <button
