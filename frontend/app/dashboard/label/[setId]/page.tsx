@@ -227,9 +227,12 @@ function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
       <article key={t.id} className={`afl-toolbox__tool${isFav ? ' is-pinned' : ''}`}>
         <header className="afl-toolbox__tool-header">
           <span className="afl-toolbox__tool-icon" aria-hidden="true"><ToolIcon id={t.iconId as any} size={20} /></span>
-          <h3>{t.name}</h3>
-          <button type="button" className="afl-toolbox__pin" onClick={(e) => toggleFavoriteTool(t.id, e)} aria-pressed={isFav} title={isFav ? 'Unpin tool' : 'Pin tool'}>
-            {isFav ? 'PINNED' : 'PIN'}
+          <h3><a className="afl-toolbox__tool-name" href={t.href} target="_blank" rel="noopener noreferrer">{t.name}</a></h3>
+          <button type="button" className="afl-toolbox__pin" onClick={(e) => toggleFavoriteTool(t.id, e)} aria-pressed={isFav} aria-label={`${isFav ? 'Unpin' : 'Pin'} ${t.name}`} title={isFav ? 'Unpin tool' : 'Pin tool'}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill={isFav ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M16 9V3H8v6l-3 3v3h14v-3l-3-3Z" />
+              <path d="M12 15v6" />
+            </svg>
           </button>
         </header>
         <p>{t.blurb}</p>
