@@ -630,10 +630,7 @@ export default function FaersView({
 }) {
   return (
     <div id="faers-view" className={`tab-content ${activeTab === 'faers-view' ? 'active' : ''}`} style={{ display: activeTab === 'faers-view' ? 'block' : 'none' }}>
-        <div id="faers-loading" className="loader"></div>
-        <div id="dashboard-content" className="dashboard-grid" style={{ display: 'none' }}>
-            <EmergingAeAnalysis drugName={drugName} setId={setId} activeTab={activeTab} />
-        </div>
+      <EmergingAeAnalysis drugName={drugName} setId={setId} activeTab={activeTab} />
     </div>
   );
 }
