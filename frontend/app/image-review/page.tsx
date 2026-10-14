@@ -30,7 +30,14 @@ function Workbench() {
   const [progress, setProgress] = useState({ value: 0, message: '' });
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
   const busy = submitting || taskId !== null;
+  useEffect(() => {
+    if (!busy) return;
+    const start = Date.now(); setElapsed(0);
+    const timer = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
+    return () => clearInterval(timer);
+  }, [busy]);
   const currentSources = useRef({ left: '', right: '' });
 
   const invalidate = useCallback(() => { setReview(null); setSelected(null); setDecisions({}); setLastTaskId(null); setError(''); }, []);
@@ -48,8 +55,9 @@ function Workbench() {
         if (cancelled) return;
         if (!response.ok) throw new Error(data.error || 'Could not check review status.');
         errors = 0; setError(''); setProgress({ value: data.progress, message: data.message });
-        if (data.status === 'completed') { setReview(data.result); setSelected(data.result.findings[0]?.id ?? null); setTaskId(null); return; }
-        if (data.status === 'failed') { setError(data.error || 'Review failed.'); setTaskId(null); setLastTaskId(null); return; }
+        if (data.result) { setReview(data.result); setSelected(current => current ?? data.result.findings[0]?.id ?? null); }
+        if (data.status === 'completed') { setTaskId(null); return; }
+        if (data.status === 'failed') { if (data.result?.comparison_level === 'overview') setReview({ ...data.result, detail_status: 'failed' }); setError(data.error || 'Review failed.'); setTaskId(null); setLastTaskId(null); return; }
       } catch (e) {
         if (cancelled) return;
         errors++;
@@ -88,8 +96,8 @@ function Workbench() {
     <header className="ivr-page-heading"><div><span className="ivr-eyebrow">ARTWORK & SAFETY REVIEW</span><h1>Labeling Visual Review</h1><p>Compare artwork. Review safety signals.</p></div><button className="ivr-button ivr-primary" disabled={busy || !left.ready || !right.ready || (mode === 'consistency' && !left.descriptor.set_id && !right.descriptor.set_id)} onClick={() => void run()}>{busy ? 'Review in progress…' : review ? 'Run review again' : 'Run visual review'}</button></header>
     <nav className="ivr-tabs" aria-label="Review mode">{MODES.map(value => <button key={value.id} aria-pressed={mode === value.id} disabled={busy} onClick={() => { if (mode !== value.id) { setMode(value.id); invalidate(); } }}>{value.label}</button>)}</nav>
     <div className="ivr-workspace-tools"><p>{MODES.find(value => value.id === mode)?.description}</p><div><label><input type="checkbox" checked={sync} onChange={e => { setSync(e.target.checked); if (e.target.checked) setZooms({ left: zooms.left, right: zooms.left }); }} /> Sync zoom</label><label><input type="checkbox" checked={highlights} onChange={e => setHighlights(e.target.checked)} /> Show highlights</label></div></div>
-    {error && <div className="ivr-error ivr-status" role="alert">{error}{lastTaskId && !review && !busy && <button className="ivr-button" onClick={() => setTaskId(lastTaskId)}>Resume status check</button>}</div>}
-    {busy && <div className="ivr-status" role="status"><progress max="100" value={progress.value} /><span>{progress.message || 'Preparing images…'}</span></div>}
+    {error && <div className="ivr-error ivr-status" role="alert">{error}{lastTaskId && (!review || review.detail_status === 'pending') && !busy && <button className="ivr-button" onClick={() => setTaskId(lastTaskId)}>Resume status check</button>}</div>}
+    {busy && <div className="ivr-status" role="status"><progress max="100" value={progress.value} /><span>{progress.message || 'Preparing images…'} · {elapsed}s elapsed{elapsed >= 15 && progress.value === 0 ? ' · Waiting for the review worker to pick up this task.' : ''}</span></div>}
     <div className="ivr-workspace">
       <div className="ivr-pair">
         <ArtworkPanel side="left" initialSetId={params.getAll('set_ids')[0] || ''} initialSplId={params.getAll('spl_ids')[0] || ''} busy={busy} findings={drawn} selected={selected} highlights={highlights} zoom={zooms.left} onZoom={zoom => changeZoom('left', zoom)} onSelect={setSelected} onChange={onLeft} />
@@ -98,9 +106,10 @@ function Workbench() {
       <aside className="ivr-findings"><header><h2>Review Findings</h2>{review && <span>{review.findings.length} findings · {review.cached ? 'Saved analysis' : 'AI analysis'}</span>}</header>
         {!review ? <div className="ivr-findings-empty"><strong>Evidence first</strong><p>Choose an image on each side, select a review mode, then run the analysis.</p><ul><li>Localized content and design differences</li><li>Potential medication-error mechanisms</li><li>Look-alike product distinctions</li><li>Verifiable labeling references</li></ul><p>Exact-version local artwork or explicit uploads. A vision-capable model is required.</p></div> : <>
           <p className="ivr-summary">{review.summary}</p>
+          {review.comparison_level === 'overview' && <div className="ivr-overview" role="status"><strong>{review.detail_status === 'unavailable' ? 'These two images are too different; a detailed point-to-point comparison is not available.' : review.detail_status === 'pending' ? 'Quick overview ready. Detailed comparison is still running.' : 'Quick overview retained. Detailed comparison could not be completed.'}</strong><p>Showing key observations without detailed highlight regions. Labeling consistency is not assessed in this overview.</p></div>}
           <label className="ivr-filter">Show<select value={filter} onChange={e => setFilter(e.target.value as typeof filter)}><option value="all">All findings</option><option value="safety">Safety signals</option><option value="open">Unreviewed</option></select></label>
           <div className="ivr-finding-list">{visible.map(f => <button key={f.id} className={`ivr-finding ${selected === f.id ? 'is-selected' : ''} ${f.category === 'color' ? 'is-color' : ''}`} onClick={() => setSelected(f.id)} aria-pressed={selected === f.id}><span className="ivr-number">{f.id}</span><div><strong>{f.title}</strong><p>{f.observation}</p><span className="ivr-tag">{f.kind}</span><span className="ivr-tag">{f.priority}</span><span className="ivr-tag">{decisions[f.id]?.status || 'unreviewed'}</span></div></button>)}{!visible.length && <p className="ivr-source-note">No findings in this view. This does not establish absence of risk.</p>}</div>
-          {current && <FindingDetails finding={current} decision={decisions[current.id] || { status: 'unreviewed', note: '' }} onDecision={value => changeDecision(current.id, value)} onRegion={(side, region) => adjust(current.id, side, region)} />}
+          {current && <fieldset className="ivr-review-editors" disabled={busy}><FindingDetails finding={current} decision={decisions[current.id] || { status: 'unreviewed', note: '' }} onDecision={value => changeDecision(current.id, value)} onRegion={(side, region) => adjust(current.id, side, region)} /></fieldset>}
           <details className="ivr-limitations"><summary>Sources & limitations</summary><p>Model: {review.model}</p>{(['left', 'right'] as Side[]).map(side => <p key={side}>{side === 'left' ? 'A' : 'B'}: {review.sources[side].source} · {review.sources[side].filename}<br />SPL: {review.sources[side].spl_id || 'No reference'}<br />{review.sources[side].version_verified ? 'Local version-linked artwork' : 'Uploaded artwork; association unverified'}</p>)}{review.limitations.map((text, i) => <p key={i}>{text}</p>)}</details>
           <footer className="ivr-export"><button className="ivr-button" onClick={() => downloadReviewJson(review, decisions, lastTaskId)}>Export JSON</button><button className="ivr-button ivr-primary" disabled={exporting} onClick={async () => { setExporting(true); try { await downloadReviewHtml(review, decisions, { left: left.url, right: right.url }); } catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setExporting(false); } }}>{exporting ? 'Exporting…' : 'Export annotated report'}</button><p>Decisions and adjusted regions stay in this session. Export to preserve them.</p></footer>
         </>}

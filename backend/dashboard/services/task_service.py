@@ -50,10 +50,30 @@ class TaskService:
     @staticmethod
     def start_background_task(app, task_id, target_fn, *args, **kwargs):
         """Run a function via Celery queue."""
-        from celery_app import execute_generic_task
-        TaskService.update_task(task_id, status='processing')
         try:
-            execute_generic_task.delay(target_fn.__module__, target_fn.__name__, task_id, *args, **kwargs)
+            # celery_app constructs a worker Flask app at import time, including
+            # create_all(). A web request must only publish a message; importing
+            # that worker here could race startup DDL and strand a pending task.
+            from celery import Celery
+            TaskService.update_task(task_id, status='processing')
+            with Celery(
+                app.import_name,
+                broker=app.config.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'),
+                backend=app.config.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0'),
+            ) as producer:
+                producer.conf.update(app.config)
+                producer.conf.broker_connection_timeout = 5
+                producer.conf.broker_transport_options = {
+                    **(producer.conf.broker_transport_options or {}),
+                    'socket_connect_timeout': 5,
+                    'socket_timeout': 5,
+                }
+                producer.send_task(
+                    'execute_generic_task',
+                    args=[target_fn.__module__, target_fn.__name__, task_id, *args],
+                    kwargs=kwargs,
+                    retry=False,
+                )
         except Exception as e:
             logger.error(f"Failed to dispatch task to Celery: {e}", exc_info=True)
             TaskService.update_task(task_id, status='failed', error_details=str(e))

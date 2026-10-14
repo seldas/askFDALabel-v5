@@ -9,7 +9,7 @@ export type Finding = {
   observation: string; risk: string; left_text: string; right_text: string;
   label_evidence: { side: Side; quote: string }[]; regions: Record<Side, Region | null>;
 };
-export type Review = { mode: ReviewMode; summary: string; findings: Finding[]; limitations: string[]; sources: Record<Side, Source>; model: string; cached: boolean; consistency_status: Record<Side, string> };
+export type Review = { mode: ReviewMode; summary: string; findings: Finding[]; limitations: string[]; sources: Record<Side, Source>; model: string; cached: boolean; consistency_status: Record<Side, string>; comparison_level?: 'overview' | 'detailed'; detail_status?: 'pending' | 'unavailable' | 'complete' | 'failed' };
 export type Decision = { status: 'unreviewed' | 'confirmed' | 'dismissed'; note: string };
 export const MODES: { id: ReviewMode; label: string; description: string }[] = [
   { id: 'artwork', label: 'Artwork Comparison', description: 'Compare content and design changes, with repeated color changes grouped into one finding.' },

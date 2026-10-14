@@ -74,6 +74,10 @@ def start_review():
         return jsonify(task_id=task.id, status=task.status), 202
     except Exception:
         clean_job(job_id)
+        if task is not None:
+            db.session.rollback()
+            TaskService.update_task(task.id, status='failed', message='Could not dispatch visual review.',
+                                    error_details='Review initialization failed before it could be queued.')
         raise
 
 
@@ -84,4 +88,4 @@ def review_status(task_id):
         return jsonify(error='Review not found.'), 404
     return jsonify(task_id=task.id, status=task.status, progress=task.progress, message=task.message,
                    error=task.error_details if task.status == 'failed' else None,
-                   result=json.loads(task.result_data) if task.status == 'completed' and task.result_data else None)
+                   result=json.loads(task.result_data) if task.result_data else None)

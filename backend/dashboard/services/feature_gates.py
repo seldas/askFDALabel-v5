@@ -276,27 +276,34 @@ def seed_feature_gates():
     restart never reverts a change.
     """
     try:
-        existing_rows = {row.key: row for row in FeatureGate.query.all()}
-        added = 0
+        # API workers and Celery can start simultaneously. A SELECT followed
+        # by INSERT is not idempotent under that concurrency: both processes
+        # can observe the same missing key. Let the unique index arbitrate.
+        dialect = db.session.get_bind().dialect.name
+        if dialect == 'postgresql':
+            from sqlalchemy.dialects.postgresql import insert
+        elif dialect == 'sqlite':
+            from sqlalchemy.dialects.sqlite import insert
+        else:
+            raise RuntimeError(f'Unsupported feature-gate database: {dialect}')
+        rows = [dict(key=spec.key, min_role=spec.default_min_role,
+                     allow_guest=spec.default_allow_guest) for spec in FEATURE_CATALOG]
+        statement = insert(FeatureGate).values(rows).on_conflict_do_nothing(index_elements=['key'])
+        added = db.session.execute(statement).rowcount
         updated = 0
+        # Preserve the existing webtest default transition; other stored
+        # account/guest rules are never replaced with catalog defaults.
         for spec in FEATURE_CATALOG:
-            row = existing_rows.get(spec.key)
-            if row is None:
-                db.session.add(FeatureGate(
-                    key=spec.key,
-                    min_role=spec.default_min_role,
-                    allow_guest=spec.default_allow_guest,
-                ))
-                added += 1
-            elif spec.key == 'webtest' and row.min_role == ROLE_DEVELOPER:
-                row.min_role = spec.default_min_role
-                updated += 1
-        if added or updated:
-            db.session.commit()
-            if added:
-                print(f"[INFO] Seeded {added} feature gate(s).")
-            if updated:
-                print(f"[INFO] Updated {updated} feature gate(s) to new defaults.")
+            if spec.key == 'webtest':
+                from sqlalchemy import update
+                change = update(FeatureGate).where(FeatureGate.key == spec.key,
+                                                   FeatureGate.min_role == ROLE_DEVELOPER).values(min_role=spec.default_min_role)
+                updated += db.session.execute(change).rowcount
+        db.session.commit()
+        if added:
+            print(f"[INFO] Seeded {added} feature gate(s).")
+        if updated:
+            print(f"[INFO] Updated {updated} feature gate(s) to new defaults.")
     except Exception as e:
         print(f"[WARN] Could not seed feature gates: {e}")
         db.session.rollback()

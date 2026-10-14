@@ -284,6 +284,9 @@ def call_llm(user, system_prompt, user_message, history=None, model_override=Non
                         "repetition_penalty": kwargs.get("repetition_penalty", 1.1),
                         "top_k": kwargs.get("top_k", 50),
                     }
+            # Opt-in budgets for staged reviews; other callers keep their defaults.
+            if kwargs.get('timeout') is not None:
+                client = client.with_options(timeout=kwargs['timeout'], max_retries=kwargs.get('max_retries', 0))
             response = client.chat.completions.create(**request_args)
             if kwargs.get("stream", False): return response
             
@@ -297,6 +300,8 @@ def call_llm(user, system_prompt, user_message, history=None, model_override=Non
                 
             return response.choices[0].message.content
         except Exception as e:
+            if not kwargs.get('allow_fallback', True):
+                raise
             allowed_raw = os.getenv("ALLOWED_AI_PROVIDERS", "gemini,elsa,llama,vllm,ollama,customized")
             allowed_providers = [p.strip().lower() for p in allowed_raw.split(',') if p.strip()]
             

@@ -18,6 +18,10 @@ Potential medication-error mechanisms are requested in all modes. A signal is a 
 
 ## Interaction
 
+Reviews now start with a lightweight visual overview using 1,024-pixel JPEG inputs, a short prompt without full labeling text, and a 1,800-token response budget. The model returns 3–5 supported key observations and decides whether corresponding artwork elements exist. If the images are fundamentally different, the task finishes with: "These two images are too different; a detailed point-to-point comparison is not available." Color, strength, crop, and scale differences alone do not justify this decision.
+
+For comparable images, the overview becomes visible while a second pass runs. Detail uses 1,536-pixel inputs, up to 24,000 characters of reference text per side, and a 5,000-token budget. The overview request uses a 45-second timeout; detail uses 90 seconds. Both disable SDK retries and provider fallback. These are provider request timeouts, not guaranteed end-to-end latency, which also includes queueing. If detail times out or returns invalid output, the completed task retains the overview with an explicit limitation; rerunning retries detail. Overview results do not claim localization or image–labeling consistency assessment. The interface displays elapsed time and distinguishes waiting for a worker from active analysis.
+
 Two viewers support fit-to-view, independent or synchronized zoom, and numbered overlays. Selecting a finding locates the corresponding regions. Global theme-color changes are requested as a single finding with one representative region per side; duplicate global color observations without separate risk mechanisms are merged defensively. Safety-specific color/contrast concerns can remain separate.
 
 Findings include visible evidence, category, priority, evidence confidence, potential error mechanism, and verified labeling quotations when available. Reviewers can confirm/dismiss findings, write notes, and adjust or remove highlight rectangles in normalized percentage coordinates. Dismissed findings retain their record but stop drawing overlays.
@@ -35,9 +39,9 @@ Inputs are bounded to 12 MiB each and 25 megapixels, orientation-normalized, com
 - `GET /api/image-review/labels/<set_id>/images`: discover artwork for optional `spl_id`.
 - `GET /api/image-review/labels/<set_id>/images/<image_id>`: serve normalized local artwork.
 - `POST /api/image-review/reviews`: multipart `mode`, JSON `left`/`right` descriptors, optional `left_upload`/`right_upload`; returns a SystemTask ID with HTTP 202.
-- `GET /api/image-review/reviews/<task_id>`: owner-only progress/results.
+- `GET /api/image-review/reviews/<task_id>`: owner-only progress/results, including an overview during processing.
 
-Review execution uses the existing generic Celery task dispatcher. Both API and Celery workers must share `UPLOAD_FOLDER` (the standard Docker `/data` bind already does). Pending inputs live in `uploads/image-review/<uuid>` and are removed on task completion/failure or dispatch failure. If a worker never consumes a queued task, inputs remain until the worker runs; account-level concurrent reviews are limited to one pending/processing task.
+Review execution uses the existing generic Celery task dispatcher. API-side dispatch uses a producer client and never imports the worker application or repeats schema initialization. Broker failures mark the task failed instead of leaving it pending. Feature-gate defaults are seeded with atomic conflict-ignore inserts so concurrent API/Celery startup cannot race on `ix_feature_gate_key`; existing account rules are retained. Both API and Celery workers must share `UPLOAD_FOLDER` (the standard Docker `/data` bind already does). Pending inputs live in `uploads/image-review/<uuid>` and are removed on task completion/failure or dispatch failure. If a worker never consumes a queued task, inputs remain until the worker runs; account-level concurrent reviews are limited to one pending/processing task.
 
 Vision calls use the existing AI provider routing and usage recording. The current shared `call_llm` image path supports OpenAI-compatible (`llama`, including normalized vLLM/Ollama/custom endpoints) and Elsa providers; the selected model must itself accept images. Gemini vision is not enabled in that shared path. Failures are surfaced to the reviewer rather than falling back to text-only analysis.
 
