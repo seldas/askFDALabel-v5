@@ -52,16 +52,28 @@ def start_review():
         return jsonify(error='A visual review is already running for your account.', task_id=active.id), 409
     if request.content_length and request.content_length > 2 * FILE_LIMIT + 512 * 1024:
         return jsonify(error='Request exceeds the two-image upload limit.'), 413
-    mode = request.form.get('mode', 'artwork')
+    mode = request.form.get('mode', 'consistency')
     if mode not in MODES:
         raise BadRequest('Unsupported review mode.')
-    try:
-        descriptors = [json.loads(request.form.get(side, '{}')) for side in ('left', 'right')]
-    except (ValueError, TypeError) as exc:
-        raise BadRequest('Invalid image selection.') from exc
-    sides = [prepare_side(value, request.files.get(f'{side}_upload')) for side, value in zip(('left', 'right'), descriptors)]
-    if mode == 'consistency' and not any(value['text'] for value in sides):
-        raise BadRequest('Select at least one corresponding labeling to check image–labeling consistency.')
+    if mode == 'consistency':
+        descriptor_raw = request.form.get('left') or request.form.get('single')
+        if not descriptor_raw:
+            raise BadRequest('Invalid image selection.')
+        try:
+            descriptor = json.loads(descriptor_raw)
+        except (ValueError, TypeError) as exc:
+            raise BadRequest('Invalid image selection.') from exc
+        upload = request.files.get('left_upload') or request.files.get('single_upload')
+        side = prepare_side(descriptor, upload)
+        if not side.get('text'):
+            raise BadRequest('Select a corresponding drug labeling to check image–labeling consistency.')
+        sides = [side]
+    else:
+        try:
+            descriptors = [json.loads(request.form.get(side, '{}')) for side in ('left', 'right')]
+        except (ValueError, TypeError) as exc:
+            raise BadRequest('Invalid image selection.') from exc
+        sides = [prepare_side(value, request.files.get(f'{side}_upload')) for side, value in zip(('left', 'right'), descriptors)]
     job_id = str(uuid4())
     save_job(job_id, sides)
     task = None

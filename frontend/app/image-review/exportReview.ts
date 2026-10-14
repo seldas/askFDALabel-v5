@@ -32,9 +32,11 @@ export async function downloadReviewHtml(review: Review, decisions: Record<numbe
   append(doc.body, 'p', review.summary);
   const grid = doc.createElement('section'); grid.className = 'images'; doc.body.appendChild(grid);
   const ns = 'http://www.w3.org/2000/svg';
-  for (const side of ['left', 'right'] as Side[]) {
+  const exportSides: Side[] = review.mode === 'consistency' ? ['left'] : ['left', 'right'];
+  for (const side of exportSides) {
+    if (!urls[side]) continue;
     const panel = doc.createElement('div'); grid.appendChild(panel);
-    append(panel, 'h2', side === 'left' ? 'Product A' : 'Product B');
+    append(panel, 'h2', review.mode === 'consistency' ? 'Product Artwork' : (side === 'left' ? 'Product A' : 'Product B'));
     const svg = doc.createElementNS(ns, 'svg'); svg.setAttribute('viewBox', '0 0 1000 1000');
     const image = doc.createElementNS(ns, 'image'); image.setAttribute('href', await imageData(urls[side]));
     const raster = new Image(); raster.src = image.getAttribute('href')!; await raster.decode();

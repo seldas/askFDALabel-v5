@@ -12,7 +12,7 @@ export type Finding = {
 export type Review = { mode: ReviewMode; summary: string; findings: Finding[]; limitations: string[]; sources: Record<Side, Source>; model: string; cached: boolean; consistency_status: Record<Side, string>; comparison_level?: 'overview' | 'detailed'; detail_status?: 'pending' | 'unavailable' | 'complete' | 'failed' };
 export type Decision = { status: 'unreviewed' | 'confirmed' | 'dismissed'; note: string };
 export const MODES: { id: ReviewMode; label: string; description: string }[] = [
-  { id: 'artwork', label: 'Artwork Comparison', description: 'Compare content and design changes, with repeated color changes grouped into one finding.' },
-  { id: 'confusion', label: 'Product Confusion', description: 'Review visual similarities and whether names, strengths, and other critical distinctions are prominent enough.' },
-  { id: 'consistency', label: 'Labeling Consistency', description: 'Check each artwork against its own labeling. Load at least one corresponding label reference.' },
+  { id: 'consistency', label: 'Labeling Consistency', description: 'Audit one packaging artwork against its official FDA SPL labeling content to detect discrepancies, omissions, and errors.' },
+  { id: 'artwork', label: 'Artwork Comparison', description: 'Compare content and design changes between two artworks, with repeated color changes grouped into one finding.' },
+  { id: 'confusion', label: 'Product Confusion', description: 'Review visual similarities between two products and whether names, strengths, and distinctions are prominent.' },
 ];

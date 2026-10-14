@@ -8,13 +8,13 @@ All UI and review prompts use English. Access uses the `tool_image_review` featu
 
 ## Review modes
 
-| Mode | Review question |
-|---|---|
-| Artwork Comparison | What visible content/design changed, and could the change matter during medication use? |
-| Product Confusion | Do shared visual features obscure important product distinctions, such as name, strength, concentration, or route? |
-| Labeling Consistency | Does each image agree with its own labeling reference? Are shared details consistent where product identity and presentation justify comparison? |
+| Mode | Review question | Setup |
+|---|---|---|
+| Labeling Consistency (Default) | Does this packaging artwork agree with its official FDA SPL labeling content, including brand/generic name, strength, route, storage, and critical warnings? | 1 packaging artwork image + official drug labeling reference |
+| Artwork Comparison | What visible content/design changed between two packaging versions, and could the change matter during medication use? | 2 artwork images (A vs B) |
+| Product Confusion | Do shared visual features between two products obscure critical distinctions, such as name, strength, concentration, or route? | 2 artwork images (A vs B) |
 
-Potential medication-error mechanisms are requested in all modes. A signal is a review concern, not proof of a medication error, an error probability, or a clinical safety conclusion.
+Potential medication-error mechanisms are evaluated in all modes. Users can load drug labeling references directly from their saved dashboard tasks / projects (via a modal dialog identical to LabelComp) or by specifying an SPL Set-ID. In consistency mode, the workspace uses a spacious two-column layout dedicated to the single artwork and its side-by-side labeling discrepancy evidence.
 
 ## Interaction
 
