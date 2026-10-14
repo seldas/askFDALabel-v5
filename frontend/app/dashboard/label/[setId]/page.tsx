@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import LegacyBridge from './LegacyBridge';
 import LabelChat from './LabelChat';
+import LabelAnnotations from './LabelAnnotations';
 import NotesModal from './NotesModal';
 import TableExtractorModal from './TableExtractorModal';
 import { TOOL_LABEL, useLabel } from './LabelContext';
@@ -934,7 +935,7 @@ function LabelContent() {
       */}
       <LegacyBridge
         resetKey={setId}
-        scripts={['chart', 'marked', 'utils', 'ui', 'annotations']}
+        scripts={['chart', 'marked', 'utils', 'ui']}
         globals={{
           currentSetId: data.set_id,
           currentDrugName: data.faers_drug_name,
@@ -946,7 +947,13 @@ function LabelContent() {
           savedAnnotations: data.saved_annotations,
           canComment: Boolean(session?.is_authenticated && session?.can_comment !== false),
         }}
-        init={['initUI', 'initAnnotations']}
+        init={['initUI']}
+      />
+
+      <LabelAnnotations
+        setId={setId}
+        canComment={Boolean(session?.is_authenticated && session?.can_comment !== false)}
+        currentUserId={session?.id ?? data.user_id ?? null}
       />
 
 
