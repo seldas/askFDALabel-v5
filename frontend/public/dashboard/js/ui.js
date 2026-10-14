@@ -209,6 +209,19 @@
   }
 
   function openTableExtractor(originalTable) {
+    const title = findTableTitle(originalTable);
+    const clone = sanitizeTableClone(originalTable);
+
+    // Dispatch event for modern React TableExtractorModal
+    window.dispatchEvent(
+      new CustomEvent('open-table-extractor', {
+        detail: {
+          title: title,
+          html: clone.outerHTML,
+        },
+      })
+    );
+
     const modal = $('#table-extract-modal');
     const container = $('#table-extract-container');
     const titleEl = $('#table-extract-title');
@@ -216,10 +229,8 @@
     if (!modal || !container) return;
 
     if (titleEl) {
-      titleEl.textContent = findTableTitle(originalTable);
+      titleEl.textContent = title;
     }
-
-    const clone = sanitizeTableClone(originalTable);
 
     container.innerHTML = '';
     container.appendChild(clone);

@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import LegacyBridge from './LegacyBridge';
 import LabelChat from './LabelChat';
+import NotesModal from './NotesModal';
+import TableExtractorModal from './TableExtractorModal';
 import { TOOL_LABEL, useLabel } from './LabelContext';
 import { labelRoute, type LaunchContext } from '../../../platform/context';
 import { useUser } from '../../../context/UserContext';
@@ -326,6 +328,12 @@ function LabelContent() {
   const [companyModalOpen, setCompanyModalOpen] = useState(false);
   const [productSpecsModalOpen, setProductSpecsModalOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [notesModalOpen, setNotesModalOpen] = useState(false);
+  const [tableExtractModalOpen, setTableExtractModalOpen] = useState(false);
+  const [tableExtractData, setTableExtractData] = useState<{ title: string; html: string }>({
+    title: 'Table Data',
+    html: '',
+  });
 
   // New Favorite/Project states
   const [isFavoriteAny, setIsFavoriteAny] = useState(false);
@@ -373,6 +381,18 @@ function LabelContent() {
       // Give the label body a tick to render before wiring table extraction.
       setTimeout(() => win.initTableExtractor(), 100);
     }
+
+    const handleOpenTableExtract = (e: any) => {
+      if (e?.detail) {
+        setTableExtractData({
+          title: e.detail.title || 'Table Data',
+          html: e.detail.html || '',
+        });
+        setTableExtractModalOpen(true);
+      }
+    };
+    window.addEventListener('open-table-extractor', handleOpenTableExtract);
+    return () => window.removeEventListener('open-table-extractor', handleOpenTableExtract);
   }, []);
 
 
@@ -789,6 +809,7 @@ function LabelContent() {
               id="user-notes-btn"
               className="label-tool-btn label-tool-notes"
               data-tooltip="Annotation Notes"
+              onClick={() => setNotesModalOpen(true)}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
               <span>Notes</span>
@@ -913,7 +934,7 @@ function LabelContent() {
       */}
       <LegacyBridge
         resetKey={setId}
-        scripts={['chart', 'marked', 'utils', 'ui', 'favorites', 'annotations']}
+        scripts={['chart', 'marked', 'utils', 'ui', 'annotations']}
         globals={{
           currentSetId: data.set_id,
           currentDrugName: data.faers_drug_name,
@@ -929,13 +950,19 @@ function LabelContent() {
       />
 
 
-      {/* Modals placeholders */}
-      <div id="user-notes-modal" className="custom-modal" style={{ display: 'none' }}>
-        <div className="custom-modal-content">
-          <div className="custom-modal-header"><h3>My Notes</h3><span className="close-modal" id="close-user-notes">&times;</span></div>
-          <div className="custom-modal-body" id="user-notes-modal-body"><div id="notes-list-container" className="notes-summary-list"></div></div>
-        </div>
-      </div>
+      {/* Modals */}
+      <NotesModal
+        isOpen={notesModalOpen}
+        onClose={() => setNotesModalOpen(false)}
+        setId={setId}
+      />
+
+      <TableExtractorModal
+        isOpen={tableExtractModalOpen}
+        onClose={() => setTableExtractModalOpen(false)}
+        title={tableExtractData.title}
+        tableHtml={tableExtractData.html}
+      />
 
       <div id="meddra-stats-modal" className="custom-modal" style={{ display: 'none' }}>
         <div className="custom-modal-content">
@@ -969,29 +996,6 @@ function LabelContent() {
           </div>
           <div className="custom-modal-body" id="meddra-stats-body"></div>
         </div>
-      </div>
-
-      <div id="table-extract-modal" className="custom-modal table-extract-modal" style={{ display: 'none' }}>
-        <div className="custom-modal-content table-extract-modal__content">
-          <div className="custom-modal-header table-extract-modal__header">
-            <div className="table-extract-modal__title-group">
-              <span className="table-extract-modal__eyebrow">LABEL TABLE</span>
-              <h3 id="table-extract-title">Table Data</h3>
-            </div>
-            <div className="table-extract-modal__actions">
-              <button id="copy-selection-btn" className="table-extract-modal__copy" type="button"><span>{"\uD83D\uDCCB"}</span> Copy Selection</button>
-              <button className="close-modal table-extract-modal__close" id="close-table-extract" type="button" aria-label="Close table extractor">&times;</button>
-            </div>
-          </div>
-          <div className="custom-modal-body table-extract-modal__body" id="table-extract-container"></div>
-        </div>
-      </div>
-
-      <div id="ai-prefs-modal" className="custom-modal" style={{ display: 'none' }}>
-         <div className="custom-modal-content" style={{ maxWidth: '600px', height: 'auto' }}>
-            <div className="custom-modal-header"><h3>AI Configuration</h3><span className="close-modal" id="close-ai-prefs">&times;</span></div>
-            <div className="custom-modal-body"><form id="ai-prefs-form"></form></div>
-         </div>
       </div>
 
       <LabelChat
