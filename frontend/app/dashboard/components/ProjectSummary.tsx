@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useRef } from 'react';
 import styles from './ProjectSummary.module.css';
-import { useCumulativeChart } from './useCumulativeChart';
 
 export type DocumentTypeBuckets = {
   human_rx: number;
@@ -62,9 +61,6 @@ type Props = {
 
   // pass your existing formatter (same one used in table)
   formatEffectiveTime: (s?: string) => string;
-
-  // where your chart.js is hosted (default assumes Next public/)
-  chartSrc?: string;
 };
 
 function safeISOToMs(s?: string | null): number | null {
@@ -82,7 +78,6 @@ export default function ProjectSummary({
   error,
   stats,
   formatEffectiveTime,
-  chartSrc = '/dashboard/js/chart.js',
 }: Props) {
   // ESC to close
   useEffect(() => {

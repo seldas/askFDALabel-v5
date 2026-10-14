@@ -209,4 +209,4 @@ Which Postgres and whether Oracle is reachable are runtime settings —
 - `backend/requirements.txt` lists `fastapi`, `uvicorn`, and `python-multipart`; nothing imports them.
 - `data/` is gitignored except for `data/sync_schema.py` (an explicit `!` exception). SPL storage, uploads, and downloads under it are local-only and not in version control.
 - Frontend module pages under `frontend/app/{dashboard,search,drugtox,labelcomp,device,localquery,webtest,management}/` mirror the backend blueprint names one-to-one.
-- `frontend/public/dashboard/js/` holds legacy vanilla-JS bundles (`chart.js`, `faers.js`, `xlsx.full.min.js`, …) loaded via Next `<Script>` tags from React pages — the dashboard is a partial migration, not a clean rewrite. Reference `chart.js` in lowercase; a duplicate `Chart.js` was removed because Windows filesystems can't hold both.
+- Legacy vanilla-JS bundles (`chat.js`, `faers.js`, `ui.js`, `annotations.js`, `xlsx.full.min.js`, etc.) have been completely removed and migrated to type-safe React/TSX components and npm libraries (`chart.js`, `xlsx`, `react-markdown`).
