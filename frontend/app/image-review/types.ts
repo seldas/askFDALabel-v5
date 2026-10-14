@@ -1,0 +1,18 @@
+export type Side = 'left' | 'right';
+export type ReviewMode = 'artwork' | 'confusion' | 'consistency';
+export type Region = { x: number; y: number; w: number; h: number };
+export type Source = { set_id?: string | null; spl_id?: string | null; image_id?: string | null; filename?: string; source?: string; version_verified?: boolean; image_hash?: string; width?: number; height?: number };
+export type Selection = { descriptor: Source; file: File | null; url: string; ready: boolean };
+export type Finding = {
+  id: number; title: string; kind: 'difference' | 'confusion' | 'inconsistency';
+  category: string; priority: 'critical' | 'review' | 'informational'; confidence: string;
+  observation: string; risk: string; left_text: string; right_text: string;
+  label_evidence: { side: Side; quote: string }[]; regions: Record<Side, Region | null>;
+};
+export type Review = { mode: ReviewMode; summary: string; findings: Finding[]; limitations: string[]; sources: Record<Side, Source>; model: string; cached: boolean; consistency_status: Record<Side, string> };
+export type Decision = { status: 'unreviewed' | 'confirmed' | 'dismissed'; note: string };
+export const MODES: { id: ReviewMode; label: string; description: string }[] = [
+  { id: 'artwork', label: 'Artwork Comparison', description: 'Compare content and design changes, with repeated color changes grouped into one finding.' },
+  { id: 'confusion', label: 'Product Confusion', description: 'Review visual similarities and whether names, strengths, and other critical distinctions are prominent enough.' },
+  { id: 'consistency', label: 'Labeling Consistency', description: 'Check each artwork against its own labeling. Load at least one corresponding label reference.' },
+];

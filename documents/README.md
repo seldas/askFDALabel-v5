@@ -30,9 +30,10 @@ documents/
 - **[Labeling Adverse Events & MedDRA](file:///d:/Coding/askFDALabel_v5/documents/modules/labeling_ae_and_meddra.md)**: Adverse event extraction, MedDRA 5-level hierarchy, and interactive in-situ highlighting engine.
 - **[PV Profile & Quality Control](file:///d:/Coding/askFDALabel_v5/documents/modules/pv_profile_and_qc.md)**: Pharmacovigilance safety profiles and automated regulatory discrepancy detection.
 - **[Label Comparison](file:///d:/Coding/askFDALabel_v5/documents/modules/label_comparison.md)**: Version-to-version and cross-product structured comparison with AI clinical synthesis.
+- **[Labeling Visual Review](modules/labeling_visual_review.md)**: Localized artwork differences, product confusion signals, image–labeling consistency, and annotated review reports.
 - **[DrugTox: Toxicology Intelligence](file:///d:/Coding/askFDALabel_v5/documents/modules/drugtox.md)**: DILI Rule-of-Two assessment, cardiotoxicity (DICT), renal injury (DIRI), chemical structure visualization, and FAERS signals.
 - **[Medical Device Intelligence](file:///d:/Coding/askFDALabel_v5/documents/modules/device_intelligence.md)**: openFDA 510(k), PMA, recall enforcement, and MAUDE adverse event reports.
-- **[Local Query Builder](file:///d:/Coding/askFDALabel_v5/documents/modules/local_query_builder.md)**: 11-dimension Boolean criteria compiler and streaming data export.
+- **[Label Query Builder & Local Query Workspace](file:///d:/Coding/askFDALabel_v5/documents/modules/local_query_builder.md)**: 13-type criteria catalog, database scopes, entity expansion, Quick search, portable query codes, and external AI imports.
 - **[WebTest Validation Suite](file:///d:/Coding/askFDALabel_v5/documents/modules/webtest_validation.md)**: Automated regression testing comparing local engine results against official FDA web services.
 
 ---

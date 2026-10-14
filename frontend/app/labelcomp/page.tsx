@@ -8,6 +8,7 @@ import Link from 'next/link';
 import Modal from '../components/Modal';
 import { Badge, Button } from '../platform/primitives';
 import './labelcomp.css';
+import { imageReviewRoute } from '../platform/context';
 
 interface LabelMetadata {
   set_id: string;
@@ -668,6 +669,7 @@ function LabelCompContent() {
           <p className="hero-subtitle-animated" style={{ fontSize: 'clamp(1rem, 2vw, 1.15rem)', color: 'var(--afl-text-secondary)', fontWeight: '500', maxWidth: '700px', margin: '0 auto' }}>
             Synchronize and compare clinical data across multiple FDA drug labels.
           </p>
+          {session?.permissions?.tool_image_review && <Link href={imageReviewRoute({ setIds: searchParams.getAll('set_ids'), splIds: searchParams.getAll('spl_ids') })} style={{ display: 'inline-block', marginTop: '12px', color: 'var(--fdl-blue-700)', fontSize: '0.85rem' }}>Compare carton, container, or IFU artwork →</Link>}
         </div>
 
         {/* Comparison Setup Panel */}

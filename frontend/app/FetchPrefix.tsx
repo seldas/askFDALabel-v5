@@ -7,6 +7,7 @@ import { API_BASE, DASHBOARD_BASE, withAppBase } from "./utils/appPaths";
 const DASHBOARD_PREFIXES = [
   "/dashboard",
   "/labelcomp",
+  "/image-review",
   "/labelquery",
   "/drugtox",
   "/localquery",

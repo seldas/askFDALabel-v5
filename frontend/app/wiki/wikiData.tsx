@@ -264,11 +264,11 @@ export const getHandbookParts = (apiHost?: string): HandbookPart[] => [
             summary: 'How to narrow your search to prescription drugs, generic approvals, OTC products, or therapeutic biologics.',
             badge: 'Filter',
             tags: ['filters', 'rx', 'otc', 'anda', 'nda', 'bla', 'generics'],
-            toolLink: { href: '/querybuilder', label: 'Open Query Builder' },
+            toolLink: { href: '/', label: 'Open Query Builder' },
             content: (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <p style={{ fontSize: '0.9rem', color: '#334155', lineHeight: 1.6 }}>
-                  When conducting regulatory reviews across a class of products, the <strong>Criteria Query Builder</strong> (<code>/querybuilder</code>) lets you apply step-by-step filters without typing code.
+                  When conducting regulatory reviews across a class of products, the <strong>Criteria Query Builder</strong> on the home page lets you combine criteria without typing code. Criteria in one group use AND; separate groups use OR. Multiple values in a categorical list are alternatives. For a combination product containing two ingredients, put two Product Identifier criteria in the same group.
                 </p>
 
                 <h4 style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.9rem', marginTop: '0.5rem', marginBottom: '0.25rem' }}>
@@ -324,7 +324,7 @@ export const getHandbookParts = (apiHost?: string): HandbookPart[] => [
             content: (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <p style={{ fontSize: '0.9rem', color: '#334155', lineHeight: 1.6 }}>
-                  In Step 3 of the Query Builder, you can search for safety terms within specific sections rather than searching the entire document. This eliminates irrelevant matches from background pharmacology or clinical studies:
+                  When an Oracle database is available, Step 3 of the Query Builder lets you search for safety terms within specific sections rather than searching the entire document. This narrows matches from other sections. Local PostgreSQL supports only Product Title and Initial U.S. Approval section criteria; full labeling text and MedDRA searches require Oracle:
                 </p>
 
                 <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.88rem', color: '#334155', paddingLeft: '1.25rem' }}>
@@ -333,6 +333,89 @@ export const getHandbookParts = (apiHost?: string): HandbookPart[] => [
                   <li><strong>Section 6 (Adverse Reactions):</strong> Find terms documented in clinical trial incidence tables or postmarketing surveillance.</li>
                   <li><strong>Section 7 (Drug Interactions):</strong> Search for CYP enzyme interactions, contraindicated co-medications, and food interactions.</li>
                 </ul>
+              </div>
+            ),
+          },
+          {
+            id: '3-4-ai-quick-search', number: '3.4',
+            partId: 'part-1', partTitle: 'Part I: Using AskFDALabel (Reviewer Workflows)',
+            sectionNumber: '3.0', sectionTitle: 'Structured Label Filtering (Query Builder)',
+            title: 'AI Query Builder & Quick Search',
+            summary: 'Build reviewable criteria by default, or opt into immediate search.',
+            tags: ['ai', 'quick search', 'prefilters', 'intent', 'confirmation'],
+            toolLink: { href: '/', label: 'Open Query Builder' },
+            content: (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--fdl-ink)', fontSize: '0.88rem', lineHeight: 1.6 }}>
+                <p>Enter a clinical request in <strong>AI Query Builder</strong> on the home page. Leave <strong>Quick search</strong> unchecked to use <strong>Build Criteria</strong>, inspect the generated cards and translation notes, then click <strong>Search Labels »</strong>.</p>
+<ol><li>Confirm the database scope and Exact match setting before translating.</li><li>Review drug-name candidates, medical terms, AND/OR groups, and any warnings about unavailable conditions.</li><li>Toggle categorical filter chips before searching. Checked chips become query criteria; unchecked suggestions are omitted.</li></ol>
+<p>Check <strong>Quick search</strong> to change the action to <strong>Search</strong>. A successful translation then runs automatically, skipping criteria confirmation. The elapsed timer and progress text indicate that translation is underway; they do not confirm that each mapping has succeeded.</p>
+<p>Examples: “Find labels for metformin” uses name resolution and expansion. “Find fixed-dose combination products containing both amoxicillin and clavulanate” keeps separate ingredient conditions so both must match.</p>
+              </div>
+            ),
+          },
+          {
+            id: '3-5-portable-query-codes', number: '3.5',
+            partId: 'part-1', partTitle: 'Part I: Using AskFDALabel (Reviewer Workflows)',
+            sectionNumber: '3.0', sectionTitle: 'Structured Label Filtering (Query Builder)',
+            title: 'Copying & Restoring Query Codes',
+            summary: 'Reuse query conditions, result filters, Exact match, and database scope.',
+            tags: ['query code', 'FDALABEL-Q1', 'clipboard', 'restore', 'sharing', 'export'],
+            toolLink: { href: '/', label: 'Open Query Builder' },
+            content: (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--fdl-ink)', fontSize: '0.88rem', lineHeight: 1.6 }}>
+                <ol><li>On the results page, open the export menu and choose <strong>Copy Query Code</strong>.</li><li>The confirmation dialog shows the complete <code>FDALABEL-Q1:</code> code. Use <strong>Copy again</strong> or select and copy it manually if clipboard access fails.</li><li>Paste the complete code into <strong>AI Query Builder</strong>. With Quick search off, choose <strong>Restore Query</strong> to review the restored conditions. With Quick search on, restoration proceeds to search.</li></ol>
+<p>The code stores the current query, including applied filters and Exact match, plus its database scope. It does not contain a snapshot of results, result sorting, pagination, or account credentials. Re-running it can return different results after database updates.</p>
+<p>Restoring a query code does not call the translation AI. It cannot grant database access: a scope your account cannot select, or an unavailable Oracle database, produces an error. Compression is not encryption; anyone holding the code can read its search conditions.</p>
+              </div>
+            ),
+          },
+          {
+            id: '3-6-external-ai-query', number: '3.6',
+            partId: 'part-1', partTitle: 'Part I: Using AskFDALabel (Reviewer Workflows)',
+            sectionNumber: '3.0', sectionTitle: 'Structured Label Filtering (Query Builder)',
+            title: 'Using External AI Query Instructions',
+            summary: 'Generate compatible query criteria with Elsa, Gemini, or another chat tool.',
+            tags: ['external ai', 'elsa', 'gemini', 'instructions', 'import', 'unsupported', 'protocol'],
+            toolLink: { href: '/', label: 'Open Query Builder' },
+            content: (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--fdl-ink)', fontSize: '0.88rem', lineHeight: 1.6 }}>
+                <ol><li>Select your database and Exact match setting, then choose <strong>Download External AI Instructions</strong> once dropdown vocabulary has loaded.</li><li>Give the downloaded text and your search request to an external AI chat tool.</li><li>Copy its complete response, including <code>BEGIN FDALABEL QUERY V1</code> and <code>END FDALABEL QUERY V1</code>, into AI Query Builder.</li><li>Restore the criteria, inspect the notes and unsupported conditions, and confirm drug names and MedDRA terms using the criterion cards.</li></ol>
+<p>The instructions describe the selected scope, allowed criterion fields, AND/OR rules, Exact match, and current dropdown vocabulary. The returned text is parsed as structured query data; it is not executed as code and importing it does not call the application's translation AI.</p>
+<p>Quick search applies to external imports too, but automatic searching is disabled when the response lists any unsupported conditions. Review and revise those conditions rather than assuming the full request was searched. Invalid JSON, unsupported fields, empty criteria, and incompatible local criteria are rejected.</p>
+              </div>
+            ),
+          },
+          {
+            id: '3-7-scope-and-expansion', number: '3.7',
+            partId: 'part-1', partTitle: 'Part I: Using AskFDALabel (Reviewer Workflows)',
+            sectionNumber: '3.0', sectionTitle: 'Structured Label Filtering (Query Builder)',
+            title: 'Database Scope, Exact Match & Entity Expansion',
+            summary: 'Understand supported searches and control related product names and MedDRA terms.',
+            tags: ['local', 'oracle', 'oracle_all', 'exact match', 'expansion', 'meddra', 'candidate', 'hyphen'],
+            toolLink: { href: '/', label: 'Open Query Builder' },
+            content: (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--fdl-ink)', fontSize: '0.88rem', lineHeight: 1.6 }}>
+                <ul><li><strong>Local:</strong> PostgreSQL metadata searches; no full labeling text, MedDRA search, or DEA schedule search. Section criteria support Product Title and Initial U.S. Approval only.</li><li><strong>CDER-CBER:</strong> the Oracle human-labeling subset. Animal labeling is unavailable in this scope.</li><li><strong>FDA ver.:</strong> the broader Oracle scope, including animal and other non-human labeling.</li></ul>
+<p>Database selection depends on account permissions and deployment connectivity. Switching scope after configuring criteria asks for confirmation and clears the query because vocabularies and capabilities differ.</p>
+<p>For a resolved product name, expansion finds candidate names associated with the same complete active-ingredient UNII set. The default expanded selection is bounded to 20 names; the candidate manager lets you search, page through, add, or remove generic names, brand names, and active ingredients. Inspect the selected list instead of assuming every related name is searched.</p>
+<p><strong>Exact match</strong> retains the recognized input entities without related-name expansion. It is distinct from a Product Identifier's equals, contains, or starts-with operator. Flexible name matching and autocomplete ignore case and treat ASCII hyphens and spaces as interchangeable: “Dry Clox” can match “Dry-Clox”, while “dryclox” does not match either separated spelling. Literal exact-name criteria retain their separators.</p>
+<p>MedDRA criteria support PT and LLT. A PT can expand to its child LLTs; selecting an LLT uses bounded sibling expansion rather than searching every LLT under its parent PT. Inspect the hierarchy and selected terms, and use Exact match to keep the original LLT. MedDRA vocabulary resolution uses local reference tables, while searching label text requires Oracle.</p>
+              </div>
+            ),
+          },
+          {
+            id: '3-8-result-filters', number: '3.8',
+            partId: 'part-1', partTitle: 'Part I: Using AskFDALabel (Reviewer Workflows)',
+            sectionNumber: '3.0', sectionTitle: 'Structured Label Filtering (Query Builder)',
+            title: 'Result Filters & Reproducible Searches',
+            summary: 'Read filtered totals and preserve the conditions currently applied to results.',
+            tags: ['results', 'facets', 'filters', 'backbone', 'query code', 'reproducibility'],
+            toolLink: { href: '/', label: 'Open Query Builder' },
+            content: (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--fdl-ink)', fontSize: '0.88rem', lineHeight: 1.6 }}>
+                <p>The results header shows filtered results against the underlying query total. Sidebar filters apply across every OR group. Facet counts describe the underlying search with sidebar filters removed, so their counts remain stable while you toggle filters.</p>
+<p>Facet counts load separately from the results table. A facet failure does not invalidate the table. Use <strong>Back to search</strong> to edit the active query, or copy a query code to preserve its current conditions and filters.</p>
+<p>Portable query codes are compressed, but executing a restored query still creates a results URL. Very large criteria sets can exceed the URL size limit; narrow the selected candidates or criteria if the application asks you to reduce the query.</p>
               </div>
             ),
           },
@@ -603,6 +686,24 @@ export const getHandbookParts = (apiHost?: string): HandbookPart[] => [
                   <li>Summarizes differences in dosing schedules, administration guidelines, or renal dose adjustments.</li>
                   <li>Identifies changes in approved patient age groups, indications, or pregnancy risk descriptions.</li>
                 </ul>
+              </div>
+            ),
+          },
+          {
+            id: '7-4-labeling-visual-review', number: '7.4',
+            partId: 'part-2', partTitle: 'Part II: Specialized Analytical & Safety Tools',
+            sectionNumber: '7.0', sectionTitle: 'Label Comparison (LabelComp)',
+            title: 'Labeling Visual Review: Artwork, Confusion & Consistency',
+            summary: 'Compare selected carton, container, or IFU images with numbered findings, safety signals, and labeling evidence.',
+            tags: ['image-review', 'artwork', 'carton', 'ifu', 'product confusion', 'medication error', 'consistency', 'highlights'],
+            toolLink: { href: '/image-review', label: 'Open Labeling Visual Review' },
+            content: (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.88rem', color: 'var(--fdl-ink)', lineHeight: 1.6 }}>
+                <p>Open the standalone workbench from Tools, a label toolbox, or LabelComp. Select a labeling and a specific image on each side, or upload artwork. Optional SPL-IDs pin label versions. Missing historical artwork is not replaced with current DailyMed imagery; uploaded artwork associations require confirmation.</p>
+                <ul><li><strong>Artwork Comparison:</strong> review visible content and design changes. Repeated theme-color changes use one representative region per side.</li><li><strong>Product Confusion:</strong> inspect similar packaging and whether names, strengths, concentrations, or routes are sufficiently distinguishable.</li><li><strong>Labeling Consistency:</strong> compare each image with its own labeling reference. Load at least one reference; omitted carton text alone does not establish a conflict.</li></ul>
+                <p>Run visual review, then select numbered findings to locate evidence. Use synchronized zoom, show/hide highlights, and filter safety signals. Confirm or dismiss findings, record reviewer notes, and adjust highlight coordinates if localization is inaccurate.</p>
+                <p>Export JSON preserves structured findings and decisions. Export annotated report creates standalone HTML with embedded artwork and numbered highlights. Reviewer edits remain in the current session until exported.</p>
+                <p>Personal-account access, a running review worker, and an image-capable AI model are required. This version uses estimated AI localization rather than independent OCR or geometric registration. Potential medication-error signals require human confirmation and do not establish that an error occurred.</p>
               </div>
             ),
           },

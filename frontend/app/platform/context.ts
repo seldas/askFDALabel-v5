@@ -118,6 +118,16 @@ export function labelcompRoute(ctx: LaunchContext): string {
   return withQuery('/labelcomp', params);
 }
 
+/** Two independent artwork sources, with optional label-version pins. */
+export function imageReviewRoute(ctx: LaunchContext = {}): string {
+  const params = new URLSearchParams();
+  ctx.setIds?.slice(0, 2).forEach((id, index) => {
+    params.append('set_ids', id);
+    params.append('spl_ids', ctx.splIds?.[index] || '');
+  });
+  return withQuery('/image-review', params);
+}
+
 /** Dashboard, optionally scoped to a project. */
 export function dashboardRoute(ctx: LaunchContext = {}): string {
   const params = new URLSearchParams();

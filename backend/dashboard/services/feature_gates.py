@@ -205,6 +205,15 @@ FEATURE_CATALOG = [
         default_allow_guest=True,
     ),
     FeatureSpec(
+        key='tool_image_review',
+        name='Labeling Visual Review',
+        blurb='Compare artwork, review product confusion, and check image–labeling consistency.',
+        category='Product Toolbox',
+        enforced_at='Tool registry, /image-review and /api/image-review/*',
+        default_min_role=ROLE_USER,
+        default_allow_guest=False,
+    ),
+    FeatureSpec(
         key='tool_deepdive',
         name='Deep Dive',
         blurb='Compare this label against its pharmacologic class peers.',
