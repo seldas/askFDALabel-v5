@@ -61,7 +61,6 @@ class TaskService:
                 broker=app.config.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'),
                 backend=app.config.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0'),
             ) as producer:
-                producer.conf.update(app.config)
                 producer.conf.broker_connection_timeout = 5
                 producer.conf.broker_transport_options = {
                     **(producer.conf.broker_transport_options or {}),

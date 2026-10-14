@@ -2,13 +2,19 @@ import os
 from celery import Celery
 from app import create_unified_app
 
+
 def make_celery(app):
+    broker_url = app.config.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+    result_backend = app.config.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
     celery = Celery(
         app.import_name,
-        backend=app.config.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0'),
-        broker=app.config.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+        backend=result_backend,
+        broker=broker_url,
     )
-    celery.conf.update(app.config)
+    celery.conf.update(
+        broker_url=broker_url,
+        result_backend=result_backend,
+    )
 
     class ContextTask(celery.Task):
         def __call__(self, *args, **kwargs):
