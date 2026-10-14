@@ -918,9 +918,9 @@ function LabelContent() {
           currentManufacturer: data.manufacturer_name,
           currentEffectiveTime: data.effective_time,
           toxSummary: data.tox_summary,
-          currentUserId: data.user_id ?? null,
+          currentUserId: session?.id ?? data.user_id ?? null,
           savedAnnotations: data.saved_annotations,
-          canComment: session?.can_comment !== false,
+          canComment: Boolean(session?.is_authenticated && session?.can_comment !== false),
         }}
         init={['initUI', 'initChat', 'initAnnotations']}
       />

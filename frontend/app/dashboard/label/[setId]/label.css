@@ -856,6 +856,260 @@ html {
     color: var(--afl-danger-500);
 }
 
+/* --- Text Annotation & Highlight Styles --- */
+.text-highlight {
+    cursor: pointer;
+    border-radius: 2px;
+    padding: 1px 2px;
+    transition: filter 0.15s ease, background-color 0.15s ease;
+}
+.text-highlight:hover {
+    filter: brightness(0.92);
+}
+
+.text-comment {
+    background-color: rgba(254, 240, 138, 0.45);
+    border-bottom: 2px dashed #f59e0b;
+    position: relative;
+    cursor: pointer;
+    padding: 1px 2px;
+    border-radius: 2px;
+    transition: background-color 0.15s ease;
+}
+.text-comment:hover {
+    background-color: rgba(254, 240, 138, 0.8);
+}
+.text-comment::after {
+    content: '💬';
+    font-size: 0.68em;
+    vertical-align: super;
+    margin-left: 3px;
+    display: inline-block;
+}
+
+/* Floating Selection Toolbar */
+.selection-toolbar {
+    position: fixed;
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 5px 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 10000;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    pointer-events: auto;
+    animation: scaleIn 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.selection-toolbar button {
+    background: transparent;
+    border: none;
+    color: #f1f5f9;
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 5px 8px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transition: all 0.15s ease;
+}
+
+.selection-toolbar button:hover {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+/* Color Palette Popup */
+.color-palette {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    background: #ffffff;
+    border: 1px solid var(--fdl-line, #cbd5e1);
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    gap: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    z-index: 10001;
+}
+
+.color-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.color-btn:hover {
+    transform: scale(1.18);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.color-btn.none {
+    background: #ffffff;
+    background-image: linear-gradient(to top left, transparent 45%, #ef4444 45%, #ef4444 55%, transparent 55%);
+}
+
+/* Comment / Note Input Box */
+.comment-input-box {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background: #ffffff;
+    border: 1px solid var(--fdl-line, #e2e8f0);
+    border-radius: 12px;
+    padding: 14px;
+    width: 320px;
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.15), 0 3px 8px rgba(0, 0, 0, 0.06);
+    z-index: 10005;
+    box-sizing: border-box;
+    animation: floatIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes floatIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.comment-input-box textarea {
+    width: 100%;
+    height: 85px;
+    margin-bottom: 10px;
+    resize: none;
+    padding: 10px 12px;
+    border: 1px solid var(--fdl-line, #cbd5e1);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    outline: none;
+    background-color: var(--fdl-canvas, #f8fafc);
+    color: var(--fdl-ink, #0f172a);
+    box-sizing: border-box;
+    transition: all 0.15s ease;
+}
+
+.comment-input-box textarea::placeholder {
+    color: var(--fdl-muted, #94a3b8);
+}
+
+.comment-input-box textarea:focus {
+    background-color: #ffffff;
+    border-color: var(--fdl-blue-600, #2563eb);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.comment-input-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    align-items: center;
+}
+
+.comment-input-actions button {
+    font-size: 0.8rem;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.15s ease;
+}
+
+.comment-input-actions .btn-save-comment {
+    background: var(--fdl-blue-700, #1d4ed8);
+    color: #ffffff;
+    border: 1px solid var(--fdl-blue-700, #1d4ed8);
+}
+
+.comment-input-actions .btn-save-comment:hover {
+    background: var(--fdl-navy-950, #0f172a);
+    border-color: var(--fdl-navy-950, #0f172a);
+}
+
+.comment-input-actions .btn-cancel-comment {
+    background: transparent;
+    color: var(--fdl-ink-soft, #475569);
+    border: 1px solid var(--fdl-line, #cbd5e1);
+}
+
+.comment-input-actions .btn-cancel-comment:hover {
+    background: var(--fdl-canvas, #f1f5f9);
+    color: var(--fdl-ink, #0f172a);
+}
+
+/* Annotation Read Popover */
+.annotation-read-popover {
+    position: absolute;
+    background: #ffffff;
+    border: 1px solid var(--fdl-line, rgba(0, 0, 0, 0.1));
+    border-radius: 10px;
+    padding: 14px 16px;
+    width: 300px;
+    max-width: 90vw;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.06);
+    z-index: 10010;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    box-sizing: border-box;
+    animation: floatIn 0.15s ease-out;
+}
+
+.ann-meta {
+    font-size: 0.72rem;
+    color: var(--fdl-muted, #64748b);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    letter-spacing: 0.02em;
+    font-weight: 600;
+}
+
+.ann-content {
+    color: var(--fdl-ink, #1e293b);
+    margin-bottom: 10px;
+    background: var(--fdl-canvas, #f8fafc);
+    padding: 8px 12px;
+    border-radius: 6px;
+    border-left: 3px solid var(--fdl-blue-600, #2563eb);
+    word-break: break-word;
+    font-size: 0.85rem;
+}
+
+.ann-actions {
+    border-top: 1px solid var(--fdl-line-soft, #f1f5f9);
+    padding-top: 8px;
+    text-align: right;
+}
+
+.btn-delete-ann {
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    color: #b91c1c;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+
+.btn-delete-ann:hover {
+    background: #fecaca;
+    color: #991b1b;
+}
+
 /* --- Custom Modal (Generic) --- */
 .custom-modal {
     display: none; 

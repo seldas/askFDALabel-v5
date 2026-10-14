@@ -483,7 +483,9 @@
         type: isComment ? 'Comment' : 'Highlight',
         text: annotation.textContent.trim(),
         element: annotation,
-        section: annotation.closest('.Section')?.getAttribute('data-section-number') || 'Label'
+        section: annotation.closest('.label-section-item')?.getAttribute('data-section-index')
+          ? `Section ${Number(annotation.closest('.label-section-item')?.getAttribute('data-section-index')) + 1}`
+          : (annotation.closest('.Section')?.getAttribute('data-section-number') || 'Label')
       });
     });
 

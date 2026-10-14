@@ -1,5 +1,8 @@
 window.initAnnotations = function() {
-    if (window.LabelAnnotationManager) return; 
+    if (window.LabelAnnotationManager) {
+        window.LabelAnnotationManager.fetchAnnotations();
+        return;
+    } 
 
     /* --- Label Annotation Logic --- */
     window.LabelAnnotationManager = {
@@ -84,7 +87,9 @@ window.initAnnotations = function() {
             };
  
             const rect = range.getBoundingClientRect();
-            this.showToolbar(rect.left, rect.top - 40);
+            const topPos = Math.max(10, rect.top - 46);
+            const leftPos = Math.max(10, Math.min(rect.left, window.innerWidth - 130));
+            this.showToolbar(leftPos, topPos);
         },
 
         showToolbar: function(x, y) {
@@ -97,10 +102,10 @@ window.initAnnotations = function() {
             toolbar.style.position = 'fixed';
             
             toolbar.innerHTML = `
-            <button class="btn-ann-highlight" title="Highlight">
-                <span style="background:yellow; width:14px; height:14px; border-radius:2px; border:1px solid #ccc;"></span>
+            <button class="btn-ann-highlight" title="Highlight text" aria-label="Highlight">
+                <span class="toolbar-highlight-icon" style="background:#facc15; width:14px; height:14px; border-radius:2px; border:1px solid rgba(0,0,0,0.25); display:inline-block;"></span>
             </button>
-            <button class="btn-ann-comment" title="Comment">💬</button>
+            <button class="btn-ann-comment" title="Write a Note" aria-label="Note">💬</button>
             `;
 
             const highlightBtn = toolbar.querySelector('.btn-ann-highlight');
@@ -249,6 +254,7 @@ window.initAnnotations = function() {
                         color: data.color,
                         comment: data.comment,
                         username: resData.username,
+                        user_id: resData.user_id || window.currentUserId,
                         created_at: resData.created_at
                     });
                     window.getSelection().removeAllRanges();
@@ -278,6 +284,12 @@ window.initAnnotations = function() {
             // Fallback to data attribute match
             if (!section) {
                 section = document.querySelector(`.Section[data-section-number="${ann.section_id}"]`);
+            }
+            if (!section) {
+                section = document.querySelector(`[data-section-index="${ann.section_id}"]`);
+            }
+            if (!section) {
+                section = document.querySelector(`[id="${ann.section_id}"]`);
             }
             
             if (!section) return;
@@ -389,8 +401,9 @@ window.initAnnotations = function() {
             
             // Position
             const rect = target.getBoundingClientRect();
-            popover.style.left = (rect.left + window.scrollX) + 'px';
-            popover.style.top = (rect.bottom + window.scrollY + 5) + 'px';
+            const leftPos = Math.max(10, Math.min(rect.left + window.scrollX, window.innerWidth + window.scrollX - 320));
+            popover.style.left = leftPos + 'px';
+            popover.style.top = (rect.bottom + window.scrollY + 6) + 'px';
             
             document.body.appendChild(popover);
             
