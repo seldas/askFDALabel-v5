@@ -12,6 +12,7 @@ interface User {
   username: string;
   is_admin: boolean;
   role?: 'user' | 'developer' | 'admin';
+  can_comment?: boolean;
   ai_provider: string;
   is_active?: boolean;
   api_key?: string;
@@ -824,6 +825,25 @@ export default function ManagementPage() {
       if (res.ok) fetchUsers();
     } catch (err) {
       console.error('Toggle active error', err);
+    }
+  };
+
+  const handleToggleCommentPermission = async (userId: number, canComment: boolean) => {
+    try {
+      const res = await fetch(`/api/dashboard/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ can_comment: canComment })
+      });
+      if (res.ok) {
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, can_comment: canComment } : u));
+        setManagingUser(prev => prev?.id === userId ? { ...prev, can_comment: canComment } : prev);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Failed to update comment permission.');
+      }
+    } catch (err) {
+      console.error('Toggle comment permission error', err);
     }
   };
 
@@ -1795,10 +1815,11 @@ export default function ManagementPage() {
                   <table className="user-table">
                     <thead>
                       <tr>
-                        <th style={{ width: '38%' }}>User</th>
-                        <th style={{ width: '24%' }}>Role</th>
-                        <th style={{ width: '24%' }}>Last Login</th>
-                        <th style={{ width: '14%', textAlign: 'right' }}>Actions</th>
+                        <th style={{ width: '30%' }}>User</th>
+                        <th style={{ width: '18%' }}>Role</th>
+                        <th style={{ width: '22%' }}>Comments / Notes</th>
+                        <th style={{ width: '18%' }}>Last Login</th>
+                        <th style={{ width: '12%', textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1844,7 +1865,7 @@ export default function ManagementPage() {
                         if (filtered.length === 0) {
                           return (
                             <tr>
-                              <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: 'var(--afl-n-400)' }}>
+                              <td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--afl-n-400)' }}>
                                 No users found matching filters.
                               </td>
                             </tr>
@@ -1875,6 +1896,27 @@ export default function ManagementPage() {
                                 <option value="developer">Developer</option>
                                 <option value="admin">Admin</option>
                               </select>
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                disabled={user.is_active === false || !session?.is_admin}
+                                onClick={() => handleToggleCommentPermission(user.id, !(user.can_comment !== false))}
+                                className="btn-ghost"
+                                style={{
+                                  padding: '4px 10px',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  borderRadius: '4px',
+                                  color: user.can_comment !== false ? '#15803d' : '#b91c1c',
+                                  backgroundColor: user.can_comment !== false ? '#dcfce7' : '#fee2e2',
+                                  borderColor: user.can_comment !== false ? '#86efac' : '#fca5a5',
+                                  cursor: session?.is_admin ? 'pointer' : 'default',
+                                }}
+                                title={session?.is_admin ? "Click to toggle commenting, annotations & AI notes permission" : undefined}
+                              >
+                                {user.can_comment !== false ? '✓ Enabled' : '✕ Disabled'}
+                              </button>
                             </td>
                             <td>
                               {user.last_login ? (
@@ -3440,6 +3482,34 @@ else:
                     </button>
                   </div>
                   {userModelError && <p role="alert" style={{ color: 'var(--fdl-red)', margin: '0.75rem 0 0' }}>{userModelError}</p>}
+                </div>
+              )}
+
+              {/* Comments, Annotations & AI Notes Permission (Admin Only) */}
+              {session?.is_admin && (
+                <div style={{ background: 'var(--afl-n-50)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--afl-n-200)' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-800)', marginBottom: '0.35rem' }}>
+                    Comments, Annotations & AI Notes Permission
+                  </div>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--afl-n-500)', margin: '0 0 0.75rem 0', lineHeight: 1.4 }}>
+                    Controls whether this user can post comments & justifications in visual compare, create label highlights/notes, and save AI notes.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleCommentPermission(managingUser.id, !(managingUser.can_comment !== false))}
+                    className="btn-ghost"
+                    style={{
+                      padding: '6px 14px',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      borderRadius: '4px',
+                      color: managingUser.can_comment !== false ? '#15803d' : '#b91c1c',
+                      backgroundColor: managingUser.can_comment !== false ? '#dcfce7' : '#fee2e2',
+                      borderColor: managingUser.can_comment !== false ? '#86efac' : '#fca5a5',
+                    }}
+                  >
+                    {managingUser.can_comment !== false ? '✓ Comments & Notes: Enabled' : '✕ Comments & Notes: Disabled'}
+                  </button>
                 </div>
               )}
 

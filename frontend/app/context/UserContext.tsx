@@ -18,6 +18,8 @@ export interface UserSession {
   role?: UserRole;
   /** Whether the labeling-database switch is offered. Enforced server-side too. */
   can_select_db?: boolean;
+  /** Whether the user is permitted to post comments, highlights, and annotations. Admin controlled. */
+  can_comment?: boolean;
   /** The shared anonymous account: no query history, no saved preferences. */
   is_guest?: boolean;
   /** Developer-only modules: LabelChat, Web-test, Local Database Search. */

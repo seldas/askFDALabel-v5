@@ -286,7 +286,7 @@ window.initChat = function () {
         <div class="annotation-popover-header">
           <div class="popover-header-title">${headerTitle}</div>
           <div class="popover-actions">
-            ${!isSaved ? `<button class="save-note-btn" title="Save permanently">&#128190;</button>` : ""}
+            ${!isSaved && window.canComment !== false ? `<button class="save-note-btn" title="Save permanently">&#128190;</button>` : ""}
             <button class="delete-note-btn" title="Delete note">&#128465;</button>
             <button class="close-note-btn" title="Close note">&times;</button>
           </div>
@@ -413,6 +413,10 @@ window.initChat = function () {
       if (saveBtn) {
         saveBtn.addEventListener("click", async (e) => {
           e.stopPropagation();
+          if (window.canComment === false) {
+            alert("Commenting and saving notes has been disabled for your account.");
+            return;
+          }
           try {
             const res = await fetch("/api/dashboard/save_annotation", {
               method: "POST",
@@ -430,6 +434,8 @@ window.initChat = function () {
               badge.classList.add("saved");
               badge.setAttribute("data-id", data.id);
               saveBtn.remove();
+            } else if (data.error) {
+              alert(data.error);
             }
           } catch (err) {
             console.error("Save failed", err);

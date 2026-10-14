@@ -831,6 +831,8 @@ def ai_compare_summary():
 @api_bp.route('/save_annotation', methods=['POST'])
 @login_required
 def save_annotation():
+    if not getattr(current_user, 'can_comment', True):
+        return jsonify({'error': 'Saving AI notes has been disabled for your account by an administrator.'}), 403
     data = request.get_json()
     set_id = data.get('set_id')
     section_num = data.get('section_number', 'TOP') 
@@ -1037,6 +1039,8 @@ from sqlalchemy import or_
 @api_bp.route('/annotations/save', methods=['POST'])
 @login_required
 def save_label_annotation():
+    if not getattr(current_user, 'can_comment', True):
+        return jsonify({'error': 'Highlights and annotations have been disabled for your account by an administrator.'}), 403
     data = request.get_json(silent=True) or {}
 
     raw_project_id = data.get('project_id', None)

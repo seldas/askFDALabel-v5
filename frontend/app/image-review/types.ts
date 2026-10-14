@@ -10,7 +10,22 @@ export type Finding = {
   label_evidence: { side: Side; quote: string }[]; regions: Record<Side, Region | null>;
 };
 export type Review = { mode: ReviewMode; summary: string; findings: Finding[]; limitations: string[]; sources: Record<Side, Source>; model: string; cached: boolean; consistency_status: Record<Side, string>; comparison_level?: 'overview' | 'detailed'; detail_status?: 'pending' | 'unavailable' | 'complete' | 'failed' };
-export type Decision = { status: 'unreviewed' | 'confirmed' | 'dismissed'; note: string };
+export type Decision = { status: 'unreviewed' | 'confirmed' | 'dismissed'; note: string; is_public?: boolean; saved?: boolean };
+export type ReviewComment = {
+  id: number;
+  task_id: number;
+  finding_id: number;
+  user_id: number;
+  username: string;
+  set_id?: string | null;
+  decision: 'unreviewed' | 'confirmed' | 'dismissed';
+  comment: string;
+  is_public: boolean;
+  is_mine: boolean;
+  regions?: Record<Side, Region | null> | null;
+  created_at?: string;
+  updated_at?: string;
+};
 export const MODES: { id: ReviewMode; label: string; description: string }[] = [
   { id: 'consistency', label: 'Labeling Consistency', description: 'Audit one packaging artwork against its official FDA SPL labeling content to detect discrepancies, omissions, and errors.' },
   { id: 'artwork', label: 'Artwork Comparison', description: 'Compare content and design changes between two artworks, with repeated color changes grouped into one finding.' },

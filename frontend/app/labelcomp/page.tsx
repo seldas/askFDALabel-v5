@@ -172,6 +172,46 @@ function LabelCompContent() {
 
   const filledSlotsCount = selectedSlots.filter(s => s !== null).length;
 
+  // Set window name on mount so visual review can reuse/focus this window
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.name = 'fdalabel_labelcomp';
+    }
+  }, []);
+
+  const activeSetIds = useMemo(() => {
+    if (data?.selected_labels_metadata && data.selected_labels_metadata.length > 0) {
+      return data.selected_labels_metadata.map(m => m.set_id);
+    }
+    return selectedSlots.filter(s => s !== null).map(s => s!.set_id);
+  }, [data, selectedSlots]);
+
+  const activeSplIds = useMemo(() => {
+    return searchParams.getAll('spl_ids');
+  }, [searchParams]);
+
+  const visualReviewCount = activeSetIds.length;
+  const isVisualReviewDisabled = visualReviewCount === 0 || visualReviewCount > 2;
+
+  const visualReviewTooltip = useMemo(() => {
+    if (visualReviewCount === 0) {
+      return 'Select 1 or 2 labels to open in Visual Review.';
+    }
+    if (visualReviewCount > 2) {
+      return `Visual Review supports at most 2 labelings (currently ${visualReviewCount} selected). Please select 1 or 2 labels to launch visual review.`;
+    }
+    return `Open ${visualReviewCount === 1 ? 'this label' : 'these 2 labels'} in Visual Review (/image-review)`;
+  }, [visualReviewCount]);
+
+  const handleOpenVisualReview = () => {
+    if (isVisualReviewDisabled) return;
+    const url = imageReviewRoute({ setIds: activeSetIds.slice(0, 2), splIds: activeSplIds.slice(0, 2) });
+    const target = window.open(url, 'fdalabel_image_review');
+    if (target) {
+      target.focus();
+    }
+  };
+
 
   // Design System Constants
   /*
@@ -681,16 +721,33 @@ function LabelCompContent() {
                 Compare up to 4 drug labels side-by-side. Add at least 2 labels to begin.
               </p>
             </div>
-            {filledSlotsCount > 0 && (
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="sm"
-                className="lc-clear-btn"
-                onClick={() => { setSelectedSlots([null, null, null, null]); router.push('/labelcomp'); }}
+                disabled={isVisualReviewDisabled}
+                title={visualReviewTooltip}
+                onClick={handleOpenVisualReview}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                Clear All
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <path d="m21 15-5-5L5 21" />
+                </svg>
+                Visual Review
               </Button>
-            )}
+              {filledSlotsCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="lc-clear-btn"
+                  onClick={() => { setSelectedSlots([null, null, null, null]); router.push('/labelcomp'); }}
+                >
+                  Clear All
+                </Button>
+              )}
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -761,7 +818,21 @@ function LabelCompContent() {
               <button type="button" onClick={collapseAll} className="lc-toolbar-toggle">Collapse All</button>
             </div>
 
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <Button
+                variant="ghost"
+                disabled={isVisualReviewDisabled}
+                title={visualReviewTooltip}
+                onClick={handleOpenVisualReview}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <path d="m21 15-5-5L5 21" />
+                </svg>
+                Visual Review
+              </Button>
               <Button variant="info" onClick={handleExportDiffs}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 Export

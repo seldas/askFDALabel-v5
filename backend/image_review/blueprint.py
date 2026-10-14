@@ -9,7 +9,7 @@ from flask_login import current_user
 from werkzeug.exceptions import BadRequest, HTTPException
 
 from database import db
-from database.models import SystemTask
+from database.models import SystemTask, ImageReviewComment, utc_now
 from dashboard.routes.guards import feature_before_request
 from dashboard.services.task_service import TaskService
 from .assets import (FILE_LIMIT, label_inventory, read_local_artwork, normalized_image,
@@ -96,8 +96,107 @@ def start_review():
 @image_review_bp.get('/reviews/<int:task_id>')
 def review_status(task_id):
     task = db.session.get(SystemTask, task_id)
-    if not task or task.user_id != current_user.id or task.task_type != 'image_review':
+    if not task or task.task_type != 'image_review':
+        return jsonify(error='Review not found.'), 404
+    if task.user_id != current_user.id and task.status != 'completed':
         return jsonify(error='Review not found.'), 404
     return jsonify(task_id=task.id, status=task.status, progress=task.progress, message=task.message,
                    error=task.error_details if task.status == 'failed' else None,
                    result=json.loads(task.result_data) if task.result_data else None)
+
+
+@image_review_bp.get('/reviews/<int:task_id>/comments')
+def get_review_comments(task_id):
+    task = db.session.get(SystemTask, task_id)
+    if not task or task.task_type != 'image_review':
+        return jsonify(error='Review not found.'), 404
+
+    is_guest = getattr(current_user, 'is_guest', False)
+    current_uid = None if is_guest else getattr(current_user, 'id', None)
+
+    filters = [ImageReviewComment.task_id == task_id]
+    if current_uid:
+        filters.append(db.or_(ImageReviewComment.is_public.is_(True), ImageReviewComment.user_id == current_uid))
+    else:
+        filters.append(ImageReviewComment.is_public.is_(True))
+
+    comments = ImageReviewComment.query.filter(*filters).order_by(
+        ImageReviewComment.finding_id.asc(),
+        ImageReviewComment.updated_at.desc()
+    ).all()
+
+    return jsonify(comments=[c.to_dict(current_uid) for c in comments])
+
+
+@image_review_bp.put('/reviews/<int:task_id>/comments/<int:finding_id>')
+@image_review_bp.post('/reviews/<int:task_id>/comments')
+def save_review_comment(task_id, finding_id=None):
+    if getattr(current_user, 'is_guest', False):
+        return jsonify(error='Sign in to save personal comments and decisions.'), 403
+    if not getattr(current_user, 'can_comment', True):
+        return jsonify(error='Commenting and clinical justifications have been disabled for your account by an administrator.'), 403
+    task = db.session.get(SystemTask, task_id)
+    if not task or task.task_type != 'image_review':
+        return jsonify(error='Review not found.'), 404
+
+    data = request.get_json(silent=True) or {}
+    fid = finding_id if finding_id is not None else data.get('finding_id')
+    if fid is None:
+        raise BadRequest('Finding ID is required.')
+
+    decision = data.get('decision', 'unreviewed')
+    if decision not in ('unreviewed', 'confirmed', 'dismissed'):
+        decision = 'unreviewed'
+
+    comment_text = data.get('comment', '').strip()
+    is_public = bool(data.get('is_public', False))
+    regions = data.get('regions')
+    regions_str = json.dumps(regions) if regions else None
+    set_id = data.get('set_id') or None
+
+    record = ImageReviewComment.query.filter_by(
+        task_id=task_id,
+        finding_id=fid,
+        user_id=current_user.id
+    ).first()
+
+    if record:
+        record.decision = decision
+        record.comment = comment_text
+        record.is_public = is_public
+        if set_id:
+            record.set_id = set_id
+        if regions is not None:
+            record.regions = regions_str
+        record.updated_at = utc_now()
+    else:
+        record = ImageReviewComment(
+            task_id=task_id,
+            finding_id=fid,
+            user_id=current_user.id,
+            set_id=set_id,
+            decision=decision,
+            comment=comment_text,
+            is_public=is_public,
+            regions=regions_str
+        )
+        db.session.add(record)
+
+    db.session.commit()
+    return jsonify(comment=record.to_dict(current_user.id))
+
+
+@image_review_bp.delete('/reviews/<int:task_id>/comments/<int:finding_id>')
+def delete_review_comment(task_id, finding_id):
+    if getattr(current_user, 'is_guest', False):
+        return jsonify(error='Sign in with a personal account.'), 403
+    record = ImageReviewComment.query.filter_by(
+        task_id=task_id,
+        finding_id=finding_id,
+        user_id=current_user.id
+    ).first()
+    if record:
+        db.session.delete(record)
+        db.session.commit()
+    return jsonify(success=True)
+

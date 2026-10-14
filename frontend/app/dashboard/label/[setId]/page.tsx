@@ -916,6 +916,7 @@ function LabelContent() {
           toxSummary: data.tox_summary,
           currentUserId: data.user_id ?? null,
           savedAnnotations: data.saved_annotations,
+          canComment: session?.can_comment !== false,
         }}
         init={['initUI', 'initChat', 'initAnnotations']}
       />

@@ -349,27 +349,51 @@ export default function ArtworkPanel({
                 setError('This image cannot be displayed. Use a PNG, JPEG, or WebP copy.');
               }}
             />
+            {/* If a finding is selected, show its non-blocking outline box */}
+            {imageReady && highlights && selected && (() => {
+              const activeFinding = findings.find(f => f.id === selected);
+              const region = activeFinding?.regions[side];
+              if (!region) return null;
+              return (
+                <div
+                  className={`ivr-active-region-outline ${activeFinding.category === 'color' ? 'is-color' : ''}`}
+                  style={{
+                    left: `${region.x * 100}%`,
+                    top: `${region.y * 100}%`,
+                    width: `${region.w * 100}%`,
+                    height: `${region.h * 100}%`,
+                  }}
+                />
+              );
+            })()}
+
+            {/* Display clean numbered circular tags centered in each difference area */}
             {imageReady &&
               highlights &&
               findings.map(finding => {
                 const region = finding.regions[side];
                 if (!region) return null;
+                const isSelected = selected === finding.id;
+                const centerX = (region.x + region.w / 2) * 100;
+                const centerY = (region.y + region.h / 2) * 100;
                 return (
                   <button
                     key={finding.id}
-                    data-finding={finding.id}
-                    className={`ivr-region ${finding.category === 'color' ? 'is-color' : ''} ${
-                      selected === finding.id ? 'is-selected' : ''
+                    type="button"
+                    data-tag={finding.id}
+                    className={`ivr-tag-pin ${finding.category === 'color' ? 'is-color' : ''} ${
+                      isSelected ? 'is-selected' : ''
                     }`}
                     style={{
-                      left: `${region.x * 100}%`,
-                      top: `${region.y * 100}%`,
-                      width: `${region.w * 100}%`,
-                      height: `${region.h * 100}%`,
+                      left: `${centerX}%`,
+                      top: `${centerY}%`,
                     }}
                     aria-label={`Finding ${finding.id}: ${finding.title}`}
-                    title={finding.title}
-                    onClick={() => onSelect(finding.id)}
+                    title={`${finding.id}. ${finding.title}`}
+                    onClick={e => {
+                      e.stopPropagation();
+                      onSelect(finding.id);
+                    }}
                   >
                     <span>{finding.id}</span>
                   </button>

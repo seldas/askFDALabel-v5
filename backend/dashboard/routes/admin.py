@@ -38,6 +38,7 @@ def get_users():
             'can_select_db': u.can_select_database,
             'has_developer_access': u.has_developer_access,
             'ai_provider': u.ai_provider,
+            'can_comment': getattr(u, 'can_comment', True),
             'is_active': getattr(u, 'is_active', True),
             'created_at': u.created_at.isoformat() if getattr(u, 'created_at', None) else None,
             'last_login': u.last_login.isoformat() if getattr(u, 'last_login', None) else None
@@ -65,7 +66,8 @@ def create_user():
     if User.query.filter(db.func.lower(User.username) == username.lower()).first():
         return jsonify({'success': False, 'error': 'Username already exists'}), 400
 
-    new_user = User(username=username, created_at=utc_now())
+    can_comment = data.get('can_comment', True)
+    new_user = User(username=username, created_at=utc_now(), can_comment=bool(can_comment))
     new_user.set_role(role)
     new_user.set_password(password)
     db.session.add(new_user)
@@ -93,6 +95,8 @@ def update_user(user_id):
         user.set_role('admin' if data['is_admin'] else ROLE_USER)
     if 'is_active' in data:
         user.is_active = data['is_active']
+    if 'can_comment' in data:
+        user.can_comment = bool(data['can_comment'])
     if 'password' in data and data['password']:
         if user.sso_identities:
             return jsonify({'success': False, 'error': 'SSO passwords are managed by the identity provider.'}), 400

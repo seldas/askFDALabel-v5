@@ -1,18 +1,22 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import RequireFeature from '../components/RequireFeature';
 import ArtworkPanel from './ArtworkPanel';
-import { MODES, type Decision, type Finding, type Region, type Review, type ReviewMode, type Selection, type Side } from './types';
+import { MODES, type Decision, type Finding, type Region, type Review, type ReviewComment, type ReviewMode, type Selection, type Side } from './types';
 import { downloadReviewHtml, downloadReviewJson } from './exportReview';
+import { labelcompRoute } from '../platform/context';
+import { useUser } from '../context/UserContext';
 import './image-review.css';
 
 const EMPTY: Selection = { descriptor: {}, file: null, url: '', ready: false };
 
 function Workbench() {
+  const { session } = useUser();
+  const canComment = session?.can_comment !== false;
   const params = useSearchParams();
   const [mode, setMode] = useState<ReviewMode>('consistency');
   const [left, setLeft] = useState<Selection>(EMPTY);
@@ -20,6 +24,8 @@ function Workbench() {
   const [review, setReview] = useState<Review | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [decisions, setDecisions] = useState<Record<number, Decision>>({});
+  const [allComments, setAllComments] = useState<ReviewComment[]>([]);
+  const [savingComment, setSavingComment] = useState<number | null>(null);
   const [filter, setFilter] = useState<'all' | 'safety' | 'open'>('all');
   const [sync, setSync] = useState(true);
   const [zooms, setZooms] = useState({ left: 1, right: 1 });
@@ -48,9 +54,63 @@ function Workbench() {
     setReview(null);
     setSelected(null);
     setDecisions({});
+    setAllComments([]);
     setLastTaskId(null);
     setError('');
   }, []);
+
+  const fetchComments = useCallback(async (tid: number) => {
+    try {
+      const response = await fetch(`/api/image-review/reviews/${tid}/comments`);
+      if (!response.ok) return;
+      const data = await response.json();
+      if (Array.isArray(data.comments)) {
+        setAllComments(data.comments);
+        const myDecisions: Record<number, Decision> = {};
+        for (const c of data.comments) {
+          if (c.is_mine) {
+            myDecisions[c.finding_id] = {
+              status: c.decision,
+              note: c.comment,
+              is_public: c.is_public,
+              saved: true,
+            };
+          }
+        }
+        setDecisions(current => {
+          const next = { ...current };
+          for (const [idStr, dec] of Object.entries(myDecisions)) {
+            const fid = Number(idStr);
+            if (!next[fid] || (next[fid].status === 'unreviewed' && !next[fid].note)) {
+              next[fid] = dec;
+            } else {
+              next[fid] = { ...dec, ...next[fid], saved: true };
+            }
+          }
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load review comments:', err);
+    }
+  }, []);
+
+  const paramTaskId = params.get('task_id');
+  useEffect(() => {
+    if (paramTaskId) {
+      const tid = parseInt(paramTaskId, 10);
+      if (!isNaN(tid)) {
+        setLastTaskId(tid);
+        setTaskId(tid);
+      }
+    }
+  }, [paramTaskId]);
+
+  useEffect(() => {
+    if (lastTaskId && !taskId) {
+      void fetchComments(lastTaskId);
+    }
+  }, [lastTaskId, taskId, fetchComments]);
 
   const onLeft = useCallback((value: Selection) => {
     const key = JSON.stringify(value.descriptor) + value.url;
@@ -89,6 +149,7 @@ function Workbench() {
         if (data.result) {
           setReview(data.result);
           setSelected(current => current ?? data.result.findings[0]?.id ?? null);
+          void fetchComments(taskId);
         }
         if (data.status === 'completed') {
           setTaskId(null);
@@ -121,7 +182,7 @@ function Workbench() {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [taskId]);
+  }, [taskId, fetchComments]);
 
   const run = async () => {
     if (mode === 'consistency') {
@@ -155,6 +216,11 @@ function Workbench() {
       setProgress({ value: 0, message: 'Review queued. A running Celery worker is required.' });
       setLastTaskId(data.task_id);
       setTaskId(data.task_id);
+      if (typeof window !== 'undefined') {
+        const u = new URL(window.location.href);
+        u.searchParams.set('task_id', String(data.task_id));
+        window.history.replaceState(null, '', u.toString());
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -168,8 +234,93 @@ function Workbench() {
   const changeDecision = (id: number, change: Partial<Decision>) =>
     setDecisions(current => ({
       ...current,
-      [id]: { ...(current[id] || { status: 'unreviewed', note: '' }), ...change },
+      [id]: { ...(current[id] || { status: 'unreviewed', note: '', is_public: false }), ...change },
     }));
+
+  const saveDecisionToDb = useCallback(
+    async (findingId: number, customDecision?: Partial<Decision>) => {
+      if (!lastTaskId) return;
+      if (!canComment) {
+        alert('Commenting has been disabled for your account by an administrator.');
+        return;
+      }
+      const base = decisions[findingId] || { status: 'unreviewed', note: '', is_public: false };
+      const current = customDecision ? { ...base, ...customDecision } : base;
+
+      setSavingComment(findingId);
+      try {
+        const response = await fetch(`/api/image-review/reviews/${lastTaskId}/comments/${findingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            finding_id: findingId,
+            decision: current.status,
+            comment: current.note,
+            is_public: current.is_public ?? false,
+            set_id: left.descriptor?.set_id || null,
+          }),
+        });
+        if (response.ok) {
+          setDecisions(prev => ({
+            ...prev,
+            [findingId]: { ...current, saved: true },
+          }));
+          await fetchComments(lastTaskId);
+        } else {
+          const data = await response.json().catch(() => ({}));
+          if (data.error) alert(data.error);
+        }
+      } catch (e) {
+        console.error('Failed to save comment to database:', e);
+      } finally {
+        setSavingComment(null);
+      }
+    },
+    [lastTaskId, canComment, decisions, left.descriptor?.set_id, fetchComments]
+  );
+
+  const deleteCommentFromDb = useCallback(
+    async (findingId: number) => {
+      if (!lastTaskId) return;
+      if (!canComment) {
+        alert('Commenting has been disabled for your account by an administrator.');
+        return;
+      }
+      setSavingComment(findingId);
+      try {
+        const response = await fetch(`/api/image-review/reviews/${lastTaskId}/comments/${findingId}`, {
+          method: 'DELETE',
+        });
+        if (response.ok) {
+          setDecisions(prev => ({
+            ...prev,
+            [findingId]: { status: 'unreviewed', note: '', is_public: false, saved: false },
+          }));
+          await fetchComments(lastTaskId);
+        } else {
+          const data = await response.json().catch(() => ({}));
+          if (data.error) alert(data.error);
+        }
+      } catch (e) {
+        console.error('Failed to delete comment from database:', e);
+      } finally {
+        setSavingComment(null);
+      }
+    },
+    [lastTaskId, canComment, fetchComments]
+  );
+
+  const handleSelectFinding = useCallback((id: number) => {
+    setSelected(current => (current === id ? null : id));
+  }, []);
+
+  useEffect(() => {
+    if (selected === null) return;
+    const item = document.querySelector(`[data-finding-row="${selected}"]`);
+    if (item) {
+      item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [selected]);
 
   const current = review?.findings.find(f => f.id === selected);
   const visible = (review?.findings || []).filter(f =>
@@ -191,6 +342,52 @@ function Workbench() {
         : value
     );
 
+  // Set window name on mount so labelcomp can reuse/focus this window
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.name = 'fdalabel_image_review';
+    }
+  }, []);
+
+  const activeSetIds = useMemo(() => {
+    const list: string[] = [];
+    if (left.descriptor?.set_id) {
+      list.push(left.descriptor.set_id);
+    }
+    if (mode !== 'consistency' && right.descriptor?.set_id) {
+      list.push(right.descriptor.set_id);
+    }
+    if (list.length === 0) {
+      return params.getAll('set_ids');
+    }
+    return list;
+  }, [left.descriptor?.set_id, right.descriptor?.set_id, mode, params]);
+
+  const activeSplIds = useMemo(() => {
+    const list: string[] = [];
+    if (left.descriptor?.spl_id) {
+      list.push(left.descriptor.spl_id);
+    }
+    if (mode !== 'consistency' && right.descriptor?.spl_id) {
+      list.push(right.descriptor.spl_id);
+    }
+    if (list.length === 0) {
+      return params.getAll('spl_ids');
+    }
+    return list;
+  }, [left.descriptor?.spl_id, right.descriptor?.spl_id, mode, params]);
+
+  const handleOpenLabelcomp = () => {
+    const url = labelcompRoute({
+      setIds: activeSetIds.slice(0, 4),
+      splIds: activeSplIds.slice(0, 4),
+    });
+    const target = window.open(url, 'fdalabel_labelcomp');
+    if (target) {
+      target.focus();
+    }
+  };
+
   const canRun =
     !busy &&
     (mode === 'consistency'
@@ -211,15 +408,36 @@ function Workbench() {
                 : 'Compare artwork versions or identify look-alike product confusion risks.'}
             </p>
           </div>
-          <button className="ivr-button ivr-primary" disabled={!canRun} onClick={() => void run()}>
-            {busy
-              ? 'Audit in progress…'
-              : review
-              ? 'Run audit again'
-              : mode === 'consistency'
-              ? 'Check Labeling Consistency'
-              : 'Run visual review'}
-          </button>
+          <div className="ivr-heading-actions">
+            <button
+              type="button"
+              className="ivr-button"
+              onClick={handleOpenLabelcomp}
+              title={
+                activeSetIds.length > 0
+                  ? `Compare ${activeSetIds.length === 1 ? 'this label' : 'these 2 labels'} in LabelComp`
+                  : 'Open Label Comparison (LabelComp)'
+              }
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+                <path d="M16 3h5v5" />
+                <path d="M4 20L21 3" />
+                <path d="M21 16v5h-5" />
+                <path d="M15 15l6 6" />
+                <path d="M4 4l5 5" />
+              </svg>
+              Compare in LabelComp
+            </button>
+            <button className="ivr-button ivr-primary" disabled={!canRun} onClick={() => void run()}>
+              {busy
+                ? 'Audit in progress…'
+                : review
+                ? 'Run audit again'
+                : mode === 'consistency'
+                ? 'Check Labeling Consistency'
+                : 'Run visual review'}
+            </button>
+          </div>
         </header>
 
         <nav className="ivr-tabs" aria-label="Review mode">
@@ -301,7 +519,7 @@ function Workbench() {
                 highlights={highlights}
                 zoom={zooms.left}
                 onZoom={zoom => changeZoom('left', zoom)}
-                onSelect={setSelected}
+                onSelect={handleSelectFinding}
                 onChange={onLeft}
               />
             </div>
@@ -318,7 +536,7 @@ function Workbench() {
                 highlights={highlights}
                 zoom={zooms.left}
                 onZoom={zoom => changeZoom('left', zoom)}
-                onSelect={setSelected}
+                onSelect={handleSelectFinding}
                 onChange={onLeft}
               />
               <ArtworkPanel
@@ -332,7 +550,7 @@ function Workbench() {
                 highlights={highlights}
                 zoom={zooms.right}
                 onZoom={zoom => changeZoom('right', zoom)}
-                onSelect={setSelected}
+                onSelect={handleSelectFinding}
                 onChange={onRight}
               />
             </div>
@@ -418,10 +636,11 @@ function Workbench() {
                       {visible.map(f => (
                         <button
                           key={f.id}
+                          data-finding-row={f.id}
                           className={`ivr-finding ${selected === f.id ? 'is-selected' : ''} ${
                             f.category === 'color' ? 'is-color' : ''
                           }`}
-                          onClick={() => setSelected(f.id)}
+                          onClick={() => handleSelectFinding(f.id)}
                           aria-pressed={selected === f.id}
                         >
                           <span className="ivr-number">{f.id}</span>
@@ -448,8 +667,14 @@ function Workbench() {
                     <FindingDetails
                       mode={mode}
                       finding={current}
-                      decision={decisions[current.id] || { status: 'unreviewed', note: '' }}
+                      decision={decisions[current.id] || { status: 'unreviewed', note: '', is_public: false }}
+                      teamComments={allComments.filter(c => c.finding_id === current.id && !c.is_mine && c.is_public)}
+                      lastTaskId={lastTaskId}
+                      saving={savingComment === current.id}
+                      canComment={canComment}
                       onDecision={value => changeDecision(current.id, value)}
+                      onSaveToDb={change => saveDecisionToDb(current.id, change)}
+                      onDeleteFromDb={() => deleteCommentFromDb(current.id)}
                       onRegion={(side, region) => adjust(current.id, side, region)}
                     />
                   </fieldset>
@@ -502,7 +727,7 @@ function Workbench() {
                   >
                     {exporting ? 'Exporting…' : 'Export annotated report'}
                   </button>
-                  <p>Decisions and adjusted regions stay in this session. Export to preserve them.</p>
+                  <p>Decisions and comments are saved to the database. Export anytime to download full audit reports.</p>
                 </footer>
               </>
             )}
@@ -521,16 +746,35 @@ function FindingDetails({
   mode,
   finding,
   decision,
+  teamComments,
+  lastTaskId,
+  saving,
+  canComment = true,
   onDecision,
+  onSaveToDb,
+  onDeleteFromDb,
   onRegion,
 }: {
   mode: ReviewMode;
   finding: Finding;
   decision: Decision;
+  teamComments: ReviewComment[];
+  lastTaskId: number | null;
+  saving: boolean;
+  canComment?: boolean;
   onDecision: (value: Partial<Decision>) => void;
+  onSaveToDb: (change?: Partial<Decision>) => Promise<void>;
+  onDeleteFromDb: () => Promise<void>;
   onRegion: (side: Side, region: Region | null) => void;
 }) {
   const isConsistency = mode === 'consistency';
+  const [showAllComments, setShowAllComments] = useState(false);
+
+  useEffect(() => {
+    setShowAllComments(false);
+  }, [finding.id]);
+
+  const displayedComments = showAllComments ? teamComments : teamComments.slice(0, 1);
 
   return (
     <section className="ivr-details">
@@ -538,6 +782,17 @@ function FindingDetails({
         <h3>Finding {finding.id} · {finding.title}</h3>
         <span className="ivr-confidence">Confidence: {finding.confidence}</span>
       </header>
+
+      {!canComment && (
+        <div className="ivr-comment-disabled-banner" role="alert">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span>Commenting and clinical justifications have been disabled for your account by an administrator.</span>
+        </div>
+      )}
 
       {finding.risk && (
         <div className="ivr-risk">
@@ -589,30 +844,176 @@ function FindingDetails({
 
       <div className="ivr-decision">
         <button
+          type="button"
           className="ivr-button"
+          disabled={!canComment}
+          title={!canComment ? 'Commenting and decisions disabled for your account' : undefined}
           aria-pressed={decision.status === 'confirmed'}
-          onClick={() => onDecision({ status: decision.status === 'confirmed' ? 'unreviewed' : 'confirmed' })}
+          onClick={() => {
+            if (!canComment) return;
+            const nextStatus = decision.status === 'confirmed' ? 'unreviewed' : 'confirmed';
+            onDecision({ status: nextStatus, saved: false });
+            if (lastTaskId) {
+              void onSaveToDb({ status: nextStatus });
+            }
+          }}
         >
           ✓ Confirm Finding
         </button>
         <button
+          type="button"
           className="ivr-button"
+          disabled={!canComment}
+          title={!canComment ? 'Commenting and decisions disabled for your account' : undefined}
           aria-pressed={decision.status === 'dismissed'}
-          onClick={() => onDecision({ status: decision.status === 'dismissed' ? 'unreviewed' : 'dismissed' })}
+          onClick={() => {
+            if (!canComment) return;
+            const nextStatus = decision.status === 'dismissed' ? 'unreviewed' : 'dismissed';
+            onDecision({ status: nextStatus, saved: false });
+            if (lastTaskId) {
+              void onSaveToDb({ status: nextStatus });
+            }
+          }}
         >
           ✕ Dismiss
         </button>
       </div>
 
+      <div className="ivr-comment-visibility">
+        <label className="ivr-visibility-option" title="Private comments are visible only to your personal account">
+          <input
+            type="radio"
+            name={`visibility-${finding.id}`}
+            checked={!decision.is_public}
+            disabled={!canComment}
+            onChange={() => {
+              if (!canComment) return;
+              onDecision({ is_public: false, saved: false });
+              if (lastTaskId) {
+                void onSaveToDb({ is_public: false });
+              }
+            }}
+          />
+          <span>🔒 Private (Only me)</span>
+        </label>
+        <label className="ivr-visibility-option" title="Public comments are visible to all users, showing your username">
+          <input
+            type="radio"
+            name={`visibility-${finding.id}`}
+            checked={!!decision.is_public}
+            disabled={!canComment}
+            onChange={() => {
+              if (!canComment) return;
+              onDecision({ is_public: true, saved: false });
+              if (lastTaskId) {
+                void onSaveToDb({ is_public: true });
+              }
+            }}
+          />
+          <span>🌐 Public (Visible to all)</span>
+        </label>
+      </div>
+      <p className="ivr-comment-visibility-hint">
+        {decision.is_public
+          ? '🌐 Public: Visible to all reviewers and colleagues with your username.'
+          : '🔒 Private (Default): Saved to database, visible only to your personal account.'}
+      </p>
+
       <label>
-        Reviewer note
+        Reviewer comment / justification note
         <textarea
-          rows={2}
-          placeholder="Add comments or clinical verification notes…"
-          value={decision.note}
-          onChange={e => onDecision({ note: e.target.value })}
+          rows={3}
+          placeholder={!canComment ? 'Commenting has been disabled for your account.' : 'Add comments or clinical verification notes…'}
+          value={decision.note || ''}
+          disabled={!canComment}
+          onChange={e => onDecision({ note: e.target.value, saved: false })}
+          onBlur={() => {
+            if (!canComment) return;
+            if (lastTaskId && !decision.saved && decision.note?.trim()) {
+              void onSaveToDb();
+            }
+          }}
         />
       </label>
+
+      <div className="ivr-comment-actions">
+        <button
+          type="button"
+          className={`ivr-button ivr-save-comment-btn ${decision.saved ? 'is-saved' : 'ivr-primary'}`}
+          disabled={!canComment || saving || !lastTaskId}
+          onClick={() => void onSaveToDb()}
+          title={!canComment ? 'Commenting is disabled for your account' : !lastTaskId ? 'Run visual review to save to database' : 'Save comment and decision to database'}
+        >
+          {saving ? 'Saving…' : decision.saved ? '✓ Saved to DB' : 'Save Comment & Decision'}
+        </button>
+        {decision.saved && (
+          <button
+            type="button"
+            className="ivr-button ivr-delete-comment-btn"
+            disabled={!canComment || saving}
+            onClick={() => void onDeleteFromDb()}
+            title={!canComment ? 'Commenting is disabled for your account' : 'Delete your saved comment and reset decision'}
+          >
+            Clear / Delete
+          </button>
+        )}
+      </div>
+
+      {teamComments.length > 0 && (
+        <div className="ivr-team-comments">
+          <div className="ivr-team-comments-header">
+            <h4>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              Team Reviews & Public Comments ({teamComments.length})
+            </h4>
+            {teamComments.length > 1 && (
+              <button
+                type="button"
+                className="ivr-more-comments-btn"
+                onClick={() => setShowAllComments(prev => !prev)}
+                title={showAllComments ? 'Collapse to 1 comment' : 'Show all comments'}
+              >
+                {showAllComments ? 'Less' : `More (${teamComments.length - 1})`}
+              </button>
+            )}
+          </div>
+          <div className="ivr-team-comments-list">
+            {displayedComments.map(c => (
+              <div key={c.id} className="ivr-team-comment-item">
+                <div className="ivr-team-comment-header">
+                  <span className="ivr-comment-author">
+                    <strong>@{c.username}</strong>
+                    <span className="ivr-badge-public">Public</span>
+                  </span>
+                  <span className={`ivr-comment-decision is-${c.decision}`}>
+                    {c.decision === 'confirmed' ? '✓ Confirmed' : c.decision === 'dismissed' ? '✕ Dismissed' : 'Unreviewed'}
+                  </span>
+                  {c.updated_at && (
+                    <span className="ivr-comment-time">
+                      {new Date(c.updated_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                    </span>
+                  )}
+                </div>
+                {c.comment && <p className="ivr-comment-body">{c.comment}</p>}
+              </div>
+            ))}
+          </div>
+          {teamComments.length > 1 && !showAllComments && (
+            <button
+              type="button"
+              className="ivr-more-comments-link"
+              onClick={() => setShowAllComments(true)}
+            >
+              + {teamComments.length - 1} more…
+            </button>
+          )}
+        </div>
+      )}
 
       <details>
         <summary>Adjust highlight region coordinates</summary>

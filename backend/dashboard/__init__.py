@@ -172,6 +172,9 @@ def ensure_user_schema():
                 "NOT NULL DEFAULT 'user';"
             ))
             db.session.execute(text(
+                'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS can_comment BOOLEAN NOT NULL DEFAULT TRUE;'
+            ))
+            db.session.execute(text(
                 'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS api_key VARCHAR(64);'
             ))
             # Existing admins keep admin; everyone else lands on 'user', so no

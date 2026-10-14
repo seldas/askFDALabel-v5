@@ -177,6 +177,7 @@ def session():
             'username': current_user.username,
             'is_admin': current_user.is_admin,
             'role': current_user.effective_role,
+            'can_comment': getattr(current_user, 'can_comment', True),
             # Whether the database switch is offered at all. Normal users are
             # pinned to the CDER-CBER scope; see labelquery._resolve_target_db,
             # which enforces the same rule server-side.

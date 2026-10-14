@@ -39,6 +39,10 @@ window.initAnnotations = function() {
         },
 
         handleSelection: function(e) {
+            if (window.canComment === false) {
+                this.closeToolbar();
+                return;
+            }
             if (e.target.closest('.selection-toolbar') || 
                 e.target.closest('.color-palette') || 
                 e.target.closest('.comment-input-box')) return;
@@ -194,6 +198,10 @@ window.initAnnotations = function() {
         },
 
         saveAnnotation: function(type, data) {
+            if (window.canComment === false) {
+                alert("Highlights and annotations have been disabled for your account by an administrator.");
+                return;
+            }
             if (!this.currentSelection) return;
             
             const { sectionNode, sectionId, range, text } = this.currentSelection;

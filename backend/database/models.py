@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
@@ -66,6 +67,7 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), nullable=False, default=ROLE_USER, server_default=ROLE_USER)
     is_admin = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True, server_default='true')
+    can_comment = db.Column(db.Boolean, default=True, server_default='true', nullable=False)
     created_at = db.Column(db.DateTime, default=utc_now)
     last_login = db.Column(db.DateTime, nullable=True)
 
@@ -257,6 +259,50 @@ class ImageAnalysisCache(db.Model):
     model_name = db.Column(db.String(255), nullable=False)
     result_json = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+
+
+class ImageReviewComment(db.Model):
+    """User comments, justifications, and decision records on visual review findings."""
+    __tablename__ = 'image_review_comments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('system_tasks.id', ondelete='CASCADE'), nullable=False, index=True)
+    finding_id = db.Column(db.Integer, nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
+    set_id = db.Column(db.String(100), nullable=True, index=True)
+
+    decision = db.Column(db.String(20), default='unreviewed', nullable=False)  # 'unreviewed', 'confirmed', 'dismissed'
+    comment = db.Column(db.Text, nullable=True)  # Reviewer comments or clinical justification
+    is_public = db.Column(db.Boolean, default=False, nullable=False)  # False=private, True=public
+    regions = db.Column(db.Text, nullable=True)  # Optional JSON string of adjusted region coordinates
+
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    user = db.relationship('User', backref=db.backref('image_review_comments', lazy=True, cascade='all, delete-orphan'))
+    task = db.relationship('SystemTask', backref=db.backref('image_review_comments', lazy=True, cascade='all, delete-orphan'))
+
+    __table_args__ = (
+        db.UniqueConstraint('task_id', 'finding_id', 'user_id', name='uq_image_review_comment_task_finding_user'),
+    )
+
+    def to_dict(self, current_user_id=None):
+        return {
+            'id': self.id,
+            'task_id': self.task_id,
+            'finding_id': self.finding_id,
+            'user_id': self.user_id,
+            'username': self.user.username if self.user else 'Unknown',
+            'set_id': self.set_id,
+            'decision': self.decision,
+            'comment': self.comment or '',
+            'is_public': bool(self.is_public),
+            'is_mine': (self.user_id == current_user_id) if current_user_id is not None else False,
+            'regions': json.loads(self.regions) if self.regions else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
 
 class LabelAnnotation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
