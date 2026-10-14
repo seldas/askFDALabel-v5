@@ -197,4 +197,23 @@ body:has(.ivr-page) { min-width:0; }
   color: #dc2626;
 }
 
+/* Archived artwork friendly notice */
+.ivr-empty-artwork.ivr-archived-artwork {
+  background: var(--fdl-canvas, #f8fafc);
+  border: 1px dashed var(--fdl-line, #cbd5e1);
+  padding: 32px 20px;
+}
+.ivr-empty-artwork.ivr-archived-artwork strong {
+  color: var(--fdl-navy-950, #0f172a);
+  font-size: 0.88rem;
+  margin-top: 10px;
+}
+.ivr-empty-artwork.ivr-archived-artwork span {
+  color: var(--fdl-muted, #64748b);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  margin-top: 6px;
+  max-width: 360px;
+}
+
 

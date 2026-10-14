@@ -46,6 +46,7 @@ export default function ArtworkPanel({
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isArchivedUnavailable, setIsArchivedUnavailable] = useState(false);
   const [imageReady, setImageReady] = useState(false);
   const [natural, setNatural] = useState({ width: 1, height: 1 });
   const [frame, setFrame] = useState({ width: 0, height: 0 });
@@ -114,6 +115,7 @@ export default function ArtworkPanel({
     let objectUrl = '';
     setUrl('');
     setImageReady(false);
+    setIsArchivedUnavailable(false);
     if (upload) {
       objectUrl = URL.createObjectURL(upload);
       setUrl(objectUrl);
@@ -122,19 +124,28 @@ export default function ArtworkPanel({
       fetch(`/api/image-review/labels/${encodeURIComponent(loaded.set_id)}/images/${assetId}${query}`, { signal: controller.signal })
         .then(async response => {
           if (!response.ok) {
-            const body = await response.json();
-            throw new Error(body.error || 'Image unavailable.');
+            const body = await response.json().catch(() => ({}));
+            const errMsg = body.error || 'Image unavailable.';
+            if (errMsg.includes('Archived labeling image is currently not available')) {
+              if (alive) setIsArchivedUnavailable(true);
+              return;
+            }
+            throw new Error(errMsg);
           }
           return response.blob();
         })
         .then(blob => {
-          if (alive) {
+          if (alive && blob) {
             objectUrl = URL.createObjectURL(blob);
             setUrl(objectUrl);
+            setIsArchivedUnavailable(false);
           }
         })
         .catch(e => {
-          if (alive && e.name !== 'AbortError') setError(e.message);
+          if (alive && e.name !== 'AbortError') {
+            setIsArchivedUnavailable(false);
+            setError(e.message);
+          }
         });
     }
     return () => {
@@ -399,6 +410,21 @@ export default function ArtworkPanel({
                   </button>
                 );
               })}
+          </div>
+        ) : isArchivedUnavailable ? (
+          <div className="ivr-empty-artwork ivr-archived-artwork">
+            <svg viewBox="0 0 48 48" width="48" height="48" fill="none" stroke="#64748b" strokeWidth="1.5">
+              <rect x="6" y="8" width="36" height="32" rx="2" />
+              <path d="M14 18h20M14 26h14M14 34h8" />
+              <circle cx="34" cy="32" r="6" stroke="#94a3b8" />
+              <path d="M34 29v3l2 2" stroke="#94a3b8" />
+            </svg>
+            <strong>Archived labeling image is currently not available in askFDALabel.</strong>
+            <span>
+              This is a historical label version. Images for archived labels cannot be pulled from DailyMed.
+              <br />
+              You may upload a package photo or artwork above to review against this labeling.
+            </span>
           </div>
         ) : (
           <div className="ivr-empty-artwork">

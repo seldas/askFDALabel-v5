@@ -73,7 +73,7 @@ def get_media_map(root):
                             if mid and fname: media_map[mid] = fname
     return media_map
 
-def to_html(element, media_map=None, set_id=None):
+def to_html(element, media_map=None, set_id=None, is_archived=False):
     if element is None: return ""
     
     def _clean_chunk(text):
@@ -88,10 +88,13 @@ def to_html(element, media_map=None, set_id=None):
         
         child_html = ""
         for child in element:
-            child_html += to_html(child, media_map, set_id)
+            child_html += to_html(child, media_map, set_id, is_archived=is_archived)
             
-        img_url = f"https://dailymed.nlm.nih.gov/dailymed/image.cfm?setid={set_id}&name={filename}" if filename and set_id else ""
-        img_tag = f'<img src="{img_url}" style="max-width:100%"/>' if img_url else ""
+        if is_archived:
+            img_tag = f'<div class="spl-archived-image-notice" style="display:inline-block; margin:12px auto; padding:12px 18px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:4px; color:#64748b; font-size:0.85rem; text-align:center;"><p style="margin:0 0 4px 0; font-weight:600; color:#334155;">📦 Archived labeling image is currently not available in askFDALabel.</p><span style="font-size:0.75rem; color:#94a3b8;">({filename or "Image"})</span></div>'
+        else:
+            img_url = f"https://dailymed.nlm.nih.gov/dailymed/image.cfm?setid={set_id}&name={filename}" if filename and set_id else ""
+            img_tag = f'<img src="{img_url}" style="max-width:100%"/>' if img_url else ""
         return f'<div class="spl-figure" style="text-align: center; margin: 20px 0;">{img_tag}{child_html}</div>{_clean_chunk(element.tail)}'
 
     tag_map = {
@@ -130,7 +133,7 @@ def to_html(element, media_map=None, set_id=None):
         if raw_tag == 'item' and child_raw_tag == 'caption':
             inner_html += _clean_chunk(child.tail)
             continue
-        inner_html += to_html(child, media_map, set_id)
+        inner_html += to_html(child, media_map, set_id, is_archived=is_archived)
     
     if html_tag == 'br': 
         return f"<br/>{_clean_chunk(element.tail)}"
@@ -338,7 +341,7 @@ def detect_multiple_xml_roots(xml_text: str) -> bool:
     matches = re.findall(r'<\?xml\b|<document\b', xml_text, flags=re.IGNORECASE)
     return len(matches) > 1
 
-def parse_spl_xml(xml_string, set_id=None):
+def parse_spl_xml(xml_string, set_id=None, is_archived=False):
     if not xml_string: 
         return "Error", [], None, None, [], []
 
@@ -431,14 +434,14 @@ def parse_spl_xml(xml_string, set_id=None):
                 sec_id = "sec_" + hashlib.md5(content_sample.encode()).hexdigest()[:10]
 
             # Content
-            content = to_html(txt_nodes[0], media_map, set_id) if txt_nodes else ""
+            content = to_html(txt_nodes[0], media_map, set_id, is_archived=is_archived) if txt_nodes else ""
             content = clean_spl_text(content)
             
             # Highlights
             if any(local(child.tag) == 'excerpt' for child in sec_el):
                 for exc in [c for c in sec_el if local(c.tag) == 'excerpt']:
                     for hl in [c for c in exc if local(c.tag) == 'highlight']:
-                        hl_html = to_html(hl, media_map, set_id)
+                        hl_html = to_html(hl, media_map, set_id, is_archived=is_archived)
                         highlights.append({'source_section_title': title or "Highlights", 'content_html': clean_spl_text(hl_html)})
 
             # Children

@@ -67,7 +67,29 @@ def read_local_artwork(source, inventory, asset_id):
                     if candidate.stat().st_size > FILE_LIMIT:
                         raise RequestEntityTooLarge('Artwork exceeds 12 MiB.')
                     return candidate.read_bytes()
-    raise NotFound('Exact-version artwork is not available locally. Upload the corresponding image; current DailyMed artwork is not substituted.')
+
+    set_id = source.get('set_id')
+    spl_id = source.get('spl_id')
+    is_latest = FDALabelDBService.is_latest_spl(set_id, spl_id)
+    if not is_latest:
+        raise NotFound('Archived labeling image is currently not available in askFDALabel.')
+
+    # For the current version (or set_id query), fallback to DailyMed
+    import requests
+    try:
+        resp = requests.get(
+            'https://dailymed.nlm.nih.gov/dailymed/image.cfm',
+            params={'setid': set_id, 'name': media_path},
+            timeout=(5, 30),
+        )
+        if resp.status_code == 200 and resp.content:
+            if len(resp.content) > FILE_LIMIT:
+                raise RequestEntityTooLarge('Artwork exceeds 12 MiB.')
+            return resp.content
+    except requests.RequestException:
+        pass
+
+    raise NotFound('Artwork image is not available locally or on DailyMed.')
 
 
 def normalized_image(raw):

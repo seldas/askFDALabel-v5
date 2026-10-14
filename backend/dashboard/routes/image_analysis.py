@@ -17,6 +17,7 @@ from urllib.parse import urlencode
 import requests
 from flask import Blueprint, abort, current_app, jsonify, request, send_file
 from flask_login import current_user, login_required
+from werkzeug.exceptions import HTTPException
 from PIL import Image
 
 from dashboard.routes.guards import require_feature
@@ -156,6 +157,11 @@ def _read_artwork(set_id, spl_id, asset_id):
         except zipfile.BadZipFile:
             logger.warning("Invalid SPL archive for set_id=%s", set_id)
 
+    # Not found in local zip. Check if this is an archived SPL version.
+    is_latest = FDALabelDBService.is_latest_spl(set_id, spl_id)
+    if not is_latest:
+        abort(404, description="Archived labeling image is currently not available in askFDALabel.")
+
     # The existing label reader also uses DailyMed for SPL media. Keep the
     # host fixed here; never accept an arbitrary image URL from the browser.
     try:
@@ -260,13 +266,19 @@ def list_label_images(set_id):
     xml, source, inventory = _resolved_label(set_id, spl_id)
     if not xml:
         return jsonify({"error": "Label not found"}), 404
+    is_latest = FDALabelDBService.is_latest_spl(set_id, spl_id)
     items = inventory[0]
     for item in items:
         media_path = next((path for ref_id, path in inventory[1].items()
                            if hashlib.sha256(f"{ref_id}:{path}".encode()).hexdigest()[:24] == item["id"]), None)
-        item["url"] = "https://dailymed.nlm.nih.gov/dailymed/image.cfm?" + urlencode({"setid": set_id, "name": media_path or item["filename"]})
         item["proxy_url"] = f"/api/image-analysis/{set_id}/images/{item['id']}" + (f"?spl_id={spl_id}" if spl_id else "")
-    return jsonify({"images": items, "spl_id": source.get("spl_id"), "source": source.get("origin")})
+        if not is_latest:
+            item["url"] = item["proxy_url"]
+            item["is_archived"] = True
+        else:
+            item["url"] = "https://dailymed.nlm.nih.gov/dailymed/image.cfm?" + urlencode({"setid": set_id, "name": media_path or item["filename"]})
+            item["is_archived"] = False
+    return jsonify({"images": items, "spl_id": source.get("spl_id"), "source": source.get("origin"), "is_archived": not is_latest})
 
 
 @image_analysis_bp.get("/<set_id>/images/<asset_id>")
@@ -275,6 +287,8 @@ def list_label_images(set_id):
 def get_label_image(set_id, asset_id):
     try:
         raw = _read_artwork(set_id, request.args.get("spl_id"), asset_id)
+    except HTTPException:
+        raise
     except requests.HTTPError as exc:
         status = exc.response.status_code if exc.response is not None else 502
         return jsonify({"error": f"DailyMed could not find this image (HTTP {status})."}), 404 if status == 404 else 502

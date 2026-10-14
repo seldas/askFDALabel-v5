@@ -329,7 +329,11 @@ def view_label(set_id):
         # public server.
         return jsonify(label_not_found_payload(set_id, spl_id)), 404
 
-    doc_title, sections, fallback_html, highlights, table_of_contents, product_data = parse_spl_xml(label_xml_raw, set_id)
+    db_meta = get_label_metadata(set_id, import_id=import_id, spl_id=spl_id)
+    is_latest = db_meta.get('is_latest', True) if db_meta else True
+    is_archived = bool(spl_id and not is_latest)
+
+    doc_title, sections, fallback_html, highlights, table_of_contents, product_data = parse_spl_xml(label_xml_raw, set_id, is_archived=is_archived)
     
     # Re-use the clean_name logic for the display drug name
     def clean_header_text(text):
@@ -369,7 +373,8 @@ def view_label(set_id):
     metadata = extract_metadata_from_xml(label_xml_raw)
     
     # Enrich with database metadata (RLD, RS, etc.)
-    db_meta = get_label_metadata(set_id, import_id=import_id, spl_id=spl_id)
+    if not db_meta:
+        db_meta = get_label_metadata(set_id, import_id=import_id, spl_id=spl_id)
     if db_meta:
         if not metadata:
             metadata = db_meta

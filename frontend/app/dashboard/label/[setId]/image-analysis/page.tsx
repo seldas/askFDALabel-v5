@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm';
 import { useLabel } from '../LabelContext';
 import './image-analysis.css';
 
-type LabelImage = { id: string; filename: string; title: string; category: string; url: string; proxy_url: string };
+type LabelImage = { id: string; filename: string; title: string; category: string; url: string; proxy_url: string; is_archived?: boolean };
 type CompareResult = { style: string; content: string; critical_summary: string };
 
 function splitProcessReview(text: string) {
@@ -64,7 +64,9 @@ export default function ImageAnalysisPage() {
       setProxyImageIds((current) => [...current, image.id]);
     } else {
       setBrokenImageIds((current) => current.includes(image.id) ? current : [...current, image.id]);
-      setError(`Could not load ${image.filename} from DailyMed or the local SPL package.`);
+      if (!image.is_archived) {
+        setError(`Could not load ${image.filename} from DailyMed or the local SPL package.`);
+      }
     }
   };
 
@@ -169,7 +171,7 @@ export default function ImageAnalysisPage() {
       {!loading && images.length > 0 && <nav className="image-review__filmstrip" aria-label="Label images">
         <div className="image-review__filmstrip-title">Select an image <span>{images.length}</span></div>
               <div className="image-review__cards">{images.map((image) => <button key={image.id} className={`image-review__card ${selectedId === image.id ? 'is-selected' : ''}`} onClick={() => { setSelectedId(image.id); setProcessResult(''); setProcessCached(false); setHasProcessed(false); }} aria-pressed={selectedId === image.id}>
-          {brokenImageIds.includes(image.id) ? <span className="image-review__thumb-error">Unavailable</span> : <img src={imageSrc(image)} onError={() => imageFailed(image)} alt="" loading="lazy" />}
+          {brokenImageIds.includes(image.id) ? <span className="image-review__thumb-error">{image.is_archived ? 'Archived' : 'Unavailable'}</span> : <img src={imageSrc(image)} onError={() => imageFailed(image)} alt="" loading="lazy" />}
           <span className="image-review__card-category">{image.category}</span>
           <span className="image-review__card-name">{image.title}</span>
         </button>)}</div>
@@ -193,7 +195,21 @@ export default function ImageAnalysisPage() {
         <>
           <section className="image-review__stage" aria-label="Selected label image">
             {selected && <>
-              <div className="image-review__preview-wrap">{brokenImageIds.includes(selected.id) ? <div className="image-review__image-error">Image unavailable<br /><small>{selected.filename}</small></div> : <button className="image-review__preview-button" onClick={() => { setImageZoom(1); setImageViewerOpen(true); }} aria-label="Open image viewer"><img src={imageSrc(selected)} onError={() => imageFailed(selected)} alt={selected.title} className="image-review__preview" /><span>Click to enlarge</span></button>}</div>
+              <div className="image-review__preview-wrap">{brokenImageIds.includes(selected.id) ? (
+                <div className="image-review__image-error">
+                  {selected.is_archived ? (
+                    <>
+                      <strong>Archived labeling image is currently not available in askFDALabel.</strong>
+                      <br />
+                      <small>{selected.filename}</small>
+                    </>
+                  ) : (
+                    <>
+                      Image unavailable<br /><small>{selected.filename}</small>
+                    </>
+                  )}
+                </div>
+              ) : <button className="image-review__preview-button" onClick={() => { setImageZoom(1); setImageViewerOpen(true); }} aria-label="Open image viewer"><img src={imageSrc(selected)} onError={() => imageFailed(selected)} alt={selected.title} className="image-review__preview" /><span>Click to enlarge</span></button>}</div>
               <div className="image-review__caption"><span>{selected.category}</span><strong>{selected.title}</strong><small>{selected.filename}</small></div>
             </>}
           </section>

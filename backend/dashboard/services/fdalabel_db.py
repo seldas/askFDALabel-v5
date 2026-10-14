@@ -847,6 +847,27 @@ class FDALabelDBService:
         return cls.get_label_metadata(None, spl_id=spl_id)
 
     @classmethod
+    def is_latest_spl(cls, set_id, spl_id=None):
+        """
+        Check if spl_id is the active / latest version for set_id.
+        If no spl_id is provided, returns True (current version by definition).
+        If spl_id is an archived / historical version, returns False.
+        """
+        if not spl_id:
+            return True
+        try:
+            meta = cls.get_label_metadata(set_id, spl_id=spl_id)
+            if meta and 'is_latest' in meta:
+                return bool(meta['is_latest'])
+            if set_id:
+                latest_meta = cls.get_label_metadata(set_id)
+                if latest_meta and latest_meta.get('spl_id'):
+                    return latest_meta.get('spl_id') == spl_id
+        except Exception as e:
+            logger.warning(f"Error checking is_latest_spl for {set_id}/{spl_id}: {e}")
+        return True
+
+    @classmethod
     def get_structured_sections_by_spl_id(cls, spl_id):
         """
         Always empty: there is no structured section store any more.
