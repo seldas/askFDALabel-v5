@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState, useRef, Suspense, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import LegacyBridge from './LegacyBridge';
 import LabelChat from './LabelChat';
 import LabelAnnotations from './LabelAnnotations';
 import NotesModal from './NotesModal';
@@ -335,6 +334,7 @@ function LabelContent() {
     title: 'Table Data',
     html: '',
   });
+  const [meddraModalOpen, setMeddraModalOpen] = useState(false);
 
   // New Favorite/Project states
   const [isFavoriteAny, setIsFavoriteAny] = useState(false);
@@ -392,13 +392,21 @@ function LabelContent() {
         setTableExtractModalOpen(true);
       }
     };
-    window.addEventListener('open-table-extractor', handleOpenTableExtract);
-    return () => window.removeEventListener('open-table-extractor', handleOpenTableExtract);
-  }, []);
+    const handleCloseMeddraModal = () => setMeddraModalOpen(false);
 
+    window.addEventListener('open-table-extractor', handleOpenTableExtract);
+    window.addEventListener('meddra:close-modal', handleCloseMeddraModal);
+    return () => {
+      window.removeEventListener('open-table-extractor', handleOpenTableExtract);
+      window.removeEventListener('meddra:close-modal', handleCloseMeddraModal);
+    };
+  }, []);
 
   useEffect(() => {
     if (data) {
+      if (typeof window !== 'undefined') {
+        (window as any).currentSetId = data.set_id;
+      }
       const brand = data.brand_name || data.drug_name;
       const generic = data.generic_name;
       const effective = data.effective_time;
@@ -790,6 +798,12 @@ function LabelContent() {
             <button
               id="meddra-stats-btn"
               disabled={pvProfileReady === false}
+              onClick={() => {
+                setMeddraModalOpen(true);
+                setTimeout(() => {
+                  (window as any).loadMeddraStatistics?.();
+                }, 50);
+              }}
               className={`label-tool-btn label-tool-meddra ${pvProfileReady === false ? 'disabled' : ''}`}
               data-tooltip={
                 pvProfileReady === false
@@ -919,36 +933,8 @@ function LabelContent() {
         </div>
       )}
 
-      {/* Hidden Data for JS */}
+      {/* Hidden Data for JS / Backward Compatibility */}
       <div id="xml-content" style={{ display: 'none' }}>{data.label_xml_raw}</div>
-
-      {/*
-        Ordered, promise-based loading of the legacy bundles. The per-label
-        globals below were previously written by an inline <Script>, which
-        raced the bundles that read them; LegacyBridge assigns them before the
-        first script executes.
-
-        Note the absent 'initToxAgents': no bundle defines it, since DrugTox
-        lives on its own page. The previous polling loop required it as part of
-        its readiness check, so that check could never pass — meaning none of
-        these initializers, nor the MedDRA scan, ever actually ran.
-      */}
-      <LegacyBridge
-        resetKey={setId}
-        scripts={['chart', 'marked', 'utils', 'ui']}
-        globals={{
-          currentSetId: data.set_id,
-          currentDrugName: data.faers_drug_name,
-          currentGenericName: data.generic_name,
-          currentManufacturer: data.manufacturer_name,
-          currentEffectiveTime: data.effective_time,
-          toxSummary: data.tox_summary,
-          currentUserId: session?.id ?? data.user_id ?? null,
-          savedAnnotations: data.saved_annotations,
-          canComment: Boolean(session?.is_authenticated && session?.can_comment !== false),
-        }}
-        init={['initUI']}
-      />
 
       <LabelAnnotations
         setId={setId}
@@ -971,7 +957,14 @@ function LabelContent() {
         tableHtml={tableExtractData.html}
       />
 
-      <div id="meddra-stats-modal" className="custom-modal" style={{ display: 'none' }}>
+      <div 
+        id="meddra-stats-modal" 
+        className="custom-modal" 
+        style={{ display: meddraModalOpen ? 'block' : 'none' }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setMeddraModalOpen(false);
+        }}
+      >
         <div className="custom-modal-content">
           <div className="custom-modal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
             <h3 style={{ margin: 0 }}>Statistics of Adverse Events by MedDRA</h3>
@@ -998,7 +991,12 @@ function LabelContent() {
               >
                 <span style={{ fontSize: '1rem' }}>{"\u2b21"}</span> Download MedDRA Profile
               </button>
-              <span className="close-modal" id="close-meddra-stats" style={{ cursor: 'pointer', fontSize: '1.5rem' }}>&times;</span>
+              <span 
+                className="close-modal" 
+                id="close-meddra-stats" 
+                onClick={() => setMeddraModalOpen(false)}
+                style={{ cursor: 'pointer', fontSize: '1.5rem' }}
+              >&times;</span>
             </div>
           </div>
           <div className="custom-modal-body" id="meddra-stats-body"></div>

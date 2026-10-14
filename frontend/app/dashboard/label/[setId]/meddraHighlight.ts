@@ -2,6 +2,8 @@
  * MedDRA Adverse Event Term Scanner and SOC Highlighting Controller.
  * Decoupled from legacy faers.js to provide pure TypeScript/React integration.
  */
+import Chart from 'chart.js/auto';
+
 
 export interface SocTermItem {
   term: string;
@@ -269,6 +271,9 @@ export function focusMeddraTerm(term: string): void {
 
   if (firstMatch) {
     // Close AE stats modal
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('meddra:close-modal'));
+    }
     const modal = document.getElementById('meddra-stats-modal');
     if (modal) modal.style.display = 'none';
 
@@ -408,12 +413,6 @@ export function setupMeddraStatistics(pvData: any): void {
       </div>
     `;
 
-    const Chart = (window as any).Chart;
-    if (!Chart) {
-      modalBody.innerHTML = '<p style="color: red; padding: 20px;">Chart library not loaded.</p>';
-      return;
-    }
-
     const canvas = document.getElementById('meddraStatsChart') as HTMLCanvasElement | null;
     if (!canvas) return;
 
@@ -489,7 +488,7 @@ export function setupMeddraStatistics(pvData: any): void {
       container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    const chartInstance = new Chart(canvas.getContext('2d'), {
+    const chartInstance = new Chart(canvas, {
       type: 'bar',
       data: {
         labels: xTickLabels,
@@ -539,7 +538,7 @@ export function setupMeddraStatistics(pvData: any): void {
               minRotation: 0,
               font: {
                 size: 11,
-                weight: '700',
+                weight: 'bold',
               },
               color: '#334155',
             },

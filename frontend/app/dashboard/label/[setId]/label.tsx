@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react';
 import { Section, LabelData, TOCItem } from './types';
 import { useLabel } from './LabelContext';
 import Link from 'next/link';
+import { initTableExtractor } from './tableExtractor';
 import {
   scanAndHighlightMeddraTerms,
   applySocHighlight,
@@ -312,6 +313,14 @@ export default function LabelView({
       return () => clearTimeout(timer);
     }
   }, [activeTab, pvProfileData, sections.length]);
+
+  // Wrap tables with Excel-style extractor buttons
+  useEffect(() => {
+    if (activeTab === 'label-view' && labelViewRef.current) {
+      initTableExtractor(labelViewRef.current);
+    }
+  }, [activeTab, sections]);
+
 
   // Delegated click handler on label viewport for MedDRA terms
   useEffect(() => {

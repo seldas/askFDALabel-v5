@@ -15,6 +15,7 @@
     "@mui/icons-material": "^7.3.7",
     "@mui/material": "^7.3.7",
     "axios": "^1.13.5",
+    "chart.js": "^4.5.1",
     "cross-env": "^10.1.0",
     "datatables.net": "^2.3.7",
     "datatables.net-autofill-bs5": "^2.7.1",
