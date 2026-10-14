@@ -23,7 +23,7 @@
 .management-container :is(button, input, select):disabled { opacity: 0.55; cursor: not-allowed; }
 .management-container :is(button, input, select, textarea):focus-visible { outline: 3px solid var(--fdl-blue-600); outline-offset: 2px; }
 .management-container .user-table-wrapper { overflow-x: auto; border: 1px solid var(--fdl-line); }
-.management-container .user-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; }
+.management-container .user-table { width: 100%; min-width: 720px; border-collapse: collapse; text-align: left; font-size: 0.85rem; }
 .management-container .user-table th { padding: 10px 12px; border-bottom: 1px solid var(--fdl-line); background: var(--fdl-blue-050); color: var(--fdl-navy-800); font-size: 0.8rem; font-weight: 700; }
 .management-container .user-table td { padding: 10px 12px; border-bottom: 1px solid var(--fdl-line-soft); color: var(--fdl-ink-soft); vertical-align: middle; }
 .management-container .user-table tr:last-child td { border-bottom: 0; }

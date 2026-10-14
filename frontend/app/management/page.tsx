@@ -1815,11 +1815,11 @@ export default function ManagementPage() {
                   <table className="user-table">
                     <thead>
                       <tr>
-                        <th style={{ width: '30%' }}>User</th>
-                        <th style={{ width: '18%' }}>Role</th>
-                        <th style={{ width: '22%' }}>Comments / Notes</th>
-                        <th style={{ width: '18%' }}>Last Login</th>
-                        <th style={{ width: '12%', textAlign: 'right' }}>Actions</th>
+                        <th style={{ width: '26%', maxWidth: '240px' }}>User</th>
+                        <th style={{ width: '18%', minWidth: '130px' }}>Role</th>
+                        <th style={{ width: '22%', minWidth: '140px' }}>Comments / Notes</th>
+                        <th style={{ width: '20%', minWidth: '140px' }}>Last Login</th>
+                        <th style={{ width: '14%', minWidth: '90px', textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1874,30 +1874,43 @@ export default function ManagementPage() {
 
                         return filtered.map(user => (
                           <tr key={user.id} style={{ opacity: user.is_active === false ? 0.6 : 1 }}>
-                            <td>
-                              <div style={{ fontWeight: 700, color: 'var(--afl-n-800)', fontSize: '0.9rem' }}>{user.username}</div>
+                            <td style={{ maxWidth: '240px' }}>
+                              <div
+                                style={{
+                                  fontWeight: 700,
+                                  color: 'var(--afl-n-800)',
+                                  fontSize: '0.9rem',
+                                  maxWidth: '240px',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                                title={user.username}
+                              >
+                                {user.username}
+                              </div>
                               {user.is_active === false && (
                                 <span style={{ fontSize: '0.65rem', background: 'var(--fdl-red-050)', color: 'var(--fdl-red)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, marginTop: '2px', display: 'inline-block' }}>DEACTIVATED</span>
                               )}
-                              <div style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)', marginTop: '2px' }}>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 Joined {formatUserDate(user.created_at) || '—'}
                               </div>
                             </td>
-                            <td>
+                            <td style={{ minWidth: '130px' }}>
                               <select
                                 value={user.role ?? (user.is_admin ? 'admin' : 'user')}
                                 onChange={e => handleUpdateRole(user.id, e.target.value)}
                                 className="mgmt-select"
                                 disabled={user.is_active === false || !session?.is_admin}
                                 title="Developer is User plus the labeling-database switch"
-                                style={{ width: '100%', maxWidth: '140px' }}
+                                style={{ width: '100%', minWidth: '110px', maxWidth: '140px' }}
                               >
                                 <option value="user">User</option>
                                 <option value="developer">Developer</option>
                                 <option value="admin">Admin</option>
                               </select>
                             </td>
-                            <td>
+                            <td style={{ minWidth: '140px' }}>
                               <button
                                 type="button"
                                 disabled={user.is_active === false || !session?.is_admin}
@@ -1918,7 +1931,7 @@ export default function ManagementPage() {
                                 {user.can_comment !== false ? '✓ Enabled' : '✕ Disabled'}
                               </button>
                             </td>
-                            <td>
+                            <td style={{ minWidth: '140px' }}>
                               {user.last_login ? (
                                 <span style={{ fontSize: '0.85rem', color: 'var(--afl-n-700)', whiteSpace: 'nowrap' }}>
                                   {formatUserDate(user.last_login)}
@@ -1929,7 +1942,7 @@ export default function ManagementPage() {
                                 </span>
                               )}
                             </td>
-                            <td style={{ textAlign: 'right' }}>
+                            <td style={{ minWidth: '90px', textAlign: 'right' }}>
                               <button
                                 onClick={() => {
                                   setUserModelError(null);
@@ -2431,7 +2444,7 @@ else:
                     <table className="user-table">
                       <thead>
                         <tr>
-                          <th style={{ width: '28%' }}>User</th>
+                          <th style={{ width: '28%', maxWidth: '240px' }}>User</th>
                           <th style={{ width: '36%' }}>API Key</th>
                           <th style={{ width: '22%' }}>Activity</th>
                           <th style={{ width: '14%', textAlign: 'right' }}>Actions</th>
@@ -2496,8 +2509,19 @@ else:
 
                             return (
                               <tr key={k.user_id} style={{ opacity: k.is_active === false ? 0.6 : 1 }}>
-                                <td>
-                                  <div style={{ fontWeight: 700, color: 'var(--afl-n-800)', fontSize: '0.9rem' }}>
+                                <td style={{ maxWidth: '240px' }}>
+                                  <div
+                                    style={{
+                                      fontWeight: 700,
+                                      color: 'var(--afl-n-800)',
+                                      fontSize: '0.9rem',
+                                      maxWidth: '240px',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                    title={k.username}
+                                  >
                                     {k.username}
                                   </div>
                                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
