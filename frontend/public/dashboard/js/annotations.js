@@ -1,6 +1,5 @@
 window.initAnnotations = function() {
     if (window.LabelAnnotationManager) {
-        window.LabelAnnotationManager.fetchAnnotations();
         return;
     } 
 
@@ -9,6 +8,7 @@ window.initAnnotations = function() {
         currentSelection: null,
         toolbarEl: null,
         activeProjectId: localStorage.getItem('activeProjectId'),
+        _isFetching: false,
 
         init: function() {
             if (!document.getElementById('label-view')) {
@@ -29,6 +29,8 @@ window.initAnnotations = function() {
 
         fetchAnnotations: function() {
             if (typeof currentSetId === 'undefined' || !currentSetId) return;
+            if (this._isFetching) return;
+            this._isFetching = true;
 
             const qs = this.activeProjectId ? `?project_id=${this.activeProjectId}` : '';
             fetch(`/api/dashboard/annotations/get/${currentSetId}${qs}`)
@@ -38,7 +40,10 @@ window.initAnnotations = function() {
                         data.annotations.forEach(ann => this.renderAnnotation(ann));
                     }
                 })
-                .catch(err => console.error("Error fetching annotations", err));
+                .catch(err => console.error("Error fetching annotations", err))
+                .finally(() => {
+                    this._isFetching = false;
+                });
         },
 
         handleSelection: function(e) {
@@ -275,6 +280,9 @@ window.initAnnotations = function() {
         },
 
         renderAnnotation: function(ann) {
+            if (!ann || !ann.id) return;
+            if (document.querySelector(`[data-ann-id="${ann.id}"]`)) return;
+
             // Find section
             let section = null;
             if (ann.section_id === 'unknown') return; // Skip
@@ -437,11 +445,22 @@ window.initAnnotations = function() {
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    // Unwrap
-                    const parent = domElement.parentNode;
-                    while(domElement.firstChild) parent.insertBefore(domElement.firstChild, domElement);
-                    parent.removeChild(domElement);
-                    parent.normalize(); // Merge text nodes
+                    // Unwrap all matching elements for this annotation id
+                    const targets = document.querySelectorAll(`[data-ann-id="${id}"]`);
+                    if (targets.length > 0) {
+                        targets.forEach(el => {
+                            const parent = el.parentNode;
+                            if (!parent) return;
+                            while(el.firstChild) parent.insertBefore(el.firstChild, el);
+                            parent.removeChild(el);
+                            parent.normalize();
+                        });
+                    } else if (domElement && domElement.parentNode) {
+                        const parent = domElement.parentNode;
+                        while(domElement.firstChild) parent.insertBefore(domElement.firstChild, domElement);
+                        parent.removeChild(domElement);
+                        parent.normalize();
+                    }
                 } else {
                     alert("Error: " + data.error);
                 }

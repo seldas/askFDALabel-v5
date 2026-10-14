@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useRef, Suspense, useCallback } from 'rea
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import LegacyBridge from './LegacyBridge';
+import LabelChat from './LabelChat';
 import { TOOL_LABEL, useLabel } from './LabelContext';
 import { labelRoute, type LaunchContext } from '../../../platform/context';
 import { useUser } from '../../../context/UserContext';
@@ -324,6 +325,7 @@ function LabelContent() {
   const [ndcModalOpen, setNdcModalOpen] = useState(false);
   const [companyModalOpen, setCompanyModalOpen] = useState(false);
   const [productSpecsModalOpen, setProductSpecsModalOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   // New Favorite/Project states
   const [isFavoriteAny, setIsFavoriteAny] = useState(false);
@@ -755,6 +757,7 @@ function LabelContent() {
             id="chat-bubble"
             className="label-tool-btn label-tool-chat"
             data-tooltip="AI Assistant Chat"
+            onClick={() => setChatOpen((prev) => !prev)}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
             <span>AI Chat</span>
@@ -910,7 +913,7 @@ function LabelContent() {
       */}
       <LegacyBridge
         resetKey={setId}
-        scripts={['chart', 'marked', 'utils', 'ui', 'favorites', 'session', 'chat', 'annotations']}
+        scripts={['chart', 'marked', 'utils', 'ui', 'favorites', 'annotations']}
         globals={{
           currentSetId: data.set_id,
           currentDrugName: data.faers_drug_name,
@@ -922,7 +925,7 @@ function LabelContent() {
           savedAnnotations: data.saved_annotations,
           canComment: Boolean(session?.is_authenticated && session?.can_comment !== false),
         }}
-        init={['initUI', 'initChat', 'initAnnotations']}
+        init={['initUI', 'initAnnotations']}
       />
 
 
@@ -991,20 +994,15 @@ function LabelContent() {
          </div>
       </div>
 
-      <div id="chatbox" className="chatbox" style={{ display: 'none', zIndex: 2500 }}>
-        <div className="chat-header" id="chat-header">
-            <h3>AI Assistant</h3>
-            <div className="chat-header-buttons" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <button id="chat-reset" className="chat-reset" title="Reset Chat" style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.25rem', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>&#8634;</button>
-                <button id="close-chat" className="close-chat" style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.25rem', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>&times;</button>
-            </div>
-        </div>
-        <div id="chat-messages" className="chat-messages"></div>
-        <div className="chat-input-form">
-            <input type="text" id="chat-input" placeholder="Type a message..." />
-            <button id="chat-send">Send</button>
-        </div>
-      </div>
+      <LabelChat
+        setId={setId}
+        drugName={data?.faers_drug_name || data?.generic_name || data?.brand_name}
+        xmlContent={data?.label_xml_raw || ''}
+        isOpen={chatOpen}
+        onClose={() => setChatOpen(false)}
+        canComment={Boolean(session?.is_authenticated && session?.can_comment !== false)}
+        savedAnnotations={data?.saved_annotations}
+      />
 
       {ndcModalOpen && (
         <div onClick={() => setNdcModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.55)', zIndex: 5000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>

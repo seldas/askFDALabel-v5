@@ -458,8 +458,15 @@
 
   function collectUserNotes() {
     const notes = [];
+    const seenQaIds = new Set();
 
     $$('.chat-annotation-badge').forEach(badge => {
+      const qId = badge.getAttribute('data-id');
+      if (qId) {
+        if (seenQaIds.has(qId)) return;
+        seenQaIds.add(qId);
+      }
+
       const qEl = $('.popover-q', badge);
       if (!qEl) return;
 
@@ -476,7 +483,14 @@
       });
     });
 
+    const seenAnnIds = new Set();
     $$('.text-highlight, .text-comment').forEach(annotation => {
+      const annId = annotation.getAttribute('data-ann-id');
+      if (annId) {
+        if (seenAnnIds.has(annId)) return;
+        seenAnnIds.add(annId);
+      }
+
       const isComment = annotation.classList.contains('text-comment');
 
       notes.push({
@@ -571,7 +585,12 @@
       if (isQA) {
         note.element.remove();
       } else {
-        unwrapElement(note.element);
+        const annId = note.element.getAttribute('data-ann-id');
+        if (annId) {
+          document.querySelectorAll(`[data-ann-id="${annId}"]`).forEach(el => unwrapElement(el));
+        } else {
+          unwrapElement(note.element);
+        }
       }
 
       item.remove();
