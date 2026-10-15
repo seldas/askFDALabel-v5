@@ -5,14 +5,15 @@ export type Source = { set_id?: string | null; spl_id?: string | null; image_id?
 export type Selection = { descriptor: Source; file: File | null; url: string; ready: boolean };
 export const CARTON_FIELDS = { brand_name: 'Brand name', generic_name: 'Generic name', strength: 'Strength / concentration', dosage_form: 'Dosage form', route: 'Route', pack_quantity: 'Pack quantity', manufacturer: 'Manufacturer', warnings: 'Visible warnings' } as const;
 export type CartonField = keyof typeof CARTON_FIELDS;
+export type PackagingImageType = 'carton' | 'container_label';
 export type CartonExtraction = {
-  suitability: 'carton' | 'uncertain' | 'unsupported'; reason: string; view: string;
+  suitability: 'supported' | 'carton' | 'uncertain' | 'unsupported'; image_type?: PackagingImageType | 'unknown'; reason: string; view: string;
   limitations: string[]; visual_features: string;
   fields: Record<CartonField, { value: string; status: 'readable' | 'uncertain' | 'not_visible'; region: Region | null }>;
 };
-export type CartonConfirmation = { task_id: number; acknowledged: boolean; fields: Record<CartonField, string> };
+export type CartonConfirmation = { task_id: number; image_type: PackagingImageType; acknowledged: boolean; fields: Record<CartonField, string> };
 export type CartonInputs = Record<Side, CartonConfirmation>;
-export type SavedCarton = { extraction: CartonExtraction; confirmed_fields: Record<CartonField, { value: string; source: 'user_provided' | 'image_extraction' }>; extraction_task_id: number; acknowledged: boolean };
+export type SavedCarton = { extraction: CartonExtraction; image_type?: PackagingImageType; confirmed_fields: Record<CartonField, { value: string; source: 'user_provided' | 'image_extraction' }>; extraction_task_id: number; acknowledged: boolean };
 export type Finding = {
   id: number; title: string; kind: 'difference' | 'confusion' | 'inconsistency';
   category: string; priority: 'critical' | 'review' | 'informational'; confidence: string;
@@ -39,5 +40,5 @@ export type ReviewComment = {
 export const MODES: { id: ReviewMode; label: string; description: string }[] = [
   { id: 'consistency', label: 'Labeling Consistency', description: 'Audit one packaging artwork against its official FDA SPL labeling content to detect discrepancies, omissions, and errors.' },
   { id: 'artwork', label: 'Artwork Comparison', description: 'Compare content and design changes between two artworks, with repeated color changes grouped into one finding.' },
-  { id: 'confusion', label: 'Product Confusion', description: 'Package cartons only: identify each carton, confirm product information, then compare visual similarities and critical distinctions.' },
+  { id: 'confusion', label: 'Product Confusion', description: 'Compare two package cartons or two container labels: identify images, confirm product information, then assess confusion factors. Matching image types are required.' },
 ];

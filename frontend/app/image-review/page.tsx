@@ -518,7 +518,7 @@ function Workbench() {
 
         {comparisonBusy && (
           <div className="ivr-status" role="status">
-            {mode === 'confusion' ? <progress aria-label="Comparing cartons" /> : <progress max="100" value={progress.value} />}
+            {mode === 'confusion' ? <progress aria-label="Comparing packaging images" /> : <progress max="100" value={progress.value} />}
             <span>
               {progress.message || 'Analyzing artwork…'} · {elapsed}s elapsed
               {elapsed >= 15 && progress.value === 0
@@ -609,8 +609,8 @@ function Workbench() {
                   </>
                 ) : mode === 'confusion' ? (
                   <>
-                    <strong>Package carton confusion review</strong>
-                    <p>Select corresponding carton images, identify A and B, and confirm the extracted information above. The comparison will explain visual similarities, overlooked distinctions and protective design factors.</p>
+                    <strong>Packaging product confusion review</strong>
+                    <p>Select matching packaging image types, identify A and B, and confirm the extracted information above. The comparison will explain visual similarities, overlooked distinctions and protective design factors.</p>
                   </>
                 ) : (
                   <>

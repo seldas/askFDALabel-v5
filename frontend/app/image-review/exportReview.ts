@@ -35,10 +35,10 @@ export async function downloadReviewHtml(review: Review, decisions: Record<numbe
     append(doc.body, 'h2', 'Distinguishing factors');
     review.distinguishing_factors?.forEach(text => append(doc.body, 'p', text));
     if (review.carton_inputs) {
-      append(doc.body, 'h2', 'Confirmed carton information');
+      append(doc.body, 'h2', 'Confirmed packaging information');
       for (const side of ['left', 'right'] as Side[]) {
         const input = review.carton_inputs[side];
-        append(doc.body, 'h3', `Product ${side === 'left' ? 'A' : 'B'} · ${input.extraction.view}`);
+        append(doc.body, 'h3', `Product ${side === 'left' ? 'A' : 'B'} · ${input.image_type || 'carton'} · ${input.extraction.view}`);
         for (const key of Object.keys(CARTON_FIELDS) as CartonField[]) {
           const field = input.confirmed_fields[key];
           append(doc.body, 'p', `${CARTON_FIELDS[key]}: ${field.value || 'Unknown'} (${field.source === 'user_provided' ? 'User provided; visibility not established' : input.extraction.fields[key].status})`);

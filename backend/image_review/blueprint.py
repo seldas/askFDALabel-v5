@@ -16,7 +16,7 @@ from .assets import (FILE_LIMIT, label_inventory, read_local_artwork, normalized
                      prepare_side, save_job, clean_job)
 from .review import MODES
 from .tasks import execute_review, execute_carton_extraction
-from .carton import FIELDS
+from .carton import FIELDS, IMAGE_TYPES
 
 image_review_bp = Blueprint('image_review', __name__)
 image_review_bp.before_request(feature_before_request('tool_image_review'))
@@ -116,39 +116,47 @@ def validate_carton_confirmation(sides):
     try:
         submitted = json.loads(request.form.get('carton_inputs', '{}'))
     except (ValueError, TypeError) as exc:
-        raise BadRequest('Invalid carton confirmation.') from exc
+        raise BadRequest('Invalid image confirmation.') from exc
     if not isinstance(submitted, dict):
-        raise BadRequest('Confirm both cartons before comparing.')
+        raise BadRequest('Confirm both images before comparing.')
     confirmed = {}
     for name, image in zip(('left', 'right'), sides):
         entry = submitted.get(name)
         if not isinstance(entry, dict) or type(entry.get('task_id')) is not int:
-            raise BadRequest('Identify and confirm both cartons before comparing.')
+            raise BadRequest('Identify and confirm both images before comparing.')
         task = db.session.get(SystemTask, entry['task_id'])
         if not task or task.user_id != current_user.id or task.task_type != 'image_review_extract' or task.status != 'completed':
-            raise BadRequest('Carton identification is unavailable or still running.')
+            raise BadRequest('Image identification is unavailable or still running.')
         record = json.loads(task.result_data or '{}').get('cartons', {}).get(name, {})
         if record.get('status') != 'completed' or record.get('source', {}).get('image_hash') != image['metadata']['image_hash']:
-            raise BadRequest('An image changed. Identify the replacement carton before comparing.')
+            raise BadRequest('An image changed. Identify the replacement image before comparing.')
         extraction = record['extraction']
+        image_type = entry.get('image_type', extraction.get('image_type', 'carton'))
+        if image_type not in IMAGE_TYPES:
+            raise BadRequest('Specify a supported image type for each product.')
+        detected_type = extraction.get('image_type', 'carton')
+        if detected_type != 'unknown' and image_type != detected_type:
+            raise BadRequest('The image type changed. Identify the image again.')
         if extraction['suitability'] == 'unsupported':
-            raise BadRequest('Only package cartons are supported. Replace the non-carton image.')
+            raise BadRequest('Only package cartons and container labels are supported. Replace the unsupported image.')
         if entry.get('acknowledged') is not True:
-            raise BadRequest('Confirm the image suitability and review limitations for each carton.')
+            raise BadRequest('Confirm the image suitability and review limitations for each image.')
         edits = entry.get('fields')
         if not isinstance(edits, dict) or any(not isinstance(edits.get(key), str) or len(edits[key]) > 1000 for key in FIELDS):
-            raise BadRequest('Invalid confirmed carton fields.')
+            raise BadRequest('Invalid confirmed packaging fields.')
         fields = {key: {'value': edits[key].strip(),
                         'source': 'user_provided' if edits[key].strip() != extraction['fields'][key]['value'] else 'image_extraction'} for key in FIELDS}
         confirmed[name] = dict(extraction=extraction, confirmed_fields=fields, extraction_task_id=task.id,
-                               model=record.get('model'), acknowledged=True)
+                               model=record.get('model'), image_type=image_type, acknowledged=True)
+    if confirmed['left']['image_type'] != confirmed['right']['image_type']:
+        raise BadRequest('Select the same image type for both products. Cross-type comparison is not supported.')
     return confirmed
 
 
 @image_review_bp.post('/cartons/extractions')
 def start_carton_extraction():
     if getattr(current_user, 'is_guest', False):
-        return jsonify(error='Sign in with a personal account to identify cartons.'), 403
+        return jsonify(error='Sign in with a personal account to identify packaging images.'), 403
     if request.content_length and request.content_length > 2 * FILE_LIMIT + 512 * 1024:
         return jsonify(error='Request exceeds the two-image upload limit.'), 413
     active = SystemTask.query.filter(SystemTask.user_id == current_user.id,
@@ -158,17 +166,22 @@ def start_carton_extraction():
         return jsonify(error='A visual review is already running for your account.'), 409
     names = [side for side in ('left', 'right') if request.form.get(side)]
     if not names:
-        raise BadRequest('Select at least one carton image.')
+        raise BadRequest('Select at least one packaging image.')
     try:
         descriptors = [json.loads(request.form[name]) for name in names]
     except (ValueError, TypeError) as exc:
         raise BadRequest('Invalid image selection.') from exc
     sides = [prepare_side(value, request.files.get(f'{name}_upload')) for name, value in zip(names, descriptors)]
+    for name, side in zip(names, sides):
+        image_type = request.form.get(f'{name}_image_type', 'auto')
+        if image_type not in ('auto', *IMAGE_TYPES):
+            raise BadRequest('Unsupported image type.')
+        side['metadata']['requested_image_type'] = image_type
     job_id = str(uuid4())
     save_job(job_id, sides)
     task = None
     try:
-        task = TaskService.create_task('image_review_extract', user_id=current_user.id, message='Carton identification queued.')
+        task = TaskService.create_task('image_review_extract', user_id=current_user.id, message='Image identification queued.')
         TaskService.start_background_task(current_app._get_current_object(), task.id, execute_carton_extraction, current_user.id, job_id, names)
         if task.status == 'failed':
             clean_job(job_id)
@@ -178,7 +191,7 @@ def start_carton_extraction():
         clean_job(job_id)
         if task is not None:
             db.session.rollback()
-            TaskService.update_task(task.id, status='failed', error_details='Could not queue carton identification.')
+            TaskService.update_task(task.id, status='failed', error_details='Could not queue image identification.')
         raise
 
 

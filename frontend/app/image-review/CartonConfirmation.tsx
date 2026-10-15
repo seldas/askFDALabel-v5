@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { CARTON_FIELDS, type CartonExtraction, type CartonField, type CartonInputs, type Selection, type Side } from './types';
+import { CARTON_FIELDS, type CartonExtraction, type CartonField, type CartonInputs, type PackagingImageType, type Selection, type Side } from './types';
 
 type Identified = { key: string; task_id: number; extraction?: CartonExtraction; error?: string; fields: Record<CartonField, string>; acknowledged: boolean };
 const SIDES: Side[] = ['left', 'right'];
@@ -19,8 +19,19 @@ export default function CartonConfirmation({ left, right, disabled, comparing, h
   const [paused, setPaused] = useState(false);
   const [error, setError] = useState('');
   const [elapsed, setElapsed] = useState(0);
+  const [imageTypes, setImageTypes] = useState<Record<Side, PackagingImageType | 'auto'>>({ left: 'auto', right: 'auto' });
   const selections = { left, right };
-  const leftKey = sourceKey(left), rightKey = sourceKey(right);
+  const leftKey = sourceKey(left) + imageTypes.left, rightKey = sourceKey(right) + imageTypes.right;
+  const selectionKey = (side: Side) => side === 'left' ? leftKey : rightKey;
+  const resolvedType = (side: Side) => {
+    const record = records[side];
+    if (record?.key !== selectionKey(side)) return undefined;
+    const detected = record?.extraction?.image_type ?? (record?.extraction?.suitability === 'carton' ? 'carton' : 'unknown');
+    return detected === 'unknown' ? (imageTypes[side] === 'auto' ? undefined : imageTypes[side]) : detected;
+  };
+  const aType = resolvedType('left'), bType = resolvedType('right');
+  const mismatch = !!aType && !!bType && aType !== bType;
+  const typeLabel = (type: string | undefined) => type === 'carton' ? 'Package carton' : type === 'container_label' ? 'Container label' : 'Unknown';
   const callbacks = useRef({ onBusy, onChange });
   callbacks.current = { onBusy, onChange };
   const active = submitting || (task !== null && !paused);
@@ -47,12 +58,13 @@ export default function CartonConfirmation({ left, right, disabled, comparing, h
     const a = records.left, b = records.right;
     const ready = a?.key === leftKey && b?.key === rightKey && a?.extraction && b?.extraction
       && a.extraction.suitability !== 'unsupported' && b.extraction.suitability !== 'unsupported'
+      && aType && bType && !mismatch
       && a.acknowledged && b.acknowledged && left.ready && right.ready && !task;
     callbacks.current.onChange(ready ? {
-      left: { task_id: a.task_id, fields: a.fields, acknowledged: true },
-      right: { task_id: b.task_id, fields: b.fields, acknowledged: true },
+      left: { task_id: a.task_id, image_type: aType!, fields: a.fields, acknowledged: true },
+      right: { task_id: b.task_id, image_type: bType!, fields: b.fields, acknowledged: true },
     } : null);
-  }, [records, leftKey, rightKey, left.ready, right.ready, task]);
+  }, [records, leftKey, rightKey, left.ready, right.ready, task, aType, bType, mismatch]);
 
   useEffect(() => {
     if (!task || paused) return;
@@ -65,7 +77,7 @@ export default function CartonConfirmation({ left, right, disabled, comparing, h
         const response = await fetch(`/api/image-review/reviews/${task.id}`, { signal: controller.signal });
         const data = await response.json();
         if (cancelled) return;
-        if (!response.ok) throw new Error(data.error || 'Could not check carton identification.');
+        if (!response.ok) throw new Error(data.error || 'Could not check image identification.');
         errors = 0;
         for (const side of task.sides) {
           const value = data.result?.cartons?.[side];
@@ -106,46 +118,56 @@ export default function CartonConfirmation({ left, right, disabled, comparing, h
       for (const side of sides) {
         const value = selections[side];
         form.set(side, JSON.stringify(value.descriptor));
+        form.set(`${side}_image_type`, imageTypes[side]);
         if (value.file) form.set(`${side}_upload`, value.file);
-        submittedKeys[side] = sourceKey(value);
+        submittedKeys[side] = selectionKey(side);
       }
       const response = await fetch('/api/image-review/cartons/extractions', { method: 'POST', body: form });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Could not identify cartons.');
+      if (!response.ok) throw new Error(data.error || 'Could not identify images.');
       setRecords(prev => { const next = { ...prev }; sides.forEach(side => delete next[side]); return next; });
       setTask({ id: data.task_id, sides, keys: submittedKeys });
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setSubmitting(false); }
   };
-  const missing = SIDES.filter(side => selections[side].ready && (!records[side]?.extraction || records[side]?.key !== sourceKey(selections[side])));
+  const missing = SIDES.filter(side => selections[side].ready && (!records[side]?.extraction || records[side]?.key !== selectionKey(side)));
   const locked = disabled || active || task !== null;
   const edit = (side: Side, change: Partial<Identified>) => setRecords(prev => ({ ...prev, [side]: { ...prev[side]!, ...change } }));
 
-  return <section className="ivr-carton-flow" aria-label="Package carton review steps">
+  return <section className="ivr-carton-flow" aria-label="Product confusion review steps">
     <ol className="ivr-carton-steps">
-      <li aria-current={!left.ready || !right.ready ? 'step' : undefined}>1. Select cartons</li>
+      <li aria-current={!left.ready || !right.ready ? 'step' : undefined}>1. Select images & types</li>
       <li aria-current={left.ready && right.ready && !comparing && !hasResult ? 'step' : undefined}>2. Identify & confirm</li>
       <li aria-current={comparing || hasResult ? 'step' : undefined}>3. Compare confusion factors</li>
     </ol>
     <details open={!comparing && !hasResult}>
-    <summary>Carton identification & confirmation</summary>
-    <p>Select one package carton per product below, preferably the same face (front to front). Unfolded cartons are supported. IFU, chemical structures, clinical figures and container labels are excluded.</p>
+    <summary>Image identification & confirmation</summary>
+    <p>Select one image per product and choose its image type, or use automatic detection. Compare carton with carton or container label with container label, preferably corresponding views. IFU, chemical structures and clinical figures are excluded.</p>
     <p>We first identify A and B in parallel. Each result appears when ready. Review or correct the information, then confirm and compare. Each AI stage can take some time; your completed identification results are retained if comparison fails.</p>
-    <button className="ivr-button ivr-primary" disabled={locked || !left.ready || !right.ready || !missing.length} onClick={() => void identify(missing)}>
-      {active ? 'Identifying cartons…' : 'Identify selected cartons'}
+    <button className="ivr-button ivr-primary" disabled={locked || !left.ready || !right.ready} onClick={() => void identify(missing.length ? missing : SIDES)}>
+      {active ? 'Identifying images…' : 'Identify selected images'}
     </button>
     {active && <p role="status">Identification in progress · {elapsed}s elapsed. Waiting for the worker or image analysis; completed products appear below.</p>}
     {error && <p className="ivr-error" role="alert">{error}</p>}
     {paused && <button className="ivr-button" onClick={() => { setError(''); setPaused(false); }}>Resume status check</button>}
     <div className="ivr-carton-cards">
       {SIDES.map(side => {
-        const record = records[side]?.key === sourceKey(selections[side]) ? records[side] : undefined;
+        const record = records[side]?.key === selectionKey(side) ? records[side] : undefined;
         const extraction = record?.extraction;
         return <section key={side} className="ivr-carton-card" aria-label={`Product ${side === 'left' ? 'A' : 'B'} identification`}>
           <h3>Product {side === 'left' ? 'A' : 'B'}</h3>
-          {!extraction && <p role="status">{record?.error || (task?.sides.includes(side) ? 'Identifying this carton…' : 'Select a carton and identify it to review its information.')}</p>}
+          <label>Image type
+            <select value={imageTypes[side]} disabled={locked} onChange={e => setImageTypes(prev => ({ ...prev, [side]: e.target.value as PackagingImageType | 'auto' }))}>
+              <option value="auto">Automatically detect</option>
+              <option value="carton">Package carton</option>
+              <option value="container_label">Container label</option>
+            </select>
+          </label>
+          {!extraction && <p role="status">{record?.error || (task?.sides.includes(side) ? 'Identifying this image…' : 'Select an image and identify it to review its information.')}</p>}
           {extraction && <>
-            <p><strong>{extraction.suitability === 'unsupported' ? 'Unsupported image — replace it below' : extraction.suitability === 'uncertain' ? 'Carton type uncertain — verify before continuing' : 'Package carton identified'}</strong> · View: {extraction.view}</p>
+            <p><strong>{extraction.suitability === 'unsupported' ? 'Unsupported image — replace it below' : extraction.suitability === 'uncertain' ? 'Image type uncertain — verify before continuing' : `${typeLabel(resolvedType(side))} identified`}</strong> · View: {extraction.view}</p>
+            {!resolvedType(side) && extraction.suitability !== 'unsupported' && <p role="alert">Choose an image type above and identify the image again before confirming.</p>}
+            {imageTypes[side] !== 'auto' && resolvedType(side) && imageTypes[side] !== resolvedType(side) && <p role="alert">Detected type: {typeLabel(resolvedType(side))}. Verify the selected image and type before continuing.</p>}
             <p>{extraction.reason}</p>
             <p>{extraction.visual_features}</p>
             {extraction.limitations.length > 0 && <ul>{extraction.limitations.map((note, i) => <li key={i}>{note}</li>)}</ul>}
@@ -160,13 +182,13 @@ export default function CartonConfirmation({ left, right, disabled, comparing, h
                 </label>;
               })}</div>
               <label className="ivr-carton-confirm"><input type="checkbox" disabled={locked} checked={record!.acknowledged}
-                onChange={e => edit(side, { acknowledged: e.target.checked })} /> I reviewed this image, its information and limitations, and confirm it is a package carton. Unknown fields may remain blank.</label>
+                onChange={e => edit(side, { acknowledged: e.target.checked })} /> I reviewed this image, its information and limitations, and confirm its type: {typeLabel(resolvedType(side))}. Unknown fields may remain blank.</label>
             </>}
           </>}
-          <button className="ivr-button" disabled={locked || !selections[side].ready} onClick={() => void identify([side])}>{extraction || record?.error ? 'Retry identification' : 'Identify this product'}</button>
         </section>;
       })}
     </div>
+    {mismatch && <p className="ivr-error" role="alert">The images have different types ({typeLabel(aType)} / {typeLabel(bType)}). Select matching image types and corresponding images. Cross-type comparison is not supported.</p>}
     <p>Different faces or unfolded views limit comparison to corresponding visible areas. Confirm each product above, then use <strong>Confirm and compare</strong>. You can inspect and zoom both images throughout the analysis.</p>
     <button className="ivr-button ivr-primary" disabled={!canCompare} onClick={onCompare}>Confirm and compare</button>
     </details>
