@@ -6,7 +6,8 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import RequireFeature from '../components/RequireFeature';
 import ArtworkPanel from './ArtworkPanel';
-import { MODES, type Decision, type Finding, type Region, type Review, type ReviewComment, type ReviewMode, type Selection, type Side } from './types';
+import CartonConfirmation from './CartonConfirmation';
+import { CARTON_FIELDS, MODES, type CartonField, type CartonInputs, type Decision, type Finding, type Region, type Review, type ReviewComment, type ReviewMode, type Selection, type Side } from './types';
 import { downloadReviewHtml, downloadReviewJson } from './exportReview';
 import { labelcompRoute } from '../platform/context';
 import { useUser } from '../context/UserContext';
@@ -37,8 +38,12 @@ function Workbench() {
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [extracting, setExtracting] = useState(false);
+  const [cartonInputs, setCartonInputs] = useState<CartonInputs | null>(null);
+  const cartonInputsRef = useRef<CartonInputs | null>(null);
 
-  const busy = submitting || taskId !== null;
+  const comparisonBusy = submitting || taskId !== null;
+  const busy = comparisonBusy || extracting;
 
   useEffect(() => {
     if (!busy) return;
@@ -58,6 +63,13 @@ function Workbench() {
     setLastTaskId(null);
     setError('');
   }, []);
+
+  const onCartonChange = useCallback((value: CartonInputs | null) => {
+    if (JSON.stringify(cartonInputsRef.current) === JSON.stringify(value)) return;
+    cartonInputsRef.current = value;
+    setCartonInputs(value);
+    invalidate();
+  }, [invalidate]);
 
   const fetchComments = useCallback(async (tid: number) => {
     try {
@@ -146,7 +158,8 @@ function Workbench() {
         errors = 0;
         setError('');
         setProgress({ value: data.progress, message: data.message });
-        if (data.result) {
+        if (data.result && Array.isArray(data.result.findings)) {
+          if (data.result.mode) setMode(data.result.mode);
           setReview(data.result);
           setSelected(current => current ?? data.result.findings[0]?.id ?? null);
           void fetchComments(taskId);
@@ -185,6 +198,7 @@ function Workbench() {
   }, [taskId, fetchComments]);
 
   const run = async () => {
+    if (mode === 'confusion' && !cartonInputs) return;
     if (mode === 'consistency') {
       if (!left.ready || !left.descriptor.set_id || busy) return;
     } else {
@@ -200,6 +214,7 @@ function Workbench() {
     try {
       const form = new FormData();
       form.set('mode', mode);
+      if (mode === 'confusion') form.set('carton_inputs', JSON.stringify(cartonInputs));
       if (mode === 'consistency') {
         form.set('left', JSON.stringify(left.descriptor));
         if (left.file) form.set('left_upload', left.file);
@@ -390,6 +405,7 @@ function Workbench() {
 
   const canRun =
     !busy &&
+    (mode !== 'confusion' || cartonInputs !== null) &&
     (mode === 'consistency'
       ? left.ready && !!left.descriptor.set_id
       : left.ready && right.ready);
@@ -431,6 +447,8 @@ function Workbench() {
             <button className="ivr-button ivr-primary" disabled={!canRun} onClick={() => void run()}>
               {busy
                 ? 'Audit in progress…'
+                : mode === 'confusion'
+                ? 'Confirm and compare'
                 : review
                 ? 'Run audit again'
                 : mode === 'consistency'
@@ -449,6 +467,8 @@ function Workbench() {
               onClick={() => {
                 if (mode !== value.id) {
                   setMode(value.id);
+                  setCartonInputs(null);
+                  cartonInputsRef.current = null;
                   invalidate();
                 }
               }}
@@ -492,9 +512,13 @@ function Workbench() {
           </div>
         )}
 
-        {busy && (
+        {mode === 'confusion' && <CartonConfirmation left={left} right={right} disabled={comparisonBusy}
+          comparing={comparisonBusy} hasResult={!!review} canCompare={canRun} onCompare={() => void run()}
+          onChange={onCartonChange} onBusy={setExtracting} />}
+
+        {comparisonBusy && (
           <div className="ivr-status" role="status">
-            <progress max="100" value={progress.value} />
+            {mode === 'confusion' ? <progress aria-label="Comparing cartons" /> : <progress max="100" value={progress.value} />}
             <span>
               {progress.message || 'Analyzing artwork…'} · {elapsed}s elapsed
               {elapsed >= 15 && progress.value === 0
@@ -583,6 +607,11 @@ function Workbench() {
                     </ul>
                     <p>Uses official FDA SPL Prescribing Information as the single source of truth.</p>
                   </>
+                ) : mode === 'confusion' ? (
+                  <>
+                    <strong>Package carton confusion review</strong>
+                    <p>Select corresponding carton images, identify A and B, and confirm the extracted information above. The comparison will explain visual similarities, overlooked distinctions and protective design factors.</p>
+                  </>
                 ) : (
                   <>
                     <strong>Evidence first</strong>
@@ -601,7 +630,20 @@ function Workbench() {
               <>
                 <p className="ivr-summary">{review.summary}</p>
 
-                {review.findings.length === 0 && (
+                {review.mode === 'confusion' && <>
+                  {review.assessment && <p className="ivr-overview"><strong>{({ clear_factors: 'Clear confusion factors identified', some_factors: 'Some confusion factors identified', no_obvious_factors: 'No obvious confusion factors in the selected images', insufficient_information: 'Insufficient information' } as Record<string, string>)[review.assessment] || review.assessment}</strong></p>}
+                  {!!review.distinguishing_factors?.length && <section><h3>Distinguishing factors</h3><ul>{review.distinguishing_factors.map((text, i) => <li key={i}>{text}</li>)}</ul></section>}
+                  {review.carton_inputs && <details className="ivr-limitations"><summary>Confirmed product information</summary>
+                    <table className="ivr-carton-table"><thead><tr><th>Field</th><th>Product A</th><th>Product B</th></tr></thead><tbody>
+                      {(Object.keys(CARTON_FIELDS) as CartonField[]).map(key => <tr key={key}><th>{CARTON_FIELDS[key]}</th>{(['left', 'right'] as Side[]).map(side => {
+                        const field = review.carton_inputs![side].confirmed_fields[key];
+                        return <td key={side}>{field.value || 'Unknown'}{field.source === 'user_provided' && <small> User provided</small>}</td>;
+                      })}</tr>)}
+                    </tbody></table>
+                  </details>}
+                </>}
+
+                {review.findings.length === 0 && review.mode !== 'confusion' && (
                   <div className="ivr-clean-banner" role="status">
                     <strong>✓ Fully Consistent with Labeling</strong>
                     <p>No discrepancies, contradictions, or critical omissions were detected between this package artwork and the reviewed official labeling sections.</p>

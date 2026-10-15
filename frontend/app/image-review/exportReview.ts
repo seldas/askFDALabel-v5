@@ -1,4 +1,4 @@
-import type { Decision, Review, Side } from './types';
+import { CARTON_FIELDS, type CartonField, type Decision, type Review, type Side } from './types';
 
 export function downloadReviewJson(review: Review, decisions: Record<number, Decision>, taskId: number | null) {
   download(new Blob([JSON.stringify({ ...review, decisions, task_id: taskId, exported_at: new Date().toISOString() }, null, 2)], { type: 'application/json' }), 'labeling-visual-review.json');
@@ -30,6 +30,23 @@ export async function downloadReviewHtml(review: Review, decisions: Record<numbe
   append(doc.body, 'h1', 'Labeling Visual Review');
   append(doc.body, 'p', `${review.mode} · ${new Date().toISOString()} · ${review.model}`);
   append(doc.body, 'p', review.summary);
+  if (review.mode === 'confusion') {
+    if (review.assessment) append(doc.body, 'p', `Assessment: ${review.assessment.replaceAll('_', ' ')}`);
+    append(doc.body, 'h2', 'Distinguishing factors');
+    review.distinguishing_factors?.forEach(text => append(doc.body, 'p', text));
+    if (review.carton_inputs) {
+      append(doc.body, 'h2', 'Confirmed carton information');
+      for (const side of ['left', 'right'] as Side[]) {
+        const input = review.carton_inputs[side];
+        append(doc.body, 'h3', `Product ${side === 'left' ? 'A' : 'B'} · ${input.extraction.view}`);
+        for (const key of Object.keys(CARTON_FIELDS) as CartonField[]) {
+          const field = input.confirmed_fields[key];
+          append(doc.body, 'p', `${CARTON_FIELDS[key]}: ${field.value || 'Unknown'} (${field.source === 'user_provided' ? 'User provided; visibility not established' : input.extraction.fields[key].status})`);
+        }
+        append(doc.body, 'pre', JSON.stringify(input, null, 2));
+      }
+    }
+  }
   const grid = doc.createElement('section'); grid.className = 'images'; doc.body.appendChild(grid);
   const ns = 'http://www.w3.org/2000/svg';
   const exportSides: Side[] = review.mode === 'consistency' ? ['left'] : ['left', 'right'];

@@ -15,7 +15,8 @@ from dashboard.services.task_service import TaskService
 from .assets import (FILE_LIMIT, label_inventory, read_local_artwork, normalized_image,
                      prepare_side, save_job, clean_job)
 from .review import MODES
-from .tasks import execute_review
+from .tasks import execute_review, execute_carton_extraction
+from .carton import FIELDS
 
 image_review_bp = Blueprint('image_review', __name__)
 image_review_bp.before_request(feature_before_request('tool_image_review'))
@@ -46,7 +47,7 @@ def artwork(set_id, asset_id):
 def start_review():
     if getattr(current_user, 'is_guest', False):
         return jsonify(error='Sign in with a personal account to create a visual review.'), 403
-    active = SystemTask.query.filter(SystemTask.user_id == current_user.id, SystemTask.task_type == 'image_review',
+    active = SystemTask.query.filter(SystemTask.user_id == current_user.id, SystemTask.task_type.in_(['image_review', 'image_review_extract']),
                                      SystemTask.status.in_(['pending', 'processing'])).first()
     if active:
         return jsonify(error='A visual review is already running for your account.', task_id=active.id), 409
@@ -74,12 +75,18 @@ def start_review():
         except (ValueError, TypeError) as exc:
             raise BadRequest('Invalid image selection.') from exc
         sides = [prepare_side(value, request.files.get(f'{side}_upload')) for side, value in zip(('left', 'right'), descriptors)]
+    confirmed = None
+    if mode == 'confusion':
+        confirmed = validate_carton_confirmation(sides)
     job_id = str(uuid4())
     save_job(job_id, sides)
     task = None
     try:
         task = TaskService.create_task('image_review', user_id=current_user.id, message='Preparing visual review...')
-        TaskService.start_background_task(current_app._get_current_object(), task.id, execute_review, current_user.id, job_id, mode)
+        if mode == 'confusion':
+            # Preserve the confirmed input audit even if dispatch or comparison fails.
+            TaskService.update_task(task.id, result_data={'stage': 'carton_comparison', 'carton_inputs': confirmed})
+        TaskService.start_background_task(current_app._get_current_object(), task.id, execute_review, current_user.id, job_id, mode, confirmed)
         if task.status == 'failed':
             clean_job(job_id)
             return jsonify(error='The review worker is unavailable. Start Celery and try again.'), 503
@@ -96,13 +103,83 @@ def start_review():
 @image_review_bp.get('/reviews/<int:task_id>')
 def review_status(task_id):
     task = db.session.get(SystemTask, task_id)
-    if not task or task.task_type != 'image_review':
+    if not task or task.task_type not in ('image_review', 'image_review_extract'):
         return jsonify(error='Review not found.'), 404
-    if task.user_id != current_user.id and task.status != 'completed':
+    if task.user_id != current_user.id and (task.status != 'completed' or task.task_type == 'image_review_extract'):
         return jsonify(error='Review not found.'), 404
     return jsonify(task_id=task.id, status=task.status, progress=task.progress, message=task.message,
                    error=task.error_details if task.status == 'failed' else None,
                    result=json.loads(task.result_data) if task.result_data else None)
+
+
+def validate_carton_confirmation(sides):
+    try:
+        submitted = json.loads(request.form.get('carton_inputs', '{}'))
+    except (ValueError, TypeError) as exc:
+        raise BadRequest('Invalid carton confirmation.') from exc
+    if not isinstance(submitted, dict):
+        raise BadRequest('Confirm both cartons before comparing.')
+    confirmed = {}
+    for name, image in zip(('left', 'right'), sides):
+        entry = submitted.get(name)
+        if not isinstance(entry, dict) or type(entry.get('task_id')) is not int:
+            raise BadRequest('Identify and confirm both cartons before comparing.')
+        task = db.session.get(SystemTask, entry['task_id'])
+        if not task or task.user_id != current_user.id or task.task_type != 'image_review_extract' or task.status != 'completed':
+            raise BadRequest('Carton identification is unavailable or still running.')
+        record = json.loads(task.result_data or '{}').get('cartons', {}).get(name, {})
+        if record.get('status') != 'completed' or record.get('source', {}).get('image_hash') != image['metadata']['image_hash']:
+            raise BadRequest('An image changed. Identify the replacement carton before comparing.')
+        extraction = record['extraction']
+        if extraction['suitability'] == 'unsupported':
+            raise BadRequest('Only package cartons are supported. Replace the non-carton image.')
+        if entry.get('acknowledged') is not True:
+            raise BadRequest('Confirm the image suitability and review limitations for each carton.')
+        edits = entry.get('fields')
+        if not isinstance(edits, dict) or any(not isinstance(edits.get(key), str) or len(edits[key]) > 1000 for key in FIELDS):
+            raise BadRequest('Invalid confirmed carton fields.')
+        fields = {key: {'value': edits[key].strip(),
+                        'source': 'user_provided' if edits[key].strip() != extraction['fields'][key]['value'] else 'image_extraction'} for key in FIELDS}
+        confirmed[name] = dict(extraction=extraction, confirmed_fields=fields, extraction_task_id=task.id,
+                               model=record.get('model'), acknowledged=True)
+    return confirmed
+
+
+@image_review_bp.post('/cartons/extractions')
+def start_carton_extraction():
+    if getattr(current_user, 'is_guest', False):
+        return jsonify(error='Sign in with a personal account to identify cartons.'), 403
+    if request.content_length and request.content_length > 2 * FILE_LIMIT + 512 * 1024:
+        return jsonify(error='Request exceeds the two-image upload limit.'), 413
+    active = SystemTask.query.filter(SystemTask.user_id == current_user.id,
+                                    SystemTask.task_type.in_(['image_review', 'image_review_extract']),
+                                    SystemTask.status.in_(['pending', 'processing'])).first()
+    if active:
+        return jsonify(error='A visual review is already running for your account.'), 409
+    names = [side for side in ('left', 'right') if request.form.get(side)]
+    if not names:
+        raise BadRequest('Select at least one carton image.')
+    try:
+        descriptors = [json.loads(request.form[name]) for name in names]
+    except (ValueError, TypeError) as exc:
+        raise BadRequest('Invalid image selection.') from exc
+    sides = [prepare_side(value, request.files.get(f'{name}_upload')) for name, value in zip(names, descriptors)]
+    job_id = str(uuid4())
+    save_job(job_id, sides)
+    task = None
+    try:
+        task = TaskService.create_task('image_review_extract', user_id=current_user.id, message='Carton identification queued.')
+        TaskService.start_background_task(current_app._get_current_object(), task.id, execute_carton_extraction, current_user.id, job_id, names)
+        if task.status == 'failed':
+            clean_job(job_id)
+            return jsonify(error='The review worker is unavailable. Start Celery and try again.'), 503
+        return jsonify(task_id=task.id), 202
+    except Exception:
+        clean_job(job_id)
+        if task is not None:
+            db.session.rollback()
+            TaskService.update_task(task.id, status='failed', error_details='Could not queue carton identification.')
+        raise
 
 
 @image_review_bp.get('/reviews/<int:task_id>/comments')
