@@ -1,7 +1,0 @@
-/*
- * Legacy dashboard.css placeholder.
- * All active dashboard workspace styling has been unified into dashboard-workstation.css.
- * The original pre-migration file is archived at:
- * frontend/style-archive/2026-09-15-source/app/dashboard/dashboard.css
- */
-@import './dashboard-workstation.css';
