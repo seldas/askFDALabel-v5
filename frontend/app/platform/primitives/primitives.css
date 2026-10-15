@@ -28,7 +28,7 @@
 .afl-section-header__title { margin: 0; color: var(--fdl-navy-950); font-size: 1.4rem; font-weight: 750; letter-spacing: -0.01em; }
 .afl-section-header__desc { margin: 0.25rem 0 0; color: var(--fdl-muted); font-size: 0.84rem; }
 
-.afl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(280px, 240px), 1fr)); gap: var(--fdl-space-4); }
+.afl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--fdl-grid-min, 240px), 1fr)); gap: var(--fdl-space-4); }
 
 .afl-card {
   padding: var(--fdl-space-4);
