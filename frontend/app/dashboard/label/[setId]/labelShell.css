@@ -18,7 +18,7 @@
   flex-direction: column;
   min-height: 0;
   overflow-y: auto;
-  padding-top: var(--afl-header-height);
+  padding-top: var(--fdl-header-height, 56px);
 }
 
 .afl-label-shell__inner {
@@ -532,31 +532,31 @@
 .afl-toolbox__notice a { color: var(--fdl-blue-700); font-weight: 700; }
 
 .afl-toolbox__section {
-  --afl-toolbox-workflow: var(--fdl-blue-700);
-  --afl-toolbox-workflow-tint: var(--fdl-blue-050);
+  --fdl-toolbox-workflow: var(--fdl-blue-700);
+  --fdl-toolbox-workflow-tint: var(--fdl-blue-050);
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
 .afl-toolbox__section--pinned {
-  --afl-toolbox-workflow: var(--fdl-navy-800);
-  --afl-toolbox-workflow-tint: var(--fdl-blue-100);
+  --fdl-toolbox-workflow: var(--fdl-navy-800);
+  --fdl-toolbox-workflow-tint: var(--fdl-blue-100);
 }
 
 .afl-toolbox__section[data-workflow='safety'] {
-  --afl-toolbox-workflow: var(--fdl-amber);
-  --afl-toolbox-workflow-tint: var(--fdl-amber-050);
+  --fdl-toolbox-workflow: var(--fdl-amber);
+  --fdl-toolbox-workflow-tint: var(--fdl-amber-050);
 }
 
 .afl-toolbox__section[data-workflow='toxicity'] {
-  --afl-toolbox-workflow: var(--fdl-green);
-  --afl-toolbox-workflow-tint: var(--fdl-green-050);
+  --fdl-toolbox-workflow: var(--fdl-green);
+  --fdl-toolbox-workflow-tint: var(--fdl-green-050);
 }
 
 .afl-toolbox__section[data-workflow='comparison'] {
-  --afl-toolbox-workflow: var(--fdl-navy-800);
-  --afl-toolbox-workflow-tint: var(--fdl-blue-050);
+  --fdl-toolbox-workflow: var(--fdl-navy-800);
+  --fdl-toolbox-workflow-tint: var(--fdl-blue-050);
 }
 
 .afl-toolbox__section-header {
@@ -566,13 +566,13 @@
   gap: 16px;
   padding: 9px 0 8px;
   border-bottom: 1px solid var(--fdl-line);
-  border-left: 3px solid var(--afl-toolbox-workflow);
+  border-left: 3px solid var(--fdl-toolbox-workflow);
   padding-left: 9px;
 }
 
 .afl-toolbox__section-header span {
   display: block;
-  color: var(--afl-toolbox-workflow);
+  color: var(--fdl-toolbox-workflow);
   font-family: var(--fdl-font-mono);
   font-size: 0.64rem;
   font-weight: 700;
@@ -602,35 +602,35 @@
 }
 
 .afl-toolbox__tool {
-  --afl-toolbox-workflow: var(--fdl-blue-700);
-  --afl-toolbox-workflow-tint: var(--fdl-blue-050);
+  --fdl-toolbox-workflow: var(--fdl-blue-700);
+  --fdl-toolbox-workflow-tint: var(--fdl-blue-050);
   display: flex;
   min-height: 176px;
   flex-direction: column;
   padding: 14px;
   border: 1px solid var(--fdl-line-soft);
-  border-top: 2px solid var(--afl-toolbox-workflow, var(--fdl-line));
+  border-top: 2px solid var(--fdl-toolbox-workflow, var(--fdl-line));
   background: var(--fdl-paper);
 }
 
 .afl-toolbox__tool[data-workflow='review'] {
-  --afl-toolbox-workflow: var(--fdl-blue-700);
-  --afl-toolbox-workflow-tint: var(--fdl-blue-050);
+  --fdl-toolbox-workflow: var(--fdl-blue-700);
+  --fdl-toolbox-workflow-tint: var(--fdl-blue-050);
 }
 
 .afl-toolbox__tool[data-workflow='safety'] {
-  --afl-toolbox-workflow: var(--fdl-amber);
-  --afl-toolbox-workflow-tint: var(--fdl-amber-050);
+  --fdl-toolbox-workflow: var(--fdl-amber);
+  --fdl-toolbox-workflow-tint: var(--fdl-amber-050);
 }
 
 .afl-toolbox__tool[data-workflow='toxicity'] {
-  --afl-toolbox-workflow: var(--fdl-green);
-  --afl-toolbox-workflow-tint: var(--fdl-green-050);
+  --fdl-toolbox-workflow: var(--fdl-green);
+  --fdl-toolbox-workflow-tint: var(--fdl-green-050);
 }
 
 .afl-toolbox__tool[data-workflow='comparison'] {
-  --afl-toolbox-workflow: var(--fdl-navy-800);
-  --afl-toolbox-workflow-tint: var(--fdl-blue-050);
+  --fdl-toolbox-workflow: var(--fdl-navy-800);
+  --fdl-toolbox-workflow-tint: var(--fdl-blue-050);
 }
 
 .afl-toolbox__tool.is-pinned {
@@ -657,7 +657,7 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--afl-toolbox-workflow, var(--fdl-muted));
+  color: var(--fdl-toolbox-workflow, var(--fdl-muted));
   margin-bottom: 2px;
   line-height: 1.2;
 }
@@ -668,8 +668,8 @@
   height: 28px;
   place-items: center;
   border: 1px solid var(--fdl-line);
-  background: var(--afl-toolbox-workflow-tint, var(--fdl-blue-050));
-  color: var(--afl-toolbox-workflow, var(--fdl-blue-700));
+  background: var(--fdl-toolbox-workflow-tint, var(--fdl-blue-050));
+  color: var(--fdl-toolbox-workflow, var(--fdl-blue-700));
 }
 
 .afl-toolbox__tool h3 {
@@ -687,7 +687,7 @@
   place-items: center;
   padding: 0;
   border: 1px solid var(--fdl-line);
-  border-radius: 4px;
+  border-radius: var(--fdl-radius-sm, 2px);
   background: var(--fdl-paper);
   color: var(--fdl-muted);
   cursor: pointer;
@@ -698,12 +698,12 @@
 }
 
 .afl-toolbox__pin[aria-pressed='true'] {
-  border-color: var(--afl-toolbox-workflow, var(--fdl-blue-700));
-  background: var(--afl-toolbox-workflow, var(--fdl-blue-700));
+  border-color: var(--fdl-toolbox-workflow, var(--fdl-blue-700));
+  background: var(--fdl-toolbox-workflow, var(--fdl-blue-700));
   color: var(--fdl-paper);
 }
 
-.afl-toolbox__pin:hover { border-color: var(--afl-toolbox-workflow, var(--fdl-blue-600)); color: var(--afl-toolbox-workflow, var(--fdl-blue-700)); }
+.afl-toolbox__pin:hover { border-color: var(--fdl-toolbox-workflow, var(--fdl-blue-600)); color: var(--fdl-toolbox-workflow, var(--fdl-blue-700)); }
 .afl-toolbox__pin[aria-pressed='true']:hover { background: var(--fdl-navy-950); border-color: var(--fdl-navy-950); color: var(--fdl-paper); }
 .afl-toolbox__pin:focus-visible, .afl-toolbox__launch:focus-visible, .afl-toolbox__tool-name:focus-visible { outline: 2px solid var(--fdl-blue-600); outline-offset: 2px; }
 
@@ -725,7 +725,7 @@
   margin-top: auto;
   padding: 8px 12px;
   border: 1px solid var(--fdl-blue-700);
-  border-radius: 4px;
+  border-radius: var(--fdl-radius-sm, 2px);
   background: var(--fdl-blue-700);
   color: var(--fdl-paper);
   font-size: 0.8rem;

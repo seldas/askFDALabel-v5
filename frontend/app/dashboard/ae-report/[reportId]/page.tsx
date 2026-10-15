@@ -33,7 +33,7 @@ interface ReportDetail {
   }>;
 }
 
-const COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
+const COLORS = ['#0759a5', '#0071bc', '#2d7a4c', '#b86200', '#b82323', '#7a3b8c', '#12375b', '#00838f', '#4d7c0f', '#c2410c'];
 
 export default function AEReportPage() {
   const { reportId } = useParams();
@@ -144,34 +144,34 @@ export default function AEReportPage() {
   }, [data, chartType]);
 
   if (loading) return <div style={{ padding: '100px', textAlign: 'center' }}><div className="loader" style={{ margin: '0 auto' }} /></div>;
-  if (error || !data) return <div style={{ padding: '100px', textAlign: 'center', color: '#ef4444' }}>{error || 'Report not found.'}</div>;
+  if (error || !data) return <div style={{ padding: '100px', textAlign: 'center', color: '#b82323' }}>{error || 'Report not found.'}</div>;
 
   return (
-    <main style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+    <main style={{ minHeight: '100vh', backgroundColor: 'var(--fdl-canvas, #f3f6f8)' }}>
       <Header activeApp="dashboard" />
       
       <div className="hp-container" style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
         {/* Header Section */}
         <div style={{ 
-          background: 'white', 
-          borderRadius: '24px', 
-          padding: '2rem', 
-          boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-          marginBottom: '2rem',
-          border: '1px solid #e2e8f0'
+          background: 'var(--fdl-paper, #ffffff)', 
+          borderRadius: 'var(--fdl-radius-sm, 2px)', 
+          padding: '1.75rem 2rem', 
+          border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+          borderTop: '3px solid var(--fdl-navy-800, #12375b)',
+          marginBottom: '1.5rem'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>AE Profile Report</span>
-                <span style={{ color: '#cbd5e1' }}>•</span>
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>{new Date(data.report.created_at).toLocaleDateString()}</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--fdl-blue-700, #0759a5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>AE Profile Report</span>
+                <span style={{ color: 'var(--fdl-line, #b8c8d7)' }}>•</span>
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--fdl-muted, #5e6e7c)' }}>{new Date(data.report.created_at).toLocaleDateString()}</span>
               </div>
-              <h1 style={{ fontSize: '2.25rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>{data.report.target_pt}</h1>
-              <p style={{ fontSize: '1.1rem', color: '#64748b', marginTop: '0.5rem' }}>Project: <strong>{data.report.project_title}</strong></p>
+              <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)', margin: 0 }}>{data.report.target_pt}</h1>
+              <p style={{ fontSize: '1rem', color: 'var(--fdl-ink-soft, #273843)', marginTop: '0.35rem' }}>Project: <strong style={{ color: 'var(--fdl-ink, #132332)' }}>{data.report.project_title}</strong></p>
             </div>
             
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
               <button 
                 onClick={async () => {
                   const res = await fetch(`/api/dashboard/ae_report/export/${reportId}`);
@@ -187,16 +187,17 @@ export default function AEReportPage() {
                   }
                 }}
                 style={{
-                  padding: '10px 20px',
-                  borderRadius: '12px',
-                  background: '#ecfeff',
-                  color: '#0891b2',
-                  border: '1px solid #cffafe',
-                  fontWeight: 700,
+                  padding: '7px 14px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  background: 'var(--fdl-paper, #ffffff)',
+                  color: 'var(--fdl-blue-700, #0759a5)',
+                  border: '1px solid var(--fdl-line, #b8c8d7)',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px'
+                  gap: '6px'
                 }}
               >
                 <span>📊</span> Download Excel
@@ -218,16 +219,17 @@ export default function AEReportPage() {
                   }
                 }}
                 style={{
-                  padding: '10px 20px',
-                  borderRadius: '12px',
-                  background: '#f5f3ff',
-                  color: '#5b21b6',
-                  border: '1px solid #ddd6fe',
-                  fontWeight: 700,
+                  padding: '7px 14px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  background: 'var(--fdl-paper, #ffffff)',
+                  color: 'var(--fdl-navy-800, #12375b)',
+                  border: '1px solid var(--fdl-line, #b8c8d7)',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px'
+                  gap: '6px'
                 }}
               >
                 <span>🤖</span> JSON for AI
@@ -235,32 +237,33 @@ export default function AEReportPage() {
 
               <button 
                 onClick={() => window.print()}
-              style={{
-                padding: '10px 20px',
-                borderRadius: '12px',
-                background: '#f1f5f9',
-                color: '#475569',
-                border: 'none',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              <span>🖨️</span> Print Report
-            </button>
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  background: 'var(--fdl-canvas, #f3f6f8)',
+                  color: 'var(--fdl-ink-soft, #273843)',
+                  border: '1px solid var(--fdl-line, #b8c8d7)',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>🖨️</span> Print Report
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginTop: '2rem' }}>
-            <StatCard label="Total Labels" value={stats?.total || 0} icon="📄" color="#6366f1" />
-            <StatCard label="Labeled Presence" value={`${stats?.labeled} (${stats?.percentLabeled}%)`} icon="✅" color="#10b981" />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginTop: '1.5rem' }}>
+            <StatCard label="Total Labels" value={stats?.total || 0} icon="📄" color="var(--fdl-blue-700, #0759a5)" />
+            <StatCard label="Labeled Presence" value={`${stats?.labeled} (${stats?.percentLabeled}%)`} icon="✅" color="var(--fdl-green, #2d7a4c)" />
             <div onClick={() => { setChartType('total'); setShowChartModal(true); }} style={{ cursor: 'pointer' }}>
-              <StatCard label="Total FAERS Cases" value={stats?.totalFaers?.toLocaleString() || 0} icon="📊" color="#f59e0b" badge="Click for Chart" />
+              <StatCard label="Total FAERS Cases" value={stats?.totalFaers?.toLocaleString() || 0} icon="📊" color="var(--fdl-ink, #132332)" badge="Click for Chart" />
             </div>
             <div onClick={() => { setChartType('1yr'); setShowChartModal(true); }} style={{ cursor: 'pointer' }}>
-              <StatCard label="Last Year Cases" value={stats?.total1yr?.toLocaleString() || 0} icon="📅" color="#0ea5e9" badge="Click for Chart" />
+              <StatCard label="Last Year Cases" value={stats?.total1yr?.toLocaleString() || 0} icon="📅" color="var(--fdl-blue-600, #0071bc)" badge="Click for Chart" />
             </div>
           </div>
         </div>
@@ -298,48 +301,48 @@ export default function AEReportPage() {
         {/* Context Ranking Table */}
         {data.frequent_contexts && data.frequent_contexts.length > 0 && (
           <div style={{ 
-            background: 'white', 
-            borderRadius: '24px', 
-            padding: '2rem', 
-            boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-            marginBottom: '2rem',
-            border: '1px solid #e2e8f0'
+            background: 'var(--fdl-paper, #ffffff)', 
+            borderRadius: 'var(--fdl-radius-sm, 2px)', 
+            padding: '1.75rem 2rem', 
+            border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+            borderTop: '3px solid var(--fdl-navy-800, #12375b)',
+            marginBottom: '1.5rem'
           }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>📈</span> Most Frequent Labeling Contexts
             </h2>
-            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1.5rem', fontStyle: 'italic' }}>
+            <p style={{ fontSize: '0.85rem', color: 'var(--fdl-muted, #5e6e7c)', marginBottom: '1.25rem', fontStyle: 'italic' }}>
               Phrases are grouped by semantic similarity (80% threshold). Document counts reflect unique labels containing at least one mention in the group.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {data.frequent_contexts.map((ctx, idx) => (
                 <div key={idx} style={{ 
                   display: 'flex', 
-                  gap: '20px', 
-                  padding: '1.25rem', 
-                  background: '#f8fafc', 
-                  borderRadius: '16px',
-                  border: '1px solid #f1f5f9',
+                  gap: '16px', 
+                  padding: '1rem 1.25rem', 
+                  background: 'var(--fdl-canvas, #f3f6f8)', 
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  border: '1px solid var(--fdl-line-soft, #d7e0e7)',
                   alignItems: 'center'
                 }}>
                   <div style={{ 
-                    minWidth: '40px', 
-                    height: '40px', 
-                    borderRadius: '50%', 
-                    background: '#6366f1', 
+                    minWidth: '32px', 
+                    height: '32px', 
+                    borderRadius: 'var(--fdl-radius-sm, 2px)', 
+                    background: 'var(--fdl-navy-800, #12375b)', 
                     color: 'white', 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center',
-                    fontWeight: 900,
-                    fontSize: '0.9rem'
+                    fontWeight: 800,
+                    fontSize: '0.85rem'
                   }}>
                     {idx + 1}
                   </div>
-                  <div style={{ flex: 1, fontSize: '0.9rem', color: '#334155', lineHeight: '1.5', fontStyle: 'italic' }}>
+                  <div style={{ flex: 1, fontSize: '0.875rem', color: 'var(--fdl-ink, #132332)', lineHeight: '1.5', fontStyle: 'italic' }}>
                     "...<HighlightedText text={ctx.snippet} highlight={data.report.target_pt} />..."
                   </div>
-                  <div style={{ textAlign: 'right', minWidth: '120px', position: 'relative' }}>
+                  <div style={{ textAlign: 'right', minWidth: '110px', position: 'relative' }}>
                     <div 
                       onClick={() => {
                         if (ctx.count < 5) {
@@ -347,9 +350,9 @@ export default function AEReportPage() {
                         }
                       }}
                       style={{ 
-                        fontSize: '1.25rem', 
-                        fontWeight: 900, 
-                        color: '#6366f1',
+                        fontSize: '1.2rem', 
+                        fontWeight: 800, 
+                        color: 'var(--fdl-blue-700, #0759a5)',
                         cursor: ctx.count < 5 ? 'pointer' : 'default',
                         textDecoration: ctx.count < 5 ? 'underline' : 'none',
                         textDecorationStyle: 'dashed',
@@ -359,34 +362,34 @@ export default function AEReportPage() {
                     >
                       {ctx.count}
                     </div>
-                    <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Documents</div>
+                    <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--fdl-muted, #5e6e7c)', textTransform: 'uppercase' }}>Documents</div>
                     
                     {expandedContexts[idx] && ctx.set_ids && (
                       <div style={{ 
                         position: 'absolute',
                         top: '100%',
                         right: 0,
-                        marginTop: '10px', 
+                        marginTop: '6px', 
                         width: '180px',
                         display: 'flex', 
                         flexDirection: 'column', 
-                        gap: '6px',
+                        gap: '4px',
                         fontSize: '0.75rem',
                         textAlign: 'left',
                         maxHeight: '200px',
                         overflowY: 'auto',
-                        padding: '12px',
-                        background: 'white',
-                        borderRadius: '12px',
-                        border: '1px solid #e2e8f0',
-                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                        padding: '10px',
+                        background: 'var(--fdl-paper, #ffffff)',
+                        borderRadius: 'var(--fdl-radius-sm, 2px)',
+                        border: '1px solid var(--fdl-line, #b8c8d7)',
+                        boxShadow: '0 4px 12px rgba(7, 31, 61, 0.1)',
                         zIndex: 100
                       }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
-                          <span style={{ fontWeight: 800, color: '#475569', fontSize: '0.65rem', textTransform: 'uppercase' }}>Label IDs</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)', paddingBottom: '4px' }}>
+                          <span style={{ fontWeight: 800, color: 'var(--fdl-ink-soft, #273843)', fontSize: '0.65rem', textTransform: 'uppercase' }}>Label IDs</span>
                           <button 
                             onClick={(e) => { e.stopPropagation(); setExpandedContexts(prev => ({ ...prev, [idx]: false })); }}
-                            style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1rem', color: '#94a3b8', padding: 0 }}
+                            style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1rem', color: 'var(--fdl-muted, #5e6e7c)', padding: 0 }}
                           >
                             ×
                           </button>
@@ -398,12 +401,12 @@ export default function AEReportPage() {
                             target="_blank" 
                             rel="noreferrer"
                             style={{ 
-                              color: '#6366f1', 
+                              color: 'var(--fdl-blue-700, #0759a5)', 
                               textDecoration: 'none', 
                               fontWeight: 600,
-                              padding: '4px 6px',
-                              borderRadius: '4px',
-                              background: '#f8fafc',
+                              padding: '3px 6px',
+                              borderRadius: 'var(--fdl-radius-sm, 2px)',
+                              background: 'var(--fdl-canvas, #f3f6f8)',
                               overflow: 'hidden', 
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap'
@@ -424,21 +427,21 @@ export default function AEReportPage() {
 
         {/* Results Table */}
         <div style={{ 
-          background: 'white', 
-          borderRadius: '24px', 
-          boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-          border: '1px solid #e2e8f0',
+          background: 'var(--fdl-paper, #ffffff)', 
+          borderRadius: 'var(--fdl-radius-sm, 2px)', 
+          border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+          borderTop: '3px solid var(--fdl-navy-800, #12375b)',
           overflow: 'hidden'
         }}>
-          <div style={{ padding: '1.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b', margin: 0 }}>Labeling & FAERS Analysis</h2>
-            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Showing {data.results.length} labeling documents</div>
+          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)', margin: 0 }}>Labeling & FAERS Analysis</h2>
+            <div style={{ fontSize: '0.85rem', color: 'var(--fdl-muted, #5e6e7c)' }}>Showing {data.results.length} labeling documents</div>
           </div>
           
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
+                <tr style={{ background: 'var(--fdl-canvas, #f3f6f8)', borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>
                   <Th label="Drug Product" field="brand_name" current={sortField} order={sortOrder} onClick={setSortField} setOrder={setSortOrder} />
                   <Th label="Labeled?" field="is_labeled" current={sortField} order={sortOrder} onClick={setSortField} setOrder={setSortOrder} />
                   <Th label="Sections Mentioned" field={null} />
@@ -449,37 +452,37 @@ export default function AEReportPage() {
               </thead>
               <tbody>
                 {sortedResults.map((res, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #f8fafc', transition: 'background 0.2s' }} className="table-row">
-                    <td style={{ padding: '1rem 1.5rem' }}>
-                      <div style={{ fontWeight: 700, color: '#1e293b' }}>{res.brand_name}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontFamily: 'monospace' }}>{res.set_id}</div>
+                  <tr key={idx} style={{ borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)', transition: 'background 0.2s' }} className="table-row">
+                    <td style={{ padding: '0.875rem 1.25rem' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--fdl-ink, #132332)' }}>{res.brand_name}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--fdl-muted, #5e6e7c)', fontFamily: 'monospace' }}>{res.set_id}</div>
                     </td>
-                    <td style={{ padding: '1rem 1.5rem' }}>
+                    <td style={{ padding: '0.875rem 1.25rem' }}>
                       {res.is_labeled ? (
-                        <span style={{ padding: '4px 10px', background: '#dcfce7', color: '#166534', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 800 }}>LABELED</span>
+                        <span style={{ padding: '2px 8px', background: '#dcfce7', color: '#166534', borderRadius: 'var(--fdl-radius-sm, 2px)', fontSize: '0.75rem', fontWeight: 700, border: '1px solid #bbf7d0' }}>LABELED</span>
                       ) : (
-                        <span style={{ padding: '4px 10px', background: '#f1f5f9', color: '#64748b', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 800 }}>NOT MENTIONED</span>
+                        <span style={{ padding: '2px 8px', background: 'var(--fdl-canvas, #f3f6f8)', color: 'var(--fdl-muted, #5e6e7c)', borderRadius: 'var(--fdl-radius-sm, 2px)', fontSize: '0.75rem', fontWeight: 700, border: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>NOT MENTIONED</span>
                       )}
                     </td>
-                    <td style={{ padding: '1rem 1.5rem' }}>
+                    <td style={{ padding: '0.875rem 1.25rem' }}>
                       {res.found_sections.length > 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                             {res.found_sections.map((s, i) => (
-                              <span key={i} title={s.snippet} style={{ fontSize: '0.7rem', padding: '2px 6px', background: '#fef3c7', color: '#92400e', borderRadius: '4px', fontWeight: 600, border: '1px solid #fde68a' }}>{s.section}</span>
+                              <span key={i} title={s.snippet} style={{ fontSize: '0.7rem', padding: '1px 5px', background: '#fef3c7', color: '#92400e', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 600, border: '1px solid #fde68a' }}>{s.section}</span>
                             ))}
                           </div>
                           {res.found_sections[0] && (
-                            <div style={{ fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--fdl-muted, #5e6e7c)', fontStyle: 'italic', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               "<HighlightedText text={res.found_sections[0].snippet} highlight={data.report.target_pt} />"
                             </div>
                           )}
                         </div>
                       ) : '—'}
                     </td>
-                    <td style={{ padding: '1rem 1.5rem', fontWeight: 700, color: '#1e293b' }}>{res.faers_count?.toLocaleString() || 0}</td>
-                    <td style={{ padding: '1rem 1.5rem', fontWeight: 700, color: '#64748b' }}>{res.faers_5yr_count?.toLocaleString() || 0}</td>
-                    <td style={{ padding: '1rem 1.5rem', fontWeight: 700, color: '#0ea5e9' }}>{res.faers_1yr_count?.toLocaleString() || 0}</td>
+                    <td style={{ padding: '0.875rem 1.25rem', fontWeight: 700, color: 'var(--fdl-ink, #132332)' }}>{res.faers_count?.toLocaleString() || 0}</td>
+                    <td style={{ padding: '0.875rem 1.25rem', fontWeight: 700, color: 'var(--fdl-muted, #5e6e7c)' }}>{res.faers_5yr_count?.toLocaleString() || 0}</td>
+                    <td style={{ padding: '0.875rem 1.25rem', fontWeight: 700, color: 'var(--fdl-blue-600, #0071bc)' }}>{res.faers_1yr_count?.toLocaleString() || 0}</td>
                   </tr>
                 ))}
               </tbody>
@@ -490,18 +493,18 @@ export default function AEReportPage() {
 
       <style jsx>{`
         .table-row:hover {
-          background-color: #f1f5f9;
+          background-color: var(--fdl-blue-050, #edf4fa);
         }
         .sid-link:hover {
-          background-color: #eef2ff !important;
-          color: #4338ca !important;
+          background-color: var(--fdl-blue-100, #dcecf8) !important;
+          color: var(--fdl-navy-800, #12375b) !important;
         }
         .loader {
-          border: 4px solid #f3f3f3;
+          border: 3px solid var(--fdl-line-soft, #d7e0e7);
           border-radius: 50%;
-          border-top: 4px solid #6366f1;
-          width: 40px;
-          height: 40px;
+          border-top: 3px solid var(--fdl-blue-700, #0759a5);
+          width: 36px;
+          height: 36px;
           animation: spin 1s linear infinite;
         }
         @keyframes spin {
@@ -515,23 +518,24 @@ export default function AEReportPage() {
 
 function StatCard({ label, value, icon, color, badge }: { label: string, value: string | number, icon: string, color: string, badge?: string }) {
   return (
-    <div style={{ padding: '1.25rem', borderRadius: '16px', border: '1px solid #f1f5f9', backgroundColor: '#fafafa', position: 'relative' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
-        <span style={{ fontSize: '1.25rem' }}>{icon}</span>
-        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>{label}</span>
+    <div style={{ padding: '1rem 1.25rem', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)', backgroundColor: 'var(--fdl-paper, #ffffff)', position: 'relative' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.5rem' }}>
+        <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--fdl-muted, #5e6e7c)', textTransform: 'uppercase' }}>{label}</span>
       </div>
-      <div style={{ fontSize: '1.5rem', fontWeight: 900, color }}>{value}</div>
+      <div style={{ fontSize: '1.4rem', fontWeight: 800, color }}>{value}</div>
       {badge && (
         <div style={{ 
           position: 'absolute', 
           top: '10px', 
           right: '10px', 
-          fontSize: '0.6rem', 
-          fontWeight: 900, 
-          padding: '2px 6px', 
-          background: '#f1f5f9', 
-          color: '#64748b', 
-          borderRadius: '4px',
+          fontSize: '0.65rem', 
+          fontWeight: 700, 
+          padding: '2px 5px', 
+          background: 'var(--fdl-canvas, #f3f6f8)', 
+          color: 'var(--fdl-muted, #5e6e7c)', 
+          borderRadius: 'var(--fdl-radius-sm, 2px)',
+          border: '1px solid var(--fdl-line-soft, #d7e0e7)',
           textTransform: 'uppercase'
         }}>
           {badge}
@@ -555,10 +559,10 @@ function Th({ label, field, current, order, onClick, setOrder }: any) {
         }
       }}
       style={{ 
-        padding: '12px 1.5rem', 
+        padding: '10px 1.25rem', 
         fontSize: '0.75rem', 
         fontWeight: 800, 
-        color: '#475569', 
+        color: 'var(--fdl-ink-soft, #273843)', 
         textTransform: 'uppercase', 
         cursor: field ? 'pointer' : 'default',
         userSelect: 'none'
@@ -567,7 +571,7 @@ function Th({ label, field, current, order, onClick, setOrder }: any) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
         {label}
         {field && (
-          <span style={{ color: isCurrent ? '#6366f1' : '#cbd5e1' }}>
+          <span style={{ color: isCurrent ? 'var(--fdl-blue-700, #0759a5)' : 'var(--fdl-line, #b8c8d7)' }}>
             {isCurrent ? (order === 'asc' ? '↑' : '↓') : '⇅'}
           </span>
         )}

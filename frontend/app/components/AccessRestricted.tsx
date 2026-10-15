@@ -38,10 +38,10 @@ export default function AccessRestricted({
       <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }} aria-hidden="true">
         🔒
       </div>
-      <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--afl-n-900, #0f172a)', marginBottom: '0.5rem' }}>
+      <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--fdl-navy-950, #0f172a)', marginBottom: '0.5rem' }}>
         {title ?? `${feature} is not available for guests`}
       </h1>
-      <p style={{ color: 'var(--afl-n-500, #64748b)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+      <p style={{ color: 'var(--fdl-muted, #64748b)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
         {body ??
           `The guest account is shared by everyone browsing without signing in, so it cannot keep per-account data. Register or sign in with your own account to use ${feature.toLowerCase()}.`}
       </p>
@@ -50,8 +50,8 @@ export default function AccessRestricted({
         style={{
           display: 'inline-block',
           padding: '0.6rem 1.25rem',
-          borderRadius: '8px',
-          background: 'var(--afl-info-500, #2563eb)',
+          borderRadius: '2px',
+          background: 'var(--fdl-blue-600, #2563eb)',
           color: '#fff',
           fontWeight: 700,
           textDecoration: 'none',

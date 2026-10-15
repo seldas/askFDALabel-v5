@@ -479,29 +479,30 @@ export default function Header({
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {activeTasks.map(task => (
-                        <div key={task.id} style={{ padding: '8px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                        <div key={task.id} style={{ padding: '8px 10px', background: 'var(--fdl-canvas, #f3f6f8)', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-navy-950, #071f3d)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {getTaskLabel(task)}
                             </div>
-                            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#0759a5' }}>{task.progress}%</div>
+                            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--fdl-blue-700, #0759a5)' }}>{task.progress}%</div>
                           </div>
-                          <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '6px' }}>{getTaskProjectLabel(task)}</div>
-                          <div style={{ width: '100%', height: '4px', background: '#dcecf8', borderRadius: '0', overflow: 'hidden', marginBottom: '8px' }}>
-                            <div style={{ width: `${task.progress}%`, height: '100%', background: '#0071bc', transition: 'width 0.3s ease' }} />
+                          <div style={{ fontSize: '0.65rem', color: 'var(--fdl-muted, #5e6e7c)', marginBottom: '6px' }}>{getTaskProjectLabel(task)}</div>
+                          <div style={{ width: '100%', height: '4px', background: 'var(--fdl-blue-100, #dcecf8)', borderRadius: '0', overflow: 'hidden', marginBottom: '8px' }}>
+                            <div style={{ width: `${task.progress}%`, height: '100%', background: 'var(--fdl-blue-600, #0071bc)', transition: 'width 0.3s ease' }} />
                           </div>
                           <div style={{ display: 'flex', gap: '8px' }}>
                             <button
                               onClick={(e) => { e.stopPropagation(); fetchLogs(task.id); }}
                               style={{
-                                background: '#f1f5f9',
-                                border: '1px solid #e2e8f0',
-                                borderRadius: '4px',
+                                background: 'var(--fdl-paper, #ffffff)',
+                                border: '1px solid var(--fdl-line, #b8c8d7)',
+                                borderRadius: 'var(--fdl-radius-sm, 2px)',
                                 padding: '2px 8px',
                                 fontSize: '0.65rem',
                                 cursor: 'pointer',
                                 fontWeight: 800,
-                                flex: 1
+                                flex: 1,
+                                color: 'var(--fdl-ink-soft, #273843)'
                               }}
                             >
                               VIEW LOGS
@@ -509,10 +510,10 @@ export default function Header({
                             <button
                               onClick={(e) => { e.stopPropagation(); cancelTask(task.id); }}
                               style={{
-                                background: '#fef2f2',
-                                color: '#ef4444',
+                                background: 'var(--fdl-red-050, #fff1f1)',
+                                color: 'var(--fdl-red, #b50909)',
                                 border: '1px solid #fca5a5',
-                                borderRadius: '4px',
+                                borderRadius: 'var(--fdl-radius-sm, 2px)',
                                 padding: '2px 8px',
                                 fontSize: '0.65rem',
                                 cursor: 'pointer',
@@ -678,18 +679,30 @@ export default function Header({
       {/* Log Modal */}
       {isLogModalOpen && (
         <div
-          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(7, 31, 61, 0.58)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}
           onClick={() => {
             setIsLogModalOpen(false);
             setSelectedTaskId(null);
           }}
         >
           <div
-            style={{ background: 'white', padding: '24px', borderRadius: '12px', width: '80%', maxWidth: '800px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
+            style={{
+              background: 'var(--fdl-paper, #ffffff)',
+              borderRadius: 'var(--fdl-radius-sm, 2px)',
+              border: '1px solid var(--fdl-line, #b8c8d7)',
+              borderTop: '3px solid var(--fdl-navy-800, #12375b)',
+              boxShadow: '0 16px 36px rgba(7, 31, 61, 0.24)',
+              padding: '20px 24px',
+              width: '80%',
+              maxWidth: '800px',
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, color: '#1e293b' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)', paddingBottom: '10px' }}>
+              <h3 style={{ margin: 0, color: 'var(--fdl-navy-950, #071f3d)', fontSize: '1.1rem', fontWeight: 800 }}>
                 Task Execution Logs {selectedTaskId ? `(ID: ${selectedTaskId})` : ''}
               </h3>
               <button
@@ -697,7 +710,16 @@ export default function Header({
                   setIsLogModalOpen(false);
                   setSelectedTaskId(null);
                 }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 800, color: '#64748b' }}
+                style={{
+                  background: 'var(--fdl-paper, #ffffff)',
+                  border: '1px solid var(--fdl-line, #b8c8d7)',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  padding: '4px 10px',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  color: 'var(--fdl-ink-soft, #273843)'
+                }}
               >
                 CLOSE
               </button>
@@ -705,7 +727,19 @@ export default function Header({
             <pre
               ref={logScrollRef}
               onScroll={handleLogScroll}
-              style={{ flex: 1, overflow: 'auto', background: '#f8fafc', padding: '16px', borderRadius: '8px', fontSize: '0.85rem', color: '#334155', border: '1px solid #e2e8f0', whiteSpace: 'pre-wrap' }}
+              style={{
+                flex: 1,
+                overflow: 'auto',
+                background: 'var(--fdl-canvas, #f3f6f8)',
+                padding: '14px',
+                borderRadius: 'var(--fdl-radius-sm, 2px)',
+                fontSize: '0.82rem',
+                color: 'var(--fdl-ink, #132332)',
+                border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+                whiteSpace: 'pre-wrap',
+                fontFamily: 'var(--fdl-font-mono, monospace)',
+                lineHeight: 1.5
+              }}
             >
               {selectedLogs || 'No logs available.'}
             </pre>

@@ -636,10 +636,10 @@ function ResultsPage() {
                   onClick={() => setExportOpen((prev) => !prev)}
                   disabled={!activeWireQuery || downloading !== null}
                   style={{
-                    background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                    background: 'var(--fdl-navy-800, #12375b)',
                     color: '#ffffff',
                     border: 'none',
-                    borderRadius: '8px',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
                     padding: '8px 18px',
                     fontWeight: 700,
                     fontSize: '0.88rem',
@@ -647,7 +647,7 @@ function ResultsPage() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '8px',
-                    boxShadow: '0 2px 6px rgba(15, 23, 42, 0.2)',
+                    boxShadow: 'none',
                   }}
                 >
                   <span>Export</span>
@@ -661,9 +661,9 @@ function ResultsPage() {
                       right: 0,
                       top: 'calc(100% + 6px)',
                       background: '#ffffff',
-                      borderRadius: '10px',
-                      border: '1px solid #cbd5e1',
-                      boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.2)',
+                      borderRadius: 'var(--fdl-radius-sm, 2px)',
+                      border: '1px solid var(--fdl-line, #b8c8d7)',
+                      boxShadow: 'var(--fdl-elevation-2, 0 4px 16px rgba(7, 31, 61, 0.12))',
                       minWidth: '240px',
                       zIndex: 1000,
                       padding: '6px',
@@ -679,10 +679,10 @@ function ResultsPage() {
                         alignItems: 'center',
                         gap: '10px',
                         padding: '8px 12px',
-                        borderRadius: '6px',
+                        borderRadius: 'var(--fdl-radius-sm, 2px)',
                         border: 'none',
                         background: 'transparent',
-                        color: '#1e293b',
+                        color: 'var(--fdl-ink, #132332)',
                         fontSize: '0.85rem',
                         fontWeight: 600,
                         cursor: 'pointer',
@@ -703,10 +703,10 @@ function ResultsPage() {
                         alignItems: 'center',
                         gap: '10px',
                         padding: '8px 12px',
-                        borderRadius: '6px',
+                        borderRadius: 'var(--fdl-radius-sm, 2px)',
                         border: 'none',
                         background: 'transparent',
-                        color: '#1e293b',
+                        color: 'var(--fdl-ink, #132332)',
                         fontSize: '0.85rem',
                         fontWeight: 600,
                         cursor: 'pointer',
@@ -717,7 +717,7 @@ function ResultsPage() {
                       <span>{downloading === 'xlsx' ? 'Exporting Excel…' : 'Export as Excel (.xlsx)'}</span>
                     </button>
 
-                    <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0' }} />
+                    <div style={{ height: '1px', background: 'var(--fdl-line-soft, #d7e0e7)', margin: '4px 0' }} />
 
                     <button
                       type="button"
@@ -730,10 +730,10 @@ function ResultsPage() {
                         alignItems: 'center',
                         gap: '10px',
                         padding: '8px 12px',
-                        borderRadius: '6px',
+                        borderRadius: 'var(--fdl-radius-sm, 2px)',
                         border: 'none',
                         background: 'transparent',
-                        color: '#1e293b',
+                        color: 'var(--fdl-ink, #132332)',
                         fontSize: '0.85rem',
                         fontWeight: 600,
                         cursor: 'pointer',
@@ -753,17 +753,17 @@ function ResultsPage() {
                         alignItems: 'center',
                         gap: '10px',
                         padding: '8px 12px',
-                        borderRadius: '6px',
+                        borderRadius: 'var(--fdl-radius-sm, 2px)',
                         border: 'none',
                         background: 'transparent',
-                        color: '#2563eb',
+                        color: 'var(--fdl-blue-600, #0071bc)',
                         fontSize: '0.85rem',
                         fontWeight: 700,
                         cursor: 'pointer',
                         textAlign: 'left',
                       }}
                     >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><polyline points="9 14 11 16 15 12"/></svg>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><polyline points="9 14 11 16 15 12"/></svg>
                       <span>Save Query Results as Task</span>
                     </button>
                   </div>
@@ -779,13 +779,13 @@ function ResultsPage() {
                   border: '1px solid #a7f3d0',
                   color: '#065f46',
                   padding: '12px 18px',
-                  borderRadius: '10px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
                   marginBottom: '1rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: '12px',
-                  boxShadow: '0 2px 8px rgba(16, 185, 129, 0.1)',
+                  boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -802,7 +802,7 @@ function ResultsPage() {
                       background: '#059669',
                       color: '#ffffff',
                       padding: '6px 12px',
-                      borderRadius: '6px',
+                      borderRadius: 'var(--fdl-radius-sm, 2px)',
                       fontSize: '0.8rem',
                       fontWeight: 700,
                       textDecoration: 'none',
@@ -850,7 +850,7 @@ function ResultsPage() {
               // refetch lands; dimming them says so, instead of letting a stale
               // table read as "the filter did nothing".
               <div className={busy ? 'fdl-results-stale' : undefined} aria-busy={busy}>
-                <div className="fdl-results__bar fdl-results__bar--top" style={{ borderRadius: 'var(--afl-radius-md) var(--afl-radius-md) 0 0', borderBottom: '1px solid var(--afl-border)' }}>
+                <div className="fdl-results__bar fdl-results__bar--top" style={{ borderRadius: 'var(--fdl-radius-sm, 2px) var(--fdl-radius-sm, 2px) 0 0', borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>
                   <span className="fdl-results__count">
                     Showing {offset + 1}–{to} of {browsable.toLocaleString()}
                   </span>
@@ -946,8 +946,7 @@ function ResultsPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.65)',
-            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(7, 31, 61, 0.58)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -958,12 +957,13 @@ function ResultsPage() {
           <div
             style={{
               background: '#ffffff',
-              borderRadius: '16px',
+              borderRadius: 'var(--fdl-radius-sm, 2px)',
               maxWidth: '520px',
               width: '100%',
               padding: '24px',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
-              border: '1px solid #cbd5e1',
+              boxShadow: 'var(--fdl-elevation-3, 0 12px 32px rgba(7, 31, 61, 0.18))',
+              border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+              borderTop: '3px solid var(--fdl-navy-800, #12375b)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
@@ -971,7 +971,7 @@ function ResultsPage() {
                 style={{
                   width: '42px',
                   height: '42px',
-                  borderRadius: '10px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
                   background: '#fef3c7',
                   color: '#d97706',
                   display: 'flex',
@@ -982,16 +982,16 @@ function ResultsPage() {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)' }}>
                   Result Limit Truncation Notice
                 </h3>
-                <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.78rem', color: 'var(--fdl-muted, #5e6e7c)', fontWeight: 600 }}>
                   Query results exceed task capacity limit
                 </span>
               </div>
             </div>
 
-            <p style={{ margin: '0 0 20px 0', fontSize: '0.9rem', color: '#334155', lineHeight: 1.55 }}>
+            <p style={{ margin: '0 0 20px 0', fontSize: '0.9rem', color: 'var(--fdl-ink-soft, #273843)', lineHeight: 1.55 }}>
               This search query returned <strong>{(data?.total || 0).toLocaleString()}</strong> labeling results. Tasks support a maximum of <strong>3,000</strong> items. Only the first <strong>3,000</strong> results will be saved into the task.
             </p>
 
@@ -1001,10 +1001,10 @@ function ResultsPage() {
                 onClick={() => setIs3000WarningOpen(false)}
                 style={{
                   padding: '8px 16px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  border: '1px solid var(--fdl-line, #b8c8d7)',
                   background: '#ffffff',
-                  color: '#475569',
+                  color: 'var(--fdl-ink-soft, #273843)',
                   fontSize: '0.85rem',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -1020,14 +1020,13 @@ function ResultsPage() {
                 }}
                 style={{
                   padding: '8px 16px',
-                  borderRadius: '8px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
                   border: 'none',
-                  background: '#2563eb',
+                  background: 'var(--fdl-navy-800, #12375b)',
                   color: '#ffffff',
                   fontSize: '0.85rem',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  boxShadow: '0 2px 6px rgba(37, 99, 235, 0.3)',
                 }}
               >
                 Proceed & Save (First 3,000)
@@ -1043,8 +1042,7 @@ function ResultsPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.65)',
-            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(7, 31, 61, 0.58)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1055,12 +1053,13 @@ function ResultsPage() {
           <div
             style={{
               background: '#ffffff',
-              borderRadius: '16px',
+              borderRadius: 'var(--fdl-radius-sm, 2px)',
               maxWidth: '500px',
               width: '100%',
               padding: '24px',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
-              border: '1px solid #cbd5e1',
+              boxShadow: 'var(--fdl-elevation-3, 0 12px 32px rgba(7, 31, 61, 0.18))',
+              border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+              borderTop: '3px solid var(--fdl-navy-800, #12375b)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
@@ -1068,28 +1067,28 @@ function ResultsPage() {
                 style={{
                   width: '40px',
                   height: '40px',
-                  borderRadius: '10px',
-                  background: '#eff6ff',
-                  color: '#2563eb',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  background: 'var(--fdl-blue-050, #edf4fa)',
+                  color: 'var(--fdl-blue-600, #0071bc)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><polyline points="9 14 11 16 15 12"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><polyline points="9 14 11 16 15 12"/></svg>
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)' }}>
                   Save Query Results as Task
                 </h3>
-                <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.78rem', color: 'var(--fdl-muted, #5e6e7c)', fontWeight: 600 }}>
                   Organize query set into My Dashboard tasks
                 </span>
               </div>
             </div>
 
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft, #273843)', marginBottom: '6px' }}>
                 Task Title
               </label>
               <input
@@ -1100,11 +1099,11 @@ function ResultsPage() {
                 style={{
                   width: '100%',
                   padding: '10px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  border: '1px solid var(--fdl-line, #b8c8d7)',
                   fontSize: '0.9rem',
-                  background: '#f8fafc',
-                  color: '#0f172a',
+                  background: 'var(--fdl-canvas, #f3f6f8)',
+                  color: 'var(--fdl-ink, #132332)',
                   fontWeight: 600,
                 }}
               />
@@ -1112,11 +1111,12 @@ function ResultsPage() {
 
             <div
               style={{
-                background: '#f1f5f9',
+                background: 'var(--fdl-canvas, #f3f6f8)',
                 padding: '10px 14px',
-                borderRadius: '8px',
+                borderRadius: 'var(--fdl-radius-sm, 2px)',
+                border: '1px solid var(--fdl-line-soft, #d7e0e7)',
                 fontSize: '0.8rem',
-                color: '#475569',
+                color: 'var(--fdl-ink-soft, #273843)',
                 marginBottom: '20px',
                 display: 'flex',
                 alignItems: 'center',
@@ -1124,7 +1124,7 @@ function ResultsPage() {
               }}
             >
               <span>Records to be saved:</span>
-              <strong style={{ color: '#1d4ed8' }}>
+              <strong style={{ color: 'var(--fdl-blue-700, #0759a5)' }}>
                 {Math.min(data?.total || 0, 3000).toLocaleString()} labeling record(s)
               </strong>
             </div>
@@ -1136,10 +1136,10 @@ function ResultsPage() {
                 onClick={() => setIsTaskModalOpen(false)}
                 style={{
                   padding: '8px 16px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  border: '1px solid var(--fdl-line, #b8c8d7)',
                   background: '#ffffff',
-                  color: '#475569',
+                  color: 'var(--fdl-ink-soft, #273843)',
                   fontSize: '0.85rem',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -1153,14 +1153,13 @@ function ResultsPage() {
                 onClick={handleSaveTask}
                 style={{
                   padding: '8px 18px',
-                  borderRadius: '8px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
                   border: 'none',
-                  background: '#2563eb',
+                  background: 'var(--fdl-navy-800, #12375b)',
                   color: '#ffffff',
                   fontSize: '0.85rem',
                   fontWeight: 700,
                   cursor: taskSaving ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 2px 6px rgba(37, 99, 235, 0.3)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',

@@ -136,7 +136,7 @@ export function Grid({
   return (
     <div
       className={cx('afl-grid', className)}
-      style={{ ['--afl-grid-min' as string]: min, ...style }}
+      style={{ ['--fdl-grid-min' as string]: min, ...style }}
       {...rest}
     />
   );

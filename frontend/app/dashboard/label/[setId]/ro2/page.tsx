@@ -77,10 +77,10 @@ type Status = 'pending' | 'done' | 'error';
 
 const CARD: React.CSSProperties = {
   background: '#ffffff',
-  borderRadius: '16px',
+  borderRadius: 'var(--fdl-radius-sm, 2px)',
   padding: '20px 24px',
-  border: '1px solid #e2e8f0',
-  boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
+  border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+  boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))',
   marginBottom: '20px',
 };
 
@@ -92,7 +92,7 @@ function Pill({ tone, children }: { tone: 'danger' | 'ok' | 'muted'; children: R
   }[tone];
   return (
     <span style={{
-      display: 'inline-block', padding: '3px 10px', borderRadius: '999px',
+      display: 'inline-block', padding: '3px 8px', borderRadius: 'var(--fdl-radius-sm, 2px)',
       background: tones.bg, color: tones.fg, border: `1px solid ${tones.bd}`,
       fontSize: '0.78rem', fontWeight: 700,
     }}>
@@ -357,18 +357,18 @@ export default function Ro2ToolPage() {
                 onChange={(e) => setDoseDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') applyDose(); }}
                 style={{
-                  width: '120px', padding: '7px 10px', borderRadius: '8px',
-                  border: '1px solid #cbd5e1', fontSize: '0.92rem',
+                  width: '120px', padding: '7px 10px', borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  border: '1px solid var(--fdl-line, #b8c8d7)', fontSize: '0.92rem',
                 }}
                 aria-label="Maximum daily dose in milligrams"
               />
-              <span style={{ color: '#64748b', fontSize: '0.88rem' }}>mg/day</span>
+              <span style={{ color: 'var(--fdl-muted, #5e6e7c)', fontSize: '0.88rem' }}>mg/day</span>
               <button
                 type="button"
                 onClick={applyDose}
                 style={{
-                  padding: '7px 14px', borderRadius: '8px', border: '1px solid #2563eb',
-                  background: '#2563eb', color: '#ffffff', fontWeight: 700,
+                  padding: '7px 14px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-navy-800, #12375b)',
+                  background: 'var(--fdl-navy-800, #12375b)', color: '#ffffff', fontWeight: 700,
                   fontSize: '0.86rem', cursor: 'pointer',
                 }}
               >
@@ -379,8 +379,8 @@ export default function Ro2ToolPage() {
                   type="button"
                   onClick={resetDose}
                   style={{
-                    padding: '7px 12px', borderRadius: '8px', border: '1px solid #cbd5e1',
-                    background: '#ffffff', color: '#475569', fontWeight: 600,
+                    padding: '7px 12px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line, #b8c8d7)',
+                    background: '#ffffff', color: 'var(--fdl-ink-soft, #273843)', fontWeight: 600,
                     fontSize: '0.86rem', cursor: 'pointer',
                   }}
                 >
@@ -444,7 +444,7 @@ export default function Ro2ToolPage() {
               <div style={{
                 marginTop: '8px', fontSize: '0.8rem', color: '#0f172a',
                 background: '#eff6ff', border: '1px solid #bfdbfe',
-                borderRadius: '8px', padding: '7px 10px', lineHeight: 1.5,
+                borderRadius: 'var(--fdl-radius-sm, 2px)', padding: '7px 10px', lineHeight: 1.5,
               }}>
                 The label names a salt. ALogP is computed on the free base
                 {structure.pubchem_cid ? <> (PubChem CID {structure.pubchem_cid}</> : null}
@@ -457,7 +457,7 @@ export default function Ro2ToolPage() {
               <div style={{
                 marginTop: '8px', fontSize: '0.8rem', color: '#78350f',
                 background: '#fffbeb', border: '1px solid #fde68a',
-                borderRadius: '8px', padding: '7px 10px', lineHeight: 1.5,
+                borderRadius: 'var(--fdl-radius-sm, 2px)', padding: '7px 10px', lineHeight: 1.5,
               }}>
                 PubChem had no free-base record for this salt, so the largest
                 component of the mixture was used. Worth checking the structure

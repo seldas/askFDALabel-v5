@@ -67,32 +67,33 @@ function DeviceSearchContent() {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--fdl-canvas, #f3f6f8)' }}>
       <Header />
 
       <main style={{ maxWidth: '1400px', margin: '0 auto', padding: 'clamp(2rem, 5vh, 4rem) clamp(1rem, 5vw, 2rem)' }}>
         {/* Hero Section */}
         <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-          <h1 className="hero-title-animated" style={{ fontSize: 'clamp(2.25rem, 6vw, 3.5rem)', fontWeight: 900, color: '#0f172a', marginBottom: '1rem', letterSpacing: '-0.025em' }}>
+          <h1 className="hero-title-animated" style={{ fontSize: 'clamp(2.25rem, 6vw, 3.5rem)', fontWeight: 900, color: 'var(--fdl-navy-950, #071f3d)', marginBottom: '1rem', letterSpacing: '-0.025em' }}>
             Device Safety & Labeling
           </h1>
-          <p className="hero-subtitle-animated" style={{ fontSize: 'clamp(1rem, 2vw, 1.15rem)', color: '#64748b', fontWeight: '500', maxWidth: '800px', margin: '0 auto' }}>
+          <p className="hero-subtitle-animated" style={{ fontSize: 'clamp(1rem, 2vw, 1.15rem)', color: 'var(--fdl-muted, #5e6e7c)', fontWeight: '500', maxWidth: '800px', margin: '0 auto' }}>
             Unified intelligence for Premarket Notifications (510k), Approvals (PMA), and MAUDE adverse event monitoring.
           </p>
         </div>
 
         {/* Search Toolbar */}
         <div style={{ 
-          backgroundColor: 'white', 
+          backgroundColor: 'var(--fdl-paper, #ffffff)', 
           padding: '1.5rem', 
-          borderRadius: '24px', 
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-          border: '1px solid #e2e8f0',
+          borderRadius: 'var(--fdl-radius-sm, 2px)', 
+          boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))',
+          border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+          borderTop: '3px solid var(--fdl-navy-800, #12375b)',
           marginBottom: '3rem'
         }}>
           <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem' }}>
             <div style={{ position: 'relative', flex: 1 }}>
-              <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+              <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--fdl-muted, #5e6e7c)' }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8"></circle>
                   <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -106,14 +107,15 @@ function DeviceSearchContent() {
                 placeholder="Search by Device Name, Manufacturer, or Identifier (e.g. K230001)..."
                 style={{ 
                   width: '100%', 
-                  padding: '1.15rem 1rem 1.15rem 3rem', 
-                  borderRadius: '16px', 
-                  border: '2px solid #f1f5f9',
-                  backgroundColor: '#f8fafc',
-                  fontSize: '1.05rem',
+                  padding: '1rem 1rem 1rem 3rem', 
+                  borderRadius: 'var(--fdl-radius-sm, 2px)', 
+                  border: '1px solid var(--fdl-line, #b8c8d7)',
+                  backgroundColor: 'var(--fdl-paper, #ffffff)',
+                  color: 'var(--fdl-ink, #132332)',
+                  fontSize: '1rem',
                   fontWeight: 500,
                   outline: 'none',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.15s'
                 }}
                 className="search-input-focus"
               />
@@ -122,16 +124,16 @@ function DeviceSearchContent() {
               onClick={() => handleSearch()}
               disabled={loading}
               style={{ 
-                padding: '0 2.5rem',
-                backgroundColor: '#3b82f6',
+                padding: '0 2rem',
+                backgroundColor: 'var(--fdl-navy-800, #12375b)',
                 color: 'white',
-                borderRadius: '16px',
+                borderRadius: 'var(--fdl-radius-sm, 2px)',
                 fontWeight: 800,
                 border: 'none',
                 cursor: 'pointer',
-                fontSize: '1rem',
-                boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.2)',
-                transition: 'all 0.2s'
+                fontSize: '0.95rem',
+                boxShadow: 'none',
+                transition: 'all 0.15s'
               }}
             >
               {loading ? 'Analyzing...' : 'Run Analysis'}
@@ -139,7 +141,7 @@ function DeviceSearchContent() {
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', padding: '0 0.5rem' }}>
-            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '8px' }}>Rapid Starters:</span>
+            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--fdl-muted, #5e6e7c)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '8px' }}>Rapid Starters:</span>
             {examples.map((ex) => (
               <button
                 key={ex.query}
@@ -148,15 +150,15 @@ function DeviceSearchContent() {
                   handleSearch(ex.query);
                 }}
                 style={{
-                  padding: '6px 14px',
-                  backgroundColor: 'white',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '100px',
+                  padding: '5px 12px',
+                  backgroundColor: 'var(--fdl-canvas, #f3f6f8)',
+                  border: '1px solid var(--fdl-line, #b8c8d7)',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
                   fontSize: '0.75rem',
                   fontWeight: 700,
-                  color: '#475569',
+                  color: 'var(--fdl-ink-soft, #273843)',
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.15s'
                 }}
               >
                 {ex.label}
@@ -167,11 +169,11 @@ function DeviceSearchContent() {
 
         {error && (
           <div style={{ 
-            backgroundColor: '#fff7ed', 
-            color: '#c2410c', 
-            border: '1px solid #fdba74', 
-            padding: '1.5rem', 
-            borderRadius: '16px', 
+            backgroundColor: 'var(--fdl-red-050)', 
+            color: 'var(--fdl-red)', 
+            border: '1px solid var(--fdl-red)', 
+            padding: '1.25rem', 
+            borderRadius: 'var(--fdl-radius-sm, 2px)', 
             marginBottom: '2rem',
             display: 'flex',
             alignItems: 'center',
@@ -187,7 +189,7 @@ function DeviceSearchContent() {
         )}
 
         {analyzeTarget && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', overflowY: 'auto' }}>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backgroundColor: 'rgba(7, 31, 61, 0.58)', overflowY: 'auto' }}>
             <div style={{ width: '100%', maxWidth: '1000px', margin: '2rem 0' }}>
               <MaudeReport 
                 productCode={analyzeTarget.code} 
@@ -203,14 +205,15 @@ function DeviceSearchContent() {
             const isSelected = selectedDevices.some(d => d.id === device.id);
             return (
               <div key={device.id} style={{ 
-                backgroundColor: isSelected ? '#eff6ff' : 'white', 
+                backgroundColor: isSelected ? 'var(--fdl-blue-050, #edf4fa)' : 'var(--fdl-paper, #ffffff)', 
                 padding: '1.75rem', 
-                borderRadius: '24px', 
-                border: isSelected ? '2px solid #3b82f6' : '1px solid #e2e8f0',
-                boxShadow: isSelected ? '0 10px 15px -3px rgba(59, 130, 246, 0.1)' : '0 1px 3px rgba(0,0,0,0.02)',
+                borderRadius: 'var(--fdl-radius-sm, 2px)', 
+                border: isSelected ? '1px solid var(--fdl-blue-700, #0759a5)' : '1px solid var(--fdl-line-soft, #d7e0e7)',
+                borderTop: isSelected ? '3px solid var(--fdl-blue-700, #0759a5)' : '3px solid var(--fdl-navy-800, #12375b)',
+                boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))',
                 display: 'flex',
                 flexDirection: 'column',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: 'all 0.15s ease-in-out',
                 position: 'relative',
                 overflow: 'hidden'
               }} className="device-card">
@@ -219,20 +222,20 @@ function DeviceSearchContent() {
                   <button 
                     onClick={() => toggleSelection(device)}
                     style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '50%',
-                      border: isSelected ? 'none' : '2px solid #cbd5e1',
-                      backgroundColor: isSelected ? '#3b82f6' : 'transparent',
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: 'var(--fdl-radius-sm, 2px)',
+                      border: isSelected ? 'none' : '1px solid var(--fdl-line, #b8c8d7)',
+                      backgroundColor: isSelected ? 'var(--fdl-blue-700, #0759a5)' : 'transparent',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
-                      transition: 'all 0.2s'
+                      transition: 'all 0.15s'
                     }}
                   >
                     {isSelected && (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12"></polyline>
                       </svg>
                     )}
@@ -240,36 +243,36 @@ function DeviceSearchContent() {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', paddingRight: '32px' }}>
-                  <span style={{ padding: '4px 10px', backgroundColor: isSelected ? '#dbeafe' : '#eff6ff', color: '#1d4ed8', fontSize: '0.65rem', fontWeight: 900, borderRadius: '100px', textTransform: 'uppercase', letterSpacing: '0.02em', border: '1px solid #dbeafe' }}>
+                  <span style={{ padding: '3px 8px', backgroundColor: isSelected ? 'var(--fdl-blue-100, #d7e0e7)' : 'var(--fdl-blue-050, #edf4fa)', color: 'var(--fdl-navy-800, #12375b)', fontSize: '0.65rem', fontWeight: 800, borderRadius: 'var(--fdl-radius-sm, 2px)', textTransform: 'uppercase', letterSpacing: '0.02em', border: '1px solid var(--fdl-line, #b8c8d7)' }}>
                     {device.type}
                   </span>
-                  <span style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700 }}>{device.date}</span>
+                  <span style={{ color: 'var(--fdl-muted, #5e6e7c)', fontSize: '0.75rem', fontWeight: 700 }}>{device.date}</span>
                 </div>
                 
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.5rem', lineHeight: 1.2 }}>{device.name}</h2>
-                <p style={{ color: '#64748b', marginBottom: '1.75rem', fontSize: '0.9rem', fontWeight: 600 }}>{device.manufacturer}</p>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--fdl-navy-950, #071f3d)', marginBottom: '0.5rem', lineHeight: 1.2 }}>{device.name}</h2>
+                <p style={{ color: 'var(--fdl-muted, #5e6e7c)', marginBottom: '1.75rem', fontSize: '0.9rem', fontWeight: 600 }}>{device.manufacturer}</p>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: 'auto' }}>
-                  <div style={{ backgroundColor: isSelected ? 'white' : '#f8fafc', padding: '10px 14px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                    <p style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>Product Code</p>
-                    <p style={{ fontFamily: 'monospace', fontSize: '0.9rem', fontWeight: 800, color: '#334155' }}>{device.product_code || 'N/A'}</p>
+                  <div style={{ backgroundColor: isSelected ? 'var(--fdl-paper, #ffffff)' : 'var(--fdl-canvas, #f3f6f8)', padding: '10px 14px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>
+                    <p style={{ fontSize: '0.6rem', color: 'var(--fdl-muted, #5e6e7c)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>Product Code</p>
+                    <p style={{ fontFamily: 'monospace', fontSize: '0.9rem', fontWeight: 800, color: 'var(--fdl-ink, #132332)' }}>{device.product_code || 'N/A'}</p>
                   </div>
-                  <div style={{ backgroundColor: isSelected ? 'white' : '#f8fafc', padding: '10px 14px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                    <p style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>Identifier</p>
-                    <p style={{ fontFamily: 'monospace', fontSize: '0.9rem', fontWeight: 800, color: '#334155' }}>{device.id}</p>
+                  <div style={{ backgroundColor: isSelected ? 'var(--fdl-paper, #ffffff)' : 'var(--fdl-canvas, #f3f6f8)', padding: '10px 14px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>
+                    <p style={{ fontSize: '0.6rem', color: 'var(--fdl-muted, #5e6e7c)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>Identifier</p>
+                    <p style={{ fontFamily: 'monospace', fontSize: '0.9rem', fontWeight: 800, color: 'var(--fdl-ink, #132332)' }}>{device.id}</p>
                   </div>
                 </div>
 
-                <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #f1f5f9', display: 'flex', gap: '12px' }}>
+                <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--fdl-line-soft, #d7e0e7)', display: 'flex', gap: '12px' }}>
                   <button 
-                    style={{ flex: 1, padding: '12px', backgroundColor: '#0f172a', color: 'white', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 800, border: 'none', cursor: 'pointer' }}
+                    style={{ flex: 1, padding: '10px', backgroundColor: 'var(--fdl-canvas, #f3f6f8)', color: 'var(--fdl-ink-soft, #273843)', borderRadius: 'var(--fdl-radius-sm, 2px)', fontSize: '0.75rem', fontWeight: 800, border: '1px solid var(--fdl-line, #b8c8d7)', cursor: 'pointer' }}
                     onClick={() => window.open(`https://api.fda.gov/device/${device.type === 'PMA' ? 'pma' : '510k'}.json?search=${device.type === 'PMA' ? 'pma_number' : 'k_number'}:${device.id}`, '_blank')}
                   >
                     FDA Metadata
                   </button>
                   {device.product_code && (
                     <button 
-                      style={{ flex: 1, padding: '12px', backgroundColor: '#3b82f6', color: 'white', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 800, border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)' }}
+                      style={{ flex: 1, padding: '10px', backgroundColor: 'var(--fdl-navy-800, #12375b)', color: 'white', borderRadius: 'var(--fdl-radius-sm, 2px)', fontSize: '0.75rem', fontWeight: 800, border: 'none', cursor: 'pointer', boxShadow: 'none' }}
                       onClick={() => setAnalyzeTarget({ code: device.product_code, id: device.id })}
                     >
                       Safety Profile
@@ -282,10 +285,10 @@ function DeviceSearchContent() {
         </div>
 
         {!loading && results.length === 0 && query && (
-          <div style={{ textAlign: 'center', padding: '5rem 2rem', backgroundColor: '#f8fafc', borderRadius: '32px', border: '2px dashed #e2e8f0', marginTop: '3rem' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>🔍</div>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#475569', marginBottom: '0.5rem' }}>No results for "{query}"</h3>
-            <p style={{ color: '#94a3b8', fontWeight: 600 }}>Try searching by brand name, applicant, or Premarket number (K- or P-).</p>
+          <div style={{ textAlign: 'center', padding: '4rem 2rem', backgroundColor: 'var(--fdl-canvas, #f3f6f8)', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px dashed var(--fdl-line, #b8c8d7)', marginTop: '3rem' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🔍</div>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--fdl-navy-950, #071f3d)', marginBottom: '0.5rem' }}>No results for "{query}"</h3>
+            <p style={{ color: 'var(--fdl-muted, #5e6e7c)', fontWeight: 600 }}>Try searching by brand name, applicant, or Premarket number (K- or P-).</p>
           </div>
         )}
       </main>
@@ -297,24 +300,25 @@ function DeviceSearchContent() {
           bottom: '2rem', 
           left: '50%', 
           transform: 'translateX(-50%)', 
-          backgroundColor: '#1e293b', 
+          backgroundColor: 'var(--fdl-navy-950, #071f3d)', 
           color: 'white', 
-          padding: '1rem 2rem', 
-          borderRadius: '100px', 
+          padding: '10px 20px', 
+          borderRadius: 'var(--fdl-radius-sm, 2px)', 
+          border: '1px solid var(--fdl-line, #b8c8d7)',
           display: 'flex', 
           alignItems: 'center', 
-          gap: '2rem', 
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+          gap: '1.5rem', 
+          boxShadow: 'var(--fdl-elevation-3, 0 12px 32px rgba(7, 31, 61, 0.18))',
           zIndex: 1000,
-          animation: 'slideUp 0.3s ease-out'
+          animation: 'slideUp 0.2s ease-out'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>
               {selectedDevices.length} Device{selectedDevices.length > 1 ? 's' : ''} Selected
             </span>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               {selectedDevices.map(d => (
-                <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#334155', padding: '4px 10px', borderRadius: '100px', fontSize: '0.7rem', fontWeight: 800 }}>
+                <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--fdl-navy-800, #12375b)', padding: '3px 8px', borderRadius: 'var(--fdl-radius-sm, 2px)', fontSize: '0.7rem', fontWeight: 800 }}>
                   {d.id}
                   <button onClick={() => toggleSelection(d)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0, display: 'flex' }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -327,14 +331,14 @@ function DeviceSearchContent() {
             onClick={() => setShowCompare(true)}
             disabled={selectedDevices.length !== 2}
             style={{ 
-              padding: '10px 20px', 
-              backgroundColor: selectedDevices.length === 2 ? '#3b82f6' : '#475569', 
+              padding: '8px 16px', 
+              backgroundColor: selectedDevices.length === 2 ? 'var(--fdl-blue-700, #0759a5)' : '#475569', 
               color: 'white', 
               border: 'none', 
-              borderRadius: '100px', 
+              borderRadius: 'var(--fdl-radius-sm, 2px)', 
               fontWeight: 800, 
               cursor: selectedDevices.length === 2 ? 'pointer' : 'not-allowed',
-              transition: 'background-color 0.2s'
+              transition: 'background-color 0.15s'
             }}
           >
             Compare IFUs
@@ -343,7 +347,7 @@ function DeviceSearchContent() {
       )}
 
       {showCompare && selectedDevices.length === 2 && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', overflowY: 'auto' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backgroundColor: 'rgba(7, 31, 61, 0.58)', overflowY: 'auto' }}>
           <DeviceCompare 
             device1={selectedDevices[0]} 
             device2={selectedDevices[1]} 
@@ -354,14 +358,11 @@ function DeviceSearchContent() {
 
       <style jsx global>{`
         .search-input-focus:focus {
-          border-color: #3b82f6 !important;
-          background-color: white !important;
-          box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+          border-color: var(--fdl-blue-700, #0759a5) !important;
+          box-shadow: 0 0 0 2px rgba(7, 89, 165, 0.15);
         }
         .device-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02) !important;
-          border-color: #dbeafe !important;
+          border-color: var(--fdl-blue-700, #0759a5) !important;
         }
         .hero-title-animated {
           animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);

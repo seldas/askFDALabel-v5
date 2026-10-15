@@ -25,7 +25,7 @@ export default function ToxToolPage() {
   }, [router, setId]);
 
   return (
-    <p style={{ color: 'var(--afl-text-secondary)', fontSize: 'var(--afl-text-sm)' }}>
+    <p style={{ color: 'var(--fdl-muted)', fontSize: 'var(0.875rem)' }}>
       Opening askDrugTox…
     </p>
   );

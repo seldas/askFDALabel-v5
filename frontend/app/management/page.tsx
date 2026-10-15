@@ -1024,9 +1024,9 @@ export default function ManagementPage() {
               <button
                 onClick={(e) => { e.stopPropagation(); fetchLogs(); }}
                 style={{
-                  background: 'var(--afl-n-100)',
-                  border: '1px solid var(--afl-n-200)',
-                  borderRadius: '4px',
+                  background: 'var(--fdl-line-soft)',
+                  border: '1px solid var(--fdl-line)',
+                  borderRadius: '2px',
                   padding: '1px 6px',
                   fontSize: '0.6rem',
                   cursor: 'pointer',
@@ -1043,7 +1043,7 @@ export default function ManagementPage() {
                   background: 'var(--fdl-red-050)',
                   color: 'var(--fdl-red)',
                   border: '1px solid var(--fdl-red-050)',
-                  borderRadius: '4px',
+                  borderRadius: '2px',
                   padding: '1px 6px',
                   fontSize: '0.6rem',
                   cursor: 'pointer',
@@ -1056,7 +1056,7 @@ export default function ManagementPage() {
           </span>
           <span style={{ fontWeight: 800 }}>{progress}%</span>
         </div>
-        <div style={{ width: '100%', height: '6px', background: 'var(--afl-n-200)', borderRadius: '3px', overflow: 'hidden' }}>
+        <div style={{ width: '100%', height: '6px', background: 'var(--fdl-line)', borderRadius: '2px', overflow: 'hidden' }}>
           <div
             style={{
               width: `${progress}%`,
@@ -1135,8 +1135,7 @@ export default function ManagementPage() {
           style={{
             position: 'fixed',
             top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(15, 23, 42, 0.75)',
-            backdropFilter: 'blur(4px)',
+            background: 'rgba(7, 31, 61, 0.58)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1153,16 +1152,16 @@ export default function ManagementPage() {
               width: '100%',
               maxWidth: '900px',
               maxHeight: '80vh',
-              background: 'var(--afl-n-800)',
+              background: 'var(--fdl-ink)',
               borderRadius: '2px',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              boxShadow: 'var(--fdl-elevation-3, 0 12px 32px rgba(7, 31, 61, 0.18))', borderTop: '3px solid var(--fdl-blue-600)',
             }}
             onClick={e => e.stopPropagation()}
           >
-            <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--afl-n-700)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, color: 'var(--afl-n-50)', fontWeight: 800 }}>
+            <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--fdl-ink-soft)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, color: 'var(--fdl-canvas)', fontWeight: 800 }}>
                 Task Execution Logs {selectedTaskId ? `(ID: ${selectedTaskId})` : ''}
               </h3>
               <button
@@ -1170,7 +1169,7 @@ export default function ManagementPage() {
                   setIsLogModalOpen(false);
                   setSelectedTaskId(null);
                 }}
-                style={{ background: 'var(--afl-n-700)', border: 'none', borderRadius: '4px', color: 'var(--afl-n-400)', padding: '4px 12px', cursor: 'pointer', fontWeight: 700 }}
+                style={{ background: 'var(--fdl-ink-soft)', border: 'none', borderRadius: '2px', color: 'var(--fdl-muted)', padding: '4px 12px', cursor: 'pointer', fontWeight: 700 }}
               >
                 CLOSE
               </button>
@@ -1185,9 +1184,9 @@ export default function ManagementPage() {
                 fontFamily: 'monospace',
                 fontSize: '0.85rem',
                 lineHeight: 1.6,
-                color: 'var(--afl-n-300)',
+                color: 'var(--fdl-line)',
                 whiteSpace: 'pre-wrap',
-                background: 'var(--afl-n-900)'
+                background: 'var(--fdl-ink)'
               }}
             >
               {selectedLogs || 'No logs available for this task.'}
@@ -1308,7 +1307,7 @@ export default function ManagementPage() {
             {activeTab === 'ai' && session?.is_admin && (
               <section id="ai-settings" className="mgmt-card" style={{ maxWidth: '800px' }}>
                 <h2 className="section-title">AI Model Preferences</h2>
-                <p style={{ color: 'var(--afl-n-500)', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.5 }}>
+                <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.5 }}>
                   Select your active AI provider and customize the connection settings for toxicity analysis.
                 </p>
 
@@ -1322,7 +1321,7 @@ export default function ManagementPage() {
                     style={{
                       padding: '1.5rem',
                       borderRadius: '2px',
-                      border: selectedProvider === 'gemini' ? '2px solid var(--fdl-blue-600)' : '1px solid var(--afl-n-200)',
+                      border: selectedProvider === 'gemini' ? '2px solid var(--fdl-blue-600)' : '1px solid var(--fdl-line)',
                       background: selectedProvider === 'gemini' ? 'var(--fdl-blue-050)' : 'white',
                       cursor: 'pointer',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -1342,8 +1341,8 @@ export default function ManagementPage() {
                         width: '40px',
                         height: '40px',
                         borderRadius: '2px',
-                        background: selectedProvider === 'gemini' ? 'var(--fdl-blue-600)' : 'var(--afl-n-200)',
-                        color: selectedProvider === 'gemini' ? 'white' : 'var(--afl-n-500)',
+                        background: selectedProvider === 'gemini' ? 'var(--fdl-blue-600)' : 'var(--fdl-line)',
+                        color: selectedProvider === 'gemini' ? 'white' : 'var(--fdl-canvas0)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1354,21 +1353,21 @@ export default function ManagementPage() {
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--afl-n-800)' }}>Google Gemini</span>
+                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--fdl-ink)' }}>Google Gemini</span>
                           {selectedProvider === 'gemini' && (
                             <span style={{ background: 'var(--fdl-blue-600)', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '2px', fontWeight: 800 }}>ACTIVE</span>
                           )}
                         </div>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--afl-n-500)', lineHeight: 1.4 }}>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--fdl-canvas0)', lineHeight: 1.4 }}>
                           High-performance multimodal model from Google. Recommended for standard toxicity analysis.
                         </p>
                       </div>
                     </div>
 
                     {selectedProvider === 'gemini' && (
-                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--afl-n-200)' }}>
+                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--fdl-line)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Gemini API Key</label>
+                          <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Gemini API Key</label>
                           <input
                             type="password"
                             placeholder={session?.has_gemini_key ? "Gemini API Key configured in backend .env (Leave blank to use default)" : "Enter your Gemini API Key"}
@@ -1380,7 +1379,7 @@ export default function ManagementPage() {
                             style={{
                               padding: '0.6rem 0.8rem',
                               borderRadius: '2px',
-                              border: '1px solid var(--afl-n-300)',
+                              border: '1px solid var(--fdl-line)',
                               fontSize: '0.9rem',
                               width: '100%',
                               maxWidth: '500px',
@@ -1400,7 +1399,7 @@ export default function ManagementPage() {
                     style={{
                       padding: '1.5rem',
                       borderRadius: '2px',
-                      border: selectedProvider === 'elsa' ? '2px solid var(--fdl-blue-600)' : '1px solid var(--afl-n-200)',
+                      border: selectedProvider === 'elsa' ? '2px solid var(--fdl-blue-600)' : '1px solid var(--fdl-line)',
                       background: selectedProvider === 'elsa' ? 'var(--fdl-blue-050)' : 'white',
                       cursor: 'pointer',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -1420,8 +1419,8 @@ export default function ManagementPage() {
                         width: '40px',
                         height: '40px',
                         borderRadius: '2px',
-                        background: selectedProvider === 'elsa' ? 'var(--fdl-blue-600)' : 'var(--afl-n-200)',
-                        color: selectedProvider === 'elsa' ? 'white' : 'var(--afl-n-500)',
+                        background: selectedProvider === 'elsa' ? 'var(--fdl-blue-600)' : 'var(--fdl-line)',
+                        color: selectedProvider === 'elsa' ? 'white' : 'var(--fdl-canvas0)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1432,22 +1431,22 @@ export default function ManagementPage() {
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--afl-n-800)' }}>ELSA</span>
+                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--fdl-ink)' }}>ELSA</span>
                           {selectedProvider === 'elsa' && (
                             <span style={{ background: 'var(--fdl-blue-600)', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '2px', fontWeight: 800 }}>ACTIVE</span>
                           )}
                         </div>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--afl-n-500)', lineHeight: 1.4 }}>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--fdl-canvas0)', lineHeight: 1.4 }}>
                           FDA Enterprise AI model. Optimized for compliance and institutional toxicity classification.
                         </p>
                       </div>
                     </div>
 
                     {selectedProvider === 'elsa' && (
-                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--afl-n-200)' }}>
+                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--fdl-line)' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', maxWidth: '600px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Elsa URL</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Elsa URL</label>
                             <input
                               type="text"
                               placeholder={session?.env_elsa_url || "https://elsa.fda.gov/api"}
@@ -1456,11 +1455,11 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 elsa: { ...customSettings.elsa, url: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
                             />
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Elsa User</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Elsa User</label>
                             <input
                               type="text"
                               placeholder={session?.env_elsa_user || "Username"}
@@ -1469,11 +1468,11 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 elsa: { ...customSettings.elsa, user: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
                             />
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Elsa Key</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Elsa Key</label>
                             <input
                               type="password"
                               placeholder={session?.has_elsa_key ? "Elsa Key configured in backend .env (Leave blank to use default)" : "API Key"}
@@ -1482,11 +1481,11 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 elsa: { ...customSettings.elsa, key: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
                             />
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Elsa Model ID</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Elsa Model ID</label>
                             <input
                               type="text"
                               placeholder={session?.env_elsa_model_id || "e.g. claude-3-5-sonnet"}
@@ -1495,11 +1494,11 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 elsa: { ...customSettings.elsa, model_id: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
                             />
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Elsa Model Name</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Elsa Model Name</label>
                             <input
                               type="text"
                               placeholder={session?.env_elsa_model_name || "e.g. CLAUDE_4_SONNET"}
@@ -1508,7 +1507,7 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 elsa: { ...customSettings.elsa, model_name: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
                             />
                           </div>
                         </div>
@@ -1525,7 +1524,7 @@ export default function ManagementPage() {
                     style={{
                       padding: '1.5rem',
                       borderRadius: '2px',
-                      border: selectedProvider === 'vllm' ? '2px solid var(--fdl-blue-600)' : '1px solid var(--afl-n-200)',
+                      border: selectedProvider === 'vllm' ? '2px solid var(--fdl-blue-600)' : '1px solid var(--fdl-line)',
                       background: selectedProvider === 'vllm' ? 'var(--fdl-blue-050)' : 'white',
                       cursor: 'pointer',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -1545,8 +1544,8 @@ export default function ManagementPage() {
                         width: '40px',
                         height: '40px',
                         borderRadius: '2px',
-                        background: selectedProvider === 'vllm' ? 'var(--fdl-blue-600)' : 'var(--afl-n-200)',
-                        color: selectedProvider === 'vllm' ? 'white' : 'var(--afl-n-500)',
+                        background: selectedProvider === 'vllm' ? 'var(--fdl-blue-600)' : 'var(--fdl-line)',
+                        color: selectedProvider === 'vllm' ? 'white' : 'var(--fdl-canvas0)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1557,22 +1556,22 @@ export default function ManagementPage() {
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--afl-n-800)' }}>vLLM / Llama</span>
+                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--fdl-ink)' }}>vLLM / Llama</span>
                           {selectedProvider === 'vllm' && (
                             <span style={{ background: 'var(--fdl-blue-600)', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '2px', fontWeight: 800 }}>ACTIVE</span>
                           )}
                         </div>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--afl-n-500)', lineHeight: 1.4 }}>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--fdl-canvas0)', lineHeight: 1.4 }}>
                           Self-hosted LLMs running on vLLM or similar OpenAI-compatible servers.
                         </p>
                       </div>
                     </div>
 
                     {selectedProvider === 'vllm' && (
-                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--afl-n-200)' }}>
+                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--fdl-line)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', maxWidth: '500px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>vLLM Base URL</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>vLLM Base URL</label>
                             <input
                               type="text"
                               placeholder={session?.env_vllm_url || "http://localhost:8000/v1"}
@@ -1581,11 +1580,11 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 vllm: { ...customSettings.vllm, url: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
                             />
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>API Key</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>API Key</label>
                             <input
                               type="password"
                               placeholder={session?.has_vllm_key ? "vLLM API Key configured in backend .env (Leave blank to use default)" : "API Key (if required)"}
@@ -1594,11 +1593,11 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 vllm: { ...customSettings.vllm, api_key: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
                             />
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Model Name</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Model Name</label>
                             <input
                               type="text"
                               placeholder={session?.env_vllm_model || "e.g. meta-llama/Llama-4-Maverick-17B-Instruct"}
@@ -1607,7 +1606,7 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 vllm: { ...customSettings.vllm, model_name: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
                             />
                           </div>
                         </div>
@@ -1624,7 +1623,7 @@ export default function ManagementPage() {
                     style={{
                       padding: '1.5rem',
                       borderRadius: '2px',
-                      border: selectedProvider === 'ollama' ? '2px solid var(--fdl-blue-600)' : '1px solid var(--afl-n-200)',
+                      border: selectedProvider === 'ollama' ? '2px solid var(--fdl-blue-600)' : '1px solid var(--fdl-line)',
                       background: selectedProvider === 'ollama' ? 'var(--fdl-blue-050)' : 'white',
                       cursor: 'pointer',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -1644,8 +1643,8 @@ export default function ManagementPage() {
                         width: '40px',
                         height: '40px',
                         borderRadius: '2px',
-                        background: selectedProvider === 'ollama' ? 'var(--fdl-blue-600)' : 'var(--afl-n-200)',
-                        color: selectedProvider === 'ollama' ? 'white' : 'var(--afl-n-500)',
+                        background: selectedProvider === 'ollama' ? 'var(--fdl-blue-600)' : 'var(--fdl-line)',
+                        color: selectedProvider === 'ollama' ? 'white' : 'var(--fdl-canvas0)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1656,22 +1655,22 @@ export default function ManagementPage() {
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--afl-n-800)' }}>Ollama</span>
+                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--fdl-ink)' }}>Ollama</span>
                           {selectedProvider === 'ollama' && (
                             <span style={{ background: 'var(--fdl-blue-600)', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '2px', fontWeight: 800 }}>ACTIVE</span>
                           )}
                         </div>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--afl-n-500)', lineHeight: 1.4 }}>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--fdl-canvas0)', lineHeight: 1.4 }}>
                           Locally running LLMs using Ollama. Run private, offline model inferences on your local device.
                         </p>
                       </div>
                     </div>
 
                     {selectedProvider === 'ollama' && (
-                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--afl-n-200)' }}>
+                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--fdl-line)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', maxWidth: '500px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Ollama URL</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Ollama URL</label>
                             <input
                               type="text"
                               placeholder={session?.env_ollama_url || "http://localhost:11434"}
@@ -1680,11 +1679,11 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 ollama: { ...customSettings.ollama, url: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
                             />
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Model Name</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Model Name</label>
                             <input
                               type="text"
                               placeholder="e.g. llama3, gemma2"
@@ -1693,7 +1692,7 @@ export default function ManagementPage() {
                                 ...customSettings,
                                 ollama: { ...customSettings.ollama, model_name: e.target.value }
                               })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
+                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
                             />
                           </div>
                         </div>
@@ -1705,7 +1704,7 @@ export default function ManagementPage() {
 
                 </div>
 
-                <div style={{ marginTop: '2.5rem', borderTop: '1px solid var(--afl-n-200)', paddingTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+                <div style={{ marginTop: '2.5rem', borderTop: '1px solid var(--fdl-line)', paddingTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
                   <button
                     onClick={handleSaveSettings}
                     disabled={savingSettings}
@@ -1716,7 +1715,7 @@ export default function ManagementPage() {
                       fontSize: '1rem',
                       fontWeight: 800,
                       cursor: 'pointer',
-                      boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.2)',
+                      boxShadow: 'none',
                       transition: 'all 0.2s',
                     }}
                   >
@@ -1865,7 +1864,7 @@ export default function ManagementPage() {
                         if (filtered.length === 0) {
                           return (
                             <tr>
-                              <td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--afl-n-400)' }}>
+                              <td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--fdl-muted)' }}>
                                 No users found matching filters.
                               </td>
                             </tr>
@@ -1878,7 +1877,7 @@ export default function ManagementPage() {
                               <div
                                 style={{
                                   fontWeight: 700,
-                                  color: 'var(--afl-n-800)',
+                                  color: 'var(--fdl-ink)',
                                   fontSize: '0.9rem',
                                   maxWidth: '240px',
                                   overflow: 'hidden',
@@ -1890,9 +1889,9 @@ export default function ManagementPage() {
                                 {user.username}
                               </div>
                               {user.is_active === false && (
-                                <span style={{ fontSize: '0.65rem', background: 'var(--fdl-red-050)', color: 'var(--fdl-red)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, marginTop: '2px', display: 'inline-block' }}>DEACTIVATED</span>
+                                <span style={{ fontSize: '0.65rem', background: 'var(--fdl-red-050)', color: 'var(--fdl-red)', padding: '2px 6px', borderRadius: '2px', fontWeight: 800, marginTop: '2px', display: 'inline-block' }}>DEACTIVATED</span>
                               )}
-                              <div style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--fdl-canvas0)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 Joined {formatUserDate(user.created_at) || '—'}
                               </div>
                             </td>
@@ -1920,7 +1919,7 @@ export default function ManagementPage() {
                                   padding: '4px 10px',
                                   fontSize: '0.78rem',
                                   fontWeight: 700,
-                                  borderRadius: '4px',
+                                  borderRadius: '2px',
                                   color: user.can_comment !== false ? '#15803d' : '#b91c1c',
                                   backgroundColor: user.can_comment !== false ? '#dcfce7' : '#fee2e2',
                                   borderColor: user.can_comment !== false ? '#86efac' : '#fca5a5',
@@ -1933,11 +1932,11 @@ export default function ManagementPage() {
                             </td>
                             <td style={{ minWidth: '140px' }}>
                               {user.last_login ? (
-                                <span style={{ fontSize: '0.85rem', color: 'var(--afl-n-700)', whiteSpace: 'nowrap' }}>
+                                <span style={{ fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', whiteSpace: 'nowrap' }}>
                                   {formatUserDate(user.last_login)}
                                 </span>
                               ) : (
-                                <span style={{ fontSize: '0.85rem', color: 'var(--afl-n-400)', fontStyle: 'italic' }}>
+                                <span style={{ fontSize: '0.85rem', color: 'var(--fdl-muted)', fontStyle: 'italic' }}>
                                   Never
                                 </span>
                               )}
@@ -1972,7 +1971,7 @@ export default function ManagementPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                     <div>
                       <h2 className="section-title" style={{ margin: 0 }}>API Access & Keys</h2>
-                      <p style={{ color: 'var(--afl-n-500)', fontSize: '0.9rem', margin: '4px 0 0 0' }}>
+                      <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.9rem', margin: '4px 0 0 0' }}>
                         Generate your personal API key for authenticating RESTful search queries to askFDALabel.
                       </p>
                     </div>
@@ -1981,8 +1980,8 @@ export default function ManagementPage() {
                   {apiKey ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                       <div style={{
-                        background: 'var(--afl-n-50)',
-                        border: '1px solid var(--afl-n-200)',
+                        background: 'var(--fdl-canvas)',
+                        border: '1px solid var(--fdl-line)',
                         borderRadius: '2px',
                         padding: '1.25rem',
                         display: 'flex',
@@ -1990,7 +1989,7 @@ export default function ManagementPage() {
                         gap: '0.75rem'
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--afl-n-700)' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
                             Personal REST API Key
                           </span>
                           <span style={{
@@ -2021,11 +2020,11 @@ export default function ManagementPage() {
                                 padding: '0.65rem 0.85rem',
                                 paddingRight: '4.5rem',
                                 borderRadius: '2px',
-                                border: '1px solid var(--afl-n-300)',
+                                border: '1px solid var(--fdl-line)',
                                 background: 'white',
                                 fontFamily: 'monospace',
                                 fontSize: '0.9rem',
-                                color: 'var(--afl-n-900)'
+                                color: 'var(--fdl-ink)'
                               }}
                             />
                             <button
@@ -2038,7 +2037,7 @@ export default function ManagementPage() {
                                 fontSize: '0.75rem',
                                 background: 'transparent',
                                 border: 'none',
-                                color: 'var(--afl-n-500)',
+                                color: 'var(--fdl-canvas0)',
                                 cursor: 'pointer',
                                 fontWeight: 600
                               }}
@@ -2069,8 +2068,8 @@ export default function ManagementPage() {
                           </button>
                         </div>
 
-                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--afl-n-500)' }}>
-                          Keep your API key secure. Authenticate requests by sending the header <code style={{ background: 'var(--afl-n-200)', padding: '1px 5px', borderRadius: '4px' }}>X-API-Key: {showKey ? apiKey : 'your_key'}</code> or <code style={{ background: 'var(--afl-n-200)', padding: '1px 5px', borderRadius: '4px' }}>Authorization: Bearer {showKey ? apiKey : 'your_key'}</code>.
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--fdl-canvas0)' }}>
+                          Keep your API key secure. Authenticate requests by sending the header <code style={{ background: 'var(--fdl-line)', padding: '1px 5px', borderRadius: '2px' }}>X-API-Key: {showKey ? apiKey : 'your_key'}</code> or <code style={{ background: 'var(--fdl-line)', padding: '1px 5px', borderRadius: '2px' }}>Authorization: Bearer {showKey ? apiKey : 'your_key'}</code>.
                         </p>
                       </div>
 
@@ -2099,9 +2098,9 @@ export default function ManagementPage() {
                     <div style={{
                       padding: '2.5rem 1.5rem',
                       textAlign: 'center',
-                      background: 'var(--afl-n-50)',
+                      background: 'var(--fdl-canvas)',
                       borderRadius: '2px',
-                      border: '1px dashed var(--afl-n-300)',
+                      border: '1px dashed var(--fdl-line)',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
@@ -2124,10 +2123,10 @@ export default function ManagementPage() {
                         </svg>
                       </div>
                       <div>
-                        <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--afl-n-800)' }}>
+                        <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--fdl-ink)' }}>
                           No API Key Generated
                         </h3>
-                        <p style={{ margin: '6px 0 0 0', color: 'var(--afl-n-500)', fontSize: '0.85rem', maxWidth: '460px' }}>
+                        <p style={{ margin: '6px 0 0 0', color: 'var(--fdl-canvas0)', fontSize: '0.85rem', maxWidth: '460px' }}>
                           Generate your exclusive API key to query drug labels programmatically using standard RESTful HTTP requests.
                         </p>
                       </div>
@@ -2147,7 +2146,7 @@ export default function ManagementPage() {
                 {/* API USAGE & QUICK START DOCUMENTATION */}
                 <section className="mgmt-card">
                   <h2 className="section-title">REST API Quick Start Guide</h2>
-                  <p style={{ color: 'var(--afl-n-500)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                  <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.9rem', marginBottom: '1rem' }}>
                     The askFDALabel REST API provides direct querying over the official CDER-CBER Oracle labeling database.
                   </p>
 
@@ -2170,7 +2169,7 @@ export default function ManagementPage() {
                         </div>
                         <p style={{ margin: '0 0 6px 0', fontSize: '0.88rem', color: '#1e3a8a', lineHeight: 1.55 }}>
                           Current Server Address:{' '}
-                          <code style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, fontFamily: 'monospace' }}>
+                          <code style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 6px', borderRadius: '2px', fontWeight: 700, fontFamily: 'monospace' }}>
                             {apiHost}/fdalabel-v3_api/api/v1/...
                           </code>
                         </p>
@@ -2194,16 +2193,16 @@ export default function ManagementPage() {
                     {(() => {
                       const apiHost = session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov';
                       return (
-                        <div style={{ background: 'var(--afl-n-50)', padding: '1rem 1.25rem', borderRadius: '2px', border: '1px solid var(--afl-n-200)' }}>
-                          <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--afl-n-800)', marginBottom: '0.5rem' }}>
+                        <div style={{ background: 'var(--fdl-canvas)', padding: '1rem 1.25rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
+                          <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--fdl-ink)', marginBottom: '0.5rem' }}>
                             Primary Endpoints ({apiHost})
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem', fontFamily: 'monospace' }}>
                             <div><span style={{ color: 'var(--fdl-green)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/search?q=diabetes&limit=20</div>
                             <div><span style={{ color: 'var(--fdl-blue-700)', fontWeight: 800 }}>POST</span> /fdalabel-v3_api/api/v1/search (JSON payload)</div>
-                            <div><span style={{ color: 'var(--fdl-green)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/labels/:set_id_or_spl_id <span style={{ color: 'var(--afl-n-500)', fontSize: '0.78rem' }}>(Metadata + Full XML)</span></div>
-                            <div><span style={{ color: 'var(--fdl-green)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/sections/:set_id_or_spl_id?loinc_code=34066-1,34067-9 <span style={{ color: 'var(--afl-n-500)', fontSize: '0.78rem' }}>(Section XMLs)</span></div>
-                            <div><span style={{ color: 'var(--fdl-green)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/pvlabeling/:set_id_or_spl_id <span style={{ color: 'var(--afl-n-500)', fontSize: '0.78rem' }}>(PV-Profile Adverse Events Table JSON)</span></div>
+                            <div><span style={{ color: 'var(--fdl-green)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/labels/:set_id_or_spl_id <span style={{ color: 'var(--fdl-canvas0)', fontSize: '0.78rem' }}>(Metadata + Full XML)</span></div>
+                            <div><span style={{ color: 'var(--fdl-green)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/sections/:set_id_or_spl_id?loinc_code=34066-1,34067-9 <span style={{ color: 'var(--fdl-canvas0)', fontSize: '0.78rem' }}>(Section XMLs)</span></div>
+                            <div><span style={{ color: 'var(--fdl-green)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/pvlabeling/:set_id_or_spl_id <span style={{ color: 'var(--fdl-canvas0)', fontSize: '0.78rem' }}>(PV-Profile Adverse Events Table JSON)</span></div>
                             <div><span style={{ color: 'var(--fdl-green)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/status</div>
                           </div>
                         </div>
@@ -2212,12 +2211,12 @@ export default function ManagementPage() {
 
                     {/* Example 1: Full-Text Search */}
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-700)', marginBottom: '4px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', marginBottom: '4px' }}>
                         1. Full-Text Search
                       </div>
                       <pre style={{
-                        background: 'var(--afl-n-900)',
-                        color: 'var(--afl-n-50)',
+                        background: 'var(--fdl-ink)',
+                        color: 'var(--fdl-canvas)',
                         padding: '0.85rem 1rem',
                         borderRadius: '2px',
                         fontSize: '0.8rem',
@@ -2231,12 +2230,12 @@ export default function ManagementPage() {
 
                     {/* Example 2: Product Name & ID Search */}
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-700)', marginBottom: '4px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', marginBottom: '4px' }}>
                         2. Product Identifier / Application Number Search
                       </div>
                       <pre style={{
-                        background: 'var(--afl-n-900)',
-                        color: 'var(--afl-n-50)',
+                        background: 'var(--fdl-ink)',
+                        color: 'var(--fdl-canvas)',
                         padding: '0.85rem 1rem',
                         borderRadius: '2px',
                         fontSize: '0.8rem',
@@ -2250,12 +2249,12 @@ export default function ManagementPage() {
 
                     {/* Example 3: Multi-Section XML Extraction */}
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-700)', marginBottom: '4px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', marginBottom: '4px' }}>
                         3. Extract Targeted Section XMLs by LOINC Code (Boxed Warning, Indications, etc.)
                       </div>
                       <pre style={{
-                        background: 'var(--afl-n-900)',
-                        color: 'var(--afl-n-50)',
+                        background: 'var(--fdl-ink)',
+                        color: 'var(--fdl-canvas)',
                         padding: '0.85rem 1rem',
                         borderRadius: '2px',
                         fontSize: '0.8rem',
@@ -2270,12 +2269,12 @@ curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_S
 
                     {/* Example 4: PV-Profile Adverse Events Export JSON */}
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-700)', marginBottom: '4px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', marginBottom: '4px' }}>
                         4. PV-Profile / PV Labeling Adverse Event Table (JSON corresponding to CSV export)
                       </div>
                       <pre style={{
-                        background: 'var(--afl-n-900)',
-                        color: 'var(--afl-n-50)',
+                        background: 'var(--fdl-ink)',
+                        color: 'var(--fdl-canvas)',
                         padding: '0.85rem 1rem',
                         borderRadius: '2px',
                         fontSize: '0.8rem',
@@ -2290,12 +2289,12 @@ curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_S
 
                     {/* Example 5: Label Metadata & Full XML */}
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-700)', marginBottom: '4px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', marginBottom: '4px' }}>
                         5. Retrieve Label Metadata and Full SPL XML
                       </div>
                       <pre style={{
-                        background: 'var(--afl-n-900)',
-                        color: 'var(--afl-n-50)',
+                        background: 'var(--fdl-ink)',
+                        color: 'var(--fdl-canvas)',
                         padding: '0.85rem 1rem',
                         borderRadius: '2px',
                         fontSize: '0.8rem',
@@ -2309,12 +2308,12 @@ curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_S
 
                     {/* Example 6: Python Script */}
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-700)', marginBottom: '4px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', marginBottom: '4px' }}>
                         6. Python Integration Example (Fetch PV-Profile Adverse Events Table)
                       </div>
                       <pre style={{
-                        background: 'var(--afl-n-900)',
-                        color: 'var(--afl-n-50)',
+                        background: 'var(--fdl-ink)',
+                        color: 'var(--fdl-canvas)',
                         padding: '0.85rem 1rem',
                         borderRadius: '2px',
                         fontSize: '0.8rem',
@@ -2351,7 +2350,7 @@ else:
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                     <div>
                       <h2 className="section-title" style={{ margin: 0 }}>API Key Management</h2>
-                      <p style={{ color: 'var(--afl-n-500)', fontSize: '0.9rem', margin: '4px 0 0' }}>
+                      <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.9rem', margin: '4px 0 0' }}>
                         Monitor active REST API keys across all users, track last used dates, and rotate or revoke keys.
                       </p>
                     </div>
@@ -2382,21 +2381,21 @@ else:
 
                     return (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-                        <div style={{ background: 'var(--afl-n-50)', border: '1px solid var(--afl-n-200)', borderRadius: '2px', padding: '1rem' }}>
-                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--afl-n-500)', letterSpacing: '0.05em' }}>Active Keys</div>
-                          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--afl-n-900)', marginTop: '4px' }}>{activeCount}</div>
+                        <div style={{ background: 'var(--fdl-canvas)', border: '1px solid var(--fdl-line)', borderRadius: '2px', padding: '1rem' }}>
+                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--fdl-canvas0)', letterSpacing: '0.05em' }}>Active Keys</div>
+                          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--fdl-ink)', marginTop: '4px' }}>{activeCount}</div>
                         </div>
-                        <div style={{ background: 'var(--afl-n-50)', border: '1px solid var(--afl-n-200)', borderRadius: '2px', padding: '1rem' }}>
-                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--afl-n-500)', letterSpacing: '0.05em' }}>Used Past 24h</div>
+                        <div style={{ background: 'var(--fdl-canvas)', border: '1px solid var(--fdl-line)', borderRadius: '2px', padding: '1rem' }}>
+                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--fdl-canvas0)', letterSpacing: '0.05em' }}>Used Past 24h</div>
                           <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--fdl-green)', marginTop: '4px' }}>{past24hCount}</div>
                         </div>
-                        <div style={{ background: 'var(--afl-n-50)', border: '1px solid var(--afl-n-200)', borderRadius: '2px', padding: '1rem' }}>
-                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--afl-n-500)', letterSpacing: '0.05em' }}>Never Used</div>
+                        <div style={{ background: 'var(--fdl-canvas)', border: '1px solid var(--fdl-line)', borderRadius: '2px', padding: '1rem' }}>
+                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--fdl-canvas0)', letterSpacing: '0.05em' }}>Never Used</div>
                           <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--fdl-amber)', marginTop: '4px' }}>{neverUsedCount}</div>
                         </div>
-                        <div style={{ background: 'var(--afl-n-50)', border: '1px solid var(--afl-n-200)', borderRadius: '2px', padding: '1rem' }}>
-                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--afl-n-500)', letterSpacing: '0.05em' }}>No Key Issued</div>
-                          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--afl-n-600)', marginTop: '4px' }}>{noKeyCount}</div>
+                        <div style={{ background: 'var(--fdl-canvas)', border: '1px solid var(--fdl-line)', borderRadius: '2px', padding: '1rem' }}>
+                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--fdl-canvas0)', letterSpacing: '0.05em' }}>No Key Issued</div>
+                          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--fdl-ink-soft)', marginTop: '4px' }}>{noKeyCount}</div>
                         </div>
                       </div>
                     );
@@ -2495,7 +2494,7 @@ else:
                           if (filtered.length === 0) {
                             return (
                               <tr>
-                                <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: 'var(--afl-n-400)' }}>
+                                <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: 'var(--fdl-muted)' }}>
                                   No API keys found matching filters.
                                 </td>
                               </tr>
@@ -2513,7 +2512,7 @@ else:
                                   <div
                                     style={{
                                       fontWeight: 700,
-                                      color: 'var(--afl-n-800)',
+                                      color: 'var(--fdl-ink)',
                                       fontSize: '0.9rem',
                                       maxWidth: '240px',
                                       overflow: 'hidden',
@@ -2525,11 +2524,11 @@ else:
                                     {k.username}
                                   </div>
                                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
-                                    <span style={{ fontSize: '0.7rem', color: 'var(--afl-n-500)', textTransform: 'capitalize' }}>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--fdl-canvas0)', textTransform: 'capitalize' }}>
                                       {k.role}
                                     </span>
                                     {k.is_active === false && (
-                                      <span style={{ fontSize: '0.65rem', background: 'var(--fdl-red-050)', color: 'var(--fdl-red)', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>
+                                      <span style={{ fontSize: '0.65rem', background: 'var(--fdl-red-050)', color: 'var(--fdl-red)', padding: '1px 5px', borderRadius: '2px', fontWeight: 800 }}>
                                         DEACTIVATED
                                       </span>
                                     )}
@@ -2541,10 +2540,10 @@ else:
                                       <code style={{
                                         fontFamily: 'monospace',
                                         fontSize: '0.8rem',
-                                        background: 'var(--afl-n-100)',
+                                        background: 'var(--fdl-line-soft)',
                                         padding: '4px 8px',
-                                        borderRadius: '4px',
-                                        color: 'var(--afl-n-800)',
+                                        borderRadius: '2px',
+                                        color: 'var(--fdl-ink)',
                                         maxWidth: '220px',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
@@ -2571,23 +2570,23 @@ else:
                                       </button>
                                     </div>
                                   ) : (
-                                    <span style={{ color: 'var(--afl-n-400)', fontStyle: 'italic', fontSize: '0.85rem' }}>
+                                    <span style={{ color: 'var(--fdl-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>
                                       No key generated
                                     </span>
                                   )}
                                 </td>
                                 <td>
-                                  <div style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)' }}>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--fdl-canvas0)' }}>
                                     Generated: {formatUserDate(k.created_at) || '—'}
                                   </div>
                                   <div style={{ fontSize: '0.8rem', marginTop: '2px' }}>
-                                    <span style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)' }}>Last used: </span>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--fdl-canvas0)' }}>Last used: </span>
                                     {k.last_used_at ? (
-                                      <span style={{ fontWeight: 600, color: 'var(--afl-n-800)', whiteSpace: 'nowrap' }}>
+                                      <span style={{ fontWeight: 600, color: 'var(--fdl-ink)', whiteSpace: 'nowrap' }}>
                                         {formatUserDate(k.last_used_at)}
                                       </span>
                                     ) : (
-                                      <span style={{ color: 'var(--afl-n-400)', fontStyle: 'italic' }}>Never</span>
+                                      <span style={{ color: 'var(--fdl-muted)', fontStyle: 'italic' }}>Never</span>
                                     )}
                                   </div>
                                 </td>
@@ -2660,13 +2659,13 @@ else:
                 </div>
 
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem', padding: '0.5rem', background: 'var(--afl-n-50)', borderRadius: '2px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem', padding: '0.5rem', background: 'var(--fdl-canvas)', borderRadius: '2px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--afl-n-600)' }}>Filter Date:</div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>Filter Date:</div>
                       <select 
                         value={historyDateFilter} 
                         onChange={(e) => { setHistoryDateFilter(e.target.value as any); setHistoryPage(1); }}
-                        style={{ padding: '6px 12px', borderRadius: '2px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
+                        style={{ padding: '6px 12px', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
                       >
                         <option value="7d">Last 7 Days</option>
                         <option value="1m">Last 1 Month</option>
@@ -2677,18 +2676,18 @@ else:
                     
                     {historyDateFilter === 'custom' && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <input type="date" value={historyCustomStart} onChange={e => { setHistoryCustomStart(e.target.value); setHistoryPage(1); }} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid var(--afl-n-300)' }} />
-                        <span style={{ fontSize: '0.8rem', color: 'var(--afl-n-500)' }}>to</span>
-                        <input type="date" value={historyCustomEnd} onChange={e => { setHistoryCustomEnd(e.target.value); setHistoryPage(1); }} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid var(--afl-n-300)' }} />
+                        <input type="date" value={historyCustomStart} onChange={e => { setHistoryCustomStart(e.target.value); setHistoryPage(1); }} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }} />
+                        <span style={{ fontSize: '0.8rem', color: 'var(--fdl-canvas0)' }}>to</span>
+                        <input type="date" value={historyCustomEnd} onChange={e => { setHistoryCustomEnd(e.target.value); setHistoryPage(1); }} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }} />
                       </div>
                     )}
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--afl-n-600)' }}>Filter Model:</div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>Filter Model:</div>
                       <select 
                         value={historyModelFilter} 
                         onChange={(e) => { setHistoryModelFilter(e.target.value); setHistoryPage(1); }}
-                        style={{ padding: '6px 12px', borderRadius: '2px', border: '1px solid var(--afl-n-300)', fontSize: '0.85rem' }}
+                        style={{ padding: '6px 12px', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
                       >
                         <option value="all">All Models</option>
                         {uniqueModels.map(model => (
@@ -2697,7 +2696,7 @@ else:
                       </select>
                     </div>
                     
-                    <div style={{ marginLeft: 'auto', fontSize: '0.85rem', color: 'var(--afl-n-500)' }}>
+                    <div style={{ marginLeft: 'auto', fontSize: '0.85rem', color: 'var(--fdl-canvas0)' }}>
                       {historyTotalItems} record{historyTotalItems !== 1 ? 's' : ''} found
                     </div>
                   </div>
@@ -2708,25 +2707,25 @@ else:
                     gridTemplateColumns: 'repeat(3, 1fr)', 
                     gap: '1rem', 
                     marginBottom: '1.5rem',
-                    background: 'var(--afl-n-50)',
+                    background: 'var(--fdl-canvas)',
                     padding: '1.25rem',
                     borderRadius: '2px',
-                    border: '1px solid var(--afl-n-200)'
+                    border: '1px solid var(--fdl-line)'
                   }}>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '2px', border: '1px solid var(--afl-n-200)', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Input Tokens</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--afl-n-900)', marginTop: '4px' }}>
+                    <div style={{ background: 'white', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-canvas0)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Input Tokens</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--fdl-ink)', marginTop: '4px' }}>
                         {totalInputTokens.toLocaleString()}
                       </div>
                     </div>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '2px', border: '1px solid var(--afl-n-200)', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Output Tokens</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--afl-n-900)', marginTop: '4px' }}>
+                    <div style={{ background: 'white', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-canvas0)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Output Tokens</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--fdl-ink)', marginTop: '4px' }}>
                         {totalOutputTokens.toLocaleString()}
                       </div>
                     </div>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '2px', border: '1px solid var(--afl-n-200)', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Overall Tokens</div>
+                    <div style={{ background: 'white', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-canvas0)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Overall Tokens</div>
                       <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--fdl-blue-600)', marginTop: '4px' }}>
                         {totalOverallTokens.toLocaleString()}
                       </div>
@@ -2747,30 +2746,30 @@ else:
                       </thead>
                       <tbody>
                         {loadingUserTokens ? (
-                          <tr><td colSpan={session?.is_admin ? 6 : 5} style={{ textAlign: 'center', padding: '24px', color: 'var(--afl-n-400)' }}>Loading detailed usage...</td></tr>
+                          <tr><td colSpan={session?.is_admin ? 6 : 5} style={{ textAlign: 'center', padding: '24px', color: 'var(--fdl-muted)' }}>Loading detailed usage...</td></tr>
                         ) : historyFilteredTokens.length === 0 ? (
-                          <tr><td colSpan={session?.is_admin ? 6 : 5} style={{ textAlign: 'center', padding: '24px', color: 'var(--afl-n-400)' }}>No records found for the selected date range.</td></tr>
+                          <tr><td colSpan={session?.is_admin ? 6 : 5} style={{ textAlign: 'center', padding: '24px', color: 'var(--fdl-muted)' }}>No records found for the selected date range.</td></tr>
                         ) : (
                           historyPagedTokens.map((record: any) => (
-                            <tr key={record.id} style={{ background: 'var(--afl-n-50)', borderRadius: '2px' }}>
-                              <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '8px 0 0 8px', fontSize: '0.85rem', color: 'var(--afl-n-600)' }}>
+                            <tr key={record.id} style={{ background: 'var(--fdl-canvas)', borderRadius: '2px' }}>
+                              <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '2px 0 0 2px', fontSize: '0.85rem', color: 'var(--fdl-ink-soft)' }}>
                                 {new Date(record.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'medium' })}
                               </td>
                               {session?.is_admin && (
-                                <td style={{ padding: '12px', borderBottom: 'none', fontSize: '0.85rem', color: 'var(--afl-n-700)', fontWeight: 600 }}>
+                                <td style={{ padding: '12px', borderBottom: 'none', fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', fontWeight: 600 }}>
                                   {record.username}
                                 </td>
                               )}
-                              <td style={{ padding: '12px', borderBottom: 'none', fontSize: '0.85rem', fontWeight: 600, color: 'var(--afl-n-700)' }}>
-                                <span style={{ background: 'var(--afl-n-200)', padding: '4px 8px', borderRadius: '2px' }}>{record.model_name}</span>
+                              <td style={{ padding: '12px', borderBottom: 'none', fontSize: '0.85rem', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>
+                                <span style={{ background: 'var(--fdl-line)', padding: '4px 8px', borderRadius: '2px' }}>{record.model_name}</span>
                               </td>
-                              <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontSize: '0.9rem', color: 'var(--afl-n-500)' }}>
+                              <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontSize: '0.9rem', color: 'var(--fdl-canvas0)' }}>
                                 {record.input_tokens.toLocaleString()}
                               </td>
-                              <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontSize: '0.9rem', color: 'var(--afl-n-500)' }}>
+                              <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontSize: '0.9rem', color: 'var(--fdl-canvas0)' }}>
                                 {record.output_tokens.toLocaleString()}
                               </td>
-                              <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '0 8px 8px 0', textAlign: 'right', fontWeight: 800, color: 'var(--afl-n-900)' }}>
+                              <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '0 2px 2px 0', textAlign: 'right', fontWeight: 800, color: 'var(--fdl-ink)' }}>
                                 {record.total_tokens.toLocaleString()}
                               </td>
                             </tr>
@@ -2785,17 +2784,17 @@ else:
                       <button 
                         disabled={historyPage === 1}
                         onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
-                        style={{ padding: '6px 12px', background: historyPage === 1 ? 'var(--afl-n-100)' : 'var(--afl-n-200)', color: historyPage === 1 ? 'var(--afl-n-400)' : 'var(--afl-n-700)', border: 'none', borderRadius: '2px', cursor: historyPage === 1 ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}
+                        style={{ padding: '6px 12px', background: historyPage === 1 ? 'var(--fdl-line-soft)' : 'var(--fdl-line)', color: historyPage === 1 ? 'var(--fdl-muted)' : 'var(--fdl-ink-soft)', border: 'none', borderRadius: '2px', cursor: historyPage === 1 ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}
                       >
                         Previous
                       </button>
-                      <span style={{ fontSize: '0.85rem', color: 'var(--afl-n-600)' }}>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--fdl-ink-soft)' }}>
                         Page {historyPage} of {historyTotalPages}
                       </span>
                       <button 
                         disabled={historyPage === historyTotalPages}
                         onClick={() => setHistoryPage(p => Math.min(historyTotalPages, p + 1))}
-                        style={{ padding: '6px 12px', background: historyPage === historyTotalPages ? 'var(--afl-n-100)' : 'var(--afl-n-200)', color: historyPage === historyTotalPages ? 'var(--afl-n-400)' : 'var(--afl-n-700)', border: 'none', borderRadius: '2px', cursor: historyPage === historyTotalPages ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}
+                        style={{ padding: '6px 12px', background: historyPage === historyTotalPages ? 'var(--fdl-line-soft)' : 'var(--fdl-line)', color: historyPage === historyTotalPages ? 'var(--fdl-muted)' : 'var(--fdl-ink-soft)', border: 'none', borderRadius: '2px', cursor: historyPage === historyTotalPages ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}
                       >
                         Next
                       </button>
@@ -2813,7 +2812,7 @@ else:
                     {loadingFeatures ? 'Refreshing...' : 'Refresh'}
                   </button>
                 </div>
-                <p style={{ color: 'var(--afl-n-500)', fontSize: '0.85rem', lineHeight: 1.6, marginTop: '4px' }}>
+                <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.85rem', lineHeight: 1.6, marginTop: '4px' }}>
                   Control which analytical and clinical tools in the label <strong>Product Toolbox</strong> are open to standard users.
                   Changes take effect immediately across all active user sessions.
                 </p>
@@ -2834,7 +2833,7 @@ else:
                 )}
 
                 {loadingFeatures && features.length === 0 ? (
-                  <div style={{ padding: '24px', textAlign: 'center', color: 'var(--afl-n-400)' }}>Loading toolbox tools...</div>
+                  <div style={{ padding: '24px', textAlign: 'center', color: 'var(--fdl-muted)' }}>Loading toolbox tools...</div>
                 ) : (
                   <div className="user-table-wrapper">
                     <table className="user-table">
@@ -2856,7 +2855,7 @@ else:
                             return (
                               <tr key={f.key} style={{ opacity: savingFeature === f.key ? 0.6 : 1 }}>
                                 <td>
-                                  <div style={{ fontWeight: 700, color: 'var(--afl-n-800)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <div style={{ fontWeight: 700, color: 'var(--fdl-ink)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <span>{f.name}</span>
                                     <span
                                       style={{
@@ -2867,20 +2866,20 @@ else:
                                         background: isOpenToUser ? '#dcfce7' : '#f1f5f9',
                                         color: isOpenToUser ? '#15803d' : '#64748b',
                                         padding: '2px 8px',
-                                        borderRadius: '4px',
+                                        borderRadius: '2px',
                                         border: isOpenToUser ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
                                       }}
                                     >
                                       {isOpenToUser ? '✓ Open to User' : 'Restricted (Dev/Admin)'}
                                     </span>
                                     {changed && (
-                                      <span title="Differs from built-in default" style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', background: 'var(--fdl-blue-100)', color: 'var(--fdl-blue-700)', padding: '2px 6px', borderRadius: '4px' }}>
+                                      <span title="Differs from built-in default" style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', background: 'var(--fdl-blue-100)', color: 'var(--fdl-blue-700)', padding: '2px 6px', borderRadius: '2px' }}>
                                         Customized
                                       </span>
                                     )}
                                   </div>
-                                  <div style={{ fontSize: '0.78rem', color: 'var(--afl-n-500)', marginTop: '2px' }}>{f.blurb}</div>
-                                  <div style={{ fontSize: '0.7rem', color: 'var(--afl-n-400)', marginTop: '2px' }}>
+                                  <div style={{ fontSize: '0.78rem', color: 'var(--fdl-canvas0)', marginTop: '2px' }}>{f.blurb}</div>
+                                  <div style={{ fontSize: '0.7rem', color: 'var(--fdl-muted)', marginTop: '2px' }}>
                                     Enforced at {f.enforced_at}
                                   </div>
                                 </td>
@@ -2910,7 +2909,7 @@ else:
                                       Allow
                                     </label>
                                   ) : (
-                                    <span title="The role requirement already excludes the shared guest account" style={{ fontSize: '0.75rem', color: 'var(--afl-n-400)' }}>
+                                    <span title="The role requirement already excludes the shared guest account" style={{ fontSize: '0.75rem', color: 'var(--fdl-muted)' }}>
                                       n/a
                                     </span>
                                   )}
@@ -2933,7 +2932,7 @@ else:
                     {loadingFeatures ? 'Refreshing...' : 'Refresh'}
                   </button>
                 </div>
-                <p style={{ color: 'var(--afl-n-500)', fontSize: '0.85rem', lineHeight: 1.6, marginTop: '4px' }}>
+                <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.85rem', lineHeight: 1.6, marginTop: '4px' }}>
                   Each function below is gated by account role. Changes apply immediately —
                   no restart — and reach open sessions within a minute. Both the API and the
                   interface read the same rule, so a function you close here cannot be reached
@@ -2947,7 +2946,7 @@ else:
                 )}
 
                 {loadingFeatures && features.length === 0 ? (
-                  <div style={{ padding: '24px', textAlign: 'center', color: 'var(--afl-n-400)' }}>Loading functions...</div>
+                  <div style={{ padding: '24px', textAlign: 'center', color: 'var(--fdl-muted)' }}>Loading functions...</div>
                 ) : (
                   <div className="user-table-wrapper">
                     <table className="user-table">
@@ -2968,19 +2967,19 @@ else:
                           return (
                             <tr key={f.key} style={{ opacity: savingFeature === f.key ? 0.6 : 1 }}>
                               <td>
-                                <div style={{ fontWeight: 700, color: 'var(--afl-n-800)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ fontWeight: 700, color: 'var(--fdl-ink)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   {f.name}
-                                  <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', background: 'var(--afl-n-100)', color: 'var(--afl-n-500)', padding: '2px 6px', borderRadius: '4px' }}>
+                                  <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', background: 'var(--fdl-line-soft)', color: 'var(--fdl-canvas0)', padding: '2px 6px', borderRadius: '2px' }}>
                                     {f.category}
                                   </span>
                                   {changed && (
-                                    <span title="Differs from the built-in default" style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', background: 'var(--fdl-blue-100)', color: 'var(--fdl-blue-700)', padding: '2px 6px', borderRadius: '4px' }}>
+                                    <span title="Differs from the built-in default" style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', background: 'var(--fdl-blue-100)', color: 'var(--fdl-blue-700)', padding: '2px 6px', borderRadius: '2px' }}>
                                       Customized
                                     </span>
                                   )}
                                 </div>
-                                <div style={{ fontSize: '0.78rem', color: 'var(--afl-n-500)', marginTop: '2px' }}>{f.blurb}</div>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--afl-n-400)', marginTop: '2px' }}>
+                                <div style={{ fontSize: '0.78rem', color: 'var(--fdl-canvas0)', marginTop: '2px' }}>{f.blurb}</div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--fdl-muted)', marginTop: '2px' }}>
                                   Enforced at {f.enforced_at}
                                 </div>
                               </td>
@@ -3010,7 +3009,7 @@ else:
                                     Allow
                                   </label>
                                 ) : (
-                                  <span title="The role requirement already excludes the shared guest account" style={{ fontSize: '0.75rem', color: 'var(--afl-n-400)' }}>
+                                  <span title="The role requirement already excludes the shared guest account" style={{ fontSize: '0.75rem', color: 'var(--fdl-muted)' }}>
                                     n/a
                                   </span>
                                 )}
@@ -3029,16 +3028,16 @@ else:
               <>
               <section className="mgmt-card">
                 <h2 className="section-title">Database Maintenance</h2>
-                <p style={{ color: 'var(--afl-n-500)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
                   Manually trigger background synchronization with local source files (data/downloads).
                 </p>
 
-                <section style={{ marginBottom: '1.75rem', padding: '1rem', border: '1px solid var(--afl-n-200)', borderRadius: '2px', background: 'var(--afl-n-50)' }}>
+                <section style={{ marginBottom: '1.75rem', padding: '1rem', border: '1px solid var(--fdl-line)', borderRadius: '2px', background: 'var(--fdl-canvas)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'baseline', marginBottom: '6px' }}>
-                    <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--afl-n-800)' }}>Managed data files</h3>
+                    <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--fdl-ink)' }}>Managed data files</h3>
                     <button type="button" onClick={refreshDataFiles} className="btn-ghost" style={{ padding: '4px 9px', fontSize: '0.75rem' }}>Refresh</button>
                   </div>
-                  <p style={{ margin: '0 0 12px', fontSize: '0.78rem', color: 'var(--afl-n-500)', lineHeight: 1.45 }}>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.78rem', color: 'var(--fdl-canvas0)', lineHeight: 1.45 }}>
                     Upload is separate from database updates. Files are renamed automatically; an existing file is moved into an <code>archive</code> folder before replacement. Large files upload in 10 MB resumable chunks.
                   </p>
                   {[
@@ -3050,8 +3049,8 @@ else:
                   ].map(item => {
                     const status = dataFiles.find(file => file.type === item.type);
                     const busy = uploadingFileType === item.type;
-                    return <div key={item.type} style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) minmax(180px, 1.4fr) auto', gap: '12px', alignItems: 'center', padding: '10px 0', borderTop: '1px solid var(--afl-n-200)' }}>
-                      <div><div style={{ fontWeight: 750, fontSize: '0.84rem', color: 'var(--afl-n-800)' }}>{item.title}</div><code style={{ fontSize: '0.7rem', color: 'var(--afl-n-500)' }}>{item.name}</code></div>
+                    return <div key={item.type} style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) minmax(180px, 1.4fr) auto', gap: '12px', alignItems: 'center', padding: '10px 0', borderTop: '1px solid var(--fdl-line)' }}>
+                      <div><div style={{ fontWeight: 750, fontSize: '0.84rem', color: 'var(--fdl-ink)' }}>{item.title}</div><code style={{ fontSize: '0.7rem', color: 'var(--fdl-canvas0)' }}>{item.name}</code></div>
                       <div style={{ fontSize: '0.75rem', color: status?.exists ? (status.stale ? '#b45309' : '#15803d') : '#b91c1c' }}>
                         {busy ? `Uploading ${uploadProgress[item.type] || 0}%…` : status?.exists ? `${status.stale ? 'Older than one month' : 'Ready'} · ${(status.size / 1024 / 1024).toFixed(1)} MB · ${new Date(status.updated_at).toLocaleDateString()}` : 'No file uploaded'}
                       </div>
@@ -3075,8 +3074,8 @@ else:
                     <div key={item.id} className="update-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
                       <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 800, color: 'var(--afl-n-800)' }}>{item.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)' }}>{item.desc}</div>
+                          <div style={{ fontWeight: 800, color: 'var(--fdl-ink)' }}>{item.name}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--fdl-canvas0)' }}>{item.desc}</div>
                         </div>
                         <button
                           onClick={() => handleUpdateClick(item.id)}
@@ -3088,15 +3087,15 @@ else:
                       </div>
 
                       {item.id === 'monthly_labeling' && (
-                        <div style={{ marginTop: '12px', padding: '12px', background: 'white', borderRadius: '2px', border: '1px solid var(--afl-n-200)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <div style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--afl-n-600)', marginBottom: '4px' }}>Configuration Options</div>
+                        <div style={{ marginTop: '12px', padding: '12px', background: 'white', borderRadius: '2px', border: '1px solid var(--fdl-line)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--fdl-ink-soft)', marginBottom: '4px' }}>Configuration Options</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.8rem', color: 'var(--afl-n-700)' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--fdl-ink-soft)' }}>
                               The uploaded monthly package is unpacked automatically and only new SPL versions are imported.
                             </span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--afl-n-700)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--fdl-ink-soft)' }}>
                               <span>Workers:</span>
-                              <select value={workers} onChange={(e) => setWorkers(Number(e.target.value))} style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--afl-n-300)', fontSize: '0.8rem', cursor: 'pointer' }}>
+                              <select value={workers} onChange={(e) => setWorkers(Number(e.target.value))} style={{ padding: '2px 8px', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.8rem', cursor: 'pointer' }}>
                                 <option value={1}>1</option>
                                 <option value={4}>4</option>
                                 <option value={10}>10</option>
@@ -3107,10 +3106,10 @@ else:
                       )}
 
                       {item.id === 'generate_drugtox' && (
-                        <div style={{ marginTop: '12px', padding: '12px', background: 'white', borderRadius: '2px', border: '1px solid var(--afl-n-200)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <div style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--afl-n-600)', marginBottom: '4px' }}>Configuration Options</div>
+                        <div style={{ marginTop: '12px', padding: '12px', background: 'white', borderRadius: '2px', border: '1px solid var(--fdl-line)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--fdl-ink-soft)', marginBottom: '4px' }}>Configuration Options</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--afl-n-700)', cursor: 'pointer', userSelect: 'none' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--fdl-ink-soft)', cursor: 'pointer', userSelect: 'none' }}>
                               <input type="checkbox" checked={useLocalDB} onChange={(e) => setUseLocalDB(e.target.checked)} style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: 'var(--fdl-blue-600)' }} />
                               Use Local DB (Postgres)
                             </label>
@@ -3130,8 +3129,8 @@ else:
                   ))}
                 </div>
 
-                <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--afl-n-50)', borderRadius: '2px', border: '1px solid var(--afl-n-200)' }}>
-                  <div style={{ fontWeight: 800, fontSize: '0.8rem', color: 'var(--afl-n-600)', marginBottom: '8px' }}>
+                <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--fdl-canvas)', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
+                  <div style={{ fontWeight: 800, fontSize: '0.8rem', color: 'var(--fdl-ink-soft)', marginBottom: '8px' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ marginRight: '6px', verticalAlign: 'middle' }}>
                       <circle cx="12" cy="12" r="10"></circle>
                       <line x1="12" y1="16" x2="12" y2="12"></line>
@@ -3139,7 +3138,7 @@ else:
                     </svg>
                     Processing Note
                   </div>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)', lineHeight: 1.4, margin: 0 }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--fdl-canvas0)', lineHeight: 1.4, margin: 0 }}>
                     Updates run as background processes. Larger datasets (Labeling, MedDRA) may take 5-10 minutes.
                     Existing data will be replaced using the <code>--force</code> flag.
                   </p>
@@ -3148,13 +3147,13 @@ else:
 
               <section className="mgmt-card" style={{ marginTop: '1.5rem' }}>
                 <h2 className="section-title">FDALabel Oracle Connection</h2>
-                <p style={{ color: 'var(--afl-n-500)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
                   Target used when label queries run against Oracle. Values default to the TST server
                   defined in <code>.env</code>; clearing a field falls back to that <code>.env</code> value.
                 </p>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>Quick apply from .env:</span>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Quick apply from .env:</span>
                   <button
                     type="button"
                     onClick={() => applyOraclePreset('dev')}
@@ -3176,7 +3175,7 @@ else:
                 </div>
 
                 <div className="mgmt-form" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
                     Host / URL
                     <input
                       className="mgmt-input"
@@ -3185,7 +3184,7 @@ else:
                       placeholder="ncsvmlbldbtst2.fda.gov"
                     />
                   </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
                     Port
                     <input
                       className="mgmt-input"
@@ -3194,7 +3193,7 @@ else:
                       placeholder="1521"
                     />
                   </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
                     SID / Service
                     <input
                       className="mgmt-input"
@@ -3203,7 +3202,7 @@ else:
                       placeholder="lbltst2"
                     />
                   </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
                     User
                     <input
                       className="mgmt-input"
@@ -3212,7 +3211,7 @@ else:
                       autoComplete="off"
                     />
                   </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-600)' }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
                     Password
                     <span style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                       <input
@@ -3266,43 +3265,43 @@ else:
         <div className="modal-overlay" onClick={() => !loadingStats && setPendingUpdateType(null)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px', width: '90%', padding: '2rem', borderRadius: '2px', background: 'white' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--afl-n-900)' }}>Confirm Database Update</h3>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--fdl-ink)' }}>Confirm Database Update</h3>
             </div>
 
             {loadingStats ? (
-              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--afl-n-500)' }}>
+              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--fdl-canvas0)' }}>
                 Fetching current database statistics...
               </div>
             ) : pendingUpdateStats ? (
               <div>
-                <p style={{ color: 'var(--afl-n-600)', marginBottom: '1.5rem' }}>
+                <p style={{ color: 'var(--fdl-ink-soft)', marginBottom: '1.5rem' }}>
                   You are about to run the update script for <strong>{pendingUpdateType}</strong>.
                   Existing data will be overwritten or updated.
                 </p>
-                <div style={{ background: 'var(--afl-n-50)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--afl-n-200)', marginBottom: '1.5rem' }}>
-                  <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--afl-n-800)', fontSize: '0.9rem' }}>Current Database Stats</h4>
+                <div style={{ background: 'var(--fdl-canvas)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', marginBottom: '1.5rem' }}>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--fdl-ink)', fontSize: '0.9rem' }}>Current Database Stats</h4>
                   {pendingUpdateStats.total_count ? (
                     <>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--afl-n-600)', display: 'flex', justifyContent: 'space-between' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', display: 'flex', justifyContent: 'space-between' }}>
                         <span>Total MedDRA Records:</span>
                         <span style={{ fontWeight: 600 }}>{pendingUpdateStats.total_count.toLocaleString()}</span>
                       </div>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--afl-n-600)', display: 'flex', justifyContent: 'space-between' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', display: 'flex', justifyContent: 'space-between' }}>
                         <span>SOC Terms:</span>
                         <span style={{ fontWeight: 600 }}>{pendingUpdateStats.soc_count.toLocaleString()}</span>
                       </div>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--afl-n-600)', display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem' }}>
                         <span>Last Updated Date:</span>
                         <span style={{ fontWeight: 600 }}>{pendingUpdateStats.last_date || 'N/A'}</span>
                       </div>
                     </>
                   ) : (
                     <>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--afl-n-600)', display: 'flex', justifyContent: 'space-between' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', display: 'flex', justifyContent: 'space-between' }}>
                         <span>Total Records:</span>
                         <span style={{ fontWeight: 600 }}>{pendingUpdateStats.count?.toLocaleString() || 0}</span>
                       </div>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--afl-n-600)', display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem' }}>
                         <span>Last Updated Date:</span>
                         <span style={{ fontWeight: 600 }}>{pendingUpdateStats.last_date || 'N/A'}</span>
                       </div>
@@ -3330,10 +3329,10 @@ else:
                   <polyline points="22 4 12 14.01 9 11.01"></polyline>
                 </svg>
               </div>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--afl-n-900)' }}>Update Completed</h3>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--fdl-ink)' }}>Update Completed</h3>
             </div>
 
-            <p style={{ color: 'var(--afl-n-600)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+            <p style={{ color: 'var(--fdl-ink-soft)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
               The database update task for <strong>{completedUpdateTask.type}</strong> has finished successfully.
             </p>
 
@@ -3358,17 +3357,17 @@ else:
       {isTokenModalOpen && session?.is_admin && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)',
+          background: 'rgba(7, 31, 61, 0.58)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
         }}>
           <div style={{
             background: 'white', borderRadius: '2px', width: '90%', maxWidth: '800px',
             maxHeight: '90vh', display: 'flex', flexDirection: 'column',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
+            boxShadow: 'var(--fdl-elevation-3, 0 12px 32px rgba(7, 31, 61, 0.18))', borderTop: '3px solid var(--fdl-navy-800)'
           }}>
-            <div style={{ padding: '24px', borderBottom: '1px solid var(--afl-n-200)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--afl-n-900)' }}>Top 10 Users Summary</h3>
-              <button onClick={() => setIsTokenModalOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px', color: 'var(--afl-n-500)' }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid var(--fdl-line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--fdl-ink)' }}>Top 10 Users Summary</h3>
+              <button onClick={() => setIsTokenModalOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px', color: 'var(--fdl-canvas0)' }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -3388,26 +3387,26 @@ else:
                 </thead>
                 <tbody>
                   {tokenUsage.length === 0 ? (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--afl-n-400)' }}>No token usage data</td></tr>
+                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--fdl-muted)' }}>No token usage data</td></tr>
                   ) : (
                     [...tokenUsage]
                       .sort((a: any, b: any) => b.stats.total_all_time - a.stats.total_all_time)
                       .slice(0, 10)
                       .map((u: any) => (
-                        <tr key={u.user_id} style={{ background: 'var(--afl-n-50)', borderRadius: '2px' }}>
-                          <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '8px 0 0 8px', fontWeight: 600, color: 'var(--afl-n-700)' }}>
+                        <tr key={u.user_id} style={{ background: 'var(--fdl-canvas)', borderRadius: '2px' }}>
+                          <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '2px 0 0 2px', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>
                             {u.username}
                           </td>
-                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 800, color: 'var(--afl-n-900)' }}>
+                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 800, color: 'var(--fdl-ink)' }}>
                             {u.stats.total_all_time.toLocaleString()}
                           </td>
-                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 600, color: 'var(--afl-n-700)' }}>
+                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>
                             {u.stats.total_30_days.toLocaleString()}
                           </td>
-                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 600, color: 'var(--afl-n-700)' }}>
+                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>
                             {u.stats.total_7_days.toLocaleString()}
                           </td>
-                          <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '0 8px 8px 0', textAlign: 'right', fontWeight: 600, color: 'var(--afl-n-700)' }}>
+                          <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '0 2px 2px 0', textAlign: 'right', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>
                             {u.stats.total_1_day.toLocaleString()}
                           </td>
                         </tr>
@@ -3416,7 +3415,7 @@ else:
                 </tbody>
               </table>
             </div>
-            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--afl-n-200)', display: 'flex', justifyContent: 'flex-end', background: 'var(--afl-n-50)', borderRadius: '0 0 16px 16px' }}>
+            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--fdl-line)', display: 'flex', justifyContent: 'flex-end', background: 'var(--fdl-canvas)', borderRadius: '0 0 2px 2px' }}>
               <button onClick={() => setIsTokenModalOpen(false)} className="btn-primary">Close</button>
             </div>
           </div>
@@ -3426,12 +3425,12 @@ else:
       {managingUser && (
         <div className="modal-overlay" onClick={() => { if (!savingUserModel) setManagingUser(null); }}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px', width: '90%', padding: '2rem', borderRadius: '2px', background: 'white' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', borderBottom: '1px solid var(--afl-n-200)', paddingBottom: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', borderBottom: '1px solid var(--fdl-line)', paddingBottom: '1rem' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--afl-n-900)', fontWeight: 800 }}>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--fdl-ink)', fontWeight: 800 }}>
                   Manage Account: {managingUser.username}
                 </h3>
-                <div style={{ fontSize: '0.8rem', color: 'var(--afl-n-500)', marginTop: '4px' }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--fdl-canvas0)', marginTop: '4px' }}>
                   Role: <strong style={{ textTransform: 'capitalize' }}>{managingUser.role || (managingUser.is_admin ? 'Admin' : 'User')}</strong>
                   {' • '}
                   Joined: {formatUserDate(managingUser.created_at) || '—'}
@@ -3440,7 +3439,7 @@ else:
               <button 
                 onClick={() => setManagingUser(null)}
                 disabled={savingUserModel}
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--afl-n-400)', padding: '4px 8px' }}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--fdl-muted)', padding: '4px 8px' }}
                 title="Close"
               >
                 ✕
@@ -3449,8 +3448,8 @@ else:
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               {/* Password Section */}
-              <div style={{ background: 'var(--afl-n-50)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--afl-n-200)' }}>
-                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-800)', marginBottom: '0.5rem' }}>
+              <div style={{ background: 'var(--fdl-canvas)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink)', marginBottom: '0.5rem' }}>
                   Reset Password
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -3476,8 +3475,8 @@ else:
 
               {/* AI Model Section (Admin Only) */}
               {session?.is_admin && (
-                <div style={{ background: 'var(--afl-n-50)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--afl-n-200)' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-800)', marginBottom: '0.5rem' }}>
+                <div style={{ background: 'var(--fdl-canvas)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink)', marginBottom: '0.5rem' }}>
                     Assigned Model Provider
                   </div>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -3511,11 +3510,11 @@ else:
 
               {/* Comments, Annotations & AI Notes Permission (Admin Only) */}
               {session?.is_admin && (
-                <div style={{ background: 'var(--afl-n-50)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--afl-n-200)' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-800)', marginBottom: '0.35rem' }}>
+                <div style={{ background: 'var(--fdl-canvas)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink)', marginBottom: '0.35rem' }}>
                     Comments, Annotations & AI Notes Permission
                   </div>
-                  <p style={{ fontSize: '0.78rem', color: 'var(--afl-n-500)', margin: '0 0 0.75rem 0', lineHeight: 1.4 }}>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--fdl-canvas0)', margin: '0 0 0.75rem 0', lineHeight: 1.4 }}>
                     Controls whether this user can post comments & justifications in visual compare, create label highlights/notes, and save AI notes.
                   </p>
                   <button
@@ -3526,7 +3525,7 @@ else:
                       padding: '6px 14px',
                       fontSize: '0.82rem',
                       fontWeight: 700,
-                      borderRadius: '4px',
+                      borderRadius: '2px',
                       color: managingUser.can_comment !== false ? '#15803d' : '#b91c1c',
                       backgroundColor: managingUser.can_comment !== false ? '#dcfce7' : '#fee2e2',
                       borderColor: managingUser.can_comment !== false ? '#86efac' : '#fca5a5',
@@ -3539,8 +3538,8 @@ else:
 
               {/* Account Status / Danger Zone (Admin Only) */}
               {session?.is_admin && (
-                <div style={{ borderTop: '1px solid var(--afl-n-200)', paddingTop: '1rem' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-800)', marginBottom: '0.75rem' }}>
+                <div style={{ borderTop: '1px solid var(--fdl-line)', paddingTop: '1rem' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink)', marginBottom: '0.75rem' }}>
                     Account Status
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
@@ -3582,7 +3581,7 @@ else:
               )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid var(--afl-n-100)', paddingTop: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid var(--fdl-line-soft)', paddingTop: '1rem' }}>
               <button onClick={handleManageUserDone} disabled={savingUserModel} className="btn-primary" style={{ minWidth: '100px' }}>
                 {savingUserModel ? 'Saving...' : 'Done'}
               </button>

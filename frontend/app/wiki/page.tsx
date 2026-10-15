@@ -108,7 +108,7 @@ export default function WikiPage() {
               background: '#f1f5f9',
               border: '1px solid #cbd5e1',
               padding: '1px 6px',
-              borderRadius: '4px',
+              borderRadius: 'var(--fdl-radius-sm, 2px)',
             }}
           >
             v5.0
@@ -144,7 +144,7 @@ export default function WikiPage() {
             overflowY: 'auto',
             background: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderRadius: '8px',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
             padding: '1rem',
             boxSizing: 'border-box',
           }}
@@ -161,7 +161,7 @@ export default function WikiPage() {
                 width: '100%',
                 padding: '7px 28px 7px 10px',
                 fontSize: '0.82rem',
-                borderRadius: '6px',
+                borderRadius: 'var(--fdl-radius-sm, 2px)',
                 border: '1px solid #cbd5e1',
                 outline: 'none',
                 background: '#f8fafc',
@@ -264,7 +264,7 @@ export default function WikiPage() {
                                     justifyContent: 'space-between',
                                     width: '100%',
                                     padding: '5px 8px',
-                                    borderRadius: '4px',
+                                    borderRadius: 'var(--fdl-radius-sm, 2px)',
                                     border: 'none',
                                     textAlign: 'left',
                                     cursor: 'pointer',
@@ -302,7 +302,7 @@ export default function WikiPage() {
             minWidth: 0,
             background: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderRadius: '8px',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
             padding: '2rem 2.5rem',
             boxSizing: 'border-box',
           }}
@@ -340,7 +340,7 @@ export default function WikiPage() {
                       background: '#f1f5f9',
                       border: '1px solid #cbd5e1',
                       padding: '3px 10px',
-                      borderRadius: '5px',
+                      borderRadius: 'var(--fdl-radius-sm, 2px)',
                       textDecoration: 'none',
                     }}
                   >
@@ -390,7 +390,7 @@ export default function WikiPage() {
                       color: '#334155',
                       border: '1px solid #cbd5e1',
                       padding: '1px 6px',
-                      borderRadius: '4px',
+                      borderRadius: 'var(--fdl-radius-sm, 2px)',
                     }}
                   >
                     {activeTopic.badge}
@@ -407,7 +407,7 @@ export default function WikiPage() {
                       background: 'transparent',
                       border: '1px solid #e2e8f0',
                       padding: '1px 6px',
-                      borderRadius: '4px',
+                      borderRadius: 'var(--fdl-radius-sm, 2px)',
                       cursor: 'pointer',
                     }}
                   >
@@ -444,7 +444,7 @@ export default function WikiPage() {
                       alignItems: 'flex-start',
                       background: '#ffffff',
                       border: '1px solid #cbd5e1',
-                      borderRadius: '6px',
+                      borderRadius: 'var(--fdl-radius-sm, 2px)',
                       padding: '8px 12px',
                       cursor: 'pointer',
                       textAlign: 'left',
@@ -472,7 +472,7 @@ export default function WikiPage() {
                       alignItems: 'flex-end',
                       background: '#ffffff',
                       border: '1px solid #cbd5e1',
-                      borderRadius: '6px',
+                      borderRadius: 'var(--fdl-radius-sm, 2px)',
                       padding: '8px 12px',
                       cursor: 'pointer',
                       textAlign: 'right',

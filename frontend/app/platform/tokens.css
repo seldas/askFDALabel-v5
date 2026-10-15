@@ -63,9 +63,9 @@
   --afl-font-mono: var(--fdl-font-mono);
   --afl-radius-sm: 2px;
   --afl-radius-md: 2px;
-  --afl-radius-lg: 3px;
-  --afl-radius-xl: 4px;
-  --afl-radius-pill: 999px;
+  --afl-radius-lg: 2px;
+  --afl-radius-xl: 2px;
+  --afl-radius-pill: 2px;
   --afl-space-1: var(--fdl-space-1);
   --afl-space-2: var(--fdl-space-2);
   --afl-space-3: var(--fdl-space-3);

@@ -290,7 +290,7 @@ const LocalQueryContent = () => {
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--afl-bg-page)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--fdl-canvas)' }}>
             <Header />
 
             <main style={{ flex: 1, padding: '40px 20px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
@@ -513,7 +513,7 @@ const LocalQueryContent = () => {
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         title={r.appr_num}
-                                                        style={{ fontWeight: 600, color: 'var(--afl-info-700)', textDecoration: 'none' }}
+                                                        style={{ fontWeight: 600, color: 'var(--fdl-blue-700)', textDecoration: 'none' }}
                                                     >
                                                         {r.appr_num.length > 25 ? r.appr_num.substring(0, 25) + '...' : r.appr_num}
                                                     </a>
@@ -585,7 +585,7 @@ const LocalQueryContent = () => {
                                                         href={withAppBase(`/dashboard/history_by_appr_num/${r.formatted_appl_no || r.appl_no}`)}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        style={{ fontWeight: 600, color: 'var(--afl-info-700)', textDecoration: 'none' }}
+                                                        style={{ fontWeight: 600, color: 'var(--fdl-blue-700)', textDecoration: 'none' }}
                                                     >
                                                         {r.formatted_appl_no || r.appl_no}
                                                     </a>
@@ -594,7 +594,7 @@ const LocalQueryContent = () => {
                                                 <td>
                                                     <span
                                                         title={getTECodeExplanation(r.te_code)}
-                                                        style={{ padding: '4px 8px', backgroundColor: 'var(--afl-bg-sunken)', borderRadius: 'var(--afl-radius-sm)', fontWeight: 600, cursor: 'help' }}
+                                                        style={{ padding: '4px 8px', backgroundColor: 'var(--fdl-blue-050)', borderRadius: 'var(--fdl-radius-sm)', fontWeight: 600, cursor: 'help' }}
                                                     >
                                                         {r.te_code || 'N/A'}
                                                     </span>
@@ -635,17 +635,17 @@ const LocalQueryContent = () => {
                                                             type="checkbox"
                                                             checked={isSelected}
                                                             onChange={() => toggleSelection(r)}
-                                                            style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--afl-info-500)' }}
+                                                            style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--fdl-blue-600)' }}
                                                         />
                                                     </td>
                                                     <td>
-                                                        <div style={{ fontWeight: 700, color: 'var(--afl-text-primary)' }}>{r.name}</div>
+                                                        <div style={{ fontWeight: 700, color: 'var(--fdl-ink)' }}>{r.name}</div>
                                                         <div style={{ marginTop: '4px' }}>
                                                             <Badge tone="info">{r.type}</Badge>
                                                         </div>
                                                     </td>
                                                     <td>{r.manufacturer}</td>
-                                                    <td style={{ fontFamily: 'var(--afl-font-mono)', fontWeight: 800 }}>{r.product_code || 'N/A'}</td>
+                                                    <td style={{ fontFamily: 'var(--fdl-font-mono)', fontWeight: 800 }}>{r.product_code || 'N/A'}</td>
                                                     <td>
                                                         <div style={{ fontWeight: 600 }}>{r.id}</div>
                                                         <div className="lq-cell-secondary">{r.date}</div>
@@ -655,7 +655,7 @@ const LocalQueryContent = () => {
                                                             <Button
                                                                 variant="secondary"
                                                                 size="sm"
-                                                                style={{ background: 'var(--afl-n-900)', color: 'var(--afl-text-inverse)', borderColor: 'var(--afl-n-900)' }}
+                                                                style={{ background: 'var(--fdl-navy-950)', color: 'var(--fdl-paper)', borderColor: 'var(--fdl-navy-950)' }}
                                                                 onClick={() => window.open(`https://api.fda.gov/device/${r.type === 'PMA' ? 'pma' : '510k'}.json?search=${r.type === 'PMA' ? 'pma_number' : 'k_number'}:${r.id}`, '_blank')}
                                                             >
                                                                 FDA Metadata
@@ -679,7 +679,7 @@ const LocalQueryContent = () => {
                             </div>
                         ) : (
                             <EmptyState
-                                style={{ padding: 'var(--afl-space-7)' }}
+                                style={{ padding: 'var(--fdl-space-6)' }}
                                 title="No results found"
                                 description="Try adjusting your search query."
                             />
@@ -694,14 +694,15 @@ const LocalQueryContent = () => {
                     bottom: '2rem', 
                     left: '50%', 
                     transform: 'translateX(-50%)', 
-                    backgroundColor: 'var(--afl-n-800)',
+                    backgroundColor: 'var(--fdl-navy-950, #071f3d)',
                     color: 'white',
-                    padding: '1rem 2rem', 
-                    borderRadius: '100px', 
+                    padding: '0.75rem 1.5rem', 
+                    borderRadius: 'var(--fdl-radius-sm, 2px)', 
+                    border: '1px solid var(--fdl-line, #b8c8d7)',
                     display: 'flex', 
                     alignItems: 'center', 
-                    gap: '2rem', 
-                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+                    gap: '1.5rem', 
+                    boxShadow: 'var(--fdl-elevation-3, 0 12px 32px rgba(7, 31, 61, 0.18))',
                     zIndex: 1000
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -713,12 +714,13 @@ const LocalQueryContent = () => {
                         onClick={() => setShowCompare(true)}
                         disabled={selectedDevices.length !== 2}
                         style={{ 
-                            padding: '10px 20px', 
-                            backgroundColor: selectedDevices.length === 2 ? 'var(--afl-info-500)' : 'var(--afl-n-600)',
+                            padding: '8px 16px', 
+                            backgroundColor: selectedDevices.length === 2 ? 'var(--fdl-blue-600, #0071bc)' : 'var(--fdl-muted, #5e6e7c)',
                             color: 'white', 
                             border: 'none', 
-                            borderRadius: '100px', 
-                            fontWeight: 800, 
+                            borderRadius: 'var(--fdl-radius-sm, 2px)', 
+                            fontWeight: 700, 
+                            fontSize: '0.85rem',
                             cursor: selectedDevices.length === 2 ? 'pointer' : 'not-allowed',
                             transition: 'background-color 0.2s'
                         }}
@@ -729,7 +731,7 @@ const LocalQueryContent = () => {
             )}
 
             {analyzeTarget && (
-                <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', overflowY: 'auto' }}>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backgroundColor: 'rgba(7, 31, 61, 0.58)', overflowY: 'auto' }}>
                     <div style={{ width: '100%', maxWidth: '1000px', margin: '2rem 0' }}>
                         <MaudeReport 
                             productCode={analyzeTarget.code} 
@@ -741,7 +743,7 @@ const LocalQueryContent = () => {
             )}
 
             {showCompare && selectedDevices.length === 2 && (
-                <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', overflowY: 'auto' }}>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backgroundColor: 'rgba(7, 31, 61, 0.58)', overflowY: 'auto' }}>
                     <DeviceCompare 
                         device1={selectedDevices[0]} 
                         device2={selectedDevices[1]} 

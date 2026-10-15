@@ -220,7 +220,7 @@ export function QueryPanel({
                                 color: '#92400e',
                                 border: '1px solid #f59e0b',
                                 padding: '2px 8px',
-                                borderRadius: '4px',
+                                borderRadius: 'var(--fdl-radius-sm, 2px)',
                                 fontSize: '0.75rem',
                                 fontWeight: 600,
                                 display: 'inline-flex',

@@ -213,10 +213,10 @@ export default function Ro2Chart({
                 const p = payload[0].payload as ReferencePoint & { isQuery?: boolean };
                 return (
                   <div style={{
-                    background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px',
-                    padding: '10px 12px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', maxWidth: '280px',
+                    background: '#ffffff', border: '1px solid var(--fdl-line, #b8c8d7)', borderRadius: 'var(--fdl-radius-sm, 2px)',
+                    padding: '10px 12px', boxShadow: 'var(--fdl-elevation-2, 0 4px 16px rgba(7, 31, 61, 0.12))', maxWidth: '280px',
                   }}>
-                    <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>
+                    <div style={{ fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)', marginBottom: '4px' }}>
                       {p.drug_name}{p.isQuery ? ' (this label)' : ''}
                     </div>
                     <div style={{ fontSize: '0.82rem', color: '#475569', lineHeight: 1.5 }}>
@@ -286,10 +286,10 @@ export default function Ro2Chart({
               style={{
                 display: 'flex', alignItems: 'center', gap: '6px',
                 background: on ? '#ffffff' : '#f1f5f9',
-                border: `1px solid ${on ? colour : '#cbd5e1'}`,
-                borderRadius: '999px', padding: '4px 11px', cursor: 'pointer',
+                border: `1px solid ${on ? colour : 'var(--fdl-line, #b8c8d7)'}`,
+                borderRadius: 'var(--fdl-radius-sm, 2px)', padding: '4px 10px', cursor: 'pointer',
                 fontSize: '0.82rem', fontWeight: on ? 700 : 500,
-                color: on ? '#0f172a' : '#94a3b8',
+                color: on ? 'var(--fdl-navy-950, #071f3d)' : 'var(--fdl-muted, #5e6e7c)',
                 textDecoration: on ? 'none' : 'line-through',
                 transition: 'all 0.15s ease',
               }}

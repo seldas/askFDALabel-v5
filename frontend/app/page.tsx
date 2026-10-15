@@ -438,8 +438,7 @@ function HomePage() {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.6)',
-            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(7, 31, 61, 0.58)',
             zIndex: 10000,
             display: 'flex',
             alignItems: 'center',
@@ -450,18 +449,19 @@ function HomePage() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: '#ffffff',
-              borderRadius: '14px',
-              border: '1px solid #e2e8f0',
-              boxShadow: '0 24px 60px -12px rgba(15, 23, 42, 0.35)',
-              padding: '24px',
+              background: 'var(--fdl-paper, #ffffff)',
+              borderRadius: 'var(--fdl-radius-sm, 2px)',
+              border: '1px solid var(--fdl-line, #b8c8d7)',
+              borderTop: '3px solid var(--fdl-navy-800, #12375b)',
+              boxShadow: '0 16px 36px rgba(7, 31, 61, 0.24)',
+              padding: '20px 24px',
               maxWidth: '480px',
               width: '100%',
             }}
           >
             <h2
               id="fdl-dbswitch-title"
-              style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}
+              style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)' }}
             >
               ⚠️ Switch to {TARGET_DB_LABELS[pendingDb]}?
             </h2>
@@ -469,8 +469,8 @@ function HomePage() {
               style={{
                 marginTop: '10px',
                 marginBottom: 0,
-                color: '#475569',
-                fontSize: '0.9rem',
+                color: 'var(--fdl-muted, #5e6e7c)',
+                fontSize: '0.88rem',
                 lineHeight: 1.5,
               }}
             >
@@ -482,10 +482,10 @@ function HomePage() {
             </p>
             <div
               style={{
-                marginTop: '20px',
+                marginTop: '18px',
                 display: 'flex',
                 justifyContent: 'flex-end',
-                gap: '10px',
+                gap: '8px',
               }}
             >
               <button

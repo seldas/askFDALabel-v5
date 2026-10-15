@@ -196,10 +196,11 @@ export default function TableExtractorModal({
         style={{
           width: 'min(1100px, 95vw)',
           height: 'min(760px, 90vh)',
-          backgroundColor: 'white',
-          borderRadius: 'var(--fdl-radius-sm, 4px)',
-          boxShadow: '0 16px 40px rgba(15, 23, 42, 0.2)',
-          border: '1px solid var(--fdl-line)',
+          backgroundColor: 'var(--fdl-paper, #ffffff)',
+          borderRadius: 'var(--fdl-radius-sm, 2px)',
+          boxShadow: '0 16px 36px rgba(7, 31, 61, 0.24)',
+          border: '1px solid var(--fdl-line, #b8c8d7)',
+          borderTop: '3px solid var(--fdl-navy-800, #12375b)',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
@@ -210,11 +211,11 @@ export default function TableExtractorModal({
           className="custom-modal-header table-extract-modal__header"
           style={{
             padding: '16px 24px',
-            borderBottom: '1px solid var(--fdl-line)',
+            borderBottom: '1px solid var(--fdl-line, #b8c8d7)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            backgroundColor: 'var(--fdl-canvas)',
+            backgroundColor: 'var(--fdl-canvas, #f3f6f8)',
           }}
         >
           <div>
@@ -223,12 +224,12 @@ export default function TableExtractorModal({
                 margin: 0,
                 fontSize: '1.15rem',
                 fontWeight: 800,
-                color: 'var(--fdl-navy-950)',
+                color: 'var(--fdl-navy-950, #071f3d)',
               }}
             >
               {title || 'Table Viewer'}
             </h3>
-            <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--fdl-muted)' }}>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--fdl-muted, #5e6e7c)' }}>
               Click and drag cells to select a range. Copy as TSV or export directly to Excel.
             </p>
           </div>
@@ -259,10 +260,10 @@ export default function TableExtractorModal({
                 alignItems: 'center',
                 gap: '6px',
                 padding: '8px 14px',
-                backgroundColor: 'var(--fdl-green, #10b981)',
+                backgroundColor: 'var(--fdl-green, #2d7a4c)',
                 color: 'white',
                 border: 'none',
-                borderRadius: 'var(--fdl-radius-sm, 4px)',
+                borderRadius: 'var(--fdl-radius-sm, 2px)',
                 cursor: 'pointer',
                 fontWeight: 700,
                 fontSize: '0.85rem',

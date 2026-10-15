@@ -60,14 +60,14 @@ function ResultsContent() {
   const totalPages = Math.ceil(data.total / data.limit);
 
   return (
-    <div className="hp-main-layout" style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+    <div className="hp-main-layout" style={{ minHeight: '100vh', backgroundColor: 'var(--fdl-canvas, #f3f6f8)' }}>
       {/* Main Header */}
       <header className="header-main">
         <div className="header-branding">
           <Link href="/" className="header-logo-link" style={{ 
             backgroundColor: 'white', 
             padding: '5px', 
-            borderRadius: '4px'
+            borderRadius: 'var(--fdl-radius-sm, 2px)'
           }}>
              <img src={withAppBase("/fdalabel-v3_icon.svg")} alt="Logo" style={{ height: '20px' }} />
           </Link>
@@ -83,53 +83,54 @@ function ResultsContent() {
 
       <div style={{ maxWidth: '1200px', margin: '2rem auto', padding: '0 1rem' }}>
         <div style={{ 
-            backgroundColor: 'white', 
-            borderRadius: '12px', 
-            border: '1px solid #e2e8f0', 
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+            backgroundColor: 'var(--fdl-paper, #ffffff)', 
+            borderRadius: 'var(--fdl-radius-sm, 2px)', 
+            border: '1px solid var(--fdl-line-soft, #d7e0e7)', 
+            borderTop: '3px solid var(--fdl-navy-800, #12375b)',
+            boxShadow: 'none',
             overflow: 'hidden'
         }}>
-            <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ padding: '1.25rem 1.75rem', borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
-                    <h2 style={{ margin: 0, fontSize: '1.25rem', color: '#002e5d' }}>{data.page_title}</h2>
-                    <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)' }}>{data.page_title}</h2>
+                    <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--fdl-muted, #5e6e7c)' }}>
                         {data.total} records found. Showing page {data.page} of {totalPages}.
                     </p>
                 </div>
             </div>
 
             <div style={{ overflowX: 'auto', width: '100%' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', minWidth: '800px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem', minWidth: '800px' }}>
                   <thead>
-                      <tr style={{ backgroundColor: '#f8fafc' }}>
-                          <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', fontSize: '0.75rem', borderBottom: '2px solid #f1f5f9' }}>Trade Name</th>
-                          <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', fontSize: '0.75rem', borderBottom: '2px solid #f1f5f9' }}>Generic Name</th>
-                          <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', fontSize: '0.75rem', borderBottom: '2px solid #f1f5f9' }}>Manufacturer</th>
-                          <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', fontSize: '0.75rem', borderBottom: '2px solid #f1f5f9' }}>Published</th>
-                          <th style={{ padding: '1rem 1.5rem', textAlign: 'right', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', fontSize: '0.75rem', borderBottom: '2px solid #f1f5f9' }}>Action</th>
+                      <tr style={{ backgroundColor: 'var(--fdl-canvas, #f3f6f8)' }}>
+                          <th style={{ padding: '0.875rem 1.25rem', textAlign: 'left', fontWeight: 800, color: 'var(--fdl-ink-soft, #273843)', textTransform: 'uppercase', fontSize: '0.75rem', borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>Trade Name</th>
+                          <th style={{ padding: '0.875rem 1.25rem', textAlign: 'left', fontWeight: 800, color: 'var(--fdl-ink-soft, #273843)', textTransform: 'uppercase', fontSize: '0.75rem', borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>Generic Name</th>
+                          <th style={{ padding: '0.875rem 1.25rem', textAlign: 'left', fontWeight: 800, color: 'var(--fdl-ink-soft, #273843)', textTransform: 'uppercase', fontSize: '0.75rem', borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>Manufacturer</th>
+                          <th style={{ padding: '0.875rem 1.25rem', textAlign: 'left', fontWeight: 800, color: 'var(--fdl-ink-soft, #273843)', textTransform: 'uppercase', fontSize: '0.75rem', borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>Published</th>
+                          <th style={{ padding: '0.875rem 1.25rem', textAlign: 'right', fontWeight: 800, color: 'var(--fdl-ink-soft, #273843)', textTransform: 'uppercase', fontSize: '0.75rem', borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>Action</th>
                       </tr>
                   </thead>
                   <tbody>
                       {data.labels.map((label) => (
-                          <tr key={label.set_id} style={{ borderBottom: '1px solid #f1f5f9' }} className="table-row-hover">
-                              <td style={{ padding: '1rem 1.5rem', fontWeight: 700, color: '#002e5d' }}>{label.brand_name}</td>
-                              <td style={{ padding: '1rem 1.5rem', color: '#475569', fontStyle: 'italic' }}>{label.generic_name}</td>
-                              <td style={{ padding: '1rem 1.5rem' }}>{label.manufacturer_name}</td>
-                              <td style={{ padding: '1rem 1.5rem' }}>{label.effective_time}</td>
-                              <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
+                          <tr key={label.set_id} style={{ borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)' }} className="table-row-hover">
+                              <td style={{ padding: '0.875rem 1.25rem', fontWeight: 700, color: 'var(--fdl-navy-950, #071f3d)' }}>{label.brand_name}</td>
+                              <td style={{ padding: '0.875rem 1.25rem', color: 'var(--fdl-ink-soft, #273843)', fontStyle: 'italic' }}>{label.generic_name}</td>
+                              <td style={{ padding: '0.875rem 1.25rem', color: 'var(--fdl-ink, #132332)' }}>{label.manufacturer_name}</td>
+                              <td style={{ padding: '0.875rem 1.25rem', color: 'var(--fdl-muted, #5e6e7c)' }}>{label.effective_time}</td>
+                              <td style={{ padding: '0.875rem 1.25rem', textAlign: 'right' }}>
                                   <Link 
                                       href={`/dashboard/label/${label.set_id}`}
                                       style={{ 
                                           display: 'inline-flex',
-                                          padding: '6px 16px',
-                                          backgroundColor: 'white',
-                                          border: '1px solid #0071bc',
-                                          color: '#0071bc',
-                                          borderRadius: '6px',
+                                          padding: '5px 12px',
+                                          backgroundColor: 'var(--fdl-paper, #ffffff)',
+                                          border: '1px solid var(--fdl-line, #b8c8d7)',
+                                          color: 'var(--fdl-blue-700, #0759a5)',
+                                          borderRadius: 'var(--fdl-radius-sm, 2px)',
                                           textDecoration: 'none',
-                                          fontWeight: 600,
-                                          fontSize: '0.85rem',
-                                          transition: 'all 0.2s'
+                                          fontWeight: 700,
+                                          fontSize: '0.825rem',
+                                          transition: 'all 0.15s'
                                       }}
                                       className="btn-view-snippet"
                                   >
@@ -144,31 +145,31 @@ function ResultsContent() {
         </div>
 
         {totalPages > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '2rem', paddingBottom: '3rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', marginTop: '1.5rem', paddingBottom: '3rem' }}>
                 {page > 1 ? (
                     <Link 
                         href={`/dashboard/results?${new URLSearchParams({...Object.fromEntries(searchParams.entries()), page: (page - 1).toString()}).toString()}`}
-                        style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#475569', textDecoration: 'none', fontWeight: 600, fontSize: '0.85rem' }}
+                        style={{ padding: '6px 14px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line, #b8c8d7)', background: 'var(--fdl-paper, #ffffff)', color: 'var(--fdl-ink-soft, #273843)', textDecoration: 'none', fontWeight: 600, fontSize: '0.85rem' }}
                     >
                         &larr; Previous
                     </Link>
                 ) : (
-                    <span style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#475569', opacity: 0.5, fontWeight: 600, fontSize: '0.85rem', cursor: 'not-allowed' }}>&larr; Previous</span>
+                    <span style={{ padding: '6px 14px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)', background: 'var(--fdl-canvas, #f3f6f8)', color: 'var(--fdl-muted, #5e6e7c)', opacity: 0.5, fontWeight: 600, fontSize: '0.85rem', cursor: 'not-allowed' }}>&larr; Previous</span>
                 )}
 
-                <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--fdl-muted, #5e6e7c)', fontWeight: 600 }}>
                     Page {page} of {totalPages}
                 </span>
 
                 {page < totalPages ? (
                     <Link 
                         href={`/dashboard/results?${new URLSearchParams({...Object.fromEntries(searchParams.entries()), page: (page + 1).toString()}).toString()}`}
-                        style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#475569', textDecoration: 'none', fontWeight: 600, fontSize: '0.85rem' }}
+                        style={{ padding: '6px 14px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line, #b8c8d7)', background: 'var(--fdl-paper, #ffffff)', color: 'var(--fdl-ink-soft, #273843)', textDecoration: 'none', fontWeight: 600, fontSize: '0.85rem' }}
                     >
                         Next &rarr;
                     </Link>
                 ) : (
-                    <span style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#475569', opacity: 0.5, fontWeight: 600, fontSize: '0.85rem', cursor: 'not-allowed' }}>Next &rarr;</span>
+                    <span style={{ padding: '6px 14px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)', background: 'var(--fdl-canvas, #f3f6f8)', color: 'var(--fdl-muted, #5e6e7c)', opacity: 0.5, fontWeight: 600, fontSize: '0.85rem', cursor: 'not-allowed' }}>Next &rarr;</span>
                 )}
             </div>
         )}
@@ -176,11 +177,12 @@ function ResultsContent() {
 
       <style jsx>{`
         .table-row-hover:hover {
-            background-color: #f8fafc;
+            background-color: var(--fdl-blue-050, #edf4fa);
         }
         .btn-view-snippet:hover {
-            background-color: #0071bc !important;
-            color: white !important;
+            background-color: var(--fdl-blue-050, #edf4fa) !important;
+            border-color: var(--fdl-blue-700, #0759a5) !important;
+            color: var(--fdl-blue-700, #0759a5) !important;
         }
         .loader {
           border: 3px solid #f3f3f3;

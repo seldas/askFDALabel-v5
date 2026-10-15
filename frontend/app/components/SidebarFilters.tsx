@@ -819,8 +819,7 @@ export default function SidebarFilters({
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.65)',
-            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(7, 31, 61, 0.58)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -831,16 +830,17 @@ export default function SidebarFilters({
         >
           <div
             style={{
-              background: '#ffffff',
-              borderRadius: '16px',
+              background: 'var(--fdl-paper, #ffffff)',
+              borderRadius: 'var(--fdl-radius-sm, 2px)',
               maxWidth: '560px',
               width: '100%',
               maxHeight: '80vh',
               display: 'flex',
               flexDirection: 'column',
-              padding: '24px',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
-              border: '1px solid #cbd5e1',
+              padding: '20px 24px',
+              boxShadow: '0 16px 36px rgba(7, 31, 61, 0.24)',
+              border: '1px solid var(--fdl-line, #b8c8d7)',
+              borderTop: '3px solid var(--fdl-navy-800, #12375b)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -850,16 +850,16 @@ export default function SidebarFilters({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                marginBottom: '16px',
+                marginBottom: '14px',
                 paddingBottom: '12px',
-                borderBottom: '1px solid #e2e8f0',
+                borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)',
               }}
             >
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)' }}>
                   All {modalData.title}
                 </h3>
-                <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.78rem', color: 'var(--fdl-muted, #5e6e7c)', fontWeight: 600 }}>
                   {modalData.items.length} matching categories
                 </span>
               </div>
@@ -867,14 +867,14 @@ export default function SidebarFilters({
                 type="button"
                 onClick={() => setModalData(null)}
                 style={{
-                  background: '#f1f5f9',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
+                  background: 'var(--fdl-paper, #ffffff)',
+                  border: '1px solid var(--fdl-line, #b8c8d7)',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
                   padding: '4px 10px',
-                  fontWeight: 800,
-                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
                   cursor: 'pointer',
-                  color: '#475569',
+                  color: 'var(--fdl-ink-soft, #273843)',
                 }}
               >
                 ✕ Close
@@ -890,13 +890,15 @@ export default function SidebarFilters({
                 placeholder={`Filter ${modalData.title.toLowerCase()}...`}
                 style={{
                   width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
+                  padding: '6px 10px',
+                  minHeight: '34px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  border: '1px solid var(--fdl-line, #b8c8d7)',
                   fontSize: '0.85rem',
-                  background: '#f8fafc',
-                  color: '#0f172a',
-                  fontWeight: 600,
+                  background: 'var(--fdl-paper, #ffffff)',
+                  color: 'var(--fdl-ink, #132332)',
+                  fontWeight: 500,
+                  boxSizing: 'border-box',
                 }}
               />
             </div>
@@ -909,7 +911,7 @@ export default function SidebarFilters({
                 paddingRight: '6px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '8px',
+                gap: '6px',
               }}
             >
               {modalFilteredItems.map((item) => {
@@ -921,13 +923,13 @@ export default function SidebarFilters({
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      background: isChecked ? '#eff6ff' : '#ffffff',
-                      border: `1px solid ${isChecked ? '#93c5fd' : '#f1f5f9'}`,
-                      fontSize: '0.85rem',
+                      padding: '7px 10px',
+                      borderRadius: 'var(--fdl-radius-sm, 2px)',
+                      background: isChecked ? 'var(--fdl-blue-050, #edf4fa)' : 'var(--fdl-paper, #ffffff)',
+                      border: `1px solid ${isChecked ? 'var(--fdl-blue-600, #0071bc)' : 'var(--fdl-line-soft, #d7e0e7)'}`,
+                      fontSize: '0.82rem',
                       fontWeight: 600,
-                      color: '#1e293b',
+                      color: 'var(--fdl-ink, #132332)',
                       cursor: item.disabledReason ? 'not-allowed' : 'pointer',
                       opacity: item.disabledReason ? 0.6 : 1,
                     }}
@@ -947,7 +949,7 @@ export default function SidebarFilters({
                 );
               })}
               {modalFilteredItems.length === 0 && (
-                <p style={{ fontSize: '0.85rem', color: '#94a3b8', textAlign: 'center', margin: '20px 0' }}>
+                <p style={{ fontSize: '0.82rem', color: 'var(--fdl-muted, #5e6e7c)', textAlign: 'center', margin: '20px 0' }}>
                   No matching categories found.
                 </p>
               )}
@@ -956,9 +958,9 @@ export default function SidebarFilters({
             {/* Modal Footer */}
             <div
               style={{
-                marginTop: '16px',
+                marginTop: '14px',
                 paddingTop: '12px',
-                borderTop: '1px solid #e2e8f0',
+                borderTop: '1px solid var(--fdl-line-soft, #d7e0e7)',
                 display: 'flex',
                 justifyContent: 'flex-end',
               }}
@@ -967,15 +969,15 @@ export default function SidebarFilters({
                 type="button"
                 onClick={() => setModalData(null)}
                 style={{
-                  background: '#2563eb',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '8px 20px',
+                  background: 'var(--fdl-blue-700, #0759a5)',
+                  color: 'var(--fdl-paper, #ffffff)',
+                  border: '1px solid var(--fdl-blue-700, #0759a5)',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  padding: '6px 18px',
                   fontWeight: 700,
-                  fontSize: '0.85rem',
+                  fontSize: '0.82rem',
                   cursor: 'pointer',
-                  boxShadow: '0 2px 6px rgba(37, 99, 235, 0.3)',
+                  boxShadow: 'none',
                 }}
               >
                 Done

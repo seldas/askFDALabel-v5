@@ -232,12 +232,12 @@ const HistoryTrackPage = () => {
             <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 <Header />
                 <main style={{ flex: 1, padding: '40px', textAlign: 'center' }}>
-                    <div style={{ maxWidth: '600px', margin: '8px auto', padding: '40px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                    <div style={{ maxWidth: '600px', margin: '8px auto', padding: '40px', backgroundColor: '#fff', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)', boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))' }}>
                         <h2 style={{ color: '#ef4444', marginBottom: '10px' }}>History Not Found</h2>
-                        <p style={{ color: '#64748b' }}>{error || "No version history exists for this Application Number in the local archive."}</p>
+                        <p style={{ color: 'var(--fdl-muted, #5e6e7c)' }}>{error || "No version history exists for this Application Number in the local archive."}</p>
                         <button 
                             onClick={() => router.back()}
-                            style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                            style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: 'var(--fdl-navy-800, #12375b)', color: '#fff', border: 'none', borderRadius: 'var(--fdl-radius-sm, 2px)', cursor: 'pointer' }}
                         >
                             Go Back
                         </button>
@@ -249,7 +249,7 @@ const HistoryTrackPage = () => {
     }
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f8fafc', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: 'var(--fdl-canvas, #f3f6f8)', overflow: 'hidden' }}>
             <Header />
 
             <div style={{ display: 'flex', flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
@@ -257,40 +257,39 @@ const HistoryTrackPage = () => {
                 <main style={{ flex: 1, backgroundColor: '#fff', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ 
                         padding: '15px 40px', 
-                        borderBottom: '1px solid #f1f5f9', 
+                        borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)', 
                         display: 'flex', 
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         position: 'sticky',
                         top: 0,
                         backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                        backdropFilter: 'blur(8px)',
                         zIndex: 10
                     }}>
                         <div>
-                            <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                            <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)', margin: 0 }}>
                                 {appr_num} - Version Comparison
                             </h1>
-                            <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '2px' }}>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--fdl-muted, #5e6e7c)', marginTop: '2px' }}>
                                 Comparing <strong>SPL version {activeRecord?.version_number ?? "unknown"}</strong> ({activeRecord?.revised_date})
                                 {previousRecord ? (
                                     <> vs <strong>SPL version {previousRecord.version_number ?? "unknown"}</strong> ({previousRecord.revised_date})</>
                                 ) : (
                                     <> (No verified predecessor)</>
                                 )}
-                                <span style={{ marginLeft: '12px', padding: '2px 8px', backgroundColor: '#f1f5f9', borderRadius: '4px', fontWeight: 600 }}>SetID: {activeRecord?.set_id}</span>
+                                <span style={{ marginLeft: '12px', padding: '2px 8px', backgroundColor: 'var(--fdl-blue-050, #edf4fa)', border: '1px solid var(--fdl-line-soft, #d7e0e7)', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 600 }}>SetID: {activeRecord?.set_id}</span>
                             </div>
                         </div>
 
                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <label style={{ fontSize: '0.8rem', color: '#475569' }}>
+                            <label style={{ fontSize: '0.8rem', color: 'var(--fdl-ink-soft, #273843)' }}>
                                 Compare within this Set-ID{' '}
                                 <select
                                     aria-label="Compare with an earlier label version from the same Set-ID"
                                     value={previousRecord?.spl_id || ''}
                                     disabled={earlierRecords.length === 0}
                                     onChange={event => setBaselineSelection({ current: selectedSplId!, previous: event.target.value })}
-                                    style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', backgroundColor: '#fff', color: '#475569', maxWidth: '300px' }}
+                                    style={{ padding: '6px 10px', border: '1px solid var(--fdl-line, #b8c8d7)', borderRadius: 'var(--fdl-radius-sm, 2px)', backgroundColor: '#fff', color: 'var(--fdl-ink, #132332)', maxWidth: '300px' }}
                                 >
                                     {!previousRecord && <option value="" disabled>{earlierRecords.length ? 'Select an earlier version' : 'No earlier version'}</option>}
                                     {earlierRecords.map(record => (
@@ -302,7 +301,7 @@ const HistoryTrackPage = () => {
                             </label>
                             <button 
                                 onClick={() => window.open(withAppBase(`/dashboard/label/${activeRecord?.set_id}?spl_id=${activeRecord?.spl_id}`), '_blank')}
-                                style={{ padding: '6px 14px', backgroundColor: '#fff', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
+                                style={{ padding: '6px 14px', backgroundColor: '#fff', color: 'var(--fdl-ink-soft, #273843)', border: '1px solid var(--fdl-line, #b8c8d7)', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
                             >
                                 View Label
                             </button>
@@ -312,7 +311,7 @@ const HistoryTrackPage = () => {
                                     : `/labelcomp?set_ids=${activeRecord?.set_id}&spl_ids=${activeRecord?.spl_id}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                style={{ padding: '6px 14px', backgroundColor: '#fff', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '6px', fontWeight: 600, fontSize: '0.8rem', textDecoration: 'none' }}
+                                style={{ padding: '6px 14px', backgroundColor: '#fff', color: 'var(--fdl-ink-soft, #273843)', border: '1px solid var(--fdl-line, #b8c8d7)', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 600, fontSize: '0.8rem', textDecoration: 'none' }}
                             >
                                 LabelComp ↗
                             </a>
@@ -321,10 +320,10 @@ const HistoryTrackPage = () => {
                                 disabled={isAnalyzing || !previousRecord || isDiffLoading || !!diffError || diffResults.length === 0}
                                 style={{ 
                                     padding: '6px 14px', 
-                                    backgroundColor: (isAnalyzing || !previousRecord || isDiffLoading || !!diffError || diffResults.length === 0) ? '#94a3b8' : '#1e40af',
+                                    backgroundColor: (isAnalyzing || !previousRecord || isDiffLoading || !!diffError || diffResults.length === 0) ? '#94a3b8' : 'var(--fdl-navy-800, #12375b)',
                                     color: '#fff', 
                                     border: 'none', 
-                                    borderRadius: '6px', 
+                                    borderRadius: 'var(--fdl-radius-sm, 2px)', 
                                     fontWeight: 600, 
                                     fontSize: '0.8rem', 
                                     cursor: (isAnalyzing || !previousRecord || isDiffLoading || !!diffError || diffResults.length === 0) ? 'not-allowed' : 'pointer',
@@ -343,7 +342,7 @@ const HistoryTrackPage = () => {
                             <div style={{ 
                                 backgroundColor: '#fffbeb', 
                                 border: '1px solid #fde68a', 
-                                borderRadius: '12px', 
+                                borderRadius: 'var(--fdl-radius-sm, 2px)', 
                                 padding: '20px',
                                 marginBottom: '25px'
                             }}>
@@ -408,9 +407,9 @@ const HistoryTrackPage = () => {
                                                     <h3 className={styles.accordionTitle}>{item.title}</h3>
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                    {item.is_addition && <span style={{ fontSize: '0.6rem', padding: '2px 6px', backgroundColor: '#dcfce7', color: '#166534', borderRadius: '4px', fontWeight: 800 }}>NEW</span>}
-                                                    {item.is_deletion && <span style={{ fontSize: '0.6rem', padding: '2px 6px', backgroundColor: '#fee2e2', color: '#991b1b', borderRadius: '4px', fontWeight: 800 }}>REMOVED</span>}
-                                                    {!item.is_addition && !item.is_deletion && <span style={{ fontSize: '0.6rem', padding: '2px 6px', backgroundColor: '#f1f5f9', color: '#64748b', borderRadius: '4px', fontWeight: 800 }}>CHANGED</span>}
+                                                    {item.is_addition && <span style={{ fontSize: '0.6rem', padding: '2px 6px', backgroundColor: '#dcfce7', color: '#166534', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 800 }}>NEW</span>}
+                                                    {item.is_deletion && <span style={{ fontSize: '0.6rem', padding: '2px 6px', backgroundColor: '#fee2e2', color: '#991b1b', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 800 }}>REMOVED</span>}
+                                                    {!item.is_addition && !item.is_deletion && <span style={{ fontSize: '0.6rem', padding: '2px 6px', backgroundColor: '#f1f5f9', color: '#64748b', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 800 }}>CHANGED</span>}
                                                 </div>
                                             </div>
 
@@ -499,8 +498,8 @@ const HistoryTrackPage = () => {
                                         style={{
                                             padding: '4px 10px 4px 28px',
                                             fontSize: '0.75rem',
-                                            border: '1px solid #e2e8f0',
-                                            borderRadius: '4px',
+                                            border: '1px solid var(--fdl-line, #b8c8d7)',
+                                            borderRadius: 'var(--fdl-radius-sm, 2px)',
                                             width: '200px',
                                             outline: 'none'
                                         }}
@@ -601,16 +600,16 @@ const HistoryTrackPage = () => {
                                                                         minWidth: '64px',
                                                                         padding: '0 6px',
                                                                         height: '24px',
-                                                                        borderRadius: '6px',
-                                                                        backgroundColor: isSelected ? '#1e40af' : (record.is_latest ? '#10b981' : '#fff'),
-                                                                        border: `2px solid ${isSelected ? '#1e40af' : (record.is_latest ? '#10b981' : '#cbd5e1')}`,
+                                                                        borderRadius: 'var(--fdl-radius-sm, 2px)',
+                                                                        backgroundColor: isSelected ? 'var(--fdl-navy-800, #12375b)' : (record.is_latest ? '#10b981' : '#fff'),
+                                                                        border: `2px solid ${isSelected ? 'var(--fdl-navy-800, #12375b)' : (record.is_latest ? '#10b981' : 'var(--fdl-line, #b8c8d7)')}`,
                                                                         margin: '8px auto',
                                                                         cursor: 'pointer',
                                                                         display: 'flex',
                                                                         alignItems: 'center',
                                                                         justifyContent: 'center',
                                                                         transition: 'transform 0.2s',
-                                                                        boxShadow: isSelected ? '0 0 0 4px rgba(30, 64, 175, 0.15)' : 'none'
+                                                                        boxShadow: isSelected ? '0 0 0 2px rgba(18, 55, 91, 0.2)' : 'none'
                                                                     }}
                                                                     onMouseOver={e => e.currentTarget.style.transform = 'scale(1.2)'}
                                                                     onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}

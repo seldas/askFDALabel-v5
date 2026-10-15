@@ -331,27 +331,29 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onSearch }) => {
     return (
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 2000, backdropFilter: 'blur(4px)'
+        backgroundColor: 'rgba(7, 31, 61, 0.58)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 2000
       }}>
         <div style={{
-          background: 'white', padding: '30px', borderRadius: '16px', width: '90%', maxWidth: '1200px', maxHeight: '85vh',
-          display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+          background: 'var(--fdl-paper, #ffffff)', padding: '24px', borderRadius: 'var(--fdl-radius-sm, 2px)',
+          border: '1px solid var(--fdl-line, #b8c8d7)', borderTop: '3px solid var(--fdl-navy-800, #12375b)',
+          width: '90%', maxWidth: '1200px', maxHeight: '85vh',
+          display: 'flex', flexDirection: 'column', boxShadow: '0 12px 32px rgba(7, 31, 61, 0.18)'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 900 }}>Response Comparison</h2>
-            <button onClick={() => setIsComparisonModalOpen(false)} style={{ border: 'none', background: '#f1f5f9', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 700 }}>Close ✕</button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+            <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)' }}>Response Comparison</h2>
+            <button onClick={() => setIsComparisonModalOpen(false)} style={{ border: '1px solid var(--fdl-line, #b8c8d7)', background: 'var(--fdl-paper, #ffffff)', padding: '6px 14px', borderRadius: 'var(--fdl-radius-sm, 2px)', cursor: 'pointer', fontWeight: 700, fontSize: '0.825rem', color: 'var(--fdl-ink-soft, #273843)' }}>Close ✕</button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', flex: 1, overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', flex: 1, overflow: 'hidden' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ fontWeight: 800, color: '#64748b', textTransform: 'uppercase', fontSize: '0.75rem', marginBottom: '10px' }}>Original Response</div>
-              <div style={{ flex: 1, overflowY: 'auto', padding: '20px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+              <div style={{ fontWeight: 800, color: 'var(--fdl-muted, #5e6e7c)', textTransform: 'uppercase', fontSize: '0.75rem', marginBottom: '8px' }}>Original Response</div>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '16px', background: 'var(--fdl-canvas, #f3f6f8)', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)', lineHeight: 1.6, whiteSpace: 'pre-wrap', fontSize: '0.875rem' }}>
                 {comparisonOriginal}
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ fontWeight: 800, color: '#16a34a', textTransform: 'uppercase', fontSize: '0.75rem', marginBottom: '10px' }}>Refined with References</div>
-              <div style={{ flex: 1, overflowY: 'auto', padding: '20px', background: '#f0fdf4', borderRadius: '12px', border: '1px solid #bbf7d0', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+              <div style={{ fontWeight: 800, color: 'var(--fdl-green, #2d7a4c)', textTransform: 'uppercase', fontSize: '0.75rem', marginBottom: '8px' }}>Refined with References</div>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '16px', background: '#f0fdf4', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid #bbf7d0', lineHeight: 1.6, whiteSpace: 'pre-wrap', fontSize: '0.875rem' }}>
                 <DiffHighlight original={comparisonOriginal} refined={comparisonRefined} />
               </div>
             </div>
@@ -500,7 +502,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onSearch }) => {
                         </ReactMarkdown>
                         
                         {(msg as any).originalContent && (
-                            <details style={{ marginTop: '10px', fontSize: '0.85rem', color: '#64748b', background: '#f8fafc', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                            <details style={{ marginTop: '10px', fontSize: '0.825rem', color: 'var(--fdl-muted, #5e6e7c)', background: 'var(--fdl-canvas, #f3f6f8)', padding: '8px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>
                                 <summary style={{ cursor: 'pointer', fontWeight: 700, userSelect: 'none' }}>
                                     📄 Show Original Response
                                 </summary>
@@ -511,13 +513,13 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onSearch }) => {
                         )}
 
                         {(msg as any).relatedSections && (
-                            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', fontSize: '0.8rem' }}>
-                                <div style={{ fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>
+                            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--fdl-line-soft, #d7e0e7)', fontSize: '0.8rem' }}>
+                                <div style={{ fontWeight: 800, color: 'var(--fdl-muted, #5e6e7c)', textTransform: 'uppercase', marginBottom: '8px' }}>
                                     Refinement Source: {(msg as any).refLabel}
                                 </div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                     {((msg as any).relatedSections || []).map((sec: string, si: number) => (
-                                        <span key={si} style={{ background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                                        <span key={si} style={{ background: 'var(--fdl-canvas, #f3f6f8)', padding: '2px 8px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>
                                             {sec}
                                         </span>
                                     ))}
@@ -560,36 +562,24 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onSearch }) => {
                         onClick={handleSave} 
                         disabled={!hasUnsavedChanges}
                         style={{ 
-                            background: hasUnsavedChanges ? '#10b981' : '#e2e8f0', 
-                            color: hasUnsavedChanges ? 'white' : '#94a3b8', 
-                            border: 'none',
-                            padding: '8px 16px',
-                            borderRadius: '8px',
-                            fontSize: '0.9rem',
-                            fontWeight: 600,
+                            background: hasUnsavedChanges ? 'var(--fdl-green, #2d7a4c)' : 'var(--fdl-canvas, #f3f6f8)', 
+                            color: hasUnsavedChanges ? 'white' : 'var(--fdl-muted, #5e6e7c)', 
+                            border: '1px solid ' + (hasUnsavedChanges ? 'var(--fdl-green, #2d7a4c)' : 'var(--fdl-line-soft, #d7e0e7)'),
+                            padding: '6px 14px',
+                            borderRadius: 'var(--fdl-radius-sm, 2px)',
+                            fontSize: '0.85rem',
+                            fontWeight: 700,
                             cursor: hasUnsavedChanges ? 'pointer' : 'not-allowed',
-                            transition: 'all 0.2s',
-                            boxShadow: hasUnsavedChanges ? '0 4px 6px -1px rgba(16, 185, 129, 0.2)' : 'none',
+                            transition: 'all 0.15s',
+                            boxShadow: 'none',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '6px'
                         }}
-                        onMouseEnter={(e) => {
-                            if (hasUnsavedChanges) {
-                                e.currentTarget.style.background = '#059669';
-                                e.currentTarget.style.transform = 'translateY(-1px)';
-                            }
-                        }}
-                        onMouseLeave={(e) => {
-                            if (hasUnsavedChanges) {
-                                e.currentTarget.style.background = '#10b981';
-                                e.currentTarget.style.transform = 'none';
-                            }
-                        }}
                     >
                         {hasUnsavedChanges ? (
                             <>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
                                     <polyline points="17 21 17 13 7 13 7 21"></polyline>
                                     <polyline points="7 3 7 8 15 8"></polyline>
@@ -598,14 +588,14 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onSearch }) => {
                             </>
                         ) : (
                             <>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                     <polyline points="20 6 9 17 4 12"></polyline>
                                 </svg>
                                 Saved
                             </>
                         )}
                     </button>
-                    <button type="button" onClick={handleClear} className="clear-chat-btn" style={{ padding: '8px 16px', borderRadius: '8px' }}>
+                    <button type="button" onClick={handleClear} className="clear-chat-btn" style={{ padding: '6px 14px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line, #b8c8d7)', background: 'var(--fdl-paper, #ffffff)', color: 'var(--fdl-ink-soft, #273843)', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
                         Clear Chat
                     </button>
                 </div>

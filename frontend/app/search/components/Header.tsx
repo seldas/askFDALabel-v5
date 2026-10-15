@@ -34,7 +34,7 @@ const Header: React.FC = () => {
         <a href={process.env.NEXT_PUBLIC_DASHBOARD_BASE || '/fdalabel-v3'} className="header-logo-link" style={{
           background: 'rgba(255,255,255,0.15)',
           padding: '4px 12px',
-          borderRadius: '20px',
+          borderRadius: 'var(--fdl-radius-sm, 2px)',
           transition: 'all 0.2s ease',
           textDecoration: 'none',
           color: 'inherit',
@@ -200,7 +200,7 @@ const Header: React.FC = () => {
               color: 'white', 
               background: 'rgba(255,255,255,0.1)', 
               padding: '4px 12px', 
-              borderRadius: '20px',
+              borderRadius: 'var(--fdl-radius-sm, 2px)',
               border: '1px solid rgba(255,255,255,0.2)',
               display: 'flex',
               alignItems: 'center',
@@ -259,7 +259,7 @@ const Header: React.FC = () => {
         ) : (
           <button 
             onClick={() => openAuthModal('login')}
-            style={{ color: 'white', fontSize: '0.875rem', border: 'none', background: 'rgba(255,255,255,0.1)', padding: '6px 16px', borderRadius: '20px', cursor: 'pointer' }}
+            style={{ color: 'white', fontSize: '0.875rem', border: 'none', background: 'rgba(255,255,255,0.1)', padding: '6px 16px', borderRadius: 'var(--fdl-radius-sm, 2px)', cursor: 'pointer' }}
           >
             Sign In
           </button>

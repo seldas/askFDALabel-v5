@@ -66,21 +66,21 @@ export const getHandbookParts = (apiHost?: string): HandbookPart[] => [
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <div style={{ padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+                  <div style={{ padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
                     <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.88rem' }}>Logging In to Your Account</div>
                     <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '4px', lineHeight: 1.55 }}>
                       Click <strong>Login</strong> at the top right of the screen. Enter your assigned username and password. Usernames are case-insensitive.
                     </div>
                   </div>
 
-                  <div style={{ padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+                  <div style={{ padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
                     <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.88rem' }}>Guest Access Mode</div>
                     <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '4px', lineHeight: 1.55 }}>
                       If you do not have an account, you can explore the system as a Guest. Guest mode allows full search, label viewing, and analytical tool execution, but personal task saving and custom notes are disabled.
                     </div>
                   </div>
 
-                  <div style={{ padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+                  <div style={{ padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
                     <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.88rem' }}>Updating Your Password</div>
                     <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '4px', lineHeight: 1.55 }}>
                       Once logged in, click your username in the top bar to open your profile settings. You can change your password at any time to maintain account security.
@@ -146,7 +146,7 @@ export const getHandbookParts = (apiHost?: string): HandbookPart[] => [
                   The global search bar at the top of the application recognizes all standard pharmaceutical identifiers and automatically finds the matching labels.
                 </p>
 
-                <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.82rem' }}>
+                <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 'var(--fdl-radius-sm, 2px)', fontSize: '0.82rem' }}>
                   <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                     <thead style={{ background: '#f1f5f9', color: '#1e293b', fontWeight: 600, borderBottom: '1px solid #e2e8f0' }}>
                       <tr>
@@ -199,13 +199,13 @@ export const getHandbookParts = (apiHost?: string): HandbookPart[] => [
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <div style={{ padding: '8px 12px', background: '#f8fafc', borderLeft: '3px solid #002e5d', borderRadius: '4px', fontSize: '0.85rem', color: '#1e293b', fontStyle: 'italic' }}>
+                  <div style={{ padding: '8px 12px', background: '#f8fafc', borderLeft: '3px solid #002e5d', borderRadius: 'var(--fdl-radius-sm, 2px)', fontSize: '0.85rem', color: '#1e293b', fontStyle: 'italic' }}>
                     &ldquo;Oral diabetes tablets with Boxed Warning for lactic acidosis&rdquo;
                   </div>
-                  <div style={{ padding: '8px 12px', background: '#f8fafc', borderLeft: '3px solid #002e5d', borderRadius: '4px', fontSize: '0.85rem', color: '#1e293b', fontStyle: 'italic' }}>
+                  <div style={{ padding: '8px 12px', background: '#f8fafc', borderLeft: '3px solid #002e5d', borderRadius: 'var(--fdl-radius-sm, 2px)', fontSize: '0.85rem', color: '#1e293b', fontStyle: 'italic' }}>
                     &ldquo;Which GLP-1 receptor agonists have thyroid C-cell tumor warnings?&rdquo;
                   </div>
-                  <div style={{ padding: '8px 12px', background: '#f8fafc', borderLeft: '3px solid #002e5d', borderRadius: '4px', fontSize: '0.85rem', color: '#1e293b', fontStyle: 'italic' }}>
+                  <div style={{ padding: '8px 12px', background: '#f8fafc', borderLeft: '3px solid #002e5d', borderRadius: 'var(--fdl-radius-sm, 2px)', fontSize: '0.85rem', color: '#1e293b', fontStyle: 'italic' }}>
                     &ldquo;Topical antifungal creams approved under OTC monographs&rdquo;
                   </div>
                 </div>
@@ -275,13 +275,13 @@ export const getHandbookParts = (apiHost?: string): HandbookPart[] => [
                   Market Category Options:
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
-                  <div style={{ padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
+                  <div style={{ padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
                     <strong>Prescription Drugs (Rx):</strong> Select NDA (innovator products) or ANDA (generic approvals) to focus on prescription pharmaceuticals.
                   </div>
-                  <div style={{ padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
+                  <div style={{ padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
                     <strong>Therapeutic Biologics (BLA):</strong> Filter specifically for monoclonal antibodies, cytokines, and therapeutic recombinant proteins.
                   </div>
-                  <div style={{ padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
+                  <div style={{ padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
                     <strong>Over-The-Counter (OTC):</strong> Select OTC Monograph or OTC NDA to inspect non-prescription consumer healthcare products.
                   </div>
                 </div>
@@ -538,13 +538,13 @@ export const getHandbookParts = (apiHost?: string): HandbookPart[] => [
                   Color-Coded Hierarchy Tiers:
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
-                  <div style={{ padding: '8px 12px', background: '#f8fafc', borderLeft: '3px solid #7c3aed', borderRadius: '4px' }}>
+                  <div style={{ padding: '8px 12px', background: '#f8fafc', borderLeft: '3px solid #7c3aed', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
                     <strong>System Organ Class (SOC):</strong> Broad anatomical or physiological systems (e.g. <em>Hepatobiliary disorders</em>, <em>Cardiac disorders</em>).
                   </div>
-                  <div style={{ padding: '8px 12px', background: '#f8fafc', borderLeft: '3px solid #059669', borderRadius: '4px' }}>
+                  <div style={{ padding: '8px 12px', background: '#f8fafc', borderLeft: '3px solid #059669', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
                     <strong>Preferred Term (PT):</strong> The distinct clinical symptom or diagnosis (e.g. <em>Hepatic failure</em>, <em>Ventricular arrhythmia</em>).
                   </div>
-                  <div style={{ padding: '8px 12px', background: '#f8fafc', borderLeft: '3px solid #d97706', borderRadius: '4px' }}>
+                  <div style={{ padding: '8px 12px', background: '#f8fafc', borderLeft: '3px solid #d97706', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
                     <strong>Lowest Level Term (LLT):</strong> Synonyms and colloquial terms mapped directly to the Preferred Term.
                   </div>
                 </div>
@@ -736,13 +736,13 @@ export const getHandbookParts = (apiHost?: string): HandbookPart[] => [
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
-                  <div style={{ padding: '8px 12px', background: '#f8fafc', borderLeft: '3px solid #002e5d', borderRadius: '4px' }}>
+                  <div style={{ padding: '8px 12px', background: '#f8fafc', borderLeft: '3px solid #002e5d', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
                     <strong>DILI (Liver Injury):</strong> Clinical severity rankings, benchmark classifications (Most-DILI, Less-DILI, No-DILI), and hepatotoxicity warnings.
                   </div>
-                  <div style={{ padding: '8px 12px', background: '#f8fafc', borderLeft: '3px solid #002e5d', borderRadius: '4px' }}>
+                  <div style={{ padding: '8px 12px', background: '#f8fafc', borderLeft: '3px solid #002e5d', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
                     <strong>DICT (Cardiotoxicity):</strong> QT interval prolongation risks, arrhythmia warnings, and cardiac failure reporting signals.
                   </div>
-                  <div style={{ padding: '8px 12px', background: '#f8fafc', borderLeft: '3px solid #002e5d', borderRadius: '4px' }}>
+                  <div style={{ padding: '8px 12px', background: '#f8fafc', borderLeft: '3px solid #002e5d', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
                     <strong>DIRI (Kidney Injury):</strong> Nephrotoxicity alerts, renal clearance restrictions, and acute kidney injury reports.
                   </div>
                 </div>
@@ -865,28 +865,28 @@ export const getHandbookParts = (apiHost?: string): HandbookPart[] => [
             tags: ['faq', 'help', 'tips', 'support', 'contact'],
             content: (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', background: '#ffffff' }}>
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: 'var(--fdl-radius-sm, 2px)', padding: '12px', background: '#ffffff' }}>
                   <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.88rem' }}>How often is drug labeling updated in the system?</div>
                   <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '4px', lineHeight: 1.55 }}>
                     The core dataset is refreshed monthly with official FDA and DailyMed public distributions. If your installation connects to internal CDER-CBER repositories, newly approved submissions are synchronized automatically.
                   </div>
                 </div>
 
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', background: '#ffffff' }}>
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: 'var(--fdl-radius-sm, 2px)', padding: '12px', background: '#ffffff' }}>
                   <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.88rem' }}>Can I share my saved review tasks with colleagues?</div>
                   <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '4px', lineHeight: 1.55 }}>
                     Yes. Any task list created in your personal dashboard can be exported as an Excel spreadsheet or shared with other registered reviewers on the platform.
                   </div>
                 </div>
 
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', background: '#ffffff' }}>
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: 'var(--fdl-radius-sm, 2px)', padding: '12px', background: '#ffffff' }}>
                   <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.88rem' }}>Why are some medical terms highlighted while others are not?</div>
                   <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '4px', lineHeight: 1.55 }}>
                     The automatic highlighter matches terms against the official MedDRA dictionary. Non-standardized synonyms or descriptive colloquial phrases might not highlight until they are mapped to an official Preferred Term (PT).
                   </div>
                 </div>
 
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', background: '#ffffff' }}>
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: 'var(--fdl-radius-sm, 2px)', padding: '12px', background: '#ffffff' }}>
                   <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.88rem' }}>Who do I contact for regulatory science support or feature requests?</div>
                   <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '4px', lineHeight: 1.55 }}>
                     For technical inquiries or feature suggestions, contact the FDA NCTR Bioinformatics & Regulatory Science team at <code>NCTRBioinformaticsSupport@fda.hhs.gov</code>.

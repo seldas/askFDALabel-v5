@@ -189,7 +189,7 @@ export default function QueryHistoryPage() {
   // 403 for a guest regardless, so this only makes the refusal readable.
   if (!userLoading && !historyAllowed) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--afl-bg-page, #f8fafc)' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--fdl-canvas, #f8fafc)' }}>
         <Header activeApp="dashboard" />
         <AccessRestricted
           feature="Search & Query History"
@@ -201,7 +201,7 @@ export default function QueryHistoryPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--afl-bg-page, #f8fafc)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--fdl-canvas, #f8fafc)' }}>
       <Header activeApp="dashboard" />
 
       <main style={{ flex: 1, padding: '1.25rem 1.5rem', maxWidth: '1280px', width: '100%', margin: '0 auto' }}>
@@ -219,10 +219,10 @@ export default function QueryHistoryPage() {
           style={{
             background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
             color: '#ffffff',
-            borderRadius: '12px',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
             padding: '1.25rem 1.5rem',
             marginBottom: '1rem',
-            boxShadow: '0 4px 14px rgba(15, 23, 42, 0.15)',
+            boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -236,7 +236,7 @@ export default function QueryHistoryPage() {
                 style={{
                   width: '32px',
                   height: '32px',
-                  borderRadius: '8px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
                   backgroundColor: 'rgba(59, 130, 246, 0.2)',
                   display: 'flex',
                   alignItems: 'center',
@@ -257,11 +257,11 @@ export default function QueryHistoryPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-            <div style={{ background: 'rgba(255, 255, 255, 0.08)', padding: '8px 16px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
+            <div style={{ background: 'rgba(255, 255, 255, 0.08)', padding: '8px 16px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
               <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', fontWeight: 700 }}>Queries</div>
               <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff' }}>{history.length}</div>
             </div>
-            <div style={{ background: 'rgba(255, 255, 255, 0.08)', padding: '8px 16px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
+            <div style={{ background: 'rgba(255, 255, 255, 0.08)', padding: '8px 16px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
               <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', fontWeight: 700 }}>Results Found</div>
               <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#60a5fa' }}>{totalResultsCount.toLocaleString()}</div>
             </div>
@@ -272,11 +272,11 @@ export default function QueryHistoryPage() {
         <div
           style={{
             background: '#ffffff',
-            borderRadius: '10px',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
             padding: '0.85rem 1.25rem',
             marginBottom: '1rem',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+            border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+            boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -354,9 +354,9 @@ export default function QueryHistoryPage() {
 
         {/* Concise Query History List */}
         {loading ? (
-          <div style={{ padding: '3rem', textAlign: 'center', background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+          <div style={{ padding: '3rem', textAlign: 'center', background: '#ffffff', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>
             <div className="loader" style={{ width: '32px', height: '32px', margin: '0 auto 0.75rem' }}></div>
-            <p style={{ color: '#64748b', fontWeight: 600, fontSize: '0.9rem' }}>Loading query history...</p>
+            <p style={{ color: 'var(--fdl-muted, #5e6e7c)', fontWeight: 600, fontSize: '0.9rem' }}>Loading query history...</p>
           </div>
         ) : paginatedHistory.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -367,10 +367,10 @@ export default function QueryHistoryPage() {
                   key={item.id}
                   style={{
                     background: '#ffffff',
-                    borderRadius: '10px',
-                    border: '1px solid #e2e8f0',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
+                    border: '1px solid var(--fdl-line-soft, #d7e0e7)',
                     padding: '0.75rem 1.15rem',
-                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)',
+                    boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -381,21 +381,21 @@ export default function QueryHistoryPage() {
                   {/* Left: Criteria Title & Badges */}
                   <div style={{ flex: 1, minWidth: '280px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a' }}>{item.query_title}</span>
+                      <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--fdl-navy-950, #071f3d)' }}>{item.query_title}</span>
                       <Badge tone={isOracle ? 'accent' : 'neutral'} style={{ fontSize: '0.7rem', padding: '1px 6px' }}>
                         {isOracle ? 'Oracle DB' : 'Local DB'}
                       </Badge>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.75rem', color: '#64748b' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.75rem', color: 'var(--fdl-muted, #5e6e7c)' }}>
                       <span>🕒 {formatTimestamp(item.timestamp)}</span>
                       {formatRelativeTime(item.timestamp) && (
-                        <span style={{ background: '#f1f5f9', padding: '1px 6px', borderRadius: '8px', fontWeight: 700, color: '#475569' }}>
+                        <span style={{ background: 'var(--fdl-blue-050, #edf4fa)', padding: '1px 6px', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 700, color: 'var(--fdl-ink-soft, #273843)' }}>
                           {formatRelativeTime(item.timestamp)}
                         </span>
                       )}
-                      <span style={{ color: '#cbd5e1' }}>•</span>
-                      <code style={{ fontSize: '0.72rem', color: '#64748b', background: '#f8fafc', padding: '1px 6px', borderRadius: '4px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ color: 'var(--fdl-line-soft, #d7e0e7)' }}>•</span>
+                      <code style={{ fontSize: '0.72rem', color: 'var(--fdl-muted, #5e6e7c)', background: 'var(--fdl-canvas, #f3f6f8)', padding: '1px 6px', borderRadius: 'var(--fdl-radius-sm, 2px)', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {item.query_link}
                       </code>
                     </div>
@@ -405,18 +405,18 @@ export default function QueryHistoryPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div
                       style={{
-                        background: item.result_count > 0 ? '#eff6ff' : '#f8fafc',
-                        border: `1px solid ${item.result_count > 0 ? '#bfdbfe' : '#e2e8f0'}`,
-                        borderRadius: '8px',
+                        background: item.result_count > 0 ? 'var(--fdl-blue-050, #edf4fa)' : 'var(--fdl-canvas, #f3f6f8)',
+                        border: `1px solid ${item.result_count > 0 ? 'var(--fdl-blue-100, #dcecf8)' : 'var(--fdl-line-soft, #d7e0e7)'}`,
+                        borderRadius: 'var(--fdl-radius-sm, 2px)',
                         padding: '4px 10px',
                         textAlign: 'center',
                         minWidth: '85px',
                       }}
                     >
-                      <div style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', color: item.result_count > 0 ? '#1d4ed8' : '#64748b' }}>
+                      <div style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', color: item.result_count > 0 ? 'var(--fdl-blue-700, #0759a5)' : 'var(--fdl-muted, #5e6e7c)' }}>
                         Results
                       </div>
-                      <div style={{ fontSize: '1rem', fontWeight: 900, color: item.result_count > 0 ? '#1e40af' : '#475569', lineHeight: 1.1 }}>
+                      <div style={{ fontSize: '1rem', fontWeight: 900, color: item.result_count > 0 ? 'var(--fdl-navy-800, #12375b)' : 'var(--fdl-ink-soft, #273843)', lineHeight: 1.1 }}>
                         {item.result_count.toLocaleString()}
                       </div>
                     </div>
@@ -437,7 +437,7 @@ export default function QueryHistoryPage() {
                           border: 'none',
                           color: '#ef4444',
                           padding: '4px 6px',
-                          borderRadius: '4px',
+                          borderRadius: 'var(--fdl-radius-sm, 2px)',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
@@ -461,9 +461,9 @@ export default function QueryHistoryPage() {
             <div
               style={{
                 background: '#ffffff',
-                borderRadius: '10px',
+                borderRadius: 'var(--fdl-radius-sm, 2px)',
                 padding: '0.75rem 1.25rem',
-                border: '1px solid #e2e8f0',
+                border: '1px solid var(--fdl-line-soft, #d7e0e7)',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
@@ -506,7 +506,7 @@ export default function QueryHistoryPage() {
             </div>
           </div>
         ) : (
-          <div style={{ background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '3rem 2rem' }}>
+          <div style={{ background: '#ffffff', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)', padding: '3rem 2rem' }}>
             <EmptyState
               icon={
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

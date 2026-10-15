@@ -4,10 +4,10 @@
 
 .lc-setup-panel {
   margin-bottom: 2.5rem;
-  background-color: var(--afl-bg-surface);
-  border-radius: var(--afl-radius-xl);
+  background-color: var(--fdl-paper);
+  border-radius: var(--fdl-radius-sm, 2px);
   padding: 1.5rem;
-  border: 1px solid var(--afl-border);
+  border: 1px solid var(--fdl-line-soft);
   box-shadow: none;
 }
 
@@ -18,7 +18,7 @@
   padding: 8px 14px;
   background-color: var(--fdl-blue-050);
   border: 1px solid var(--fdl-blue-100);
-  border-radius: var(--afl-radius-md);
+  border-radius: var(--fdl-radius-sm, 2px);
   color: var(--fdl-navy-800);
   font-size: .8rem;
   font-weight: 700;
@@ -82,9 +82,9 @@
 .lc-page .lc-toolbar-toggle {
   min-height: 36px;
   padding: 8px 12px;
-  border: 1px solid var(--afl-border);
-  background: var(--afl-bg-surface);
-  color: var(--afl-text-secondary);
+  border: 1px solid var(--fdl-line-soft);
+  background: var(--fdl-paper);
+  color: var(--fdl-muted);
 }
 
 .lc-page .lc-toolbar-toggle:hover:not(:disabled) {
@@ -100,7 +100,7 @@
   min-height: 38px;
   padding: 9px 16px;
   border: 1px solid transparent;
-  border-radius: var(--afl-radius-md);
+  border-radius: var(--fdl-radius-sm, 2px);
   font-size: .8rem;
   font-weight: 700;
   cursor: pointer;
@@ -108,7 +108,7 @@
 }
 
 .lc-page .lc-action-btn--primary {
-  background: var(--afl-gov-navy);
+  background: var(--fdl-navy-950);
   color: white;
 }
 
@@ -144,7 +144,7 @@
   cursor: pointer;
 }
 
-.lc-page .lc-icon-btn:hover { background: var(--afl-bg-sunken); color: var(--afl-text-primary); }
+.lc-page .lc-icon-btn:hover { background: var(--fdl-blue-050); color: var(--fdl-ink); }
 
 /* Add Labels modal — Federal-Scientific Workstation layout */
 .lc-add-modal-backdrop {
@@ -328,7 +328,7 @@
 }
 
 .lc-page .spl-content :is(ins.diff-add, del.diff-sub, .diff_add, .diff_sub) {
-  border-radius: var(--afl-radius-sm);
+  border-radius: var(--fdl-radius-sm, 2px);
   padding: 0 2px;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
@@ -345,9 +345,9 @@
   align-items: center;
   margin-bottom: 2.5rem;
   padding: 1rem 1.25rem;
-  background-color: var(--afl-bg-surface);
-  border-radius: var(--afl-radius-xl);
-  border: 1px solid var(--afl-border);
+  background-color: var(--fdl-paper);
+  border-radius: var(--fdl-radius-sm, 2px);
+  border: 1px solid var(--fdl-line-soft);
   box-shadow: none;
   flex-wrap: wrap;
   gap: 1rem;
@@ -356,9 +356,9 @@
 .lc-toolbar__tabs {
   display: flex;
   gap: 4px;
-  background-color: var(--afl-bg-sunken);
+  background-color: var(--fdl-blue-050);
   padding: 4px;
-  border-radius: var(--afl-radius-md);
+  border-radius: var(--fdl-radius-sm, 2px);
 }
 
 .lc-toolbar-toggle {
@@ -368,11 +368,11 @@
   cursor: pointer;
   font-size: .8rem;
   font-weight: 700;
-  color: var(--afl-text-secondary);
-  border-radius: var(--afl-radius-sm);
+  color: var(--fdl-muted);
+  border-radius: var(--fdl-radius-sm, 2px);
   transition: all 150ms ease;
 }
-.lc-toolbar-toggle:hover { background-color: var(--afl-bg-surface); }
+.lc-toolbar-toggle:hover { background-color: var(--fdl-paper); }
 
 .lc-add-modal button:disabled { opacity: .5; cursor: not-allowed; }
 .lc-add-modal button:focus-visible { outline: 3px solid var(--fdl-blue-600); outline-offset: 2px; }

@@ -10,7 +10,7 @@
 }
 
 .chart-card { 
-  background: var(--fdl-surface); 
+  background: var(--fdl-paper, #ffffff); 
   border: 1px solid var(--fdl-line); 
   border-radius: var(--fdl-radius-sm, 2px); 
   padding: 16px; 
@@ -33,7 +33,7 @@
   justify-content: center;
   text-decoration: none !important;
   border: 1px solid var(--fdl-line);
-  background: var(--fdl-surface);
+  background: var(--fdl-paper, #ffffff);
   color: var(--fdl-ink);
   cursor: pointer;
 }
@@ -86,7 +86,7 @@
   padding: 20px;
   border: 1px solid var(--fdl-line);
   border-radius: var(--fdl-radius-sm, 2px);
-  background: var(--fdl-surface);
+  background: var(--fdl-paper, #ffffff);
   cursor: pointer;
   transition: border-color 0.12s ease, background-color 0.12s ease;
   text-align: center;
@@ -100,7 +100,7 @@
 
 .agent-card.disabled:hover {
   border-color: var(--fdl-line);
-  background: var(--fdl-surface);
+  background: var(--fdl-paper, #ffffff);
   cursor: not-allowed;
   opacity: 0.5;
 }
@@ -209,7 +209,7 @@
   border-radius: var(--fdl-radius-sm, 2px);
   border: 1px solid var(--fdl-line);
   border-left: 4px solid var(--fdl-line-strong);
-  background-color: var(--fdl-surface);
+  background-color: var(--fdl-paper, #ffffff);
   box-shadow: none;
   font-family: inherit;
 }

@@ -204,11 +204,11 @@ export default function LabelLayout({
               ) : null}
 
               {data.has_boxed_warning && (
-                <div className="meta-item" style={{ marginBottom: '16px', backgroundColor: '#fff1f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '1.3rem', color: '#e11d48' }}>{"\u26A0"}</span>
+                <div className="meta-item" style={{ marginBottom: '16px', backgroundColor: 'var(--fdl-red-050, #fff1f1)', border: '1px solid var(--fdl-red)', borderRadius: 'var(--fdl-radius-sm, 2px)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontSize: '1.3rem', color: 'var(--fdl-red)' }}>{"\u26A0"}</span>
                     <div>
-                        <span style={{ display: 'block', fontSize: '0.68rem', color: '#e11d48', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Clinical Alert</span>
-                        <span style={{ fontWeight: 700, color: '#9f1239', fontSize: '0.9rem' }}>Boxed Warning Information Present</span>
+                        <span style={{ display: 'block', fontSize: '0.68rem', color: 'var(--fdl-red)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Clinical Alert</span>
+                        <span style={{ fontWeight: 700, color: 'var(--fdl-red)', fontSize: '0.9rem' }}>Boxed Warning Information Present</span>
                     </div>
                 </div>
               )}
@@ -221,7 +221,7 @@ export default function LabelLayout({
                         {data.companies && data.companies.length > 0 && (
                           <button 
                             onClick={() => setCompanyModalOpen(true)} 
-                            style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', color: '#64748b' }}
+                            style={{ background: 'var(--fdl-canvas, #f3f6f8)', border: '1px solid var(--fdl-line, #b8c8d7)', padding: '2px 8px', borderRadius: 'var(--fdl-radius-sm, 2px)', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', color: 'var(--fdl-ink-soft, #273843)' }}
                           >
                             DETAILS
                           </button>
@@ -256,24 +256,24 @@ export default function LabelLayout({
           ) : null}
 
           {companyModalOpen && data?.companies && (
-            <div onClick={() => setCompanyModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.45)', zIndex: 5000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', backdropFilter: 'blur(4px)' }}>
-              <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(550px, 95vw)', maxHeight: 'min(600px, 85vh)', background: 'white', borderRadius: '20px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e2e8f0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div><h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>Company Details</h3><p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Associated manufacturers and distributors</p></div>
-                  <button onClick={() => setCompanyModalOpen(false)} style={{ background: 'white', border: '1px solid #e2e8f0', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer' }}>×</button>
+            <div onClick={() => setCompanyModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(7, 31, 61, 0.58)', zIndex: 5000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+              <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(550px, 95vw)', maxHeight: 'min(600px, 85vh)', background: 'var(--fdl-paper, #ffffff)', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)', borderTop: '3px solid var(--fdl-navy-800, #12375b)', boxShadow: 'var(--fdl-elevation-3, 0 12px 32px rgba(7, 31, 61, 0.18))', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)', background: 'var(--fdl-canvas, #f3f6f8)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div><h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)' }}>Company Details</h3><p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--fdl-muted, #5e6e7c)', fontWeight: 600 }}>Associated manufacturers and distributors</p></div>
+                  <button onClick={() => setCompanyModalOpen(false)} style={{ background: 'white', border: '1px solid var(--fdl-line, #b8c8d7)', width: '32px', height: '32px', borderRadius: 'var(--fdl-radius-sm, 2px)', cursor: 'pointer' }}>×</button>
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {data.companies.map((comp: any, idx: number) => (
-                    <div key={idx} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px' }}>
-                      <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', marginBottom: '4px' }}>{comp.name || 'Unknown Company'}</div>
-                      {comp.role && <div style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>{comp.role}</div>}
-                      {comp.duns && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>DUNS: {comp.duns}</div>}
-                      {comp.address && <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>Address: {comp.address}</div>}
+                    <div key={idx} style={{ background: 'var(--fdl-canvas, #f3f6f8)', border: '1px solid var(--fdl-line-soft, #d7e0e7)', borderRadius: 'var(--fdl-radius-sm, 2px)', padding: '16px' }}>
+                      <div style={{ fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)', fontSize: '0.95rem', marginBottom: '4px' }}>{comp.name || 'Unknown Company'}</div>
+                      {comp.role && <div style={{ fontSize: '0.75rem', color: 'var(--fdl-blue-700, #0759a5)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>{comp.role}</div>}
+                      {comp.duns && <div style={{ fontSize: '0.8rem', color: 'var(--fdl-muted, #5e6e7c)' }}>DUNS: {comp.duns}</div>}
+                      {comp.address && <div style={{ fontSize: '0.8rem', color: 'var(--fdl-muted, #5e6e7c)', marginTop: '4px' }}>Address: {comp.address}</div>}
                     </div>
                   ))}
                 </div>
-                <div style={{ padding: '20px 24px', borderTop: '1px solid #f1f5f9', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end' }}>
-                  <button onClick={() => setCompanyModalOpen(false)} style={{ padding: '10px 24px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 800, cursor: 'pointer' }}>CLOSE</button>
+                <div style={{ padding: '20px 24px', borderTop: '1px solid var(--fdl-line-soft, #d7e0e7)', background: 'var(--fdl-canvas, #f3f6f8)', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button onClick={() => setCompanyModalOpen(false)} style={{ padding: '10px 24px', background: 'var(--fdl-navy-800, #12375b)', color: 'white', border: 'none', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 800, cursor: 'pointer' }}>CLOSE</button>
                 </div>
               </div>
             </div>

@@ -409,7 +409,7 @@ export function CriterionCard({
                 style={{
                   backgroundColor: '#fffbeb',
                   border: '1px solid #fde68a',
-                  borderRadius: '8px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
                   padding: '10px 14px',
                   marginBottom: '4px',
                 }}
@@ -496,7 +496,7 @@ export function CriterionCard({
                     alignItems: 'center',
                     gap: '4px',
                     padding: '4px 10px',
-                    borderRadius: '6px',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
                     fontSize: '0.8rem',
                     fontWeight: 700,
                     backgroundColor: '#ecfdf5',
@@ -609,7 +609,7 @@ export function CriterionCard({
                   backgroundColor: '#fef3c7',
                   color: '#92400e',
                   border: '1px solid #f59e0b',
-                  borderRadius: '6px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
                   padding: '6px 12px',
                   fontSize: '0.82rem',
                   fontWeight: 600,
@@ -699,7 +699,7 @@ export function CriterionCard({
                   backgroundColor: '#fef3c7',
                   color: '#92400e',
                   border: '1px solid #f59e0b',
-                  borderRadius: '6px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
                   padding: '6px 12px',
                   fontSize: '0.82rem',
                   fontWeight: 600,
@@ -756,7 +756,7 @@ export function CriterionCard({
                 style={{
                   height: '34px',
                   padding: '0 12px',
-                  borderRadius: '6px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
                   border: '1px solid #cbd5e1',
                   fontSize: '0.88rem',
                   background: '#ffffff',
@@ -773,13 +773,13 @@ export function CriterionCard({
             {/* Start Date Min & Max Panel (Styled exactly like attached screenshot) */}
             <div
               style={{
-                background: '#e2e8f0',
+                background: 'var(--fdl-canvas, #f3f6f8)',
                 padding: '12px 18px',
-                borderRadius: '12px',
+                borderRadius: 'var(--fdl-radius-sm, 2px)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '8px',
-                border: '1px solid #cbd5e1',
+                border: '1px solid var(--fdl-line-soft, #d7e0e7)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
@@ -791,8 +791,8 @@ export function CriterionCard({
                   style={{
                     height: '30px',
                     padding: '0 8px',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
+                    border: '1px solid var(--fdl-line, #b8c8d7)',
                     fontSize: '0.85rem',
                     background: '#ffffff',
                     color: '#0f172a',
@@ -809,8 +809,8 @@ export function CriterionCard({
                   style={{
                     height: '30px',
                     padding: '0 8px',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
+                    border: '1px solid var(--fdl-line, #b8c8d7)',
                     fontSize: '0.85rem',
                     background: '#ffffff',
                     color: '#0f172a',
@@ -961,7 +961,7 @@ export function CriterionCard({
                 style={{
                   backgroundColor: '#fffbeb',
                   border: '1px solid #fde68a',
-                  borderRadius: '8px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
                   padding: '10px 14px',
                   marginBottom: '10px',
                 }}
@@ -1016,7 +1016,7 @@ export function CriterionCard({
                   backgroundColor: '#fef3c7',
                   color: '#92400e',
                   border: '1px solid #f59e0b',
-                  borderRadius: '6px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
                   padding: '8px 12px',
                   fontSize: '0.82rem',
                   fontWeight: 600,
@@ -1239,7 +1239,7 @@ export function CriterionCard({
                     backgroundColor: multiGuids.length > 0 ? '#2563eb' : '#f1f5f9',
                     color: multiGuids.length > 0 ? '#ffffff' : '#334155',
                     border: multiGuids.length > 0 ? '1px solid #1d4ed8' : '1px solid #cbd5e1',
-                    borderRadius: '6px',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
                     padding: '6px 12px',
                     fontSize: '0.82rem',
                     fontWeight: 700,
@@ -1269,7 +1269,7 @@ export function CriterionCard({
                           color: '#1d4ed8',
                           border: '1px solid #bfdbfe',
                           padding: '2px 8px',
-                          borderRadius: '4px',
+                          borderRadius: 'var(--fdl-radius-sm, 2px)',
                           fontSize: '0.75rem',
                           fontFamily: 'monospace',
                         }}
@@ -1621,7 +1621,7 @@ function UnverifiedProductPicker({
             background: '#d97706',
             color: '#ffffff',
             border: 'none',
-            borderRadius: '6px',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
             padding: '3px 10px',
             fontSize: '0.78rem',
             fontWeight: 700,
@@ -1645,7 +1645,7 @@ function UnverifiedProductPicker({
             background: '#ffffff',
             color: '#92400e',
             border: '1px solid #d97706',
-            borderRadius: '6px',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
             padding: '4px 10px',
             fontSize: '0.82rem',
             fontWeight: 700,
@@ -1718,7 +1718,7 @@ function UnverifiedMeddraPicker({
             background: '#d97706',
             color: '#ffffff',
             border: 'none',
-            borderRadius: '6px',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
             padding: '3px 10px',
             fontSize: '0.78rem',
             fontWeight: 700,
@@ -1742,7 +1742,7 @@ function UnverifiedMeddraPicker({
             background: '#ffffff',
             color: '#92400e',
             border: '1px solid #d97706',
-            borderRadius: '6px',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
             padding: '4px 10px',
             fontSize: '0.82rem',
             fontWeight: 700,
@@ -1789,7 +1789,7 @@ function MultiSetIdModal({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'rgba(7, 31, 61, 0.58)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1800,20 +1800,22 @@ function MultiSetIdModal({
     >
       <div
         style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          padding: '24px',
+          backgroundColor: 'var(--fdl-paper, #ffffff)',
+          borderRadius: 'var(--fdl-radius-sm, 2px)',
+          border: '1px solid var(--fdl-line, #b8c8d7)',
+          borderTop: '3px solid var(--fdl-navy-800, #12375b)',
+          padding: '20px 24px',
           maxWidth: '560px',
           width: '100%',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          boxShadow: '0 16px 36px rgba(7, 31, 61, 0.24)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '16px',
+          gap: '14px',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b', fontWeight: 700 }}>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--fdl-navy-950, #071f3d)', fontWeight: 800 }}>
             Multi SET-IDs Input
           </h3>
           <button
@@ -1824,14 +1826,14 @@ function MultiSetIdModal({
               border: 'none',
               fontSize: '1.25rem',
               cursor: 'pointer',
-              color: '#64748b',
+              color: 'var(--fdl-muted, #5e6e7c)',
             }}
           >
             ✕
           </button>
         </div>
 
-        <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569', lineHeight: 1.4 }}>
+        <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--fdl-muted, #5e6e7c)', lineHeight: 1.45 }}>
           Paste multiple <strong>SET IDs</strong> or <strong>SPL GUIDs</strong> below. Entries can be separated by
           <strong> newlines</strong>, <strong>semicolons (;)</strong>, or <strong>commas (,)</strong>.
         </p>
@@ -1843,18 +1845,20 @@ function MultiSetIdModal({
           placeholder={`ca73b519-015a-436d-aa3c-af53492825a1\nc7247391-7fb8-4bd8-90db-2d1d072fec01\n43683519-015a-436d-aa3c-af53492825a2`}
           style={{
             width: '100%',
-            padding: '12px',
-            borderRadius: '8px',
-            border: '1px solid #cbd5e1',
-            fontSize: '0.85rem',
-            fontFamily: 'monospace',
+            padding: '8px 10px',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
+            border: '1px solid var(--fdl-line, #b8c8d7)',
+            fontSize: '0.82rem',
+            fontFamily: 'var(--fdl-font-mono, monospace)',
             resize: 'vertical',
             boxSizing: 'border-box',
+            backgroundColor: 'var(--fdl-paper, #ffffff)',
+            color: 'var(--fdl-ink, #132332)',
           }}
         />
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '0.85rem', color: uniqueIds.length > 0 ? '#2563eb' : '#64748b', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.82rem', color: uniqueIds.length > 0 ? 'var(--fdl-blue-700, #0759a5)' : 'var(--fdl-muted, #5e6e7c)', fontWeight: 700 }}>
             {uniqueIds.length} {uniqueIds.length === 1 ? 'SET-ID' : 'SET-IDs'} detected
             {parsedIds.length !== uniqueIds.length && ` (${parsedIds.length - uniqueIds.length} duplicates filtered)`}
           </span>
@@ -1865,8 +1869,8 @@ function MultiSetIdModal({
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#ef4444',
-                fontSize: '0.8rem',
+                color: 'var(--fdl-red, #b50909)',
+                fontSize: '0.78rem',
                 cursor: 'pointer',
                 textDecoration: 'underline',
               }}
@@ -1876,18 +1880,18 @@ function MultiSetIdModal({
           )}
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
           <button
             type="button"
             onClick={onClose}
             style={{
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: '1px solid #cbd5e1',
-              background: '#ffffff',
-              color: '#334155',
-              fontSize: '0.88rem',
-              fontWeight: 600,
+              padding: '6px 14px',
+              borderRadius: 'var(--fdl-radius-sm, 2px)',
+              border: '1px solid var(--fdl-line, #b8c8d7)',
+              background: 'var(--fdl-paper, #ffffff)',
+              color: 'var(--fdl-ink-soft, #273843)',
+              fontSize: '0.82rem',
+              fontWeight: 700,
               cursor: 'pointer',
             }}
           >
@@ -1897,12 +1901,12 @@ function MultiSetIdModal({
             type="button"
             onClick={() => onSave(uniqueIds)}
             style={{
-              padding: '8px 18px',
-              borderRadius: '6px',
-              border: 'none',
-              background: '#2563eb',
-              color: '#ffffff',
-              fontSize: '0.88rem',
+              padding: '6px 16px',
+              borderRadius: 'var(--fdl-radius-sm, 2px)',
+              border: '1px solid var(--fdl-blue-700, #0759a5)',
+              background: 'var(--fdl-blue-700, #0759a5)',
+              color: 'var(--fdl-paper, #ffffff)',
+              fontSize: '0.82rem',
               fontWeight: 700,
               cursor: 'pointer',
             }}

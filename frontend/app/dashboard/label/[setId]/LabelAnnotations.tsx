@@ -542,8 +542,8 @@ export default function LabelAnnotations({
                 style={{
                   background: 'none',
                   border: '1px solid var(--fdl-line, #cbd5e1)',
-                  borderRadius: '4px',
-                  color: 'var(--afl-danger-500, #ef4444)',
+                  borderRadius: '2px',
+                  color: 'var(--fdl-red, #ef4444)',
                   cursor: 'pointer',
                   fontSize: '0.75rem',
                   padding: '3px 8px',

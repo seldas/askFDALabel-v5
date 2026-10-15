@@ -229,16 +229,16 @@ function LabelCompContent() {
     cursor: 'pointer',
     fontSize: '0.85rem',
     fontWeight: 700,
-    color: 'var(--afl-text-secondary)',
-    borderRadius: 'var(--afl-radius-sm)',
+    color: 'var(--fdl-muted, #5e6e7c)',
+    borderRadius: 'var(--fdl-radius-sm, 2px)',
     transition: 'all 0.2s'
   };
 
   const metaCardStyle = {
-    backgroundColor: 'var(--afl-bg-surface)',
+    backgroundColor: 'var(--fdl-paper, #ffffff)',
     padding: '1.25rem',
-    borderRadius: 'var(--afl-radius-xl)',
-    border: '1px solid var(--afl-border)',
+    borderRadius: 'var(--fdl-radius-sm, 2px)',
+    border: '1px solid var(--fdl-line-soft, #d7e0e7)',
     position: 'relative' as const,
     boxShadow: 'none',
     display: 'flex',
@@ -250,13 +250,13 @@ function LabelCompContent() {
     position: 'absolute' as const,
     top: '12px',
     right: '12px',
-    background: 'var(--afl-bg-sunken)',
-    border: 'none',
-    color: 'var(--fdl-muted)',
+    background: 'var(--fdl-canvas, #f3f6f8)',
+    border: '1px solid var(--fdl-line, #b8c8d7)',
+    color: 'var(--fdl-muted, #5e6e7c)',
     cursor: 'pointer',
     width: '28px',
     height: '28px',
-    borderRadius: '50%',
+    borderRadius: 'var(--fdl-radius-sm, 2px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -271,19 +271,20 @@ function LabelCompContent() {
     alignItems: 'center',
     marginTop: 'auto',
     fontSize: '0.85rem',
-    color: 'var(--fdl-blue-700)',
+    color: 'var(--fdl-blue-700, #0759a5)',
     textDecoration: 'none',
     fontWeight: 700,
     paddingTop: '1rem'
   };
 
   const aiInsightContainerStyle = {
-    backgroundColor: 'var(--fdl-blue-050)',
-    borderRadius: 'var(--afl-radius-xl)',
-    border: '1px solid var(--fdl-blue-100)',
+    backgroundColor: 'var(--fdl-paper, #ffffff)',
+    borderRadius: 'var(--fdl-radius-sm, 2px)',
+    border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+    borderTop: '3px solid var(--fdl-navy-800, #12375b)',
     marginBottom: '3rem',
     overflow: 'hidden',
-    boxShadow: 'none'
+    boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))'
   };
 
   const aiInsightHeaderStyle = {
@@ -697,7 +698,7 @@ function LabelCompContent() {
   };
 
   return (
-    <div className="lc-page" style={{ minHeight: '100vh', backgroundColor: 'var(--afl-bg-page)' }}>
+    <div className="lc-page" style={{ minHeight: '100vh', backgroundColor: 'var(--fdl-canvas, #f3f6f8)' }}>
       <Header />
 
       <main style={{ maxWidth: '1600px', margin: '0 auto', padding: 'clamp(2rem, 5vh, 4rem) clamp(1rem, 5vw, 2rem)' }}>
@@ -706,7 +707,7 @@ function LabelCompContent() {
           <h1 className="hero-title-animated" style={{ fontSize: 'clamp(2.25rem, 6vw, 3rem)', fontWeight: 900, marginBottom: '0.75rem', letterSpacing: '-0.025em' }}>
             LabelComp
           </h1>
-          <p className="hero-subtitle-animated" style={{ fontSize: 'clamp(1rem, 2vw, 1.15rem)', color: 'var(--afl-text-secondary)', fontWeight: '500', maxWidth: '700px', margin: '0 auto' }}>
+          <p className="hero-subtitle-animated" style={{ fontSize: 'clamp(1rem, 2vw, 1.15rem)', color: 'var(--fdl-muted, #5e6e7c)', fontWeight: '500', maxWidth: '700px', margin: '0 auto' }}>
             Synchronize and compare clinical data across multiple FDA drug labels.
           </p>
           {session?.permissions?.tool_image_review && <Link href={imageReviewRoute({ setIds: searchParams.getAll('set_ids'), splIds: searchParams.getAll('spl_ids') })} style={{ display: 'inline-block', marginTop: '12px', color: 'var(--fdl-blue-700)', fontSize: '0.85rem' }}>Compare carton, container, or IFU artwork →</Link>}
@@ -716,8 +717,8 @@ function LabelCompContent() {
         <section className="lc-setup-panel">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
             <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--afl-text-primary)', margin: 0 }}>Compared Drug Labels</h2>
-              <p style={{ margin: '4px 0 0 0', color: 'var(--afl-text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--fdl-ink, #132332)', margin: 0 }}>Compared Drug Labels</h2>
+              <p style={{ margin: '4px 0 0 0', color: 'var(--fdl-muted, #5e6e7c)', fontWeight: 500, fontSize: '0.85rem' }}>
                 Compare up to 4 drug labels side-by-side. Add at least 2 labels to begin.
               </p>
             </div>
@@ -793,7 +794,7 @@ function LabelCompContent() {
 
           {/* Launch Button when not comparing yet */}
           {filledSlotsCount >= 2 && !data && (
-            <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '1.25rem', borderTop: '1px solid var(--afl-n-100)', paddingTop: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '1.25rem', borderTop: '1px solid var(--fdl-line-soft, #d7e0e7)', paddingTop: '1.25rem' }}>
                <Button
                 variant="success"
                 className="lc-launch-btn"
@@ -841,8 +842,8 @@ function LabelCompContent() {
           </div>
         )}
 
-        {loading && <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--afl-text-secondary)', fontWeight: 600 }}><div className="loader" style={{ margin: '0 auto 1rem auto' }}></div>Synchronizing data...</div>}
-        {error && <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--fdl-red)', backgroundColor: 'var(--fdl-red-050)', borderRadius: 'var(--afl-radius-md)', border: '1px solid var(--fdl-red)' }}>Error: {error}</div>}
+        {loading && <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--fdl-muted, #5e6e7c)', fontWeight: 600 }}><div className="loader" style={{ margin: '0 auto 1rem auto' }}></div>Synchronizing data...</div>}
+        {error && <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--fdl-red)', backgroundColor: 'var(--fdl-red-050)', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-red)' }}>Error: {error}</div>}
         
         {/* Metadata section removed as it is now in the slots */}
 
@@ -851,10 +852,10 @@ function LabelCompContent() {
           <section style={aiInsightContainerStyle}>
             <div onClick={() => setAiSummaryCollapsed(!aiSummaryCollapsed)} style={aiInsightHeaderStyle}>
                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '32px', height: '32px', backgroundColor: 'var(--fdl-blue-100)', borderRadius: 'var(--afl-radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fdl-navy-800)' }}>
+                  <div style={{ width: '32px', height: '32px', backgroundColor: 'var(--fdl-blue-100)', borderRadius: 'var(--fdl-radius-sm, 2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fdl-navy-800)' }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a4 4 0 0 0-4-4H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a4 4 0 0 1 4-4h6z"></path></svg>
                   </div>
-                  <span style={{ fontWeight: 800, color: 'var(--afl-n-900)', fontSize: '1.05rem', letterSpacing: '-0.01em' }}>AI Comparison Insight</span>
+                  <span style={{ fontWeight: 800, color: 'var(--fdl-ink, #132332)', fontSize: '1.05rem', letterSpacing: '-0.01em' }}>AI Comparison Insight</span>
                </div>
                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-blue-700)' }}>{aiSummaryCollapsed ? 'SHOW ANALYSIS' : 'HIDE ANALYSIS'}</span>
@@ -862,12 +863,12 @@ function LabelCompContent() {
                </div>
             </div>
             {!aiSummaryCollapsed && (
-              <div style={{ padding: '2rem', borderTop: '1px solid var(--fdl-blue-100)', backgroundColor: 'var(--afl-bg-surface)' }}>
+              <div style={{ padding: '2rem', borderTop: '1px solid var(--fdl-line-soft, #d7e0e7)', backgroundColor: 'var(--fdl-paper, #ffffff)' }}>
                  {aiSummary ? (
                     <div className="ai-summary-content" style={{ animation: 'fadeIn 0.3s ease-out' }} dangerouslySetInnerHTML={{ __html: aiSummary }} />
                  ) : (
                     <div style={{ textAlign: 'center', padding: '1rem' }}>
-                      <p style={{ color: 'var(--afl-text-secondary)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+                      <p style={{ color: 'var(--fdl-muted, #5e6e7c)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
                         {session?.is_authenticated
                           ? 'Perform a multi-label cognitive analysis to extract key regulatory and clinical differences.'
                           : 'Please sign in to generate high-fidelity AI comparison summaries.'}
@@ -889,9 +890,9 @@ function LabelCompContent() {
         )}
 
         {data && data.comparison_data.length > 0 ? (
-          <div style={{ backgroundColor: 'var(--afl-bg-surface)', borderRadius: 'var(--afl-radius-xl)', border: '1px solid var(--afl-border)', overflow: 'hidden', boxShadow: 'none' }}>
-            <div style={{ padding: '1rem 1.5rem', backgroundColor: 'var(--afl-bg-sunken)', borderBottom: '1px solid var(--afl-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--afl-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div style={{ backgroundColor: 'var(--fdl-paper, #ffffff)', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)', borderTop: '3px solid var(--fdl-navy-800, #12375b)', overflow: 'hidden', boxShadow: 'none' }}>
+            <div style={{ padding: '1rem 1.5rem', backgroundColor: 'var(--fdl-canvas, #f3f6f8)', borderBottom: '1px solid var(--fdl-line, #b8c8d7)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--fdl-muted, #5e6e7c)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Discrepancy Panel ({filteredData.length} sections)
                 </span>
                 <button
@@ -906,8 +907,8 @@ function LabelCompContent() {
             </div>
             {filteredData.map((section, idx) => (
               <div key={idx} style={{ 
-                borderBottom: '1px solid var(--afl-n-100)', 
-                backgroundColor: section.is_same ? 'var(--afl-n-50)' : 'white'
+                borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)', 
+                backgroundColor: section.is_same ? 'var(--fdl-canvas, #f3f6f8)' : 'white'
               }}>
                 <div 
                     onClick={() => toggleSection(section.key)}
@@ -919,25 +920,26 @@ function LabelCompContent() {
                         cursor: 'pointer',
                         userSelect: 'none',
                         marginLeft: `${section.nesting_level * 24}px`,
-                        transition: 'background-color 0.2s'
+                        transition: 'background-color 0.15s'
                     }}
-                    onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--afl-n-50)'}
-                    onMouseOut={e => e.currentTarget.style.backgroundColor = section.is_same ? 'var(--afl-n-50)' : 'white'}
+                    onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--fdl-blue-050, #edf4fa)'}
+                    onMouseOut={e => e.currentTarget.style.backgroundColor = section.is_same ? 'var(--fdl-canvas, #f3f6f8)' : 'white'}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--afl-n-400)', transform: collapsedSections[section.key] ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>
-                    <h4 style={{ margin: 0, color: section.is_same ? 'var(--afl-n-500)' : 'var(--afl-gov-navy)', fontSize: '0.95rem', fontWeight: 800, letterSpacing: '-0.01em' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--fdl-muted, #5e6e7c)', transform: collapsedSections[section.key] ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>
+                    <h4 style={{ margin: 0, color: section.is_same ? 'var(--fdl-muted, #5e6e7c)' : 'var(--fdl-navy-950, #071f3d)', fontSize: '0.95rem', fontWeight: 800, letterSpacing: '-0.01em' }}>
                         {section.title}
                         {!section.is_empty && (
                         <span style={{ 
                             marginLeft: '12px', 
                             fontSize: '0.65rem', 
                             padding: '3px 10px', 
-                            borderRadius: '6px',
-                            backgroundColor: section.is_same ? 'var(--afl-n-100)' : 'var(--fdl-red-050)',
-                            color: section.is_same ? 'var(--afl-n-400)' : 'var(--fdl-red)',
+                            borderRadius: 'var(--fdl-radius-sm, 2px)',
+                            backgroundColor: section.is_same ? 'var(--fdl-canvas, #f3f6f8)' : 'var(--fdl-red-050)',
+                            color: section.is_same ? 'var(--fdl-muted, #5e6e7c)' : 'var(--fdl-red)',
                             fontWeight: 800,
-                            letterSpacing: '0.02em'
+                            letterSpacing: '0.02em',
+                            border: section.is_same ? '1px solid var(--fdl-line, #b8c8d7)' : '1px solid rgba(217, 56, 30, 0.2)'
                         }}>
                             {section.is_same ? 'IDENTICAL' : 'CHANGES DETECTED'}
                         </span>
@@ -949,24 +951,24 @@ function LabelCompContent() {
                 {!collapsedSections[section.key] && (
                     <div style={{ padding: '0 1.5rem 1.5rem 1.5rem', animation: 'fadeIn 0.2s' }}>
                         {(section as any).is_major_change ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                                 <div style={{ 
                                     backgroundColor: 'var(--fdl-amber-050)',
                                     border: '1px solid var(--fdl-amber)',
-                                    borderRadius: '12px', 
-                                    padding: '1.25rem', 
+                                    borderRadius: 'var(--fdl-radius-sm, 2px)', 
+                                    padding: '1rem 1.25rem', 
                                     color: 'var(--fdl-amber)',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '16px',
-                                    boxShadow: '0 2px 4px rgba(251, 146, 60, 0.05)'
+                                    gap: '14px',
+                                    boxShadow: 'none'
                                 }}>
                                     <div style={{ color: 'var(--fdl-amber)' }}>
-                                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                                     </div>
                                     <div>
-                                        <div style={{ fontWeight: 800, fontSize: '0.95rem' }}>Significant Section Overhaul</div>
-                                        <div style={{ fontSize: '0.85rem', opacity: 0.9, fontWeight: 500 }}>This section has been extensively rewritten. Visual diffing is disabled to prioritize readability.</div>
+                                        <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>Significant Section Overhaul</div>
+                                        <div style={{ fontSize: '0.825rem', opacity: 0.9, fontWeight: 500 }}>This section has been extensively rewritten. Visual diffing is disabled to prioritize readability.</div>
                                     </div>
                                 </div>
                                 <div style={comparisonGridStyle}>
@@ -975,18 +977,18 @@ function LabelCompContent() {
                                         return (
                                             <div key={cIdx} style={{ 
                                                 fontSize: '0.9rem', 
-                                                color: 'var(--afl-n-700)', 
+                                                color: 'var(--fdl-ink, #132332)', 
                                                 lineHeight: 1.7,
                                                 padding: '2.5rem 1.25rem 1.25rem 1.25rem',
-                                                backgroundColor: cIdx % 2 === 0 ? 'var(--afl-n-50)' : 'var(--afl-n-0)',
-                                                border: '1px solid var(--afl-n-200)',
-                                                borderRadius: '12px',
+                                                backgroundColor: cIdx % 2 === 0 ? 'var(--fdl-canvas, #f3f6f8)' : 'var(--fdl-paper, #ffffff)',
+                                                border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+                                                borderRadius: 'var(--fdl-radius-sm, 2px)',
                                                 position: 'relative'
                                             }}>
-                                                <div style={{ position: 'absolute', top: '10px', left: '10px', backgroundColor: 'var(--afl-gov-navy)', color: 'white', fontSize: '0.65rem', padding: '3px 10px', borderRadius: '6px', fontWeight: 800, textTransform: 'uppercase' }}>
+                                                <div style={{ position: 'absolute', top: '8px', left: '8px', backgroundColor: 'var(--fdl-navy-800, #12375b)', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 800, textTransform: 'uppercase' }}>
                                                     {meta.brand_name}
                                                 </div>
-                                                {content ? <div className="spl-content" dangerouslySetInnerHTML={{ __html: content }} /> : <span style={{ color: 'var(--afl-n-300)', fontStyle: 'italic', fontWeight: 500 }}>Not specified.</span>}
+                                                {content ? <div className="spl-content" dangerouslySetInnerHTML={{ __html: content }} /> : <span style={{ color: 'var(--fdl-muted, #5e6e7c)', fontStyle: 'italic', fontWeight: 500 }}>Not specified.</span>}
                                             </div>
                                         );
                                     })}
@@ -1004,24 +1006,24 @@ function LabelCompContent() {
                                     return (
                                         <div key={cIdx} style={{ 
                                             fontSize: '0.9rem', 
-                                            color: 'var(--afl-n-700)', 
+                                            color: 'var(--fdl-ink, #132332)', 
                                             lineHeight: 1.7,
                                             padding: '2.5rem 1.25rem 1.25rem 1.25rem',
-                                            backgroundColor: cIdx % 2 === 0 ? 'var(--afl-n-50)' : 'var(--afl-n-0)',
-                                            border: '1px solid var(--afl-n-200)',
-                                            borderRadius: '12px',
+                                            backgroundColor: cIdx % 2 === 0 ? 'var(--fdl-canvas, #f3f6f8)' : 'var(--fdl-paper, #ffffff)',
+                                            border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+                                            borderRadius: 'var(--fdl-radius-sm, 2px)',
                                             position: 'relative',
                                             minHeight: '120px'
                                         }}>
                                             <div style={{
                                                 position: 'absolute',
-                                                top: '10px',
-                                                left: '10px',
-                                                backgroundColor: section.is_same ? 'var(--afl-n-500)' : 'var(--afl-gov-navy)',
+                                                top: '8px',
+                                                left: '8px',
+                                                backgroundColor: section.is_same ? 'var(--fdl-muted, #5e6e7c)' : 'var(--fdl-navy-800, #12375b)',
                                                 color: 'white',
                                                 fontSize: '0.65rem',
-                                                padding: '3px 10px',
-                                                borderRadius: '6px',
+                                                padding: '2px 8px',
+                                                borderRadius: 'var(--fdl-radius-sm, 2px)',
                                                 fontWeight: 800,
                                                 textTransform: 'uppercase',
                                                 maxWidth: '90%',
@@ -1036,7 +1038,7 @@ function LabelCompContent() {
                                             {displayContent ? (
                                                 <div className="spl-content" dangerouslySetInnerHTML={{ __html: displayContent }} />
                                             ) : (
-                                                <span style={{ color: 'var(--afl-n-300)', fontStyle: 'italic', fontWeight: 500 }}>Not specified in this labeling.</span>
+                                                <span style={{ color: 'var(--fdl-muted, #5e6e7c)', fontStyle: 'italic', fontWeight: 500 }}>Not specified in this labeling.</span>
                                             )}
                                         </div>
                                     );
@@ -1058,18 +1060,19 @@ function LabelCompContent() {
           }}>
             {/* Left Column: Onboarding / Instructive Guide */}
             <div style={{
-              backgroundColor: 'white',
-              borderRadius: '24px',
+              backgroundColor: 'var(--fdl-paper, #ffffff)',
+              borderRadius: 'var(--fdl-radius-sm, 2px)',
               padding: '2.5rem',
-              border: '1px solid var(--afl-n-200)',
-              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.01)',
+              border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+              borderTop: '3px solid var(--fdl-navy-800, #12375b)',
+              boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between'
             }}>
               <div>
-                <h3 style={{ color: 'var(--afl-n-900)', fontSize: '1.4rem', fontWeight: 900, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'var(--fdl-blue-100)', color: 'var(--fdl-navy-800)' }}>
+                <h3 style={{ color: 'var(--fdl-ink, #132332)', fontSize: '1.4rem', fontWeight: 900, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: 'var(--fdl-radius-sm, 2px)', backgroundColor: 'var(--fdl-blue-050, #edf4fa)', color: 'var(--fdl-navy-800, #12375b)' }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                   </span>
                   How to use LabelComp
@@ -1081,19 +1084,18 @@ function LabelCompContent() {
                     <div style={{
                       minWidth: '36px',
                       height: '36px',
-                      borderRadius: '12px',
-                      background: 'linear-gradient(135deg, var(--fdl-blue-700) 0%, var(--fdl-blue-700) 100%)',
+                      borderRadius: 'var(--fdl-radius-sm, 2px)',
+                      background: 'var(--fdl-navy-800, #12375b)',
                       color: 'white',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontWeight: 800,
-                      fontSize: '0.95rem',
-                      boxShadow: '0 4px 10px rgba(79, 70, 229, 0.2)'
+                      fontSize: '0.95rem'
                     }}>1</div>
                     <div>
-                      <h4 style={{ margin: '0 0 6px 0', fontSize: '1rem', fontWeight: 800, color: 'var(--afl-n-800)' }}>Select or Upload Labels</h4>
-                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--afl-n-500)', lineHeight: 1.6, fontWeight: 500 }}>
+                      <h4 style={{ margin: '0 0 6px 0', fontSize: '1rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)' }}>Select or Upload Labels</h4>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--fdl-muted, #5e6e7c)', lineHeight: 1.6, fontWeight: 500 }}>
                         Pick from your saved tasks / projects in the Workspace card, enter specific FDA SPL Set IDs, or drag and drop local XML labelings.
                       </p>
                     </div>
@@ -1104,19 +1106,18 @@ function LabelCompContent() {
                     <div style={{
                       minWidth: '36px',
                       height: '36px',
-                      borderRadius: '12px',
-                      background: 'linear-gradient(135deg, var(--fdl-blue-700) 0%, var(--fdl-navy-800) 100%)',
+                      borderRadius: 'var(--fdl-radius-sm, 2px)',
+                      background: 'var(--fdl-blue-700, #0759a5)',
                       color: 'white',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontWeight: 800,
-                      fontSize: '0.95rem',
-                      boxShadow: '0 4px 10px rgba(2, 132, 199, 0.2)'
+                      fontSize: '0.95rem'
                     }}>2</div>
                     <div>
-                      <h4 style={{ margin: '0 0 6px 0', fontSize: '1rem', fontWeight: 800, color: 'var(--afl-n-800)' }}>Fill Comparison Slots</h4>
-                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--afl-n-500)', lineHeight: 1.6, fontWeight: 500 }}>
+                      <h4 style={{ margin: '0 0 6px 0', fontSize: '1rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)' }}>Fill Comparison Slots</h4>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--fdl-muted, #5e6e7c)', lineHeight: 1.6, fontWeight: 500 }}>
                         Arrange up to 4 labels in the slots above. A minimum of 2 labels is required to initiate side-by-side disparity mapping.
                       </p>
                     </div>
@@ -1127,19 +1128,18 @@ function LabelCompContent() {
                     <div style={{
                       minWidth: '36px',
                       height: '36px',
-                      borderRadius: '12px',
-                      background: 'linear-gradient(135deg, var(--fdl-green) 0%, var(--fdl-green) 100%)',
+                      borderRadius: 'var(--fdl-radius-sm, 2px)',
+                      background: 'var(--fdl-green, #107e3e)',
                       color: 'white',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontWeight: 800,
-                      fontSize: '0.95rem',
-                      boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)'
+                      fontSize: '0.95rem'
                     }}>3</div>
                     <div>
-                      <h4 style={{ margin: '0 0 6px 0', fontSize: '1rem', fontWeight: 800, color: 'var(--afl-n-800)' }}>Compare & Extract Insights</h4>
-                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--afl-n-500)', lineHeight: 1.6, fontWeight: 500 }}>
+                      <h4 style={{ margin: '0 0 6px 0', fontSize: '1rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)' }}>Compare & Extract Insights</h4>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--fdl-muted, #5e6e7c)', lineHeight: 1.6, fontWeight: 500 }}>
                         Launch the analysis to explore aligned section diffs, filter by severity gaps, run multi-label AI clinical summaries, and export reports.
                       </p>
                     </div>
@@ -1150,17 +1150,17 @@ function LabelCompContent() {
               <div style={{
                 marginTop: '2.5rem',
                 padding: '1.25rem',
-                backgroundColor: 'var(--afl-n-50)',
-                borderRadius: '16px',
-                border: '1px solid var(--afl-n-200)',
+                backgroundColor: 'var(--fdl-blue-050, #edf4fa)',
+                borderRadius: 'var(--fdl-radius-sm, 2px)',
+                border: '1px solid var(--fdl-line, #b8c8d7)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px'
               }}>
-                <div style={{ color: 'var(--fdl-blue-700)' }}>
+                <div style={{ color: 'var(--fdl-blue-700, #0759a5)' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m8 3 4 8 5-5-5 15-2-8-3-3Z"></path></svg>
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--afl-n-600)', lineHeight: 1.5, fontWeight: 600 }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--fdl-ink-soft, #273843)', lineHeight: 1.5, fontWeight: 600 }}>
                   Tip: You can quickly compare different versions of the same drug to identify safety profile updates and black box warning additions over time.
                 </div>
               </div>
@@ -1168,43 +1168,44 @@ function LabelCompContent() {
 
             {/* Right Column: Quick Start Workspace Card */}
             <div style={{
-              backgroundColor: 'white',
-              borderRadius: '24px',
+              backgroundColor: 'var(--fdl-paper, #ffffff)',
+              borderRadius: 'var(--fdl-radius-sm, 2px)',
               padding: '2rem',
-              border: '1px solid var(--afl-n-200)',
-              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.01)',
+              border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+              borderTop: '3px solid var(--fdl-navy-800, #12375b)',
+              boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))',
               display: 'flex',
               flexDirection: 'column'
             }}>
-              <h3 style={{ color: 'var(--afl-n-900)', fontSize: '1.4rem', fontWeight: 900, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'var(--fdl-green-050)', color: 'var(--fdl-green)' }}>
+              <h3 style={{ color: 'var(--fdl-ink, #132332)', fontSize: '1.4rem', fontWeight: 900, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: 'var(--fdl-radius-sm, 2px)', backgroundColor: 'var(--fdl-green-050)', color: 'var(--fdl-green)' }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg>
                 </span>
                 Quick Start Workspace
               </h3>
 
               {/* Workspace Navigation Tabs */}
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', background: 'var(--afl-n-50)', padding: '4px', borderRadius: '12px', border: '1px solid var(--afl-n-100)' }}>
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '1.5rem', background: 'var(--fdl-canvas, #f3f6f8)', padding: '3px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line, #b8c8d7)' }}>
                 <button 
                   type="button"
                   aria-pressed={addTab === 'projects'}
                   onClick={() => setAddTab('projects')}
                   style={{ 
                     flex: 1,
-                    padding: '10px 16px', 
-                    borderRadius: '10px', 
-                    border: 'none', 
-                    backgroundColor: addTab === 'projects' ? 'var(--afl-n-0)' : 'transparent',
-                    color: addTab === 'projects' ? 'var(--afl-n-900)' : 'var(--afl-n-500)',
+                    padding: '8px 14px', 
+                    borderRadius: 'var(--fdl-radius-sm, 2px)', 
+                    border: addTab === 'projects' ? '1px solid var(--fdl-line, #b8c8d7)' : '1px solid transparent', 
+                    backgroundColor: addTab === 'projects' ? 'var(--fdl-paper, #ffffff)' : 'transparent',
+                    color: addTab === 'projects' ? 'var(--fdl-ink, #132332)' : 'var(--fdl-muted, #5e6e7c)',
                     fontWeight: 700,
                     fontSize: '0.85rem',
                     cursor: 'pointer',
-                    boxShadow: addTab === 'projects' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+                    boxShadow: 'none',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '8px',
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.15s ease'
                   }}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1218,20 +1219,20 @@ function LabelCompContent() {
                   onClick={() => setAddTab('setid')}
                   style={{ 
                     flex: 1,
-                    padding: '10px 16px', 
-                    borderRadius: '10px', 
-                    border: 'none', 
-                    backgroundColor: addTab === 'setid' ? 'var(--afl-n-0)' : 'transparent',
-                    color: addTab === 'setid' ? 'var(--afl-n-900)' : 'var(--afl-n-500)',
+                    padding: '8px 14px', 
+                    borderRadius: 'var(--fdl-radius-sm, 2px)', 
+                    border: addTab === 'setid' ? '1px solid var(--fdl-line, #b8c8d7)' : '1px solid transparent', 
+                    backgroundColor: addTab === 'setid' ? 'var(--fdl-paper, #ffffff)' : 'transparent',
+                    color: addTab === 'setid' ? 'var(--fdl-ink, #132332)' : 'var(--fdl-muted, #5e6e7c)',
                     fontWeight: 700,
                     fontSize: '0.85rem',
                     cursor: 'pointer',
-                    boxShadow: addTab === 'setid' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+                    boxShadow: 'none',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '8px',
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.15s ease'
                   }}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1247,15 +1248,15 @@ function LabelCompContent() {
               {addTab === 'projects' ? (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '320px' }}>
                   {!session?.is_authenticated ? (
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: 'var(--afl-n-500)', padding: '2rem', background: 'var(--afl-n-50)', borderRadius: '16px', border: '1px dashed var(--afl-n-200)' }}>
-                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--afl-n-400)', marginBottom: '1rem' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: 'var(--fdl-muted, #5e6e7c)', padding: '2rem', background: 'var(--fdl-canvas, #f3f6f8)', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px dashed var(--fdl-line, #b8c8d7)' }}>
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--fdl-muted, #5e6e7c)', marginBottom: '1rem' }}>
                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                         <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                       </svg>
-                      <p style={{ margin: '0 0 1.25rem 0', fontWeight: 600, fontSize: '0.9rem' }}>Sign in to access your dashboard tasks and saved labelings.</p>
+                      <p style={{ margin: '0 0 1.25rem 0', fontWeight: 600, fontSize: '0.9rem', color: 'var(--fdl-ink-soft, #273843)' }}>Sign in to access your dashboard tasks and saved labelings.</p>
                       <button 
                         onClick={() => openAuthModal('login')}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 24px', background: 'var(--afl-gov-navy)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700 }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '9px 20px', background: 'var(--fdl-navy-800, #12375b)', color: 'white', border: 'none', borderRadius: 'var(--fdl-radius-sm, 2px)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700 }}
                       >
                         Sign In Now
                       </button>
@@ -1263,21 +1264,21 @@ function LabelCompContent() {
                   ) : selectedProject ? (
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <button onClick={() => setSelectedProject(null)} style={{ background: 'none', border: 'none', color: 'var(--fdl-blue-700)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}>
+                        <button onClick={() => setSelectedProject(null)} style={{ background: 'none', border: 'none', color: 'var(--fdl-blue-700, #0759a5)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                           Back to Projects
                         </button>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--afl-n-500)', backgroundColor: 'var(--afl-n-100)', padding: '3px 8px', borderRadius: '6px' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-muted, #5e6e7c)', backgroundColor: 'var(--fdl-canvas, #f3f6f8)', border: '1px solid var(--fdl-line, #b8c8d7)', padding: '2px 8px', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
                           {selectedProject.title}
                         </span>
                       </div>
                       
                       {loadingLabels ? (
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--afl-n-500)', fontSize: '0.85rem' }}>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fdl-muted, #5e6e7c)', fontSize: '0.85rem' }}>
                           Loading labelings...
                         </div>
                       ) : projectLabels.length === 0 ? (
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--afl-n-400)', fontSize: '0.85rem', fontStyle: 'italic', padding: '2rem', textAlign: 'center' }}>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fdl-muted, #5e6e7c)', fontSize: '0.85rem', fontStyle: 'italic', padding: '2rem', textAlign: 'center' }}>
                           No labelings saved in this task.
                         </div>
                       ) : (
@@ -1290,32 +1291,32 @@ function LabelCompContent() {
                                 onClick={() => toggleSlotSelection(label)}
                                 style={{ 
                                   padding: '10px 12px', 
-                                  borderRadius: '10px',
+                                  borderRadius: 'var(--fdl-radius-sm, 2px)',
                                   border: '1px solid',
-                                  borderColor: isSelected ? 'var(--fdl-blue-700)' : 'var(--afl-n-100)',
+                                  borderColor: isSelected ? 'var(--fdl-blue-700, #0759a5)' : 'var(--fdl-line, #b8c8d7)',
                                   display: 'flex', 
                                   justifyContent: 'space-between', 
                                   alignItems: 'center',
                                   cursor: 'pointer',
-                                  backgroundColor: isSelected ? 'var(--fdl-blue-050)' : 'var(--afl-n-50)',
-                                  transition: 'all 0.2s ease'
+                                  backgroundColor: isSelected ? 'var(--fdl-blue-050, #edf4fa)' : 'var(--fdl-paper, #ffffff)',
+                                  transition: 'all 0.15s ease'
                                 }}
-                                onMouseOver={e => !isSelected && (e.currentTarget.style.borderColor = 'var(--afl-n-300)')}
-                                onMouseOut={e => !isSelected && (e.currentTarget.style.borderColor = 'var(--afl-n-100)')}
+                                onMouseOver={e => !isSelected && (e.currentTarget.style.borderColor = 'var(--fdl-navy-800, #12375b)')}
+                                onMouseOut={e => !isSelected && (e.currentTarget.style.borderColor = 'var(--fdl-line, #b8c8d7)')}
                               >
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: isSelected ? 'var(--fdl-navy-800)' : 'var(--afl-n-800)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label.brand_name}</div>
-                                  <div style={{ fontSize: '0.75rem', color: 'var(--afl-n-500)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label.manufacturer_name || 'N/A'}</div>
+                                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: isSelected ? 'var(--fdl-navy-800, #12375b)' : 'var(--fdl-ink, #132332)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label.brand_name}</div>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--fdl-muted, #5e6e7c)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label.manufacturer_name || 'N/A'}</div>
                                 </div>
                                 <button 
                                   style={{
                                     border: 'none',
-                                    backgroundColor: isSelected ? 'var(--fdl-red)' : 'var(--fdl-green)',
+                                    backgroundColor: isSelected ? 'var(--fdl-red, #d9381e)' : 'var(--fdl-green, #107e3e)',
                                     color: 'white',
                                     fontSize: '0.7rem',
                                     fontWeight: 800,
                                     padding: '4px 10px',
-                                    borderRadius: '6px',
+                                    borderRadius: 'var(--fdl-radius-sm, 2px)',
                                     cursor: 'pointer',
                                     marginLeft: '8px',
                                     whiteSpace: 'nowrap'
@@ -1332,11 +1333,11 @@ function LabelCompContent() {
                   ) : (
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                       {loadingProjects ? (
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--afl-n-500)', fontSize: '0.85rem' }}>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fdl-muted, #5e6e7c)', fontSize: '0.85rem' }}>
                           Loading projects...
                         </div>
                       ) : projects.length === 0 ? (
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--afl-n-400)', fontSize: '0.85rem', fontStyle: 'italic', padding: '2rem', textAlign: 'center' }}>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fdl-muted, #5e6e7c)', fontSize: '0.85rem', fontStyle: 'italic', padding: '2rem', textAlign: 'center' }}>
                           No active projects found.
                         </div>
                       ) : (
@@ -1347,35 +1348,33 @@ function LabelCompContent() {
                               onClick={() => fetchProjectLabels(p)}
                               style={{
                                 padding: '12px 14px',
-                                borderRadius: '10px',
-                                border: '1px solid var(--afl-n-100)',
-                                backgroundColor: 'var(--afl-n-50)',
+                                borderRadius: 'var(--fdl-radius-sm, 2px)',
+                                border: '1px solid var(--fdl-line, #b8c8d7)',
+                                backgroundColor: 'var(--fdl-canvas, #f3f6f8)',
                                 cursor: 'pointer',
-                                transition: 'all 0.2s ease',
+                                transition: 'all 0.15s ease',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between'
                               }}
                               onMouseOver={e => {
-                                e.currentTarget.style.borderColor = 'var(--afl-n-300)';
-                                e.currentTarget.style.transform = 'translateY(-1px)';
+                                e.currentTarget.style.borderColor = 'var(--fdl-blue-700, #0759a5)';
                               }}
                               onMouseOut={e => {
-                                e.currentTarget.style.borderColor = 'var(--afl-n-100)';
-                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.borderColor = 'var(--fdl-line, #b8c8d7)';
                               }}
                             >
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                                <span style={{ color: p.title === 'Favorite' ? 'var(--fdl-amber)' : 'var(--fdl-blue-700)', display: 'flex' }}>
+                                <span style={{ color: p.title === 'Favorite' ? 'var(--fdl-amber, #d9822b)' : 'var(--fdl-blue-700, #0759a5)', display: 'flex' }}>
                                   {p.title === 'Favorite' ? (
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                                   ) : (
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                                   )}
                                 </span>
-                                <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--afl-n-800)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</span>
+                                <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink, #132332)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</span>
                               </div>
-                              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--afl-n-500)', backgroundColor: 'var(--afl-n-100)', padding: '2px 6px', borderRadius: '4px' }}>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--fdl-muted, #5e6e7c)', backgroundColor: 'var(--fdl-paper, #ffffff)', border: '1px solid var(--fdl-line-soft, #d7e0e7)', padding: '2px 6px', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
                                 {p.count} labels
                               </span>
                             </div>
@@ -1388,9 +1387,9 @@ function LabelCompContent() {
               ) : (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem', minHeight: '320px' }}>
                   {/* Set ID entry */}
-                  <div style={{ backgroundColor: 'var(--afl-n-50)', padding: '1.25rem', borderRadius: '16px', border: '1px solid var(--afl-n-200)' }}>
-                    <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', fontWeight: 800, color: 'var(--afl-n-600)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Import by SPL Set ID</h4>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--afl-n-500)', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+                  <div style={{ backgroundColor: 'var(--fdl-canvas, #f3f6f8)', padding: '1.25rem', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line, #b8c8d7)' }}>
+                    <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', fontWeight: 800, color: 'var(--fdl-ink-soft, #273843)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Import by SPL Set ID</h4>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--fdl-muted, #5e6e7c)', marginBottom: '1.25rem', lineHeight: 1.5 }}>
                       Enter the unique SPL SET-ID (UUID) to import and add a custom drug labeling to your comparison list.
                     </p>
                     <div style={{ display: 'flex', gap: '8px' }}>
@@ -1402,11 +1401,13 @@ function LabelCompContent() {
                         style={{ 
                           flex: 1,
                           padding: '10px 12px', 
-                          borderRadius: '8px', 
-                          border: '1px solid var(--afl-n-300)', 
+                          borderRadius: 'var(--fdl-radius-sm, 2px)', 
+                          border: '1px solid var(--fdl-line, #b8c8d7)', 
                           fontSize: '0.85rem',
                           outline: 'none',
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                          backgroundColor: 'var(--fdl-paper, #ffffff)',
+                          color: 'var(--fdl-ink, #132332)',
+                          boxShadow: 'none'
                         }}
                       />
                       <button
@@ -1418,11 +1419,11 @@ function LabelCompContent() {
                           }
                         }}
                         style={{ 
-                          backgroundColor: 'var(--afl-gov-navy)', 
+                          backgroundColor: 'var(--fdl-navy-800, #12375b)', 
                           color: 'white', 
                           border: 'none', 
                           padding: '0 16px', 
-                          borderRadius: '8px', 
+                          borderRadius: 'var(--fdl-radius-sm, 2px)', 
                           fontWeight: 700, 
                           cursor: 'pointer',
                           fontSize: '0.8rem',
@@ -1488,7 +1489,7 @@ function LabelCompContent() {
                           <p style={{ margin: '0 0 1rem 0', fontWeight: 600 }}>Sign in to access your projects</p>
                             <button className="lc-add-modal__primary-action"
                             onClick={() => openAuthModal('login')}
-                            style={{ display: 'inline-block', padding: '10px 24px', background: 'var(--afl-gov-navy)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700 }}
+                            style={{ display: 'inline-block', padding: '10px 24px', background: 'var(--fdl-navy-800, #12375b)', color: 'white', border: 'none', borderRadius: 'var(--fdl-radius-sm, 2px)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700 }}
                           >
                             Sign In Now
                           </button>
@@ -1508,11 +1509,11 @@ function LabelCompContent() {
                                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                                     )}
                                   </span>
-                                  <h4 style={{ margin: 0, fontWeight: 800, color: 'var(--afl-n-900)' }}>{selectedProject.title}</h4>
+                                  <h4 style={{ margin: 0, fontWeight: 800, color: 'var(--fdl-ink, #132332)' }}>{selectedProject.title}</h4>
                                 </div>
                             </div>
                             {loadingLabels ? (
-                                <p style={{ textAlign: 'center', padding: '3rem', color: 'var(--afl-n-500)' }}>Loading labels...</p>
+                                <p style={{ textAlign: 'center', padding: '3rem', color: 'var(--fdl-muted, #5e6e7c)' }}>Loading labels...</p>
                             ) : (
                                     <div style={{ maxHeight: '380px', overflowY: 'auto' }} className="custom-scrollbar lc-add-modal__label-list">
                                     {projectLabels
@@ -1544,7 +1545,7 @@ function LabelCompContent() {
                         </div>
                     ) : (
                         <div style={{ maxHeight: '400px', overflowY: 'auto' }} className="custom-scrollbar lc-add-modal__project-list">
-                            {loadingProjects ? <p style={{ textAlign: 'center', padding: '3rem', color: 'var(--afl-n-500)' }}>Loading projects...</p> : projects.map(p => (
+                            {loadingProjects ? <p style={{ textAlign: 'center', padding: '3rem', color: 'var(--fdl-muted, #5e6e7c)' }}>Loading projects...</p> : projects.map(p => (
                                 <button type="button"
                                   key={p.id}
                                   onClick={() => fetchProjectLabels(p)}
@@ -1608,7 +1609,7 @@ function LabelCompContent() {
         compact
       >
         <div style={{ marginTop: '1rem' }}>
-          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: 'var(--afl-n-600)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Comparison Title</label>
+          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: 'var(--fdl-ink-soft, #273843)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Comparison Title</label>
           <input 
             type="text" 
             value={comparisonTitle}
@@ -1616,28 +1617,31 @@ function LabelCompContent() {
             placeholder="Enter a title for this comparison"
             style={{ 
               width: '100%', 
-              padding: '12px', 
-              borderRadius: '10px', 
-              border: '1px solid var(--afl-n-200)', 
+              padding: '10px 12px', 
+              borderRadius: 'var(--fdl-radius-sm, 2px)', 
+              border: '1px solid var(--fdl-line, #b8c8d7)', 
               marginBottom: '1.5rem',
               fontSize: '0.9rem',
-              outline: 'none'
+              outline: 'none',
+              backgroundColor: 'var(--fdl-paper, #ffffff)',
+              color: 'var(--fdl-ink, #132332)'
             }}
           />
 
-          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: 'var(--afl-n-600)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Designated Project</label>
+          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: 'var(--fdl-ink-soft, #273843)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Designated Project</label>
           <select 
             value={targetProjectId || ''}
             onChange={(e) => setTargetProjectId(Number(e.target.value))}
             style={{ 
               width: '100%', 
-              padding: '12px', 
-              borderRadius: '10px', 
-              border: '1px solid var(--afl-n-200)', 
+              padding: '10px 12px', 
+              borderRadius: 'var(--fdl-radius-sm, 2px)', 
+              border: '1px solid var(--fdl-line, #b8c8d7)', 
               marginBottom: '2rem',
               fontSize: '0.9rem',
               outline: 'none',
-              backgroundColor: 'var(--afl-n-50)'
+              backgroundColor: 'var(--fdl-paper, #ffffff)',
+              color: 'var(--fdl-ink, #132332)'
             }}
           >
             <option value="" disabled>Select a project</option>
@@ -1649,7 +1653,7 @@ function LabelCompContent() {
           <div style={{ display: 'flex', gap: '12px' }}>
             <button 
               onClick={() => setShowFavoriteModal(false)} 
-              style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid var(--afl-n-200)', background: 'white', fontWeight: 600, cursor: 'pointer' }}
+              style={{ flex: 1, padding: '10px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line, #b8c8d7)', background: 'var(--fdl-paper, #ffffff)', color: 'var(--fdl-ink-soft, #273843)', fontWeight: 600, cursor: 'pointer' }}
             >
               Cancel
             </button>
@@ -1658,10 +1662,10 @@ function LabelCompContent() {
               disabled={savingFavorite || !targetProjectId || !comparisonTitle.trim()}
               style={{ 
                 flex: 1, 
-                padding: '12px', 
-                borderRadius: '8px', 
+                padding: '10px', 
+                borderRadius: 'var(--fdl-radius-sm, 2px)', 
                 border: 'none', 
-                background: 'var(--fdl-blue-700)',
+                background: 'var(--fdl-navy-800, #12375b)',
                 color: 'white', 
                 fontWeight: 700, 
                 cursor: (savingFavorite || !targetProjectId || !comparisonTitle.trim()) ? 'not-allowed' : 'pointer',
@@ -1676,18 +1680,18 @@ function LabelCompContent() {
 
       {/* Confirmation Dialog */}
       {showConfirmDialog && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000 }}>
-            <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '2rem', maxWidth: '400px', textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-                <div style={{ color: 'var(--fdl-blue-700)', marginBottom: '1.5rem', opacity: 0.8 }}>
-                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><path d="M11 8a2 2 0 0 0-2 2"></path></svg>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(7, 31, 61, 0.58)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000 }}>
+            <div style={{ backgroundColor: 'var(--fdl-paper, #ffffff)', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line, #b8c8d7)', borderTop: '3px solid var(--fdl-navy-800, #12375b)', padding: '2rem', maxWidth: '400px', textAlign: 'center', boxShadow: 'var(--fdl-elevation-3, 0 12px 32px rgba(7, 31, 61, 0.18))' }}>
+                <div style={{ color: 'var(--fdl-blue-700, #0759a5)', marginBottom: '1.5rem', opacity: 0.9 }}>
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><path d="M11 8a2 2 0 0 0-2 2"></path></svg>
                 </div>
-                <h3 style={{ margin: '0 0 1rem 0', color: 'var(--afl-gov-navy)' }}>Complex Comparison</h3>
-                <p style={{ color: 'var(--afl-n-500)', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+                <h3 style={{ margin: '0 0 1rem 0', color: 'var(--fdl-navy-950, #071f3d)' }}>Complex Comparison</h3>
+                <p style={{ color: 'var(--fdl-muted, #5e6e7c)', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '2rem' }}>
                     You have selected <strong>{selectedLabelsForAdd.length} labels</strong>. Comparing many documents simultaneously may take longer to process. Proceed with analysis?
                 </p>
                 <div style={{ display: 'flex', gap: '12px' }}>
-                    <button onClick={() => setShowConfirmDialog(false)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid var(--afl-n-200)', background: 'white', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-                    <button onClick={confirmBulkAdd} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', background: 'var(--afl-gov-navy)', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Proceed</button>
+                    <button onClick={() => setShowConfirmDialog(false)} style={{ flex: 1, padding: '10px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line, #b8c8d7)', background: 'var(--fdl-paper, #ffffff)', color: 'var(--fdl-ink-soft, #273843)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                    <button onClick={confirmBulkAdd} style={{ flex: 1, padding: '10px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: 'none', background: 'var(--fdl-navy-800, #12375b)', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Proceed</button>
                 </div>
             </div>
         </div>
@@ -1701,21 +1705,21 @@ function LabelCompContent() {
         .badge-tooltip {
           visibility: hidden;
           width: 220px;
-          background-color: var(--afl-n-800);
-          color: var(--afl-n-0);
+          background-color: var(--fdl-navy-950, #071f3d);
+          color: #ffffff;
           text-align: center;
-          border-radius: 8px;
-          padding: 10px 14px;
+          border-radius: var(--fdl-radius-sm, 2px);
+          padding: 8px 12px;
           position: absolute;
           z-index: 100;
           bottom: 125%;
           left: 50%;
           transform: translateX(-50%) translateY(5px);
           opacity: 0;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
           font-size: 0.8rem;
           line-height: 1.4;
-          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+          box-shadow: var(--fdl-elevation-2, 0 4px 12px rgba(7, 31, 61, 0.12));
           pointer-events: none;
         }
         .badge-tooltip::after {
@@ -1726,7 +1730,7 @@ function LabelCompContent() {
           margin-left: -6px;
           border-width: 6px;
           border-style: solid;
-          border-color: var(--afl-n-800) transparent transparent transparent;
+          border-color: var(--fdl-navy-950, #071f3d) transparent transparent transparent;
         }
         .badge-container:hover .badge-tooltip {
           visibility: visible;
@@ -1738,27 +1742,27 @@ function LabelCompContent() {
           width: 6px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: var(--afl-n-50);
-          border-radius: 10px;
+          background: var(--fdl-canvas, #f3f6f8);
+          border-radius: 0;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: var(--afl-n-300);
-          border-radius: 10px;
+          background: var(--fdl-line, #b8c8d7);
+          border-radius: 0;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: var(--afl-n-400);
+          background: var(--fdl-muted, #5e6e7c);
         }
 
-        .ai-summary-content h3 { color: var(--afl-gov-navy); margin-top: 0; font-size: 1.25rem; }
-        .ai-summary-content h4 { color: var(--afl-gov-blue); margin: 1.5rem 0 0.5rem 0; font-size: 1rem; font-weight: 700; }
+        .ai-summary-content h3 { color: var(--fdl-navy-950, #071f3d); margin-top: 0; font-size: 1.25rem; }
+        .ai-summary-content h4 { color: var(--fdl-blue-700, #0759a5); margin: 1.5rem 0 0.5rem 0; font-size: 1rem; font-weight: 700; }
         .ai-summary-content ul { padding-left: 1.5rem; margin-bottom: 1rem; }
         .ai-summary-content li { margin-bottom: 0.5rem; }
         .summary-section { margin-bottom: 1.5rem; }
 
         .diff-table-wrapper { width: 100%; overflow-x: auto; }
         .diff { width: 100%; border-collapse: collapse; font-family: 'Inter', sans-serif; font-size: 0.85rem; }
-        .diff td, .diff th { padding: 8px; border: 1px solid var(--afl-n-200); vertical-align: top; }
-        .diff_header { background-color: var(--afl-n-100); color: var(--afl-n-500); font-weight: 700; text-align: center; }
+        .diff td, .diff th { padding: 8px; border: 1px solid var(--fdl-line-soft, #d7e0e7); vertical-align: top; }
+        .diff_header { background-color: var(--fdl-canvas, #f3f6f8); color: var(--fdl-muted, #5e6e7c); font-weight: 700; text-align: center; }
         .diff_next { display: none; }
       `}</style>
     </div>

@@ -52,7 +52,7 @@
   font-family: inherit;
   background: var(--gray-alpha-100);
   padding: 2px 4px;
-  border-radius: 4px;
+  border-radius: var(--fdl-radius-sm, 2px);
   font-weight: 600;
 }
 
@@ -63,7 +63,7 @@
 
 .ctas a {
   appearance: none;
-  border-radius: 128px;
+  border-radius: var(--fdl-radius-sm, 2px);
   height: 48px;
   padding: 0 20px;
   border: none;

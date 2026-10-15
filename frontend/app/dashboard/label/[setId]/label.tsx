@@ -60,10 +60,10 @@ const HighlightsComponent = memo(function HighlightsComponent({
             Highlights of Prescribing Information
         </h2>
         {highlights.map((h, i) => (
-            <div key={i} className="highlight-item" style={{ marginBottom: '18px', paddingBottom: '18px', borderBottom: '1px solid var(--afl-n-200)' }}>
+            <div key={i} className="highlight-item" style={{ marginBottom: '18px', paddingBottom: '18px', borderBottom: '1px solid var(--fdl-line)' }}>
                 <div className="highlight-item-header">
                     {h.source_section_title !== 'Untitled Section' && (
-                        <span className="source-title" style={{ fontWeight: 700, color: 'var(--afl-n-700)', textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                        <span className="source-title" style={{ fontWeight: 700, color: 'var(--fdl-ink-soft)', textTransform: 'uppercase', fontSize: '0.75rem' }}>
                             {h.source_section_title}
                         </span>
                     )}
@@ -77,7 +77,7 @@ const HighlightsComponent = memo(function HighlightsComponent({
                         </button>
                     )}
                 </div>
-                <div className="highlight-body spl-content" style={{ color: 'var(--afl-n-800)', lineHeight: '1.7', fontSize: '0.9rem' }} dangerouslySetInnerHTML={{ __html: h.content_html }} />
+                <div className="highlight-body spl-content" style={{ color: 'var(--fdl-ink)', lineHeight: '1.7', fontSize: '0.9rem' }} dangerouslySetInnerHTML={{ __html: h.content_html }} />
             </div>
         ))}
     </div>
@@ -456,14 +456,14 @@ export default function LabelView({
                   ))}
                 </ol>
               ) : (
-                <p style={{ fontSize: '0.8rem', color: 'var(--afl-n-400)' }}>No TOC available.</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--fdl-muted)' }}>No TOC available.</p>
               )
             ) : (
               /* SoC Navigation View */
               <div>
                 {activeSoc && socCatalog[activeSoc] ? (
                   <div>
-                    <div style={{ marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px solid var(--afl-n-100)' }}>
+                    <div style={{ marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px solid var(--fdl-line-soft)' }}>
                       <button
                         onClick={() => {
                           if (labelViewRef.current) clearSocHighlight(labelViewRef.current);
@@ -473,7 +473,7 @@ export default function LabelView({
                         style={{
                           background: 'none',
                           border: 'none',
-                          color: 'var(--afl-primary-600)',
+                          color: 'var(--fdl-blue-600)',
                           cursor: 'pointer',
                           fontSize: '0.75rem',
                           fontWeight: 600,
@@ -488,10 +488,10 @@ export default function LabelView({
                       </button>
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
                         <div>
-                          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--afl-n-900)', lineHeight: '1.3' }}>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--fdl-navy-950)', lineHeight: '1.3' }}>
                             {activeSoc}
                           </div>
-                          <div style={{ fontSize: '0.72rem', color: 'var(--afl-n-500)', marginTop: '2px' }}>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--fdl-muted)', marginTop: '2px' }}>
                             {socCatalog[activeSoc].totalOccurrences} occurrences &middot; {socCatalog[activeSoc].terms.length} terms
                           </div>
                         </div>
@@ -506,7 +506,7 @@ export default function LabelView({
                             background: '#fef08a',
                             border: '1px solid #fde047',
                             color: '#854d0e',
-                            borderRadius: '4px',
+                            borderRadius: '2px',
                             padding: '2px 6px',
                             fontSize: '0.7rem',
                             fontWeight: 700,
@@ -545,8 +545,8 @@ export default function LabelView({
                               fontWeight: 700, 
                               padding: '1px 5px', 
                               borderRadius: 'var(--fdl-radius-sm, 2px)', 
-                              background: isFocused ? '#fde047' : 'var(--fdl-canvas, var(--afl-n-200))',
-                              color: isFocused ? '#854d0e' : 'var(--fdl-text, var(--afl-n-700))',
+                              background: isFocused ? '#fde047' : 'var(--fdl-canvas, var(--fdl-line))',
+                              color: isFocused ? '#854d0e' : 'var(--fdl-text, var(--fdl-ink-soft))',
                               flexShrink: 0
                             }}>
                               {isFocused ? `${activeTermOccurIndex + 1}/${termItem.count}` : `${termItem.count}x`}
@@ -560,10 +560,10 @@ export default function LabelView({
                   /* No SoC active: display list of all available SOCs */
                   <div>
                     <div style={{ marginBottom: '10px' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--afl-n-500)', letterSpacing: '0.05em' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--fdl-muted)', letterSpacing: '0.05em' }}>
                         System Organ Classes
                       </div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--afl-n-500)', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--fdl-muted)', marginTop: '2px' }}>
                         Select an organ class to highlight its terms in the label:
                       </div>
                     </div>
@@ -592,8 +592,8 @@ export default function LabelView({
                               fontWeight: 700,
                               padding: '1px 5px',
                               borderRadius: 'var(--fdl-radius-sm, 2px)',
-                              background: 'var(--fdl-canvas, var(--afl-n-200))',
-                              color: 'var(--fdl-text, var(--afl-n-700))',
+                              background: 'var(--fdl-canvas, var(--fdl-line))',
+                              color: 'var(--fdl-text, var(--fdl-ink-soft))',
                               flexShrink: 0
                             }}>
                               {group.totalOccurrences}
@@ -602,10 +602,10 @@ export default function LabelView({
                         ))}
                       </div>
                     ) : (
-                      <div style={{ padding: '24px 10px', textAlign: 'center', color: 'var(--afl-n-400)', fontSize: '0.8rem' }}>
+                      <div style={{ padding: '24px 10px', textAlign: 'center', color: 'var(--fdl-muted)', fontSize: '0.8rem' }}>
                         <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>📋</div>
                         <div style={{ fontWeight: 600 }}>No Adverse Event scan found</div>
-                        <div style={{ fontSize: '0.72rem', marginTop: '4px', color: 'var(--afl-n-400)' }}>
+                        <div style={{ fontSize: '0.72rem', marginTop: '4px', color: 'var(--fdl-muted)' }}>
                           Run PV-Profile in Toolbox to scan and index MedDRA terms for this label.
                         </div>
                       </div>
@@ -725,7 +725,7 @@ export default function LabelView({
                                     padding: '4px 10px',
                                     fontSize: '0.8rem',
                                     fontWeight: 900,
-                                    borderRadius: '4px',
+                                    borderRadius: '2px',
                                     textTransform: 'uppercase',
                                     transform: 'rotate(8deg)',
                                     userSelect: 'none',
@@ -746,7 +746,7 @@ export default function LabelView({
                                     padding: '4px 10px',
                                     fontSize: '0.8rem',
                                     fontWeight: 900,
-                                    borderRadius: '4px',
+                                    borderRadius: '2px',
                                     textTransform: 'uppercase',
                                     transform: 'rotate(8deg)',
                                     userSelect: 'none',
@@ -778,11 +778,11 @@ export default function LabelView({
         <style jsx>{`
             .toc-side-panel-inline { transition: width 0.3s ease; }
             .toc-side-panel-inline.collapsed { width: 0 !important; margin-right: -20px; border: none; }
-            .toc-close-btn:hover { background-color: var(--afl-n-100) !important; color: var(--afl-n-600) !important; border-color: var(--afl-n-300) !important; }
+            .toc-close-btn:hover { background-color: var(--fdl-line-soft) !important; color: var(--fdl-ink-soft) !important; border-color: var(--fdl-line) !important; }
             .label-viewport::-webkit-scrollbar { width: 8px; }
             .label-viewport::-webkit-scrollbar-track { background: transparent; }
-            .label-viewport::-webkit-scrollbar-thumb { background: var(--afl-n-300); border-radius: 4px; }
-            .label-viewport::-webkit-scrollbar-thumb:hover { background: var(--afl-n-400); }
+            .label-viewport::-webkit-scrollbar-thumb { background: var(--fdl-line); border-radius: 4px; }
+            .label-viewport::-webkit-scrollbar-thumb:hover { background: var(--fdl-muted); }
             .page-inner-content :global(table) { width: 100% !important; font-size: 0.8rem !important; }
             .page-inner-content :global(img) { max-height: 300px; width: auto; object-fit: contain; }
         `}</style>

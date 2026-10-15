@@ -199,10 +199,10 @@ export default function DeepDiveView({
 
   const getLevelStyles = (code: string) => {
     switch (code) {
-      case 'B': return { bg: 'var(--afl-danger-100)', text: 'var(--afl-danger-700)', border: 'var(--afl-danger-500)', label: 'Boxed', shadow: '0 0 8px rgba(239,68,68,0.2)' };
-      case 'W': return { bg: 'var(--afl-warn-100)', text: 'var(--afl-warn-700)', border: 'var(--afl-warn-500)', label: 'Warning', shadow: 'none' };
-      case 'A': return { bg: 'var(--afl-warn-50)', text: 'var(--afl-warn-700)', border: 'var(--afl-warn-500)', label: 'Adverse', shadow: 'none' };
-      default:  return { bg: 'var(--afl-n-50)', text: 'var(--afl-n-400)', border: 'var(--afl-n-200)', label: 'None', shadow: 'none' };
+      case 'B': return { bg: 'var(--fdl-red-050)', text: 'var(--fdl-red)', border: 'var(--fdl-red)', label: 'Boxed', shadow: '0 0 8px rgba(239,68,68,0.2)' };
+      case 'W': return { bg: 'var(--fdl-amber-050)', text: 'var(--fdl-amber)', border: 'var(--fdl-amber)', label: 'Warning', shadow: 'none' };
+      case 'A': return { bg: 'var(--fdl-amber-050)', text: 'var(--fdl-amber)', border: 'var(--fdl-amber)', label: 'Adverse', shadow: 'none' };
+      default:  return { bg: 'var(--fdl-canvas)', text: 'var(--fdl-muted)', border: 'var(--fdl-line)', label: 'None', shadow: 'none' };
     }
   };
 
@@ -220,14 +220,14 @@ export default function DeepDiveView({
       
       {/* 1. SELECTION AREA */}
       <div className="selection-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 900, color: 'var(--afl-n-900)', letterSpacing: '-0.02em' }}>Regulatory Intelligence</h3>
-            <p style={{ margin: '6px 0 0 0', fontSize: '0.9rem', color: 'var(--afl-n-500)', fontWeight: 500 }}>Select a clinical cohort to perform a comparative gap analysis.</p>
+            <h3 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)', letterSpacing: '-0.02em' }}>Regulatory Intelligence</h3>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.875rem', color: 'var(--fdl-muted, #5e6e7c)', fontWeight: 500 }}>Select a clinical cohort to perform a comparative gap analysis.</p>
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '32px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '24px' }}>
           <div className="cohort-column">
             <div className="cohort-header">Generic Peer Groups</div>
             <div className="cohort-body">
@@ -276,25 +276,26 @@ export default function DeepDiveView({
           {/* DEV LOG: Cache Statistics */}
           <div style={{
             backgroundColor: 'transparent',
-            color: 'var(--afl-n-500)',
+            color: 'var(--fdl-muted, #5e6e7c)',
             padding: '8px 0',
             fontSize: '0.85rem',
             marginBottom: '16px',
-            borderBottom: '1px dashed var(--afl-n-200)',
+            borderBottom: '1px dashed var(--fdl-line-soft, #d7e0e7)',
             display: 'flex',
             gap: '20px',
             alignItems: 'center',
             fontWeight: 500
           }}>
-            <span style={{ fontWeight: 800, color: 'var(--afl-n-400)', fontSize: '0.75rem', letterSpacing: '0.05em' }}>[DEV_LOG]</span>
+            <span style={{ fontWeight: 800, color: 'var(--fdl-muted, #5e6e7c)', fontSize: '0.75rem', letterSpacing: '0.05em' }}>[DEV_LOG]</span>
             {results._stats ? (
               <>
-                <span style={{ color: 'var(--afl-n-600)' }}>Optimization Active:</span>
-                <span>Cache Hits: <strong style={{ color: 'var(--afl-n-900)' }}>{results._stats.cache_hits}</strong></span>
-                <span>New Scans: <strong style={{ color: 'var(--afl-n-900)' }}>{results._stats.cache_misses}</strong></span>
+                <span style={{ color: 'var(--fdl-ink-soft, #273843)' }}>Optimization Active:</span>
+                <span>Cache Hits: <strong style={{ color: 'var(--fdl-navy-950, #071f3d)' }}>{results._stats.cache_hits}</strong></span>
+                <span>New Scans: <strong style={{ color: 'var(--fdl-navy-950, #071f3d)' }}>{results._stats.cache_misses}</strong></span>
                 <span style={{ 
-                  backgroundColor: 'var(--afl-success-50)', 
-                  color: 'var(--afl-success-500)', 
+                  backgroundColor: '#f0fdf4', 
+                  color: '#166534', 
+                  border: '1px solid #bbf7d0',
                   padding: '2px 8px', 
                   borderRadius: 'var(--fdl-radius-sm, 2px)',
                   fontSize: '0.75rem',
@@ -310,9 +311,9 @@ export default function DeepDiveView({
 
           <div style={{ marginBottom: '40px' }}>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <h2 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 900, color: 'var(--afl-n-900)', letterSpacing: '-0.03em' }}>Signal Anomalies</h2>
+                <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)', letterSpacing: '-0.02em' }}>Signal Anomalies</h2>
                 <div className="peer-summary-badge">Analyzed {results.peer_count} Peers</div>
               </div>
               <button onClick={generateMemo} disabled={selectedSignals.size === 0} className="memo-action-btn">
@@ -518,94 +519,94 @@ export default function DeepDiveView({
       )}
 
       <style jsx>{`
-        .selection-card { background: white; border-radius: var(--fdl-radius-sm, 2px); padding: 24px; border: 1px solid var(--fdl-line, var(--afl-n-200)); margin-bottom: 24px; }
-        .source-toggle { background: var(--fdl-canvas, var(--afl-n-100)); padding: 3px; border-radius: var(--fdl-radius-sm, 2px); display: flex; gap: 4px; border: 1px solid var(--fdl-line, var(--afl-n-200)); }
-        .source-btn { padding: 6px 14px; border-radius: var(--fdl-radius-sm, 2px); font-size: 0.78rem; font-weight: 700; cursor: pointer; border: none; background: transparent; color: var(--fdl-muted, var(--afl-n-500)); text-transform: uppercase; transition: all 0.15s; }
-        .source-btn.active { background: var(--fdl-surface, white); color: var(--fdl-text, var(--afl-n-900)); }
+        .selection-card { background: var(--fdl-paper, #ffffff); border-radius: var(--fdl-radius-sm, 2px); padding: 24px; border: 1px solid var(--fdl-line-soft, #d7e0e7); border-top: 3px solid var(--fdl-navy-800, #12375b); margin-bottom: 24px; }
+        .source-toggle { background: var(--fdl-canvas, #f3f6f8); padding: 3px; border-radius: var(--fdl-radius-sm, 2px); display: flex; gap: 4px; border: 1px solid var(--fdl-line-soft, #d7e0e7); }
+        .source-btn { padding: 6px 14px; border-radius: var(--fdl-radius-sm, 2px); font-size: 0.78rem; font-weight: 700; cursor: pointer; border: none; background: transparent; color: var(--fdl-muted, #5e6e7c); text-transform: uppercase; transition: all 0.15s; }
+        .source-btn.active { background: var(--fdl-paper, #ffffff); color: var(--fdl-ink, #132332); }
         
-        .cohort-column { background: var(--fdl-canvas, var(--afl-n-50)); border-radius: var(--fdl-radius-sm, 2px); border: 1px solid var(--fdl-line, var(--afl-n-200)); overflow: hidden; }
-        .cohort-header { padding: 12px 18px; background: var(--fdl-surface, white); border-bottom: 1px solid var(--fdl-line, var(--afl-n-200)); font-weight: 800; font-size: 0.75rem; color: var(--fdl-muted, var(--afl-n-600)); text-transform: uppercase; }
+        .cohort-column { background: var(--fdl-canvas, #f3f6f8); border-radius: var(--fdl-radius-sm, 2px); border: 1px solid var(--fdl-line-soft, #d7e0e7); overflow: hidden; }
+        .cohort-header { padding: 12px 18px; background: var(--fdl-paper, #ffffff); border-bottom: 1px solid var(--fdl-line-soft, #d7e0e7); font-weight: 800; font-size: 0.75rem; color: var(--fdl-ink-soft, #273843); text-transform: uppercase; }
         .cohort-body { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
-        .cohort-card { display: flex; justify-content: space-between; align-items: center; background: var(--fdl-surface, white); padding: 12px 16px; border-radius: var(--fdl-radius-sm, 2px); border: 1px solid var(--fdl-line, var(--afl-n-100)); cursor: pointer; transition: all 0.15s ease; }
-        .cohort-card:hover { border-color: var(--fdl-accent, var(--afl-info-500)); }
-        .cohort-card.active { border-color: var(--fdl-accent, var(--afl-info-500)); background: var(--fdl-accent-soft, var(--afl-info-50)); }
-        .cohort-name { font-weight: 700; color: var(--fdl-text, var(--afl-n-800)); }
-        .cohort-count { font-size: 0.72rem; font-weight: 800; background: var(--afl-info-50); color: var(--afl-info-700); padding: 2px 8px; border-radius: var(--fdl-radius-sm, 2px); }
+        .cohort-card { display: flex; justify-content: space-between; align-items: center; background: var(--fdl-paper, #ffffff); padding: 12px 16px; border-radius: var(--fdl-radius-sm, 2px); border: 1px solid var(--fdl-line-soft, #d7e0e7); cursor: pointer; transition: all 0.15s ease; }
+        .cohort-card:hover { border-color: var(--fdl-blue-700, #0759a5); }
+        .cohort-card.active { border-color: var(--fdl-blue-700, #0759a5); background: var(--fdl-blue-050, #edf4fa); }
+        .cohort-name { font-weight: 700; color: var(--fdl-ink, #132332); }
+        .cohort-count { font-size: 0.72rem; font-weight: 800; background: var(--fdl-blue-050, #edf4fa); color: var(--fdl-blue-700, #0759a5); border: 1px solid var(--fdl-line-soft, #d7e0e7); padding: 2px 8px; border-radius: var(--fdl-radius-sm, 2px); }
 
-        .analysis-loading { text-align: center; padding: 60px; background: var(--fdl-surface, white); border-radius: var(--fdl-radius-sm, 2px); border: 1px solid var(--fdl-line, var(--afl-n-200)); }
-        .peer-summary-badge { background: var(--fdl-canvas, var(--afl-n-100)); color: var(--fdl-muted, var(--afl-n-600)); padding: 4px 10px; border-radius: var(--fdl-radius-sm, 2px); font-size: 0.75rem; font-weight: 700; border: 1px solid var(--fdl-line, var(--afl-n-200)); }
-        .memo-action-btn { background: var(--afl-danger-600, #dc2626); color: white; border: none; padding: 8px 16px; border-radius: var(--fdl-radius-sm, 2px); font-weight: 700; cursor: pointer; transition: all 0.15s; }
-        .memo-action-btn:disabled { background: var(--afl-danger-100); cursor: not-allowed; }
+        .analysis-loading { text-align: center; padding: 60px; background: var(--fdl-paper, #ffffff); border-radius: var(--fdl-radius-sm, 2px); border: 1px solid var(--fdl-line-soft, #d7e0e7); }
+        .peer-summary-badge { background: var(--fdl-canvas, #f3f6f8); color: var(--fdl-ink-soft, #273843); padding: 4px 10px; border-radius: var(--fdl-radius-sm, 2px); font-size: 0.75rem; font-weight: 700; border: 1px solid var(--fdl-line-soft, #d7e0e7); }
+        .memo-action-btn { background: var(--fdl-blue-700, #0759a5); color: white; border: 1px solid var(--fdl-blue-800, #004d80); padding: 8px 16px; border-radius: var(--fdl-radius-sm, 2px); font-weight: 700; cursor: pointer; transition: all 0.15s; }
+        .memo-action-btn:disabled { background: var(--fdl-canvas, #f3f6f8); color: var(--fdl-muted, #5e6e7c); border-color: var(--fdl-line-soft, #d7e0e7); cursor: not-allowed; }
 
-        .anomaly-tier { background: var(--fdl-surface, white); border-radius: var(--fdl-radius-sm, 2px); border: 1px solid var(--fdl-line, var(--afl-n-200)); overflow: hidden; }
+        .anomaly-tier { background: var(--fdl-paper, #ffffff); border-radius: var(--fdl-radius-sm, 2px); border: 1px solid var(--fdl-line-soft, #d7e0e7); overflow: hidden; }
         .tier-label { padding: 12px 18px; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; }
-        .critical .tier-label { background: var(--afl-danger-100); color: var(--afl-danger-700); }
-        .moderate .tier-label { background: var(--afl-warn-50); color: var(--afl-warn-700); }
+        .critical .tier-label { background: #fef2f2; color: #991b1b; border-bottom: 1px solid #fecaca; }
+        .moderate .tier-label { background: #fffbeb; color: #92400e; border-bottom: 1px solid #fde68a; }
         .tier-content { padding: 16px; }
 
-        .matrix-container { background: var(--fdl-surface, white); border-radius: var(--fdl-radius-sm, 2px); border: 1px solid var(--fdl-line, var(--afl-n-200)); overflow: hidden; }
-        .matrix-header-main { padding: 16px 24px; background: var(--fdl-canvas, var(--afl-n-50)); border-bottom: 1px solid var(--fdl-line, var(--afl-n-100)); display: flex; justify-content: space-between; align-items: center; }
+        .matrix-container { background: var(--fdl-paper, #ffffff); border-radius: var(--fdl-radius-sm, 2px); border: 1px solid var(--fdl-line-soft, #d7e0e7); border-top: 3px solid var(--fdl-navy-800, #12375b); overflow: hidden; }
+        .matrix-header-main { padding: 16px 24px; background: var(--fdl-canvas, #f3f6f8); border-bottom: 1px solid var(--fdl-line-soft, #d7e0e7); display: flex; justify-content: space-between; align-items: center; }
         .matrix-controls { display: flex; align-items: center; gap: 8px; }
-        .control-btn { padding: 5px 10px; background: var(--fdl-surface, white); border: 1px solid var(--fdl-line, var(--afl-n-200)); border-radius: var(--fdl-radius-sm, 2px); font-size: 0.75rem; font-weight: 700; color: var(--fdl-text, var(--afl-n-600)); cursor: pointer; transition: all 0.15s; }
-        .control-btn:hover { background: var(--fdl-canvas, var(--afl-n-50)); border-color: var(--fdl-accent, var(--afl-info-500)); color: var(--fdl-accent, var(--afl-info-500)); }
-        .filter-toggle { display: flex; align-items: center; gap: 8px; padding: 5px 10px; background: var(--fdl-surface, white); border: 1px solid var(--fdl-line, var(--afl-n-200)); border-radius: var(--fdl-radius-sm, 2px); cursor: pointer; }
-        .toggle-label { font-size: 0.75rem; font-weight: 700; color: var(--fdl-text, var(--afl-n-600)); }
+        .control-btn { padding: 5px 10px; background: var(--fdl-paper, #ffffff); border: 1px solid var(--fdl-line-soft, #d7e0e7); border-radius: var(--fdl-radius-sm, 2px); font-size: 0.75rem; font-weight: 700; color: var(--fdl-ink-soft, #273843); cursor: pointer; transition: all 0.15s; }
+        .control-btn:hover { background: var(--fdl-blue-050, #edf4fa); border-color: var(--fdl-blue-700, #0759a5); color: var(--fdl-blue-700, #0759a5); }
+        .filter-toggle { display: flex; align-items: center; gap: 8px; padding: 5px 10px; background: var(--fdl-paper, #ffffff); border: 1px solid var(--fdl-line-soft, #d7e0e7); border-radius: var(--fdl-radius-sm, 2px); cursor: pointer; }
+        .toggle-label { font-size: 0.75rem; font-weight: 700; color: var(--fdl-ink-soft, #273843); }
 
         .matrix-legend { display: flex; gap: 16px; }
         .legend-item { display: flex; align-items: center; gap: 6px; }
         .gem { width: 12px; height: 12px; border-radius: 2px; border: 1px solid; flex-shrink: 0; display: inline-block; }
-        .gem.B { background: var(--afl-danger-100); border-color: var(--afl-danger-500); }
-        .gem.W { background: var(--afl-warn-100); border-color: var(--afl-warn-500); }
-        .gem.A { background: var(--afl-warn-50); border-color: var(--afl-warn-500); }
-        .gem.N { background: var(--afl-n-50); border-color: var(--afl-n-200); }
-        .legend-text { font-size: 0.7rem; font-weight: 700; color: var(--fdl-muted, var(--afl-n-500)); }
+        .gem.B { background: #fef2f2; border-color: #f87171; }
+        .gem.W { background: #fffbeb; border-color: #fbbf24; }
+        .gem.A { background: #fefce8; border-color: #facc15; }
+        .gem.N { background: var(--fdl-canvas, #f3f6f8); border-color: var(--fdl-line-soft, #d7e0e7); }
+        .legend-text { font-size: 0.7rem; font-weight: 700; color: var(--fdl-muted, #5e6e7c); }
 
-        .soc-group { border-bottom: 1px solid var(--fdl-line, var(--afl-n-100)); }
-        .soc-header { padding: 12px 24px; background: var(--fdl-surface, var(--afl-n-0)); cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
-        .soc-header:hover { background: var(--fdl-canvas, var(--afl-n-50)); }
-        .soc-name { font-weight: 800; color: var(--fdl-text, var(--afl-n-900)); }
-        .soc-count { font-size: 0.7rem; font-weight: 700; background: var(--fdl-canvas, var(--afl-n-100)); color: var(--fdl-muted, var(--afl-n-500)); padding: 2px 6px; border-radius: 2px; }
-        .soc-summary-line { flex: 1; margin-left: 16px; height: 1px; background: var(--fdl-line, var(--afl-n-100)); }
+        .soc-group { border-bottom: 1px solid var(--fdl-line-soft, #d7e0e7); }
+        .soc-header { padding: 12px 24px; background: var(--fdl-paper, #ffffff); cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+        .soc-header:hover { background: var(--fdl-canvas, #f3f6f8); }
+        .soc-name { font-weight: 800; color: var(--fdl-navy-950, #071f3d); }
+        .soc-count { font-size: 0.7rem; font-weight: 700; background: var(--fdl-canvas, #f3f6f8); color: var(--fdl-muted, #5e6e7c); padding: 2px 6px; border-radius: 2px; border: 1px solid var(--fdl-line-soft, #d7e0e7); }
+        .soc-summary-line { flex: 1; margin-left: 16px; height: 1px; background: var(--fdl-line-soft, #d7e0e7); }
 
         .modern-matrix-table { width: 100%; border-collapse: collapse; }
-        .modern-matrix-table th { padding: 10px 18px; font-size: 0.7rem; font-weight: 800; color: var(--fdl-muted, var(--afl-n-400)); text-transform: uppercase; text-align: left; }
-        .modern-matrix-table td { padding: 12px 18px; border-bottom: 1px solid var(--fdl-line, var(--afl-n-50)); }
-        .is-discrepancy { background: var(--afl-warn-50); }
-        .pt-text { font-weight: 700; color: var(--fdl-text, var(--afl-n-800)); }
-        .original-match-tag { font-size: 0.7rem; font-weight: 700; color: var(--fdl-accent, var(--afl-info-500)); background: var(--afl-info-50); padding: 2px 6px; border-radius: 2px; margin-left: 8px; }
+        .modern-matrix-table th { padding: 10px 18px; font-size: 0.7rem; font-weight: 800; color: var(--fdl-muted, #5e6e7c); text-transform: uppercase; text-align: left; }
+        .modern-matrix-table td { padding: 12px 18px; border-bottom: 1px solid var(--fdl-line-soft, #d7e0e7); }
+        .is-discrepancy { background: #fffbeb; }
+        .pt-text { font-weight: 700; color: var(--fdl-ink, #132332); }
+        .original-match-tag { font-size: 0.7rem; font-weight: 700; color: var(--fdl-blue-700, #0759a5); background: var(--fdl-blue-050, #edf4fa); border: 1px solid var(--fdl-line-soft, #d7e0e7); padding: 2px 6px; border-radius: 2px; margin-left: 8px; }
         .gem-badge { width: 28px; height: 28px; line-height: 28px; text-align: center; border-radius: 2px; font-size: 0.82rem; font-weight: 800; border: 1px solid; margin: 0 auto; }
-        .consensus-meta { font-size: 0.65rem; color: var(--fdl-muted, var(--afl-n-400)); font-weight: 800; margin-top: 4px; text-align: center; }
+        .consensus-meta { font-size: 0.65rem; color: var(--fdl-muted, #5e6e7c); font-weight: 800; margin-top: 4px; text-align: center; }
         .peer-track { display: flex; gap: 3px; flex-wrap: wrap; }
         .peer-gem { width: 8px; height: 16px; border-radius: 1px; cursor: pointer; }
 
-        .memo-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px); z-index: 5000; display: flex; alignItems: center; justifyContent: center; padding: 24px; }
-        .memo-modal-advanced { background: var(--fdl-canvas, var(--afl-n-50)); width: 100%; maxWidth: 960px; height: 85vh; border-radius: var(--fdl-radius-sm, 2px); display: flex; overflow: hidden; border: 1px solid var(--fdl-line, var(--afl-n-200)); box-shadow: 0 8px 32px rgba(0,0,0,0.18); animation: modalPop 0.2s ease; }
+        .memo-overlay { position: fixed; inset: 0; background: rgba(7, 31, 61, 0.58); z-index: 5000; display: flex; align-items: center; justify-content: center; padding: 24px; }
+        .memo-modal-advanced { background: var(--fdl-canvas, #f3f6f8); width: 100%; max-width: 960px; height: 85vh; border-radius: var(--fdl-radius-sm, 2px); display: flex; overflow: hidden; border: 1px solid var(--fdl-line, #b8c8d7); border-top: 3px solid var(--fdl-navy-800, #12375b); box-shadow: 0 12px 32px rgba(7, 31, 61, 0.18); animation: modalPop 0.2s ease; }
         @keyframes modalPop { from { transform: scale(0.98); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .memo-modal-sidebar { width: 260px; background: var(--fdl-surface, var(--afl-n-800)); padding: 24px; color: var(--fdl-text, white); display: flex; flex-direction: column; border-right: 1px solid var(--fdl-line); }
+        .memo-modal-sidebar { width: 260px; background: var(--fdl-navy-950, #071f3d); padding: 24px; color: white; display: flex; flex-direction: column; border-right: 1px solid var(--fdl-line, #b8c8d7); }
         .stat-item { margin-top: 18px; }
-        .stat-item label { display: block; font-size: 0.65rem; text-transform: uppercase; font-weight: 800; color: var(--fdl-muted, var(--afl-n-400)); letter-spacing: 0.08em; }
+        .stat-item label { display: block; font-size: 0.65rem; text-transform: uppercase; font-weight: 800; color: #94a3b8; letter-spacing: 0.08em; }
         .stat-item span { font-size: 0.9rem; font-weight: 600; }
-        .memo-modal-main { flex: 1; display: flex; flex-direction: column; background: var(--fdl-surface, white); overflow: hidden; }
+        .memo-modal-main { flex: 1; display: flex; flex-direction: column; background: var(--fdl-paper, #ffffff); overflow: hidden; }
         .memo-document-container { flex: 1; padding: 28px; display: flex; flex-direction: column; overflow: hidden; }
-        .memo-header-formal { border-bottom: 1px solid var(--fdl-line, var(--afl-n-100)); padding-bottom: 18px; margin-bottom: 18px; }
-        .memo-title { font-size: 1.15rem; font-weight: 800; color: var(--fdl-text, var(--afl-n-900)); }
+        .memo-header-formal { border-bottom: 1px solid var(--fdl-line-soft, #d7e0e7); padding-bottom: 18px; margin-bottom: 18px; }
+        .memo-title { font-size: 1.15rem; font-weight: 800; color: var(--fdl-navy-950, #071f3d); }
         .memo-scroll-area { flex: 1; overflow-y: auto; padding-right: 10px; }
-        .memo-textarea-formal { width: 100%; height: 350px; border: none; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; line-height: 1.6; outline: none; resize: none; color: var(--fdl-text, var(--afl-n-700)); }
+        .memo-textarea-formal { width: 100%; height: 350px; border: none; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; line-height: 1.6; outline: none; resize: none; color: var(--fdl-ink, #132332); }
         
-        .memo-references-ui { margin-top: 28px; border-top: 1px dashed var(--fdl-line, var(--afl-n-100)); paddingTop: 18px; }
-        .refs-title { font-size: 0.72rem; font-weight: 800; color: var(--fdl-muted, var(--afl-n-400)); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+        .memo-references-ui { margin-top: 28px; border-top: 1px dashed var(--fdl-line-soft, #d7e0e7); padding-top: 18px; }
+        .refs-title { font-size: 0.72rem; font-weight: 800; color: var(--fdl-muted, #5e6e7c); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
         .refs-list { display: flex; flex-direction: column; gap: 8px; }
-        .ref-item { display: flex; flex-direction: column; gap: 3px; padding: 10px; background: var(--fdl-canvas, var(--afl-n-50)); border-radius: var(--fdl-radius-sm, 2px); border: 1px solid var(--fdl-line, var(--afl-n-100)); }
-        .ref-meta { font-size: 0.82rem; font-weight: 700; color: var(--fdl-text, var(--afl-n-800)); }
-        .ref-link { font-size: 0.78rem; color: var(--fdl-accent, var(--afl-info-500)); text-decoration: none; font-family: monospace; font-weight: 600; word-break: break-all; }
+        .ref-item { display: flex; flex-direction: column; gap: 3px; padding: 10px; background: var(--fdl-canvas, #f3f6f8); border-radius: var(--fdl-radius-sm, 2px); border: 1px solid var(--fdl-line-soft, #d7e0e7); }
+        .ref-meta { font-size: 0.82rem; font-weight: 700; color: var(--fdl-ink-soft, #273843); }
+        .ref-link { font-size: 0.78rem; color: var(--fdl-blue-700, #0759a5); text-decoration: none; font-family: monospace; font-weight: 600; word-break: break-all; }
         .ref-link:hover { text-decoration: underline; }
 
-        .memo-modal-footer-advanced { padding: 18px 28px; background: var(--fdl-canvas, var(--afl-n-50)); border-top: 1px solid var(--fdl-line, var(--afl-n-200)); display: flex; justify-content: flex-end; gap: 12px; }
-        .btn-copy-modern { background: var(--fdl-text, var(--afl-n-900)); color: white; padding: 8px 20px; border-radius: var(--fdl-radius-sm, 2px); font-weight: 700; border: none; cursor: pointer; transition: all 0.15s; }
-        .btn-cancel-modern { background: var(--fdl-surface, white); color: var(--fdl-muted, var(--afl-n-500)); padding: 8px 16px; border-radius: var(--fdl-radius-sm, 2px); font-weight: 700; border: 1px solid var(--fdl-line, var(--afl-n-200)); cursor: pointer; }
+        .memo-modal-footer-advanced { padding: 18px 28px; background: var(--fdl-canvas, #f3f6f8); border-top: 1px solid var(--fdl-line-soft, #d7e0e7); display: flex; justify-content: flex-end; gap: 12px; }
+        .btn-copy-modern { background: var(--fdl-blue-700, #0759a5); color: white; padding: 8px 20px; border-radius: var(--fdl-radius-sm, 2px); font-weight: 700; border: none; cursor: pointer; transition: all 0.15s; }
+        .btn-cancel-modern { background: var(--fdl-paper, #ffffff); color: var(--fdl-muted, #5e6e7c); padding: 8px 16px; border-radius: var(--fdl-radius-sm, 2px); font-weight: 700; border: 1px solid var(--fdl-line-soft, #d7e0e7); cursor: pointer; }
         .animate-fade-in { animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .loader { border: 3px solid var(--afl-n-100); border-top: 3px solid var(--fdl-accent, var(--afl-info-500)); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        .loader { border: 3px solid var(--fdl-line-soft, #d7e0e7); border-top: 3px solid var(--fdl-blue-700, #0759a5); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
       `}</style>
 
@@ -616,9 +617,9 @@ export default function DeepDiveView({
 function renderAnomalyCard(s: Anomaly, tier: 'critical' | 'moderate' | 'minor', onToggle: (t:string)=>void, selected: Set<string>) {
   const isSelected = selected.has(s.term);
   const tierColors = {
-    critical: { bg: 'var(--afl-danger-50)', border: 'var(--afl-danger-100)', text: 'var(--afl-danger-700)', accent: 'var(--afl-danger-500)' },
-    moderate: { bg: 'var(--afl-warn-50)', border: 'var(--afl-warn-100)', text: 'var(--afl-warn-700)', accent: 'var(--afl-warn-500)' },
-    minor: { bg: 'var(--afl-n-50)', border: 'var(--afl-n-200)', text: 'var(--afl-n-600)', accent: 'var(--afl-n-400)' }
+    critical: { bg: 'var(--fdl-red-050)', border: 'var(--fdl-red-050)', text: 'var(--fdl-red)', accent: 'var(--fdl-red)' },
+    moderate: { bg: 'var(--fdl-amber-050)', border: 'var(--fdl-amber-050)', text: 'var(--fdl-amber)', accent: 'var(--fdl-amber)' },
+    minor: { bg: 'var(--fdl-canvas)', border: 'var(--fdl-line)', text: 'var(--fdl-ink-soft)', accent: 'var(--fdl-muted)' }
   };
   const color = tierColors[tier];
   const distStr = `B:${s.distribution.B}% W:${s.distribution.W}% A:${s.distribution.A}% N:${s.distribution.N}%`;
@@ -635,15 +636,15 @@ function renderAnomalyCard(s: Anomaly, tier: 'critical' | 'moderate' | 'minor', 
         <input type="checkbox" checked={isSelected} readOnly style={{ width: '16px', height: '16px', accentColor: color.accent }} />
         <div>
           <div style={{ fontWeight: 800, color: color.text, fontSize: '0.95rem' }}>{s.term}</div>
-          <div style={{ fontSize: '0.7rem', color: 'var(--afl-n-400)', textTransform: 'uppercase', fontWeight: 800, marginTop: '2px' }}>{s.soc}</div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--fdl-muted)', textTransform: 'uppercase', fontWeight: 800, marginTop: '2px' }}>{s.soc}</div>
           <div style={{ fontSize: '0.72rem', color: color.accent, fontWeight: 700, marginTop: '4px', background: 'rgba(255,255,255,0.7)', padding: '1px 6px', borderRadius: '2px', width: 'fit-content' }}>
             {s.note}
           </div>
         </div>
       </div>
       <div style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: '0.65rem', color: 'var(--afl-n-400)', textTransform: 'uppercase', fontWeight: 800, marginBottom: '3px' }}>Peer Distribution</div>
-        <div style={{ fontFamily: 'monospace', fontSize: '0.82rem', fontWeight: 700, color: 'var(--afl-n-700)', background: 'var(--afl-n-100)', padding: '2px 8px', borderRadius: '2px' }}>
+        <div style={{ fontSize: '0.65rem', color: 'var(--fdl-muted)', textTransform: 'uppercase', fontWeight: 800, marginBottom: '3px' }}>Peer Distribution</div>
+        <div style={{ fontFamily: 'monospace', fontSize: '0.82rem', fontWeight: 700, color: 'var(--fdl-ink-soft)', background: 'var(--fdl-line-soft)', padding: '2px 8px', borderRadius: '2px' }}>
           {distStr}
         </div>
       </div>

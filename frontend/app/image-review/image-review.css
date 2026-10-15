@@ -44,7 +44,7 @@ body:has(.ivr-page) { min-width:0; }
 .ivr-tag-pin.is-color { background:var(--fdl-blue-600,#2563eb); }
 .ivr-tag-pin.is-selected { transform:translate(-50%,-50%) scale(1.28); box-shadow:0 0 0 4px rgba(245,158,11,.45),0 4px 12px rgba(0,0,0,.4); z-index:25; }
 .ivr-tag-pin.is-color.is-selected { box-shadow:0 0 0 4px rgba(37,99,235,.45),0 4px 12px rgba(0,0,0,.4); }
-.ivr-active-region-outline { position:absolute; pointer-events:none; border:2px dashed var(--fdl-amber,#d97706); background:rgba(245,158,11,.08); border-radius:4px; z-index:5; }
+.ivr-active-region-outline { position:absolute; pointer-events:none; border:2px dashed var(--fdl-amber,#d97706); background:rgba(245,158,11,.08); border-radius:var(--fdl-radius-sm, 2px); z-index:5; }
 .ivr-active-region-outline.is-color { border-color:var(--fdl-blue-600,#2563eb); background:rgba(37,99,235,.08); }
 .ivr-empty-artwork { min-height:480px; display:flex; flex-direction:column; gap:14px; justify-content:center; align-items:center; text-align:center; color:var(--fdl-muted); padding:20px; font-size:.82rem; }
 .ivr-empty-artwork strong { color:var(--fdl-ink-soft); }
@@ -109,8 +109,8 @@ body:has(.ivr-page) { min-width:0; }
 .ivr-clean-banner p { margin:0; }
 .ivr-priority-tag[data-priority="critical"] { background:#fee2e2; color:#991b1b; font-weight:700; }
 .ivr-priority-tag[data-priority="review"] { background:#fef3c7; color:#92400e; font-weight:600; }
-.ivr-modal-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.6); backdrop-filter:blur(2px); z-index:1000; display:grid; place-items:center; padding:20px; }
-.ivr-modal { width:100%; max-width:680px; max-height:85vh; background:var(--fdl-paper); border:1px solid var(--fdl-line); border-radius:4px; box-shadow:0 20px 25px -5px rgba(0,0,0,.15); display:flex; flex-direction:column; overflow:hidden; }
+.ivr-modal-backdrop { position:fixed; inset:0; background:rgba(7,31,61,.58); z-index:1000; display:grid; place-items:center; padding:20px; }
+.ivr-modal { width:100%; max-width:680px; max-height:85vh; background:var(--fdl-paper); border:1px solid var(--fdl-line); border-top:3px solid var(--fdl-navy-800); border-radius:var(--fdl-radius-sm, 2px); box-shadow:var(--fdl-elevation-3); display:flex; flex-direction:column; overflow:hidden; }
 .ivr-modal-header { display:flex; justify-content:space-between; align-items:flex-start; padding:18px 24px; border-bottom:1px solid var(--fdl-line); }
 .ivr-modal-header h2 { margin:4px 0 2px; font-size:1.25rem; color:var(--fdl-navy-950); }
 .ivr-modal-header p { margin:0; font-size:.78rem; color:var(--fdl-muted); }
@@ -160,17 +160,17 @@ body:has(.ivr-page) { min-width:0; }
 .ivr-team-comments { margin-top:16px; border-top:1px solid var(--fdl-line); padding-top:14px; }
 .ivr-team-comments-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
 .ivr-team-comments-header h4 { margin:0; font-size:.82rem; font-weight:700; color:var(--fdl-navy-950); display:flex; align-items:center; gap:6px; }
-.ivr-more-comments-btn { background:transparent; border:none; color:var(--fdl-blue-700); font-size:.75rem; font-weight:600; cursor:pointer; padding:2px 6px; border-radius:3px; }
+.ivr-more-comments-btn { background:transparent; border:none; color:var(--fdl-blue-700); font-size:.75rem; font-weight:600; cursor:pointer; padding:2px 6px; border-radius:var(--fdl-radius-sm, 2px); }
 .ivr-more-comments-btn:hover { background:var(--fdl-canvas); text-decoration:underline; }
-.ivr-more-comments-link { background:var(--fdl-canvas); border:1px dashed var(--fdl-line); color:var(--fdl-muted); font-size:.74rem; font-weight:600; padding:6px 10px; border-radius:3px; cursor:pointer; text-align:center; width:100%; margin-top:8px; transition:all .15s ease; }
+.ivr-more-comments-link { background:var(--fdl-canvas); border:1px dashed var(--fdl-line); color:var(--fdl-muted); font-size:.74rem; font-weight:600; padding:6px 10px; border-radius:var(--fdl-radius-sm, 2px); cursor:pointer; text-align:center; width:100%; margin-top:8px; transition:all .15s ease; }
 .ivr-more-comments-link:hover { color:var(--fdl-blue-700); border-color:var(--fdl-blue-700); }
 .ivr-team-comments-list { display:flex; flex-direction:column; gap:10px; }
-.ivr-team-comment-item { background:var(--fdl-canvas); border:1px solid var(--fdl-line); border-radius:3px; padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
+.ivr-team-comment-item { background:var(--fdl-canvas); border:1px solid var(--fdl-line); border-radius:var(--fdl-radius-sm, 2px); padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
 .ivr-team-comment-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; }
 .ivr-comment-author { display:inline-flex; align-items:center; gap:6px; font-size:.78rem; color:var(--fdl-navy-950); }
-.ivr-badge-public { display:inline-block; font-size:.65rem; font-weight:700; padding:1px 6px; border-radius:10px; background:#dbeafe; color:#1d4ed8; border:1px solid #bfdbfe; }
-.ivr-badge-private { display:inline-block; font-size:.65rem; font-weight:700; padding:1px 6px; border-radius:10px; background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; }
-.ivr-comment-decision { font-size:.72rem; font-weight:700; padding:1px 6px; border-radius:2px; }
+.ivr-badge-public { display:inline-block; font-size:.65rem; font-weight:700; padding:1px 6px; border-radius:var(--fdl-radius-sm, 2px); background:#dbeafe; color:#1d4ed8; border:1px solid #bfdbfe; }
+.ivr-badge-private { display:inline-block; font-size:.65rem; font-weight:700; padding:1px 6px; border-radius:var(--fdl-radius-sm, 2px); background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; }
+.ivr-comment-decision { font-size:.72rem; font-weight:700; padding:1px 6px; border-radius:var(--fdl-radius-sm, 2px); }
 .ivr-comment-decision.is-confirmed { background:#dcfce7; color:#15803d; }
 .ivr-comment-decision.is-dismissed { background:#fee2e2; color:#b91c1c; }
 .ivr-comment-decision.is-unreviewed { background:#f1f5f9; color:#64748b; }
@@ -186,7 +186,7 @@ body:has(.ivr-page) { min-width:0; }
   border: 1px solid #fecaca;
   color: #991b1b;
   padding: 8px 12px;
-  border-radius: 4px;
+  border-radius: var(--fdl-radius-sm, 2px);
   font-size: 0.78rem;
   font-weight: 500;
   margin-bottom: 12px;

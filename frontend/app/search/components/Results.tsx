@@ -79,23 +79,23 @@ const SavedHistoriesView = () => {
       });
   }, []);
 
-  if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--afl-n-500)' }}>Loading saved histories...</div>;
+  if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--fdl-muted, #5e6e7c)' }}>Loading saved histories...</div>;
 
   return (
     <div className="intro-section" style={{ padding: '40px 24px', maxWidth: '980px', margin: '0 auto' }}>
-      <h2 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '24px', color: 'var(--afl-n-900)' }}>Saved Conversations</h2>
+      <h2 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '20px', color: 'var(--fdl-navy-950, #071f3d)' }}>Saved Conversations</h2>
       {histories.length === 0 ? (
-        <div style={{ color: 'var(--afl-n-500)', fontSize: '1rem', background: 'var(--afl-n-50)', padding: '24px', borderRadius: '12px', border: '1px solid var(--afl-n-200)' }}>
+        <div style={{ color: 'var(--fdl-muted, #5e6e7c)', fontSize: '0.9rem', background: 'var(--fdl-canvas, #f3f6f8)', padding: '20px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>
           No saved conversations found. Start a search and click "Save Chat" to save your progress.
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: '16px' }}>
+        <div style={{ display: 'grid', gap: '12px' }}>
           {histories.map(h => (
             <div key={h.id} 
               style={{
-                padding: '20px', background: 'var(--afl-n-0)', borderRadius: '12px',
-                border: '1px solid var(--afl-n-200)', cursor: 'pointer', transition: 'all 0.2s',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+                padding: '16px 20px', background: 'var(--fdl-paper, #ffffff)', borderRadius: 'var(--fdl-radius-sm, 2px)',
+                border: '1px solid var(--fdl-line-soft, #d7e0e7)', borderLeft: '3px solid var(--fdl-navy-800, #12375b)', cursor: 'pointer', transition: 'border-color 0.15s, background-color 0.15s',
+                boxShadow: 'none'
               }}
               onClick={() => {
                 if (h.chat_data && h.chat_data.length > 0) {
@@ -104,11 +104,11 @@ const SavedHistoriesView = () => {
                   setHasUnsavedChanges(false);
                 }
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--afl-info-500)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--afl-n-200)'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05)'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--fdl-blue-700, #0759a5)'; e.currentTarget.style.backgroundColor = 'var(--fdl-blue-050, #edf4fa)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--fdl-line-soft, #d7e0e7)'; e.currentTarget.style.backgroundColor = 'var(--fdl-paper, #ffffff)'; }}
             >
-              <div style={{ fontWeight: 800, fontSize: '1.15rem', color: 'var(--afl-n-900)', marginBottom: '8px' }}>{h.title}</div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--afl-n-500)', display: 'flex', gap: '16px' }}>
+              <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--fdl-navy-950, #071f3d)', marginBottom: '6px' }}>{h.title}</div>
+              <div style={{ fontSize: '0.825rem', color: 'var(--fdl-muted, #5e6e7c)', display: 'flex', gap: '16px' }}>
                 <span>📅 {new Date(h.timestamp + (h.timestamp.endsWith('Z') ? '' : 'Z')).toLocaleString('en-US', { timeZone: 'America/Chicago', timeZoneName: 'short' })}</span>
                 <span>💬 {h.chat_data.length} messages</span>
               </div>
@@ -205,13 +205,13 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
         disabled={isRefining || chatHistory.length === 0}
         title={chatHistory.length === 0 ? "Send a message first to refine" : "Refine last response using this reference"}
         style={{
-          background: isThisRefining ? 'var(--afl-warn-50)' : 'none',
+          background: isThisRefining ? '#fffbeb' : 'none',
           border: 'none',
           cursor: (isRefining || chatHistory.length === 0) ? 'not-allowed' : 'pointer',
           fontSize: '1.2rem',
           padding: '4px',
-          borderRadius: '6px',
-          transition: 'all 0.2s ease',
+          borderRadius: 'var(--fdl-radius-sm, 2px)',
+          transition: 'all 0.15s ease',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -239,37 +239,37 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.4)',
+        backgroundColor: 'rgba(7, 31, 61, 0.58)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 1000,
-        backdropFilter: 'blur(2px)'
+        zIndex: 1000
       }}>
         <div style={{
-          background: 'white',
+          background: 'var(--fdl-paper, #ffffff)',
           padding: '24px',
-          borderRadius: '12px',
-          width: '350px',
-          boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
-          border: '1px solid var(--afl-n-200)'
+          borderRadius: 'var(--fdl-radius-sm, 2px)',
+          width: '360px',
+          boxShadow: '0 12px 32px rgba(7, 31, 61, 0.18)',
+          border: '1px solid var(--fdl-line, #b8c8d7)',
+          borderTop: '3px solid var(--fdl-navy-800, #12375b)'
         }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', fontWeight: 900, color: 'var(--afl-n-900)' }}>Add Manual Filter</h3>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)' }}>Add Manual Filter</h3>
           
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: 'var(--afl-n-500)', textTransform: 'uppercase', marginBottom: '6px' }}>Filter Type</label>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: 'var(--fdl-ink-soft, #273843)', textTransform: 'uppercase', marginBottom: '6px' }}>Filter Type</label>
             <select 
               value={newType} 
               onChange={(e) => setNewType(e.target.value as any)}
-              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--afl-n-300)' }}
+              style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line, #b8c8d7)', background: 'var(--fdl-paper, #ffffff)', color: 'var(--fdl-ink, #132332)', fontSize: '0.875rem' }}
             >
               <option value="drugNames">💊 Drug Name</option>
               <option value="ndcs">🔢 NDC Code</option>
             </select>
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: 'var(--afl-n-500)', textTransform: 'uppercase', marginBottom: '6px' }}>Search Term</label>
+          <div style={{ marginBottom: '18px' }}>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: 'var(--fdl-ink-soft, #273843)', textTransform: 'uppercase', marginBottom: '6px' }}>Search Term</label>
             <input 
               type="text"
               autoFocus
@@ -285,14 +285,14 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                 }
               }}
               placeholder="Enter keyword..."
-              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--afl-n-300)' }}
+              style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line, #b8c8d7)', background: 'var(--fdl-paper, #ffffff)', color: 'var(--fdl-ink, #132332)', fontSize: '0.875rem' }}
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
             <button 
               onClick={() => { setIsAddModalOpen(false); setNewTerm(''); }}
-              style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--afl-n-200)', background: 'white', fontWeight: 700, cursor: 'pointer' }}
+              style={{ padding: '7px 14px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line, #b8c8d7)', background: 'var(--fdl-paper, #ffffff)', color: 'var(--fdl-ink-soft, #273843)', fontWeight: 700, fontSize: '0.825rem', cursor: 'pointer' }}
             >
               Cancel
             </button>
@@ -304,7 +304,7 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                   setNewTerm('');
                 }
               }}
-              style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: 'var(--afl-n-700)', color: 'white', fontWeight: 700, cursor: 'pointer' }}
+              style={{ padding: '7px 14px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-blue-800, #004d80)', background: 'var(--fdl-blue-700, #0759a5)', color: 'white', fontWeight: 700, fontSize: '0.825rem', cursor: 'pointer' }}
             >
               Add Filter
             </button>
@@ -316,12 +316,12 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
 
   const LimitControl = () => {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--afl-n-500)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--fdl-muted, #5e6e7c)' }}>
         <span>Max results:</span>
         <select 
           value={resultsLimit} 
           onChange={(e) => setResultsLimit(parseInt(e.target.value))}
-          style={{ padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--afl-n-300)' }}
+          style={{ padding: '2px 6px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line, #b8c8d7)', background: 'var(--fdl-paper, #ffffff)', color: 'var(--fdl-ink, #132332)' }}
         >
           <option value={100}>100</option>
           <option value={500}>500</option>
@@ -346,31 +346,31 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
         gap: '8px',
         marginBottom: '16px',
         padding: '12px',
-        background: 'var(--afl-n-50)',
-        borderRadius: '10px',
-        border: '1px solid var(--afl-n-200)'
+        background: 'var(--fdl-canvas, #f3f6f8)',
+        borderRadius: 'var(--fdl-radius-sm, 2px)',
+        border: '1px solid var(--fdl-line-soft, #d7e0e7)'
       }}>
-        <div style={{ width: '100%', fontSize: '0.75rem', fontWeight: 800, color: 'var(--afl-n-500)', textTransform: 'uppercase', marginBottom: '4px' }}>
+        <div style={{ width: '100%', fontSize: '0.75rem', fontWeight: 800, color: 'var(--fdl-muted, #5e6e7c)', textTransform: 'uppercase', marginBottom: '4px' }}>
           Active Search Filters
         </div>
         
         {activeDrugNames.map(term => (
-          <div key={`drug-${term}`} className="filter-chip highlight-drug" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '4px 10px' }}>
+          <div key={`drug-${term}`} className="filter-chip highlight-drug" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.825rem', padding: '3px 8px', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
             <span>💊 {term}</span>
-            <button onClick={() => toggleFilterTerm('drugNames', term)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontSize: '1rem', lineHeight: 1 }}>×</button>
+            <button onClick={() => toggleFilterTerm('drugNames', term)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontSize: '0.9rem', lineHeight: 1 }}>×</button>
           </div>
         ))}
 
         {activeNDCs.map(term => (
-          <div key={`ndc-${term}`} className="filter-chip highlight-ndc" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '4px 10px' }}>
+          <div key={`ndc-${term}`} className="filter-chip highlight-ndc" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.825rem', padding: '3px 8px', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
             <span>🔢 {term}</span>
-            <button onClick={() => toggleFilterTerm('ndcs', term)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontSize: '1rem', lineHeight: 1 }}>×</button>
+            <button onClick={() => toggleFilterTerm('ndcs', term)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontSize: '0.9rem', lineHeight: 1 }}>×</button>
           </div>
         ))}
 
         {/* Hard-coded Flags Row */}
-        <div style={{ width: '100%', borderTop: '1px solid var(--afl-n-200)', margin: '4px 0', paddingTop: '8px', display: 'flex', gap: '16px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: 700, color: 'var(--afl-n-700)', cursor: 'pointer' }}>
+        <div style={{ width: '100%', borderTop: '1px solid var(--fdl-line-soft, #d7e0e7)', margin: '4px 0', paddingTop: '8px', display: 'flex', gap: '16px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.825rem', fontWeight: 700, color: 'var(--fdl-ink-soft, #273843)', cursor: 'pointer' }}>
             <input 
               type="checkbox" 
               checked={filters.isRx} 
@@ -386,14 +386,14 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
           <button 
             onClick={() => setIsAddModalOpen(true)}
             style={{
-              background: 'var(--afl-n-700)',
-              border: 'none',
+              background: 'var(--fdl-blue-700, #0759a5)',
+              border: '1px solid var(--fdl-blue-800, #004d80)',
               color: 'white',
-              fontSize: '0.85rem',
+              fontSize: '0.825rem',
               fontWeight: 700,
               cursor: 'pointer',
-              padding: '4px 12px',
-              borderRadius: '6px'
+              padding: '4px 10px',
+              borderRadius: 'var(--fdl-radius-sm, 2px)'
             }}
           >
             + Add Filter
@@ -412,8 +412,8 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
             style={{
               background: 'none',
               border: 'none',
-              color: 'var(--afl-danger-500)',
-              fontSize: '0.85rem',
+              color: '#b91c1c',
+              fontSize: '0.825rem',
               fontWeight: 700,
               cursor: 'pointer',
               textDecoration: 'underline'
@@ -733,19 +733,21 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
       {resultsMessage && (
         <div
           style={{
-            background: 'var(--afl-warn-50)',
-            border: '1px solid var(--afl-warn-500)',
-            color: 'var(--afl-warn-700)',
-            borderRadius: 10,
-            padding: '12px 16px',
-            marginBottom: 16,
+            background: '#fffbeb',
+            border: '1px solid #fde68a',
+            borderLeft: '3px solid #b45309',
+            color: '#92400e',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
+            padding: '10px 14px',
+            marginBottom: 14,
             display: 'flex',
-            gap: 12,
+            gap: 10,
             alignItems: 'center',
-            fontWeight: 700
+            fontWeight: 700,
+            fontSize: '0.85rem'
           }}
         >
-          <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+          <span style={{ fontSize: '1.1rem' }}>⚠️</span>
           <span>{resultsMessage}</span>
         </div>
       )}
@@ -754,13 +756,14 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
         <div
           className="med-answer-container"
           style={{
-            backgroundColor: 'var(--afl-danger-50)',
-            color: 'var(--afl-danger-500)',
-            border: '1px solid var(--afl-danger-100)',
-            borderRadius: '5px',
-            padding: '10px 15px',
-            marginBottom: '15px',
-            fontSize: '0.9rem',
+            backgroundColor: '#fef2f2',
+            color: '#991b1b',
+            border: '1px solid #fecaca',
+            borderLeft: '3px solid #b91c1c',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
+            padding: '10px 14px',
+            marginBottom: '14px',
+            fontSize: '0.85rem',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center'
@@ -769,7 +772,7 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
           <span>⚠️ {refError}</span>
           <button
             onClick={() => setRefError(null)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--afl-n-400)', fontSize: '1.2rem' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fdl-muted, #5e6e7c)', fontSize: '1.1rem' }}
           >
             ✕
           </button>
@@ -780,11 +783,11 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
         <div
           className="med-answer-container"
           style={{
-            backgroundColor: 'var(--afl-warn-50)',
-            color: 'var(--afl-warn-700)',
-            border: '1px solid var(--afl-warn-500)',
-            borderRadius: '5px',
-            padding: '15px',
+            backgroundColor: 'var(--fdl-canvas, #f3f6f8)',
+            color: 'var(--fdl-muted, #5e6e7c)',
+            border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
+            padding: '24px',
             marginBottom: '20px'
           }}
         >
@@ -815,17 +818,17 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
 
             <div className="controls-wrapper">
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 10 }}>
-                <span style={{ fontSize: 13, color: 'var(--afl-n-600)', fontWeight: 700 }}>Per page</span>
+                <span style={{ fontSize: 13, color: 'var(--fdl-ink-soft, #273843)', fontWeight: 700 }}>Per page</span>
                 <select
                   value={localResultsPerPage}
                   onChange={handlePerPageChange}
                   style={{
-                    padding: '6px 10px',
-                    borderRadius: 8,
-                    border: '1px solid var(--afl-n-200)',
-                    background: 'var(--afl-n-0)',
+                    padding: '5px 8px',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
+                    border: '1px solid var(--fdl-line, #b8c8d7)',
+                    background: 'var(--fdl-paper, #ffffff)',
                     fontWeight: 700,
-                    color: 'var(--afl-n-900)',
+                    color: 'var(--fdl-navy-950, #071f3d)',
                     cursor: 'pointer'
                   }}
                 >
@@ -867,10 +870,10 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                     top: '100%',
                     right: 0,
                     marginTop: '4px',
-                    backgroundColor: 'white',
-                    borderRadius: '6px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                    border: '1px solid var(--afl-n-200)',
+                    backgroundColor: 'var(--fdl-paper, #ffffff)',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
+                    boxShadow: '0 4px 12px rgba(7, 31, 61, 0.1)',
+                    border: '1px solid var(--fdl-line, #b8c8d7)',
                     zIndex: 50,
                     minWidth: '160px',
                     overflow: 'hidden'
@@ -881,16 +884,16 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                         display: 'block',
                         width: '100%',
                         textAlign: 'left',
-                        padding: '8px 16px',
-                        fontSize: '0.875rem',
-                        color: 'var(--afl-n-700)',
-                        backgroundColor: 'white',
+                        padding: '8px 14px',
+                        fontSize: '0.825rem',
+                        color: 'var(--fdl-ink, #132332)',
+                        backgroundColor: 'var(--fdl-paper, #ffffff)',
                         border: 'none',
                         cursor: 'pointer',
-                        borderBottom: '1px solid var(--afl-n-100)'
+                        borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)'
                       }}
-                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--afl-n-50)'}
-                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--fdl-canvas, #f3f6f8)'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--fdl-paper, #ffffff)'}
                     >
                       JSON (Results + XML)
                     </button>
@@ -901,15 +904,15 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                         display: 'block',
                         width: '100%',
                         textAlign: 'left',
-                        padding: '8px 16px',
-                        fontSize: '0.875rem',
-                        color: 'var(--afl-n-700)',
-                        backgroundColor: 'white',
+                        padding: '8px 14px',
+                        fontSize: '0.825rem',
+                        color: 'var(--fdl-ink, #132332)',
+                        backgroundColor: 'var(--fdl-paper, #ffffff)',
                         border: 'none',
                         cursor: 'pointer'
                       }}
-                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--afl-n-50)'}
-                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--fdl-canvas, #f3f6f8)'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--fdl-paper, #ffffff)'}
                     >
                       Excel (Template)
                     </button>
@@ -921,17 +924,17 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                           display: 'block',
                           width: '100%',
                           textAlign: 'left',
-                          padding: '8px 16px',
-                          fontSize: '0.875rem',
-                          color: 'var(--afl-info-500)',
-                          backgroundColor: 'white',
+                          padding: '8px 14px',
+                          fontSize: '0.825rem',
+                          color: 'var(--fdl-blue-700, #0759a5)',
+                          backgroundColor: 'var(--fdl-paper, #ffffff)',
                           border: 'none',
                           cursor: 'pointer',
-                          fontWeight: 600,
-                          borderTop: '1px solid var(--afl-n-100)'
+                          fontWeight: 700,
+                          borderTop: '1px solid var(--fdl-line-soft, #d7e0e7)'
                         }}
-                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--afl-n-50)'}
-                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--fdl-canvas, #f3f6f8)'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--fdl-paper, #ffffff)'}
                       >
                         Export to Dashboard
                       </button>
@@ -961,14 +964,14 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                 className={`result-item p-4 border-b border-gray-200 ${isHighlighted ? 'highlighted-result' : ''} ${isLastRef ? 'reference-popout' : ''}`}
                 style={{
                   position: 'relative',
-                  cursor: 'default',     // ✅ allow normal cursor + selection
-                  userSelect: 'text',    // ✅ ensure selectable
-                  border: isHighlighted ? '2px solid var(--afl-info-500)' : (isLastRef ? '2px solid var(--afl-success-500)' : '1px solid var(--afl-n-200)'),
-                  backgroundColor: isHighlighted ? 'var(--afl-info-50)' : (isLastRef ? 'var(--afl-success-50)' : 'var(--afl-n-0)'),
-                  boxShadow: isLastRef ? '0 10px 15px -3px rgba(22, 163, 74, 0.1), 0 4px 6px -2px rgba(22, 163, 74, 0.05)' : 'none',
-                  transform: isLastRef ? 'scale(1.01)' : 'scale(1)',
+                  cursor: 'default',
+                  userSelect: 'text',
+                  border: isHighlighted ? '2px solid var(--fdl-blue-700, #0759a5)' : (isLastRef ? '2px solid var(--fdl-green, #2d7a4c)' : '1px solid var(--fdl-line-soft, #d7e0e7)'),
+                  backgroundColor: isHighlighted ? 'var(--fdl-blue-050, #edf4fa)' : (isLastRef ? '#f0fdf4' : 'var(--fdl-paper, #ffffff)'),
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  boxShadow: 'none',
                   zIndex: isLastRef ? 10 : 1,
-                  transition: 'all 0.3s ease'
+                  transition: 'border-color 0.15s, background-color 0.15s'
                 }}
               >
                 <div
@@ -976,7 +979,6 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                   title="Drag this label into the question box"
                   onDragStart={(e) => {
                     e.dataTransfer.setData('application/json+drugdata', JSON.stringify(result));
-                    // optional but helpful: lets plain inputs accept a text drop too
                     e.dataTransfer.setData('text/plain', `${result.PRODUCT_NAMES} (${result.GENERIC_NAMES}) [SET_ID: ${result.set_id}]`);
                     e.dataTransfer.effectAllowed = 'copy';
                   }}
@@ -984,15 +986,15 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                     position: 'absolute',
                     top: 10,
                     right: 10,
-                    padding: '4px 8px',
-                    borderRadius: 8,
-                    border: '1px solid var(--afl-n-200)',
-                    background: 'var(--afl-n-0)',
+                    padding: '3px 7px',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
+                    border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+                    background: 'var(--fdl-paper, #ffffff)',
                     cursor: 'grab',
                     userSelect: 'none',
                     fontWeight: 800,
-                    color: 'var(--afl-n-700)',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.06)'
+                    fontSize: '0.8rem',
+                    color: 'var(--fdl-muted, #5e6e7c)'
                   }}
                 >
                   ⠿
@@ -1007,7 +1009,7 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
 
                 <div className="result-header mb-2">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--afl-info-700)', fontWeight: 700, cursor: 'pointer', background: 'var(--afl-info-50)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--afl-info-100)' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.825rem', color: 'var(--fdl-blue-700, #0759a5)', fontWeight: 700, cursor: 'pointer', background: 'var(--fdl-blue-050, #edf4fa)', padding: '2px 8px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>
                       <input 
                         type="checkbox"
                         checked={false}
@@ -1043,19 +1045,19 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                             style={{
                               display: 'inline-block',
                               marginLeft: 6,
-                              padding: '3px 10px',
-                              borderRadius: 999,
-                              background: 'var(--afl-success-50)',
-                              border: '1px solid var(--afl-success-500)',
-                              color: 'var(--afl-success-700)',
-                              fontWeight: 900,
+                              padding: '2px 8px',
+                              borderRadius: 'var(--fdl-radius-sm, 2px)',
+                              background: '#dcfce7',
+                              border: '1px solid #bbf7d0',
+                              color: '#166534',
+                              fontWeight: 700,
                               fontSize: 12
                             }}
                           >
                             Yes
                           </span>
                         ) : (
-                          <span style={{ color: 'var(--afl-n-400)', marginLeft: 6 }}>—</span>
+                          <span style={{ color: 'var(--fdl-muted, #5e6e7c)', marginLeft: 6 }}>—</span>
                         )}
                       </div>
                     </div>
@@ -1067,20 +1069,21 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                       <div className="meta-row"><span>FDALabel SET-ID:</span> {result.set_id}</div>
                     </div>
                   </div>
-                  <div style={{ marginTop: '15px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                  <div style={{ marginTop: '15px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                     {result.is_combination && (
                       <a
                         href={withAppBase(`/device?q=${encodeURIComponent(result.PRODUCT_NAMES.split(' ')[0])}`)}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
-                          fontSize: '0.85rem',
-                          color: 'var(--afl-danger-500)',
+                          fontSize: '0.825rem',
+                          color: '#b91c1c',
                           textDecoration: 'none',
-                          fontWeight: 600,
-                          padding: '4px 12px',
-                          borderRadius: '4px',
-                          border: '1px solid var(--afl-danger-500)',
+                          fontWeight: 700,
+                          padding: '4px 10px',
+                          borderRadius: 'var(--fdl-radius-sm, 2px)',
+                          border: '1px solid #fecaca',
+                          background: '#fef2f2',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '4px'
@@ -1094,13 +1097,14 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
-                        fontSize: '0.85rem',
-                        color: 'var(--afl-info-500)',
+                        fontSize: '0.825rem',
+                        color: 'var(--fdl-blue-700, #0759a5)',
                         textDecoration: 'none',
-                        fontWeight: 600,
-                        padding: '4px 12px',
-                        borderRadius: '4px',
-                        border: '1px solid var(--afl-info-500)'
+                        fontWeight: 700,
+                        padding: '4px 10px',
+                        borderRadius: 'var(--fdl-radius-sm, 2px)',
+                        border: '1px solid var(--fdl-line, #b8c8d7)',
+                        background: 'var(--fdl-paper, #ffffff)'
                       }}
                     >
                       View Label ↗
@@ -1124,10 +1128,10 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                     <th>Application #</th>
                     <th>NDC</th>
                     <th style={{
-                      backgroundColor: 'var(--afl-info-50)',
-                      color: 'var(--afl-info-700)',
+                      backgroundColor: 'var(--fdl-blue-050, #edf4fa)',
+                      color: 'var(--fdl-blue-700, #0759a5)',
                       fontWeight: 'bold',
-                      border: '1px solid var(--afl-n-200)'
+                      border: '1px solid var(--fdl-line-soft, #d7e0e7)'
                     }}>Analysis ↗</th>
                   </tr>
                 </thead>
@@ -1142,10 +1146,10 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                         key={index}
                         id={`result-${result.set_id}`}
                         style={{
-                          backgroundColor: isHighlighted ? 'var(--afl-info-50)' : (isLastRef ? 'var(--afl-success-50)' : 'inherit'),
+                          backgroundColor: isHighlighted ? 'var(--fdl-blue-050, #edf4fa)' : (isLastRef ? '#f0fdf4' : 'inherit'),
                           fontWeight: (isHighlighted || isLastRef) ? '600' : 'normal',
-                          border: isLastRef ? '2px solid var(--afl-success-500)' : 'inherit',
-                          boxShadow: isLastRef ? 'inset 0 0 0 1px var(--afl-success-500)' : 'none'
+                          border: isLastRef ? '2px solid var(--fdl-green, #2d7a4c)' : 'inherit',
+                          boxShadow: 'none'
                         }}
                       >
                         <td style={{ whiteSpace: 'nowrap' }}>
@@ -1164,13 +1168,14 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                               width: 22,
                               height: 22,
                               marginRight: 8,
-                              borderRadius: 6,
-                              border: '1px solid var(--afl-n-200)',
-                              background: 'var(--afl-n-0)',
+                              borderRadius: 'var(--fdl-radius-sm, 2px)',
+                              border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+                              background: 'var(--fdl-paper, #ffffff)',
                               cursor: 'grab',
                               userSelect: 'none',
                               fontWeight: 800,
-                              color: 'var(--afl-n-700)'
+                              fontSize: '0.75rem',
+                              color: 'var(--fdl-muted, #5e6e7c)'
                             }}
                           >
                             ⠿
@@ -1183,19 +1188,19 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ fontWeight: 600, color: 'var(--afl-n-900)' }}>{result.PRODUCT_NAMES}</span>
+                              <span style={{ fontWeight: 600, color: 'var(--fdl-navy-950, #071f3d)' }}>{result.PRODUCT_NAMES}</span>
                               {(() => {
                                 const val = (result as any).RLD ?? (result as any).rld ?? (result as any).is_rld;
                                 return String(val).toLowerCase() === 'yes' || val === true || val === 1 || String(val) === '1';
                               })() && (
                                 <span style={{
                                   display: 'inline-block',
-                                  padding: '2px 6px',
-                                  borderRadius: '4px',
-                                  background: 'var(--afl-a-100)',
-                                  border: '1px solid var(--afl-a-100)',
-                                  color: 'var(--afl-a-700)',
-                                  fontWeight: 800,
+                                  padding: '1px 6px',
+                                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                                  background: '#dcfce7',
+                                  border: '1px solid #bbf7d0',
+                                  color: '#166534',
+                                  fontWeight: 700,
                                   fontSize: '0.65rem',
                                   textTransform: 'uppercase'
                                 }}>
@@ -1203,7 +1208,7 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                                 </span>
                               )}
                             </div>
-                            <span style={{ fontSize: '0.8rem', color: 'var(--afl-n-500)' }}>{result.GENERIC_NAMES}</span>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--fdl-muted, #5e6e7c)' }}>{result.GENERIC_NAMES}</span>
                           </div>
                         </td>
                         <td>{result.COMPANY}</td>
@@ -1223,7 +1228,7 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
                                 href={withAppBase(`/device?q=${encodeURIComponent(result.PRODUCT_NAMES.split(' ')[0])}`)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                style={{ color: 'var(--afl-danger-500)', fontWeight: 700, fontSize: '0.75rem' }}
+                                style={{ color: '#b91c1c', fontWeight: 700, fontSize: '0.75rem' }}
                               >
                                 🩺 Device Safety
                               </a>
@@ -1242,15 +1247,15 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
           <div style={{
             marginTop: '20px',
             padding: '12px 16px',
-            background: 'var(--afl-info-50)',
-            borderRadius: '10px',
-            border: '1px solid var(--afl-info-100)',
+            background: 'var(--fdl-blue-050, #edf4fa)',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
+            border: '1px solid var(--fdl-line-soft, #d7e0e7)',
             display: 'flex',
             alignItems: 'center',
             gap: '12px'
           }}>
             <span style={{ fontSize: '1.2rem' }}>💡</span>
-            <div style={{ fontSize: '0.85rem', color: 'var(--afl-info-700)', lineHeight: 1.4 }}>
+            <div style={{ fontSize: '0.85rem', color: 'var(--fdl-navy-800, #12375b)', lineHeight: 1.4 }}>
               <strong>Pro Tip:</strong> Click the <strong>🔍📄 Document Refinement</strong> icon on any result to refine the AI's last response using that specific labeling as a primary reference.
             </div>
           </div>

@@ -175,10 +175,11 @@ export default function NotesModal({ isOpen, onClose, setId }: NotesModalProps) 
         style={{
           width: 'min(720px, 92vw)',
           maxHeight: 'min(640px, 85vh)',
-          backgroundColor: 'white',
-          borderRadius: 'var(--fdl-radius-sm, 4px)',
-          boxShadow: '0 16px 40px rgba(15, 23, 42, 0.2)',
-          border: '1px solid var(--fdl-line)',
+          backgroundColor: 'var(--fdl-paper, #ffffff)',
+          borderRadius: 'var(--fdl-radius-sm, 2px)',
+          boxShadow: '0 16px 36px rgba(7, 31, 61, 0.24)',
+          border: '1px solid var(--fdl-line, #b8c8d7)',
+          borderTop: '3px solid var(--fdl-navy-800, #12375b)',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
@@ -188,26 +189,27 @@ export default function NotesModal({ isOpen, onClose, setId }: NotesModalProps) 
         <div
           style={{
             padding: '16px 20px',
-            borderBottom: '1px solid var(--fdl-line)',
+            borderBottom: '1px solid var(--fdl-line, #b8c8d7)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            backgroundColor: 'var(--fdl-canvas)',
+            backgroundColor: 'var(--fdl-canvas, #f3f6f8)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--fdl-navy-950)' }}>
+            <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)' }}>
               My Notes & Highlights
             </h3>
             <span
               style={{
                 fontSize: '0.75rem',
                 fontWeight: 700,
-                color: 'var(--fdl-navy-800)',
-                background: 'var(--fdl-blue-050)',
-                border: '1px solid var(--fdl-line)',
+                color: 'var(--fdl-navy-800, #12375b)',
+                background: 'var(--fdl-blue-050, #edf4fa)',
+                border: '1px solid var(--fdl-line, #b8c8d7)',
                 padding: '2px 8px',
-                borderRadius: '12px',
+                borderRadius: 'var(--fdl-radius-sm, 2px)',
+                fontFamily: 'var(--fdl-font-mono, monospace)'
               }}
             >
               {notes.length}

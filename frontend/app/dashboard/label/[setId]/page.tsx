@@ -111,7 +111,7 @@ function ExportSectionItem({
 
   return (
     <div style={{ marginLeft: level * 12, marginBottom: '6px', borderLeft: level > 0 ? '1px solid #f1f5f9' : 'none', paddingLeft: level > 0 ? '8px' : '0' }}>
-      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '4px 8px', borderRadius: '6px', transition: 'background 0.2s ease' }} onMouseOver={e => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '4px 8px', borderRadius: 'var(--fdl-radius-sm, 2px)', transition: 'background 0.2s ease' }} onMouseOver={e => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
         <input 
           type="checkbox" 
           checked={isSelected} 
@@ -974,18 +974,18 @@ function LabelContent() {
                 onClick={handleDownloadMeddraProfile}
                 title="Export MedDRA Profile JSON"
                 style={{ 
-                  background: '#6366f1', 
+                  background: 'var(--fdl-navy-800, #12375b)', 
                   color: '#ffffff', 
                   border: 'none', 
                   padding: '6px 14px', 
-                  borderRadius: '8px', 
+                  borderRadius: 'var(--fdl-radius-sm, 2px)', 
                   fontSize: '0.8rem', 
                   fontWeight: 700, 
                   display: 'inline-flex', 
                   alignItems: 'center', 
                   gap: '6px', 
                   cursor: 'pointer',
-                  boxShadow: '0 2px 6px rgba(99, 102, 241, 0.25)',
+                  boxShadow: 'none',
                   transition: 'all 0.2s ease'
                 }}
               >

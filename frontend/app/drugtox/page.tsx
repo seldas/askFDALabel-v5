@@ -603,8 +603,9 @@ export default function DrugToxPage() {
             borderBottom: '1px solid #e3f2fd',
           },
           '.drugtox-ai-preview .toxicity-summary': {
-            background: '#e8eaf6',
-            borderRadius: '8px',
+            background: 'var(--fdl-blue-050, #edf4fa)',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
+            border: '1px solid var(--fdl-line, #b8c8d7)',
             padding: '10px 14px',
             marginBottom: '0.75rem',
             fontWeight: 600,
@@ -612,10 +613,10 @@ export default function DrugToxPage() {
           '.drugtox-ai-preview [class*="badge-score"]': {
             display: 'inline-block',
             padding: '2px 8px',
-            borderRadius: '4px',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
             fontSize: '0.72rem',
             fontWeight: 800,
-            background: '#1a237e',
+            background: 'var(--fdl-navy-950, #071f3d)',
             color: '#fff',
             margin: '2px 3px',
           },
@@ -633,7 +634,7 @@ export default function DrugToxPage() {
             Agentic AI System for Drug Toxicity Classification
           </Typography>
 
-          <Paper sx={{ display: 'flex', alignItems: 'center', width: '100%', maxWidth: 900, p: 1, border: '1px solid #e2e8f0', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+          <Paper sx={{ display: 'flex', alignItems: 'center', width: '100%', maxWidth: 900, p: 1, border: '1px solid var(--fdl-line, #b8c8d7)', borderRadius: 'var(--fdl-radius-sm, 2px)', boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))' }}>
             <Box sx={{ position: 'relative' }}>
               {/* Floating hint to switch endpoints */}
               {mounted && (
@@ -645,15 +646,15 @@ export default function DrugToxPage() {
                     display: 'flex', 
                     alignItems: 'center', 
                     gap: 1,
-                    backgroundColor: '#e8eaf6',
-                    border: '1.5px solid #c5cae9',
-                    borderRadius: '20px',
+                    backgroundColor: 'var(--fdl-blue-050, #edf4fa)',
+                    border: '1px solid var(--fdl-line, #b8c8d7)',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
                     px: 1.5,
                     py: 0.5,
                     zIndex: 10,
                     pointerEvents: 'none',
                     whiteSpace: 'nowrap',
-                    boxShadow: '0 4px 12px rgba(26, 35, 126, 0.08)',
+                    boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))',
                     '@keyframes bounce': {
                       '0%, 100%': { transform: 'translateY(0)' },
                       '50%': { transform: 'translateY(-4px)' },
@@ -779,7 +780,7 @@ export default function DrugToxPage() {
               onClick={() => handleSearchSubmit()} 
               startIcon={<ScienceIcon />}
               sx={{ 
-                borderRadius: '12px', 
+                borderRadius: 'var(--fdl-radius-sm, 2px)', 
                 px: 4, 
                 py: 1.2, 
                 fontWeight: 800, 
@@ -809,7 +810,7 @@ export default function DrugToxPage() {
 
         {/* Global Statistics Panel - Now on top */}
         <Box sx={{ width: '100%', mb: 6 }}>
-          <Card sx={{ borderLeft: `6px solid ${theme.palette.primary.main}` }}>
+          <Card sx={{ borderLeft: `6px solid ${theme.palette.primary.main}`, borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
             <CardContent sx={{ py: 3, px: 4 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 3 }}>
                 <Box>
@@ -847,7 +848,7 @@ export default function DrugToxPage() {
                       height: '40px',
                       fontWeight: 800,
                       textTransform: 'none',
-                      borderRadius: '8px',
+                      borderRadius: 'var(--fdl-radius-sm, 2px)',
                       fontSize: '0.75rem',
                       ml: 2
                     }}
@@ -864,7 +865,7 @@ export default function DrugToxPage() {
                       height: '40px',
                       fontWeight: 800,
                       textTransform: 'none',
-                      borderRadius: '8px',
+                      borderRadius: 'var(--fdl-radius-sm, 2px)',
                       fontSize: '0.75rem',
                     }}
                     onClick={() => setShowExportDialog(true)}
@@ -889,15 +890,15 @@ export default function DrugToxPage() {
           </Box>
 
           {hasSearched ? (
-            <Paper sx={{ overflow: 'hidden', border: '1px solid #e0e0e0', borderRadius: '12px' }}>
+            <Paper sx={{ overflow: 'hidden', border: '1px solid var(--fdl-line, #b8c8d7)', borderRadius: 'var(--fdl-radius-sm, 2px)', boxShadow: 'none' }}>
               <TableContainer sx={{ maxHeight: '60vh' }}>
                 <Table stickyHeader>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 900, backgroundColor: '#f8f9fa', color: '#1a237e' }}>SET-ID</TableCell>
-                      <TableCell sx={{ fontWeight: 900, backgroundColor: '#f8f9fa', color: '#1a237e' }}>DRUG NAME</TableCell>
-                      <TableCell sx={{ fontWeight: 900, backgroundColor: '#f8f9fa', color: '#1a237e' }}>COMPANY</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 900, backgroundColor: '#f8f9fa', color: '#1a237e' }}>
+                      <TableCell sx={{ fontWeight: 900, backgroundColor: 'var(--fdl-canvas, #f3f6f8)', color: 'var(--fdl-navy-950, #071f3d)' }}>SET-ID</TableCell>
+                      <TableCell sx={{ fontWeight: 900, backgroundColor: 'var(--fdl-canvas, #f3f6f8)', color: 'var(--fdl-navy-950, #071f3d)' }}>DRUG NAME</TableCell>
+                      <TableCell sx={{ fontWeight: 900, backgroundColor: 'var(--fdl-canvas, #f3f6f8)', color: 'var(--fdl-navy-950, #071f3d)' }}>COMPANY</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 900, backgroundColor: 'var(--fdl-canvas, #f3f6f8)', color: 'var(--fdl-navy-950, #071f3d)' }}>
                         TOXICITY CLASS
                       </TableCell>
                     </TableRow>
@@ -911,11 +912,11 @@ export default function DrugToxPage() {
                         sx={{
                           cursor: 'pointer',
                           backgroundColor:
-                            selectedSetid === drug.SETID ? '#f8faff' : drug.is_historical === 1 ? '#fafafa' : 'inherit',
+                            selectedSetid === drug.SETID ? 'var(--fdl-blue-050, #edf4fa)' : drug.is_historical === 1 ? '#fafafa' : 'inherit',
                           borderLeft:
                             selectedSetid === drug.SETID
-                              ? '6px solid #1a237e'
-                              : '6px solid transparent',
+                              ? '4px solid var(--fdl-navy-800, #12375b)'
+                              : '4px solid transparent',
                           opacity: drug.is_historical === 1 ? 0.7 : 1,
                         }}
                       >
@@ -924,11 +925,11 @@ export default function DrugToxPage() {
                         </TableCell>
                         <TableCell sx={{ py: 2.5 }}>
                           <Stack direction="row" alignItems="center" spacing={1.5}>
-                            <Typography variant="body2" sx={{ fontWeight: 800, color: '#1a237e' }}>
+                            <Typography variant="body2" sx={{ fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)' }}>
                               {drug.Trade_Name}
                             </Typography>
                             {drug.is_historical === 1 && (
-                              <Chip label="ARCHIVED" size="small" variant="outlined" sx={{ fontSize: '0.6rem', height: 18, fontWeight: 800 }} />
+                              <Chip label="ARCHIVED" size="small" variant="outlined" sx={{ fontSize: '0.6rem', height: 18, fontWeight: 800, borderRadius: 'var(--fdl-radius-sm, 2px)' }} />
                             )}
                           </Stack>
                         </TableCell>
@@ -942,11 +943,11 @@ export default function DrugToxPage() {
                             label={drug.Toxicity_Class}
                             color={getToxColor(drug.Toxicity_Class) as any}
                             variant="filled"
-                            sx={{ minWidth: 100, fontWeight: 900, borderRadius: '8px' }}
+                            sx={{ minWidth: 100, fontWeight: 900, borderRadius: 'var(--fdl-radius-sm, 2px)' }}
                           />
                           <br />
                           {(drug.endpoint === 'Fuzzy' || drug.endpoint === 'Disagree') && (
-                            <Chip label={drug.endpoint} size="small" color="warning" variant="outlined" sx={{ fontWeight: 700, mt: 1, height: 20, fontSize: '0.65rem' }} />
+                            <Chip label={drug.endpoint} size="small" color="warning" variant="outlined" sx={{ fontWeight: 700, mt: 1, height: 20, fontSize: '0.65rem', borderRadius: 'var(--fdl-radius-sm, 2px)' }} />
                           )}
                         </TableCell>
                       </TableRow>
@@ -955,7 +956,7 @@ export default function DrugToxPage() {
                       <TableRow>
                         <TableCell style={{ paddingBottom: 0, paddingTop: 0, border: 0 }} colSpan={4}>
                           <Collapse in={selectedSetid === drug.SETID} timeout="auto" unmountOnExit>
-                            <Box sx={{ margin: 3, padding: 3, backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e0e6f0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                            <Box sx={{ margin: 3, padding: 3, backgroundColor: 'var(--fdl-paper, #ffffff)', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)', borderTop: '3px solid var(--fdl-navy-800, #12375b)', boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))' }}>
                               {detailLoading ? (
                                 <Box display="flex" justifyContent="center" alignItems="center" p={2}>
                                   <CircularProgress size={20} />
@@ -964,7 +965,7 @@ export default function DrugToxPage() {
                                 <Box>
                                   {/* ── Header row: title + action buttons ── */}
                                   <Box display="flex" justifyContent="space-between" alignItems="center" mb={2.5} flexWrap="wrap" gap={1}>
-                                    <Typography variant="h6" sx={{ fontWeight: 800, color: '#1a237e' }}>
+                                    <Typography variant="h6" sx={{ fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)' }}>
                                       {detail.Toxicity_Class === 'Not Assessed' ? 'Label Information' : 'Evidence Preview'}
                                     </Typography>
                                      <Box display="flex" gap={1}>
@@ -974,7 +975,7 @@ export default function DrugToxPage() {
                                         size="small"
                                         endIcon={<LaunchIcon />}
                                         onClick={() => window.location.href = withAppBase(`/drugtox/${drug.SETID}`)}
-                                        sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 700 }}
+                                        sx={{ borderRadius: 'var(--fdl-radius-sm, 2px)', textTransform: 'none', fontWeight: 700 }}
                                       >
                                         View in Detail
                                       </Button>
@@ -988,9 +989,9 @@ export default function DrugToxPage() {
                                     gap: 1.5,
                                     mb: 2.5,
                                     p: 2,
-                                    backgroundColor: '#f8faff',
-                                    borderRadius: '10px',
-                                    border: '1px solid #e3f2fd'
+                                    backgroundColor: 'var(--fdl-canvas, #f3f6f8)',
+                                    borderRadius: 'var(--fdl-radius-sm, 2px)',
+                                    border: '1px solid var(--fdl-line-soft, #d7e0e7)'
                                   }}>
                                     {([
                                       { label: 'Revised Date', value: detail.SPL_Effective_Time ? `${detail.SPL_Effective_Time.slice(0,4)}-${detail.SPL_Effective_Time.slice(4,6)}-${detail.SPL_Effective_Time.slice(6,8)}` : '—' },
@@ -1001,10 +1002,10 @@ export default function DrugToxPage() {
                                       { label: 'Assessment Date', value: (detail as any).Assessment_Date || '—' },
                                     ] as {label: string; value: string}[]).map(({ label, value }) => (
                                       <Box key={label}>
-                                        <Typography variant="caption" sx={{ fontWeight: 700, color: '#90a4ae', textTransform: 'uppercase', fontSize: '0.6rem', letterSpacing: '0.06em' }}>
+                                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'var(--fdl-muted, #5e6e7c)', textTransform: 'uppercase', fontSize: '0.6rem', letterSpacing: '0.06em' }}>
                                           {label}
                                         </Typography>
-                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#37474f', fontSize: '0.8rem', mt: 0.25, wordBreak: 'break-word' }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: 'var(--fdl-ink-soft, #273843)', fontSize: '0.8rem', mt: 0.25, wordBreak: 'break-word' }}>
                                           {value}
                                         </Typography>
                                       </Box>
@@ -1012,15 +1013,15 @@ export default function DrugToxPage() {
                                     {/* RLD / RS badges */}
                                     {(detail.Is_RLD === 1 || detail.Is_RS === 1) && (
                                       <Box>
-                                        <Typography variant="caption" sx={{ fontWeight: 700, color: '#90a4ae', textTransform: 'uppercase', fontSize: '0.6rem', letterSpacing: '0.06em' }}>
+                                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'var(--fdl-muted, #5e6e7c)', textTransform: 'uppercase', fontSize: '0.6rem', letterSpacing: '0.06em' }}>
                                           Status
                                         </Typography>
                                         <Box display="flex" gap={0.5} mt={0.5} flexWrap="wrap">
                                           {detail.Is_RLD === 1 && (
-                                            <Chip label="RLD" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 800, backgroundColor: '#e3f2fd', color: '#1565c0' }} />
+                                            <Chip label="RLD" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 800, backgroundColor: 'var(--fdl-blue-050, #edf4fa)', color: 'var(--fdl-navy-800, #12375b)', borderRadius: 'var(--fdl-radius-sm, 2px)' }} />
                                           )}
                                           {detail.Is_RS === 1 && (
-                                            <Chip label="RS" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 800, backgroundColor: '#f3e5f5', color: '#6a1b9a' }} />
+                                            <Chip label="RS" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 800, backgroundColor: 'var(--fdl-blue-050, #edf4fa)', color: 'var(--fdl-blue-700, #0759a5)', borderRadius: 'var(--fdl-radius-sm, 2px)' }} />
                                           )}
                                         </Box>
                                       </Box>
@@ -1031,20 +1032,20 @@ export default function DrugToxPage() {
                                   {detail.Toxicity_Class === 'Not Assessed' ? (
                                     <Box sx={{
                                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                      gap: 1.5, py: 4, backgroundColor: '#fffde7', borderRadius: '10px',
-                                      border: '1px dashed #f9a825'
+                                      gap: 1.5, py: 4, backgroundColor: 'var(--fdl-canvas, #f3f6f8)', borderRadius: 'var(--fdl-radius-sm, 2px)',
+                                      border: '1px dashed var(--fdl-line, #b8c8d7)'
                                     }}>
-                                      <Typography variant="body2" sx={{ color: '#795548', fontWeight: 700, textAlign: 'center' }}>
+                                      <Typography variant="body2" sx={{ color: 'var(--fdl-ink-soft, #273843)', fontWeight: 700, textAlign: 'center' }}>
                                         This drug has not yet been assessed by the AI system.
                                       </Typography>
-                                      <Typography variant="caption" sx={{ color: '#9e9e9e', textAlign: 'center' }}>
+                                      <Typography variant="caption" sx={{ color: 'var(--fdl-muted, #5e6e7c)', textAlign: 'center' }}>
                                         Use &ldquo;View in Detail&rdquo; to open the label page, or check back after the next generation run.
                                       </Typography>
                                     </Box>
                                   ) : (
                                     // AI_Summary is LLM-generated HTML (not Markdown) — render it directly.
                                     // Previously passed to <ReactMarkdown> which escaped all HTML tags, causing them to show as raw text.
-                                    <Box sx={{ backgroundColor: '#f8faff', p: 2, borderRadius: '8px', border: '1px solid #e3f2fd', overflowX: 'auto' }}>
+                                    <Box sx={{ backgroundColor: 'var(--fdl-canvas, #f3f6f8)', p: 2, borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line, #b8c8d7)', overflowX: 'auto' }}>
                                       {(() => {
                                         const content = detail.AI_Summary || detail.Explanations || detail.Evidence || '';
                                         if (!content) {
@@ -1102,10 +1103,11 @@ export default function DrugToxPage() {
           ) : (
             <Box 
               sx={{ 
-                backgroundColor: '#ffffff', 
-                borderRadius: '20px', 
-                border: '1px solid #e8eaf6',
-                boxShadow: '0 10px 30px rgba(26, 35, 126, 0.03)',
+                backgroundColor: 'var(--fdl-paper, #ffffff)', 
+                borderRadius: 'var(--fdl-radius-sm, 2px)', 
+                border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+                borderTop: '3px solid var(--fdl-navy-800, #12375b)',
+                boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))',
                 p: { xs: 4, md: 6 }, 
                 textAlign: 'center',
                 display: 'flex',
@@ -1120,8 +1122,8 @@ export default function DrugToxPage() {
                   sx={{ 
                     width: 70, 
                     height: 70, 
-                    borderRadius: '50%', 
-                    backgroundColor: 'rgba(26, 35, 126, 0.05)', 
+                    borderRadius: 'var(--fdl-radius-sm, 2px)', 
+                    backgroundColor: 'var(--fdl-blue-050, #edf4fa)', 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center', 
@@ -1129,9 +1131,9 @@ export default function DrugToxPage() {
                     mx: 'auto' 
                   }}
                 >
-                  <ScienceIcon sx={{ fontSize: 36, color: '#1a237e' }} />
+                  <ScienceIcon sx={{ fontSize: 36, color: 'var(--fdl-navy-800, #12375b)' }} />
                 </Box>
-                <Typography variant="h5" sx={{ fontWeight: 900, color: '#1a237e', mb: 1.5 }}>
+                <Typography variant="h5" sx={{ fontWeight: 900, color: 'var(--fdl-navy-950, #071f3d)', mb: 1.5 }}>
                   Welcome to the Agent Toxicity Explorer
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 550, lineHeight: 1.6 }}>
@@ -1149,7 +1151,7 @@ export default function DrugToxPage() {
                     color: '#2e7d32',
                     bg: 'rgba(46, 125, 50, 0.04)',
                     hoverBg: 'rgba(46, 125, 50, 0.08)',
-                    borderColor: 'rgba(46, 125, 50, 0.15)',
+                    borderColor: 'rgba(46, 125, 50, 0.25)',
                     iconColor: '#2e7d32'
                   },
                   {
@@ -1159,7 +1161,7 @@ export default function DrugToxPage() {
                     color: '#ed6c02',
                     bg: 'rgba(237, 108, 2, 0.04)',
                     hoverBg: 'rgba(237, 108, 2, 0.08)',
-                    borderColor: 'rgba(237, 108, 2, 0.15)',
+                    borderColor: 'rgba(237, 108, 2, 0.25)',
                     iconColor: '#ed6c02'
                   },
                   {
@@ -1169,7 +1171,7 @@ export default function DrugToxPage() {
                     color: '#1565c0',
                     bg: 'rgba(21, 101, 192, 0.04)',
                     hoverBg: 'rgba(21, 101, 192, 0.08)',
-                    borderColor: 'rgba(21, 101, 192, 0.15)',
+                    borderColor: 'rgba(21, 101, 192, 0.25)',
                     iconColor: '#1565c0'
                   }
                 ].map((item) => (
@@ -1184,16 +1186,15 @@ export default function DrugToxPage() {
                       sx={{
                         p: 3,
                         height: '100%',
-                        borderRadius: '16px',
-                        border: `1.5px solid ${item.borderColor}`,
+                        borderRadius: 'var(--fdl-radius-sm, 2px)',
+                        border: `1px solid ${item.borderColor}`,
                         backgroundColor: item.bg,
                         textAlign: 'left',
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease-in-out',
+                        transition: 'all 0.15s ease-in-out',
                         '&:hover': {
                           backgroundColor: item.hoverBg,
-                          transform: 'translateY(-3px)',
-                          boxShadow: `0 8px 20px ${item.bg === 'rgba(46, 125, 50, 0.04)' ? 'rgba(46, 125, 50, 0.08)' : item.bg === 'rgba(237, 108, 2, 0.04)' ? 'rgba(237, 108, 2, 0.08)' : 'rgba(21, 101, 192, 0.08)'}`
+                          borderColor: item.color
                         }
                       }}
                     >
@@ -1217,9 +1218,9 @@ export default function DrugToxPage() {
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: 1.5, 
-                  backgroundColor: '#f8faff', 
-                  border: '1px solid #e3f2fd', 
-                  borderRadius: '12px', 
+                  backgroundColor: 'var(--fdl-blue-050, #edf4fa)', 
+                  border: '1px solid var(--fdl-line, #b8c8d7)', 
+                  borderRadius: 'var(--fdl-radius-sm, 2px)', 
                   p: 2, 
                   maxWidth: 600,
                   width: '100%' 
@@ -1245,9 +1246,9 @@ export default function DrugToxPage() {
         onClose={() => setShowExportDialog(false)} 
         maxWidth="sm" 
         fullWidth 
-        PaperProps={{ sx: { borderRadius: '16px !important', p: 2 } }}
+        PaperProps={{ sx: { borderRadius: 'var(--fdl-radius-sm, 2px) !important', p: 2, borderTop: '3px solid var(--fdl-navy-800, #12375b)', boxShadow: 'var(--fdl-elevation-3, 0 12px 32px rgba(7, 31, 61, 0.18))' } }}
       >
-        <DialogTitle sx={{ pb: 1, fontWeight: 900, color: '#1a237e' }}>
+        <DialogTitle sx={{ pb: 1, fontWeight: 900, color: 'var(--fdl-navy-950, #071f3d)' }}>
           Export {toxType} Data to Excel
         </DialogTitle>
 
@@ -1319,13 +1320,13 @@ export default function DrugToxPage() {
         onClose={() => setShowNotesStatsDialog(false)}
         maxWidth="md"
         fullWidth
-        PaperProps={{ sx: { borderRadius: '20px !important', p: 1 } }}
+        PaperProps={{ sx: { borderRadius: 'var(--fdl-radius-sm, 2px) !important', p: 1, borderTop: '3px solid var(--fdl-navy-800, #12375b)', boxShadow: 'var(--fdl-elevation-3, 0 12px 32px rgba(7, 31, 61, 0.18))' } }}
       >
         <DialogTitle
           sx={{
             pb: 1,
             fontWeight: 900,
-            color: '#1a237e',
+            color: 'var(--fdl-navy-950, #071f3d)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -1334,7 +1335,7 @@ export default function DrugToxPage() {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <HistoryIcon color="primary" sx={{ fontSize: 28 }} />
             <Box>
-              <Typography variant="h5" sx={{ fontWeight: 900, color: '#1a237e' }}>
+              <Typography variant="h5" sx={{ fontWeight: 900, color: 'var(--fdl-navy-950, #071f3d)' }}>
                 {toxType} Update History & Timeline
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
@@ -1389,7 +1390,7 @@ export default function DrugToxPage() {
                       flex: 1,
                       minWidth: 150,
                       p: 2.5,
-                      borderRadius: '16px',
+                      borderRadius: 'var(--fdl-radius-sm, 2px)',
                       backgroundColor: c.bg,
                       border: `1px solid ${c.border}`,
                       textAlign: 'center'
@@ -1412,7 +1413,7 @@ export default function DrugToxPage() {
 
               {/* Timeline Section */}
               <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#1a237e', mb: 2.5 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)', mb: 2.5 }}>
                   Chronological Update Timeline
                 </Typography>
                 
@@ -1424,9 +1425,9 @@ export default function DrugToxPage() {
                     pl: 1,
                     pr: 1.5,
                     // custom scrollbar
-                    '&::-webkit-scrollbar': { width: '8px' },
-                    '&::-webkit-scrollbar-track': { backgroundColor: '#f1f1f1', borderRadius: '4px' },
-                    '&::-webkit-scrollbar-thumb': { backgroundColor: '#c5cae9', borderRadius: '4px', '&:hover': { backgroundColor: '#9fa8da' } }
+                    '&::-webkit-scrollbar': { width: '6px' },
+                    '&::-webkit-scrollbar-track': { backgroundColor: 'var(--fdl-canvas, #f3f6f8)', borderRadius: 0 },
+                    '&::-webkit-scrollbar-thumb': { backgroundColor: 'var(--fdl-line, #b8c8d7)', borderRadius: 0, '&:hover': { backgroundColor: 'var(--fdl-muted, #5e6e7c)' } }
                   }}
                 >
                   {groupedTimeline && groupedTimeline.length > 0 ? (
@@ -1437,14 +1438,14 @@ export default function DrugToxPage() {
                           variant="subtitle1" 
                           sx={{ 
                             fontWeight: 900, 
-                            color: '#1a237e', 
+                            color: 'var(--fdl-navy-950, #071f3d)', 
                             mb: 2, 
                             display: 'flex', 
                             alignItems: 'center', 
                             gap: 1,
                             backgroundColor: 'rgba(26, 35, 126, 0.04)',
                             p: '8px 16px',
-                            borderRadius: '8px'
+                            borderRadius: 'var(--fdl-radius-sm, 2px)'
                           }}
                         >
                           <CalendarTodayIcon sx={{ fontSize: 18, color: '#3f51b5' }} /> {yearGroup.year}
@@ -1495,17 +1496,15 @@ export default function DrugToxPage() {
                                     pl: 3,
                                     pr: 2.5,
                                     mb: 1.5,
-                                    borderRadius: '12px',
-                                    border: '1px solid #e8eaf6',
+                                    borderRadius: 'var(--fdl-radius-sm, 2px)',
+                                    border: '1px solid var(--fdl-line-soft, #d7e0e7)',
                                     backgroundColor: '#ffffff',
-                                    boxShadow: '0 2px 8px rgba(26, 35, 126, 0.03)',
-                                    transition: 'all 0.2s ease-in-out',
+                                    boxShadow: 'none',
+                                    transition: 'all 0.15s ease-in-out',
                                     zIndex: 1,
                                     '&:hover': {
-                                      backgroundColor: '#fafbff',
-                                      borderColor: '#c5cae9',
-                                      transform: 'translateX(3px)',
-                                      boxShadow: '0 4px 12px rgba(26, 35, 126, 0.06)'
+                                      backgroundColor: 'var(--fdl-blue-050, #edf4fa)',
+                                      borderColor: 'var(--fdl-blue-700, #0759a5)'
                                     }
                                   }}
                                 >

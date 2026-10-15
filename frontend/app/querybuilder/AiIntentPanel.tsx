@@ -515,9 +515,9 @@ export function AiIntentPanel({
             zIndex: 10000,
             background: '#0f172a',
             color: '#ffffff',
-            borderRadius: '6px',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
             padding: '10px 14px',
-            boxShadow: '0 8px 24px -4px rgba(0, 0, 0, 0.25)',
+            boxShadow: 'var(--fdl-elevation-2, 0 4px 16px rgba(7, 31, 61, 0.12))',
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
@@ -540,7 +540,7 @@ export function AiIntentPanel({
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span>Criteria Configured</span>
-              <span style={{ fontSize: '0.72rem', fontWeight: 600, background: '#1e293b', color: '#94a3b8', padding: '1px 6px', borderRadius: '4px', border: '1px solid #334155' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, background: '#1e293b', color: '#94a3b8', padding: '1px 6px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid #334155' }}>
                 {completionToast.duration}
               </span>
             </div>

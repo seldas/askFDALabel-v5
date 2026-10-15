@@ -248,24 +248,24 @@ export default function AEProfileModal({ isOpen, onClose, projectId, projectName
       <div>
         <p style={{ 
           fontSize: '0.82rem', 
-          color: '#64748b', 
+          color: 'var(--fdl-muted, #5e6e7c)', 
           marginBottom: '0.85rem',
-          lineHeight: '1.4'
+          lineHeight: '1.45'
         }}>
           Generate a statistical overview of a specific Adverse Event (AE) across 
           <strong> {projectName}</strong>. Select a MedDRA Preferred Term (PT).
         </p>
 
         {isGenerating ? (
-          <div style={{ padding: '1.5rem 0' }}>
+          <div style={{ padding: '1.25rem 0' }}>
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
               marginBottom: '0.5rem',
-              fontSize: '0.85rem',
+              fontSize: '0.82rem',
               fontWeight: 700,
-              color: '#4338ca'
+              color: 'var(--fdl-navy-800, #12375b)'
             }}>
               <span>
                 {progress < 50 ? 'Phase 1: Scanning labels...' : 'Phase 2: Fetching FAERS data...'}
@@ -274,33 +274,33 @@ export default function AEProfileModal({ isOpen, onClose, projectId, projectName
             </div>
             <div style={{ 
               width: '100%', 
-              height: '8px', 
-              backgroundColor: '#eef2ff', 
-              borderRadius: '4px',
+              height: '6px', 
+              backgroundColor: 'var(--fdl-blue-100, #dcecf8)', 
+              borderRadius: '0',
               overflow: 'hidden'
             }}>
               <div style={{ 
                 width: `${progress}%`, 
                 height: '100%', 
-                backgroundColor: progress < 50 ? '#6366f1' : '#0ea5e9',
+                backgroundColor: 'var(--fdl-blue-600, #0071bc)',
                 transition: 'width 0.4s ease'
               }} />
             </div>
-            <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.5rem', textAlign: 'center' }}>
+            <p style={{ fontSize: '0.75rem', color: 'var(--fdl-muted, #5e6e7c)', marginTop: '0.5rem', textAlign: 'center' }}>
               {progress < 50 
                 ? 'Processing drug labels for text matches in specific sections.' 
                 : 'Collecting unique drug counts from openFDA FAERS API.'}
             </p>
 
-            <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'center', gap: '12px' }}>
+            <div style={{ marginTop: '1.25rem', display: 'flex', justifyContent: 'center', gap: '8px' }}>
               <button
                 onClick={onClose}
                 style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  background: '#f1f5f9',
-                  color: '#475569',
-                  border: 'none',
+                  padding: '6px 14px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  background: 'var(--fdl-paper, #ffffff)',
+                  color: 'var(--fdl-ink-soft, #273843)',
+                  border: '1px solid var(--fdl-line, #b8c8d7)',
                   fontWeight: 700,
                   cursor: 'pointer',
                   fontSize: '0.8rem'
@@ -319,11 +319,11 @@ export default function AEProfileModal({ isOpen, onClose, projectId, projectName
                   }
                 }}
                 style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  background: '#fef2f2',
-                  color: '#ef4444',
-                  border: '1px solid #fee2e2',
+                  padding: '6px 14px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  background: 'var(--fdl-red-050, #fff1f1)',
+                  color: 'var(--fdl-red, #b50909)',
+                  border: '1px solid #fca5a5',
                   fontWeight: 700,
                   cursor: 'pointer',
                   fontSize: '0.8rem'
@@ -338,10 +338,11 @@ export default function AEProfileModal({ isOpen, onClose, projectId, projectName
             <label style={{ 
               display: 'block', 
               fontSize: '0.75rem', 
-              fontWeight: 800, 
-              color: '#475569',
+              fontWeight: 700, 
+              color: 'var(--fdl-navy-800, #12375b)',
               marginBottom: '0.4rem',
-              textTransform: 'uppercase'
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em'
             }}>
               Target MedDRA Preferred Term
             </label>
@@ -353,12 +354,14 @@ export default function AEProfileModal({ isOpen, onClose, projectId, projectName
                 placeholder="e.g., Acute Kidney Injury"
                 style={{
                   width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: '10px',
-                  border: '2px solid #e2e8f0',
-                  fontSize: '0.9rem',
+                  padding: '6px 10px',
+                  minHeight: '34px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  border: '1px solid var(--fdl-line, #b8c8d7)',
+                  fontSize: '0.85rem',
                   outline: 'none',
-                  transition: 'border-color 0.2s',
+                  backgroundColor: 'var(--fdl-paper, #ffffff)',
+                  color: 'var(--fdl-ink, #132332)',
                   boxSizing: 'border-box'
                 }}
                 onFocus={() => searchTerm.length >= 2 && setShowSuggestions(true)}
@@ -370,7 +373,7 @@ export default function AEProfileModal({ isOpen, onClose, projectId, projectName
                   top: '50%', 
                   transform: 'translateY(-50%)' 
                 }}>
-                  <div className="loader" style={{ width: '18px', height: '18px', borderTopWidth: '2px', borderLeftWidth: '2px' }} />
+                  <div className="loader" style={{ width: '16px', height: '16px', borderTopWidth: '2px', borderLeftWidth: '2px' }} />
                 </div>
               )}
             </div>
@@ -383,13 +386,13 @@ export default function AEProfileModal({ isOpen, onClose, projectId, projectName
                   top: '100%',
                   left: 0,
                   right: 0,
-                  background: 'white',
-                  borderRadius: '10px',
-                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                  border: '1px solid #e2e8f0',
-                  marginTop: '4px',
+                  background: 'var(--fdl-paper, #ffffff)',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  boxShadow: '0 8px 16px rgba(7, 31, 61, 0.12)',
+                  border: '1px solid var(--fdl-line, #b8c8d7)',
+                  marginTop: '2px',
                   zIndex: 100,
-                  maxHeight: '280px',
+                  maxHeight: '240px',
                   overflowY: 'auto'
                 }}
               >
@@ -398,11 +401,11 @@ export default function AEProfileModal({ isOpen, onClose, projectId, projectName
                     key={index}
                     onClick={() => handleSelectSuggestion(suggestion)}
                     style={{
-                      padding: '6px 14px',
+                      padding: '6px 12px',
                       cursor: 'pointer',
                       fontSize: '0.8rem',
-                      color: '#1e293b',
-                      borderBottom: index === suggestions.length - 1 ? 'none' : '1px solid #f1f5f9'
+                      color: 'var(--fdl-ink, #132332)',
+                      borderBottom: index === suggestions.length - 1 ? 'none' : '1px solid var(--fdl-line-soft, #d7e0e7)'
                     }}
                     className="suggestion-item"
                   >
@@ -412,18 +415,18 @@ export default function AEProfileModal({ isOpen, onClose, projectId, projectName
               </div>
             )}
             
-            <div style={{ marginTop: '1.25rem', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
               <button
                 onClick={onClose}
                 style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  background: '#f1f5f9',
-                  color: '#475569',
-                  border: 'none',
+                  padding: '6px 14px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  background: 'var(--fdl-paper, #ffffff)',
+                  color: 'var(--fdl-ink-soft, #273843)',
+                  border: '1px solid var(--fdl-line, #b8c8d7)',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  fontSize: '0.85rem'
+                  fontSize: '0.82rem'
                 }}
               >
                 Cancel
@@ -432,15 +435,14 @@ export default function AEProfileModal({ isOpen, onClose, projectId, projectName
                 onClick={handleGenerateProfile}
                 disabled={!searchTerm || loading || isGenerating}
                 style={{
-                  padding: '8px 20px',
-                  borderRadius: '8px',
-                  background: searchTerm ? '#6366f1' : '#e2e8f0',
-                  color: 'white',
-                  border: 'none',
+                  padding: '6px 18px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  background: searchTerm ? 'var(--fdl-blue-700, #0759a5)' : 'var(--fdl-line-soft, #d7e0e7)',
+                  color: 'var(--fdl-paper, #ffffff)',
+                  border: `1px solid ${searchTerm ? 'var(--fdl-blue-700, #0759a5)' : 'var(--fdl-line, #b8c8d7)'}`,
                   fontWeight: 700,
                   cursor: searchTerm ? 'pointer' : 'not-allowed',
-                  boxShadow: searchTerm ? '0 4px 12px rgba(99, 102, 241, 0.2)' : 'none',
-                  fontSize: '0.85rem'
+                  fontSize: '0.82rem'
                 }}
               >
                 Analyze AE Profile
@@ -450,20 +452,21 @@ export default function AEProfileModal({ isOpen, onClose, projectId, projectName
         )}
 
         {existingReports.length > 0 && (
-          <div style={{ marginTop: '1.5rem', borderTop: '1px solid #f1f5f9', paddingTop: '1rem' }}>
+          <div style={{ marginTop: '1.25rem', borderTop: '1px solid var(--fdl-line-soft, #d7e0e7)', paddingTop: '0.85rem' }}>
             <h4 style={{ 
-              fontSize: '0.75rem', 
+              fontSize: '0.72rem', 
               fontWeight: 800, 
-              color: '#475569', 
+              color: 'var(--fdl-navy-800, #12375b)', 
               textTransform: 'uppercase',
-              marginBottom: '0.75rem',
+              letterSpacing: '0.04em',
+              marginBottom: '0.65rem',
               display: 'flex',
               alignItems: 'center',
               gap: '6px'
             }}>
               <span>📑</span> Previous AE Reports
             </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
               {existingReports.map((report) => (
                 <div 
                   key={report.id}
@@ -471,17 +474,17 @@ export default function AEProfileModal({ isOpen, onClose, projectId, projectName
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    padding: '8px 12px',
-                    background: '#f8fafc',
-                    borderRadius: '8px',
-                    border: '1px solid #e2e8f0'
+                    padding: '8px 10px',
+                    background: 'var(--fdl-canvas, #f3f6f8)',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
+                    border: '1px solid var(--fdl-line-soft, #d7e0e7)'
                   }}
                 >
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--fdl-navy-950, #071f3d)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {report.target_pt}
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{formatDate(report.created_at)}</div>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--fdl-muted, #5e6e7c)' }}>{formatDate(report.created_at)}</div>
                   </div>
                   
                   <div style={{ marginLeft: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -491,35 +494,35 @@ export default function AEProfileModal({ isOpen, onClose, projectId, projectName
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
-                          padding: '4px 10px',
-                          background: '#eef2ff',
-                          color: '#6366f1',
-                          borderRadius: '6px',
+                          padding: '3px 8px',
+                          background: 'var(--fdl-blue-050, #edf4fa)',
+                          color: 'var(--fdl-blue-700, #0759a5)',
+                          borderRadius: 'var(--fdl-radius-sm, 2px)',
                           fontSize: '0.75rem',
                           fontWeight: 700,
                           textDecoration: 'none',
-                          border: '1px solid #e0e7ff',
+                          border: '1px solid var(--fdl-line, #b8c8d7)',
                           whiteSpace: 'nowrap'
                         }}
                       >
                         View
                       </a>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: report.status === 'failed' ? '#ef4444' : '#f59e0b', textTransform: 'capitalize' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 700, color: report.status === 'failed' ? 'var(--fdl-red, #b50909)' : 'var(--fdl-amber, #8a5700)', textTransform: 'capitalize' }}>
                           {report.status} ({report.progress}%)
                         </span>
                         <button
                           onClick={() => handleReanalyze(report.id)}
                           disabled={isGenerating}
                           style={{
-                            padding: '2px 8px',
-                            background: '#fff',
-                            color: '#64748b',
-                            borderRadius: '4px',
+                            padding: '2px 6px',
+                            background: 'var(--fdl-paper, #ffffff)',
+                            color: 'var(--fdl-ink-soft, #273843)',
+                            borderRadius: 'var(--fdl-radius-sm, 2px)',
                             fontSize: '0.65rem',
                             fontWeight: 700,
-                            border: '1px solid #e2e8f0',
+                            border: '1px solid var(--fdl-line, #b8c8d7)',
                             cursor: isGenerating ? 'not-allowed' : 'pointer',
                             whiteSpace: 'nowrap'
                           }}
@@ -535,17 +538,16 @@ export default function AEProfileModal({ isOpen, onClose, projectId, projectName
                         padding: '4px',
                         background: 'transparent',
                         border: 'none',
-                        color: '#94a3b8',
+                        color: 'var(--fdl-muted, #5e6e7c)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        borderRadius: '4px',
-                        transition: 'color 0.2s, background 0.2s',
+                        borderRadius: 'var(--fdl-radius-sm, 2px)',
                         marginLeft: '4px'
                       }}
-                      onMouseOver={(e) => (e.currentTarget.style.color = '#ef4444')}
-                      onMouseOut={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                      onMouseOver={(e) => (e.currentTarget.style.color = 'var(--fdl-red, #b50909)')}
+                      onMouseOut={(e) => (e.currentTarget.style.color = 'var(--fdl-muted, #5e6e7c)')}
                       title="Delete report"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -563,13 +565,13 @@ export default function AEProfileModal({ isOpen, onClose, projectId, projectName
 
       <style jsx>{`
         .suggestion-item:hover {
-          background-color: #f8fafc;
-          color: #6366f1;
+          background-color: var(--fdl-blue-050, #edf4fa);
+          color: var(--fdl-blue-700, #0759a5);
         }
         .loader {
-          border: 2px solid #f3f3f3;
+          border: 2px solid var(--fdl-line-soft, #d7e0e7);
           border-radius: 50%;
-          border-top: 2px solid #6366f1;
+          border-top: 2px solid var(--fdl-blue-600, #0071bc);
           animation: spin 1s linear infinite;
         }
         @keyframes spin {

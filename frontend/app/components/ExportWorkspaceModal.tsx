@@ -61,33 +61,34 @@ export const ExportWorkspaceModal: React.FC<ExportWorkspaceModalProps> = ({ isOp
         <div style={{
             position: 'fixed',
             top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.4)',
-            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(7, 31, 61, 0.58)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 9999
+            zIndex: 9999,
+            padding: '1.25rem'
         }}>
             <div style={{
-                backgroundColor: '#fff',
-                borderRadius: '16px',
-                padding: '32px',
+                backgroundColor: 'var(--fdl-paper, #ffffff)',
+                border: '1px solid var(--fdl-line, #b8c8d7)',
+                borderTop: '3px solid var(--fdl-blue-600, #0071bc)',
+                borderRadius: 'var(--fdl-radius-sm, 2px)',
+                padding: '24px 28px',
                 width: '100%',
-                maxWidth: '460px',
-                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                animation: 'fadeIn 0.2s ease-out'
+                maxWidth: '480px',
+                boxShadow: '0 16px 36px rgba(7, 31, 61, 0.24)'
             }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '8px', marginTop: 0 }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)', marginBottom: '6px', marginTop: 0 }}>
                     Export to Dashboard
                 </h2>
-                <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '24px' }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--fdl-muted, #5e6e7c)', marginBottom: '20px', lineHeight: 1.5 }}>
                     Select a task to export the labeling list to, or create a new one. You can also assign tags.
                 </p>
 
                 <form onSubmit={handleSubmit}>
                     {/* Task Selection Dropdown */}
-                    <div style={{ marginBottom: '18px' }}>
-                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-navy-800, #12375b)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                             Destination Task
                         </label>
                         <select
@@ -98,12 +99,13 @@ export const ExportWorkspaceModal: React.FC<ExportWorkspaceModalProps> = ({ isOp
                             }}
                             style={{
                                 width: '100%',
-                                padding: '12px',
-                                borderRadius: '8px',
-                                border: '2px solid #e2e8f0',
-                                fontSize: '0.95rem',
-                                color: '#1e293b',
-                                backgroundColor: 'white',
+                                minHeight: '34px',
+                                padding: '6px 10px',
+                                borderRadius: 'var(--fdl-radius-sm, 2px)',
+                                border: '1px solid var(--fdl-line, #b8c8d7)',
+                                fontSize: '0.85rem',
+                                color: 'var(--fdl-ink, #132332)',
+                                backgroundColor: 'var(--fdl-paper, #ffffff)',
                                 outline: 'none',
                                 cursor: 'pointer',
                                 boxSizing: 'border-box'
@@ -120,8 +122,8 @@ export const ExportWorkspaceModal: React.FC<ExportWorkspaceModalProps> = ({ isOp
 
                     {/* New Task Name input (only shown if creating new task) */}
                     {selectedTaskId === 'new' && (
-                        <div style={{ marginBottom: '18px' }}>
-                            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-navy-800, #12375b)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                                 New Task Name
                             </label>
                             <input
@@ -132,22 +134,23 @@ export const ExportWorkspaceModal: React.FC<ExportWorkspaceModalProps> = ({ isOp
                                 placeholder="e.g. Oncology Labeling Research"
                                 style={{
                                     width: '100%',
-                                    padding: '12px 16px',
-                                    borderRadius: '8px',
-                                    border: '2px solid #e2e8f0',
-                                    fontSize: '0.95rem',
+                                    minHeight: '34px',
+                                    padding: '6px 10px',
+                                    borderRadius: 'var(--fdl-radius-sm, 2px)',
+                                    border: '1px solid var(--fdl-line, #b8c8d7)',
+                                    fontSize: '0.85rem',
+                                    color: 'var(--fdl-ink, #132332)',
+                                    backgroundColor: 'var(--fdl-paper, #ffffff)',
                                     outline: 'none',
                                     boxSizing: 'border-box'
                                 }}
-                                onFocus={(e) => e.target.style.borderColor = '#6366f1'}
-                                onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
                             />
                         </div>
                     )}
 
                     {/* Tags Input */}
-                    <div style={{ marginBottom: '28px' }}>
-                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <div style={{ marginBottom: '24px' }}>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-navy-800, #12375b)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                             Tags (comma-separated)
                         </label>
                         <input
@@ -157,20 +160,21 @@ export const ExportWorkspaceModal: React.FC<ExportWorkspaceModalProps> = ({ isOp
                             placeholder="e.g. Priority, Review Needed"
                             style={{
                                 width: '100%',
-                                padding: '12px 16px',
-                                borderRadius: '8px',
-                                border: '2px solid #e2e8f0',
-                                fontSize: '0.95rem',
+                                minHeight: '34px',
+                                padding: '6px 10px',
+                                borderRadius: 'var(--fdl-radius-sm, 2px)',
+                                border: '1px solid var(--fdl-line, #b8c8d7)',
+                                fontSize: '0.85rem',
+                                color: 'var(--fdl-ink, #132332)',
+                                backgroundColor: 'var(--fdl-paper, #ffffff)',
                                 outline: 'none',
                                 boxSizing: 'border-box'
                             }}
-                            onFocus={(e) => e.target.style.borderColor = '#6366f1'}
-                            onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
                         />
                     </div>
 
                     {/* Action Buttons */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                         <button
                             type="button"
                             onClick={() => {
@@ -180,18 +184,16 @@ export const ExportWorkspaceModal: React.FC<ExportWorkspaceModalProps> = ({ isOp
                                 onClose();
                             }}
                             style={{
-                                padding: '10px 20px',
-                                backgroundColor: '#f1f5f9',
-                                color: '#475569',
-                                borderRadius: '8px',
+                                minHeight: '32px',
+                                padding: '0.45rem 0.8rem',
+                                backgroundColor: 'var(--fdl-paper, #ffffff)',
+                                color: 'var(--fdl-ink-soft, #273843)',
+                                borderRadius: 'var(--fdl-radius-sm, 2px)',
                                 fontWeight: 700,
                                 cursor: 'pointer',
-                                border: 'none',
-                                fontSize: '0.85rem',
-                                transition: 'background-color 0.2s'
+                                border: '1px solid var(--fdl-line, #b8c8d7)',
+                                fontSize: '0.8rem'
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e2e8f0'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
                         >
                             Cancel
                         </button>
@@ -199,32 +201,23 @@ export const ExportWorkspaceModal: React.FC<ExportWorkspaceModalProps> = ({ isOp
                             type="submit"
                             disabled={selectedTaskId === 'new' && !taskName.trim()}
                             style={{
-                                padding: '10px 24px',
-                                backgroundColor: '#6366f1',
-                                color: '#fff',
-                                borderRadius: '8px',
+                                minHeight: '32px',
+                                padding: '0.45rem 1rem',
+                                backgroundColor: 'var(--fdl-blue-700, #0759a5)',
+                                color: 'var(--fdl-paper, #ffffff)',
+                                borderRadius: 'var(--fdl-radius-sm, 2px)',
                                 fontWeight: 700,
-                                fontSize: '0.85rem',
+                                fontSize: '0.8rem',
                                 cursor: (selectedTaskId === 'new' && !taskName.trim()) ? 'not-allowed' : 'pointer',
-                                border: 'none',
-                                opacity: (selectedTaskId === 'new' && !taskName.trim()) ? 0.5 : 1,
-                                transition: 'background-color 0.2s',
-                                boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.2)'
+                                border: '1px solid var(--fdl-blue-700, #0759a5)',
+                                opacity: (selectedTaskId === 'new' && !taskName.trim()) ? 0.5 : 1
                             }}
-                            onMouseEnter={(e) => { if (selectedTaskId !== 'new' || taskName.trim()) e.currentTarget.style.backgroundColor = '#4f46e5'; }}
-                            onMouseLeave={(e) => { if (selectedTaskId !== 'new' || taskName.trim()) e.currentTarget.style.backgroundColor = '#6366f1'; }}
                         >
                             {selectedTaskId === 'new' ? 'Create & Add' : 'Add to Task'}
                         </button>
                     </div>
                 </form>
             </div>
-            <style>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: scale(0.95); }
-                    to { opacity: 1; transform: scale(1); }
-                }
-            `}</style>
         </div>
     );
 };

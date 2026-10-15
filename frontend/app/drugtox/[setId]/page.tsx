@@ -321,7 +321,7 @@ export default function DrugToxDetailPage() {
         <div className="afl-content-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
             {/* DRUG IDENTITY CARD */}
-            <div className="document-header-container" style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
+            <div className="document-header-container" style={{ background: 'white', border: '1px solid var(--fdl-line-soft, #d7e0e7)', borderRadius: 'var(--fdl-radius-sm, 2px)', padding: '24px', boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
                     <div style={{ flex: 1, minWidth: '280px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
@@ -330,7 +330,7 @@ export default function DrugToxDetailPage() {
                                color: currentAgent.color, 
                                border: `1px solid ${currentAgent.color}40`, 
                                padding: '4px 12px', 
-                               borderRadius: '20px', 
+                               borderRadius: 'var(--fdl-radius-sm, 2px)', 
                                fontWeight: 800, 
                                fontSize: '0.8rem',
                                display: 'inline-flex',
@@ -365,12 +365,12 @@ export default function DrugToxDetailPage() {
               background: '#ffffff', 
               border: `1px solid ${currentAgent.color}35`, 
               borderLeft: `5px solid ${currentAgent.color}`,
-              borderRadius: '16px', 
+              borderRadius: 'var(--fdl-radius-sm, 2px)', 
               padding: '20px 24px',
               display: 'flex',
               flexDirection: 'column',
               gap: '10px',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
+              boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))',
               transition: 'all 0.3s ease'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -402,8 +402,8 @@ export default function DrugToxDetailPage() {
             </div>
 
             {/* AI ASSESSMENT CONTENT AREA */}
-            <Box sx={{ p: 4, backgroundColor: '#fff', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0' }}>
-                  <Box sx={{ p: 3, backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <Box sx={{ p: 4, backgroundColor: '#fff', borderRadius: 'var(--fdl-radius-sm, 2px)', boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))', border: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>
+                  <Box sx={{ p: 3, backgroundColor: 'var(--fdl-canvas, #f3f6f8)', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                           <Typography variant="h6" sx={{ fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 1 }}>
                               <HealthAndSafetyIcon sx={{ color: currentAgent.color }} /> {currentAgent.name} Assessment Records
@@ -420,7 +420,7 @@ export default function DrugToxDetailPage() {
 
                         {/* Real-time Generated Report */}
                         {reportData[activeTox] === "Failed to generate report." ? (
-                          <Box sx={{ mb: 4, p: 3, borderRadius: '8px', border: '1px solid #fca5a5', backgroundColor: '#fef2f2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Box sx={{ mb: 4, p: 3, borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid #fca5a5', backgroundColor: '#fef2f2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Typography sx={{ color: '#991b1b', fontWeight: 600 }}>
                               Generation Failed. The AI model could not produce a valid assessment.
                             </Typography>
@@ -440,12 +440,12 @@ export default function DrugToxDetailPage() {
                           <Box sx={{ 
                             mb: 4, 
                             p: 3.5, 
-                            borderRadius: '12px', 
-                            border: '1px solid #e2e8f0', 
+                            borderRadius: 'var(--fdl-radius-sm, 2px)', 
+                            border: '1px solid var(--fdl-line-soft, #d7e0e7)', 
                             borderLeft: `5px solid ${toxColors[activeTox] || '#0ea5e9'}`,
                             backgroundColor: '#ffffff', 
                             position: 'relative',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                            boxShadow: 'none'
                           }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -469,16 +469,15 @@ export default function DrugToxDetailPage() {
                                 background: 'linear-gradient(120deg, #fef08a 0%, #fde047 100%)',
                                 color: '#1e293b',
                                 padding: '2px 6px',
-                                borderRadius: '4px',
+                                borderRadius: 'var(--fdl-radius-sm, 2px)',
                                 fontWeight: 600,
-                                boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                                boxShadow: 'none',
                                 border: '1px solid rgba(250, 204, 21, 0.5)',
                                 display: 'inline',
                                 mx: '1px',
                                 transition: 'all 0.2s ease',
                                 '&:hover': {
                                   background: 'linear-gradient(120deg, #fef08a 0%, #facc15 100%)',
-                                  boxShadow: '0 2px 4px rgba(0,0,0,0.08)'
                                 }
                               }
                             }}>
@@ -490,7 +489,7 @@ export default function DrugToxDetailPage() {
                                   {showRaw[activeTox] ? 'Hide Raw AI Output' : 'View Raw AI Output (Debug)'}
                                 </Button>
                                 {showRaw[activeTox] && (
-                                  <Box sx={{ mt: 2, p: 2, backgroundColor: '#1e293b', color: '#e2e8f0', borderRadius: '4px', fontSize: '0.85rem', fontFamily: 'monospace', whiteSpace: 'pre-wrap', maxHeight: '400px', overflowY: 'auto' }}>
+                                  <Box sx={{ mt: 2, p: 2, backgroundColor: 'var(--fdl-navy-950, #071f3d)', color: 'var(--fdl-canvas, #f3f6f8)', borderRadius: 'var(--fdl-radius-sm, 2px)', fontSize: '0.85rem', fontFamily: 'monospace', whiteSpace: 'pre-wrap', maxHeight: '400px', overflowY: 'auto' }}>
                                     {rawReportData[activeTox]}
                                   </Box>
                                 )}
@@ -503,47 +502,47 @@ export default function DrugToxDetailPage() {
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                            {history.filter(h => h.Tox_Type?.toLowerCase() === activeTox.toLowerCase()).map((item, idx) => (
                                <Accordion key={`${item.SETID}-${idx}`} defaultExpanded={idx === 0} sx={{ 
-                                 border: '1px solid #e2e8f0', 
+                                 border: '1px solid var(--fdl-line-soft, #d7e0e7)', 
                                  borderLeft: `4px solid ${toxColors[activeTox] || '#64748b'}`,
                                  boxShadow: 'none', 
                                  '&:before': { display: 'none' }, 
                                  mb: 2, 
-                                 borderRadius: '8px !important',
+                                 borderRadius: 'var(--fdl-radius-sm, 2px) !important',
                                  overflow: 'hidden'
                                }}>
-                                 <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ backgroundColor: '#fff', borderBottom: '1px solid #e2e8f0' }}>
+                                 <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ backgroundColor: '#fff', borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)' }}>
                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', pr: 2 }}>
                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                       <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#334155' }}>
+                                       <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'var(--fdl-ink-soft, #273843)' }}>
                                          {item.Assessment_Date ? formatDate(item.Assessment_Date) : (item.SPL_Effective_Time ? formatDate(item.SPL_Effective_Time) : 'Date unavailable')}
                                        </Typography>
                                        {(item.AI_Model) ? (
-                                         <Chip label={item.AI_Model} size="small" sx={{ backgroundColor: '#f1f5f9', color: '#64748b', fontSize: '0.7rem', fontWeight: 700 }} />
+                                         <Chip label={item.AI_Model} size="small" sx={{ backgroundColor: 'var(--fdl-canvas, #f3f6f8)', color: 'var(--fdl-muted, #5e6e7c)', fontSize: '0.7rem', fontWeight: 700, borderRadius: 'var(--fdl-radius-sm, 2px)' }} />
                                        ) : (item.Update_Notes && item.Update_Notes.startsWith("Generated by ")) ? (
-                                         <Chip label={item.Update_Notes.replace("Generated by ", "")} size="small" sx={{ backgroundColor: '#f1f5f9', color: '#64748b', fontSize: '0.7rem', fontWeight: 700 }} />
+                                         <Chip label={item.Update_Notes.replace("Generated by ", "")} size="small" sx={{ backgroundColor: 'var(--fdl-canvas, #f3f6f8)', color: 'var(--fdl-muted, #5e6e7c)', fontSize: '0.7rem', fontWeight: 700, borderRadius: 'var(--fdl-radius-sm, 2px)' }} />
                                        ) : (
-                                         <Chip label="vLLM (Llama-4)" size="small" sx={{ backgroundColor: '#f1f5f9', color: '#64748b', fontSize: '0.7rem', fontWeight: 700 }} />
+                                         <Chip label="vLLM (Llama-4)" size="small" sx={{ backgroundColor: 'var(--fdl-canvas, #f3f6f8)', color: 'var(--fdl-muted, #5e6e7c)', fontSize: '0.7rem', fontWeight: 700, borderRadius: 'var(--fdl-radius-sm, 2px)' }} />
                                        )}
                                      </Box>
-                                     <Chip label={item.Toxicity_Class} size="small" color={getToxColor(item.Toxicity_Class) as any} sx={{ fontWeight: 800 }} />
+                                     <Chip label={item.Toxicity_Class} size="small" color={getToxColor(item.Toxicity_Class) as any} sx={{ fontWeight: 800, borderRadius: 'var(--fdl-radius-sm, 2px)' }} />
                                    </Box>
                                  </AccordionSummary>
                                  
                                  <AccordionDetails sx={{ backgroundColor: '#fafafa', p: 3 }}>
                                    <Box sx={{ mb: 2 }}>
-                                     <Typography variant="caption" sx={{ fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Summary</Typography>
+                                     <Typography variant="caption" sx={{ fontWeight: 800, color: 'var(--fdl-muted, #5e6e7c)', textTransform: 'uppercase' }}>Summary</Typography>
                                      <Box sx={{ 
-                                       color: '#334155', 
+                                       color: 'var(--fdl-ink-soft, #273843)', 
                                        mt: 0.5, 
                                        '& p': { mb: 1, lineHeight: 1.6 }, 
-                                       '& h3': { mt: 2, mb: 0.75, fontSize: '1rem', fontWeight: 700, color: '#1e293b' }, 
+                                       '& h3': { mt: 2, mb: 0.75, fontSize: '1rem', fontWeight: 700, color: 'var(--fdl-navy-950, #071f3d)' }, 
                                        '& ul': { mt: 0.5, pl: 3, mb: 1.5 },
                                        '& li': { mb: 0.5 },
                                        '& mark': {
                                          background: 'linear-gradient(120deg, #fef08a 0%, #fde047 100%)',
                                          color: '#1e293b',
                                          padding: '2px 6px',
-                                         borderRadius: '4px',
+                                         borderRadius: 'var(--fdl-radius-sm, 2px)',
                                          fontWeight: 600,
                                          boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                                          border: '1px solid rgba(250, 204, 21, 0.5)',

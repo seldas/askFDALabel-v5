@@ -287,7 +287,7 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
             <span>LabelingAE</span>
             <span className="afl-ae-beta-badge">beta</span>
             {isDemo && (
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#d97706', background: '#fef3c7', padding: '2px 8px', borderRadius: '6px' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#d97706', background: '#fef3c7', padding: '2px 8px', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
                 Example Preview
               </span>
             )}
@@ -521,7 +521,7 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
                           onClick={() => setSelectedArrayKey(k)}
                           style={{
                             padding: '4px 10px',
-                            borderRadius: '6px',
+                            borderRadius: 'var(--fdl-radius-sm, 2px)',
                             fontSize: '0.75rem',
                             fontWeight: 700,
                             border: '1px solid #cbd5e1',
@@ -543,7 +543,7 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
                     <select
                       value={selectedClassFilter}
                       onChange={(e) => setSelectedClassFilter(e.target.value)}
-                      style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.78rem', background: '#ffffff' }}
+                      style={{ padding: '6px 10px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid #cbd5e1', fontSize: '0.78rem', background: '#ffffff' }}
                     >
                       <option value="all">All Classifications</option>
                       {distinctClassifications.map((c) => (
@@ -557,7 +557,7 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
                     <select
                       value={selectedSocFilter}
                       onChange={(e) => setSelectedSocFilter(e.target.value)}
-                      style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.78rem', background: '#ffffff', maxWidth: '200px' }}
+                      style={{ padding: '6px 10px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid #cbd5e1', fontSize: '0.78rem', background: '#ffffff', maxWidth: '200px' }}
                     >
                       <option value="all">All SOC Categories</option>
                       {distinctSocs.map((s) => (
@@ -637,7 +637,7 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
                                   fontWeight: 600,
                                   background: '#f1f5f9',
                                   padding: '2px 8px',
-                                  borderRadius: '4px',
+                                  borderRadius: 'var(--fdl-radius-sm, 2px)',
                                   color: '#334155'
                                 }}
                               >
@@ -649,7 +649,7 @@ export default function LabelingAeView({ setId, splId, labelMeta }: LabelingAeVi
                                 style={{
                                   display: 'inline-block',
                                   padding: '2px 8px',
-                                  borderRadius: '6px',
+                                  borderRadius: 'var(--fdl-radius-sm, 2px)',
                                   fontSize: '0.74rem',
                                   fontWeight: 700,
                                   background: isRxBert ? '#ede9fe' : '#dbeafe',

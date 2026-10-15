@@ -1228,7 +1228,7 @@ function DashboardContent() {
                 </div>
               </div>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 'var(--afl-space-7)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 'var(--fdl-space-6)' }}>
                 <EmptyState
                   style={{ maxWidth: '440px' }}
                   icon={
@@ -1267,7 +1267,7 @@ function DashboardContent() {
 export default function DashboardPage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--afl-bg-page)' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--fdl-canvas)' }}>
         <div className="loader"></div>
       </div>
     }>

@@ -661,7 +661,7 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
 
           <button
             className="pv-btn pv-btn-primary"
-            style={{ padding: '0.65rem 1.5rem', fontSize: '0.95rem', borderRadius: '8px' }}
+            style={{ padding: '0.65rem 1.5rem', fontSize: '0.95rem', borderRadius: 'var(--fdl-radius-sm, 2px)' }}
             onClick={() => fetchProfile(true, false)}
           >
             ⚡ Start PV-Profile Analysis
@@ -1230,7 +1230,7 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                 />
               </div>
 
-              <div style={{ maxHeight: '240px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
+              <div style={{ maxHeight: '240px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
                 <table className="pv-leftover-table">
                   <thead>
                     <tr>
@@ -1341,13 +1341,13 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
               <div>
                 <span className="pv-drawer-section-title">Frequency & Incidence</span>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.2rem' }}>
-                  <div style={{ padding: '0.45rem', background: '#f8fafc', borderRadius: '5px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ padding: '0.45rem', background: '#f8fafc', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid #e2e8f0' }}>
                     <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Drug Incidence</span>
                     <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a' }}>
                       {activeDrawerItem.drug_frequency_text || 'Reported in warning'}
                     </div>
                   </div>
-                  <div style={{ padding: '0.45rem', background: '#f8fafc', borderRadius: '5px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ padding: '0.45rem', background: '#f8fafc', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid #e2e8f0' }}>
                     <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Placebo Rate</span>
                     <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a' }}>
                       {activeDrawerItem.placebo_frequency_text || 'N/A'}
@@ -1508,7 +1508,7 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                 </button>
               </div>
 
-              <div style={{ maxHeight: '280px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+              <div style={{ maxHeight: '280px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 'var(--fdl-radius-sm, 2px)' }}>
                 <table className="pv-modal-table">
                   <thead>
                     <tr>
