@@ -206,7 +206,6 @@ Which Postgres and whether Oracle is reachable are runtime settings —
 - `documents/` is the master documentation hub; historical and deprecated features are cataloged under `documents/archived/`.
 - `backend/drugtox/prev_code/` is superseded.
 - The `backend/` root holds one-off operational scripts (`inspect_db.py`, `inspect_db2.py`, `cleanup_db.py`, `cleanup_tasks.py`, `check_queries.py`, `reset_drugtox.py`, `migrate_webtest_to_pg.py`, `update_versions.py`) plus `patch_export.py` at the repo root. These are not part of the app.
-- `backend/requirements.txt` lists `fastapi`, `uvicorn`, and `python-multipart`; nothing imports them.
 - `data/` is gitignored except for `data/sync_schema.py` (an explicit `!` exception). SPL storage, uploads, and downloads under it are local-only and not in version control.
 - Frontend module pages under `frontend/app/{dashboard,search,drugtox,labelcomp,device,localquery,webtest,management}/` mirror the backend blueprint names one-to-one.
 - Legacy vanilla-JS bundles (`chat.js`, `faers.js`, `ui.js`, `annotations.js`, `xlsx.full.min.js`, etc.) have been completely removed and migrated to type-safe React/TSX components and npm libraries (`chart.js`, `xlsx`, `react-markdown`).
