@@ -116,7 +116,7 @@ export default function LabelLayout({
     return SEGMENT_TO_TOOL[segment] ?? 'label-reader';
   }, [pathname]);
 
-  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const [headerCollapsed, setHeaderCollapsed] = useState(activeToolId === 'label-reader');
 
   const ctx = useMemo(
     () => ({ setId, splId, data, loading, error, refresh, headerCollapsed, setHeaderCollapsed }),
@@ -129,7 +129,7 @@ export default function LabelLayout({
   const hideCrumbsAndTools = activeToolId !== 'label-reader';
 
   return (
-    <div className="afl-label-shell">
+    <div className={`afl-label-shell${activeToolId === 'label-reader' ? ' afl-label-shell--reader' : ''}`}>
       <Header activeApp="dashboard" />
 
       <div className="afl-label-shell__scroll">

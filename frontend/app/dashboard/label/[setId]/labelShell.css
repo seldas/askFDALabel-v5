@@ -749,3 +749,73 @@
   .afl-toolbox__grid { grid-template-columns: 1fr; }
 }
 
+
+/* The reader has one document scroll surface. Other tool routes retain their
+   viewport-sized workspaces. Measured controls supply the sticky offsets. */
+.afl-label-shell--reader {
+  --reader-toolbar-height: 112px;
+}
+.afl-label-shell--reader .afl-label-shell__inner {
+  max-width: 1680px;
+  flex: 0 0 auto;
+  min-height: 100%;
+}
+.afl-label-shell--reader .afl-label-content {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+.afl-label-shell--reader .afl-sticky-header-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+.afl-label-shell--reader .afl-label-reader-workspace {
+  flex: 0 0 auto !important;
+  align-items: flex-start;
+  overflow: visible;
+}
+.afl-label-shell--reader #toc-panel.afl-label-nav-rail {
+  position: sticky;
+  top: var(--reader-toolbar-height);
+  height: auto;
+  max-height: calc(100dvh - var(--fdl-header-height, 56px) - var(--reader-toolbar-height) - 12px);
+}
+.afl-label-shell--reader #toc-panel .afl-label-nav-rail__body {
+  overscroll-behavior-y: contain;
+}
+.afl-label-shell--reader .label-viewport [id],
+.afl-label-shell--reader .label-section-item {
+  scroll-margin-top: calc(var(--reader-toolbar-height) + 16px);
+}
+.afl-label-shell--reader .spl-progress-track {
+  top: var(--reader-toolbar-height);
+}
+.afl-label-shell--reader .label-viewport {
+  padding: 24px clamp(16px, 2.5vw, 40px) !important;
+}
+.afl-label-shell--focus > header,
+.afl-label-shell--focus > .fdl-header {
+  display: none;
+}
+.afl-label-shell--reader.afl-label-shell--focus {
+  --fdl-header-height: 0px;
+}
+.afl-label-shell--focus .afl-label-tools > div:first-child {
+  display: none !important;
+}
+.afl-label-shell--focus .afl-label-identity,
+.afl-label-shell--focus .afl-label-crumbs {
+  display: none;
+}
+.afl-label-shell--reader .afl-sticky-line1 {
+  flex-wrap: wrap;
+}
+
+.afl-label-shell--reader .function-content-area {
+  flex: 0 0 auto !important;
+  padding: 0 !important;
+  overflow: visible;
+}
+.afl-label-shell--reader .label-section-item {
+  padding: clamp(20px, 2.5vw, 36px) !important;
+}

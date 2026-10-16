@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react';
 import { Section, LabelData, TOCItem } from './types';
-import { useLabel } from './LabelContext';
 import Link from 'next/link';
 import { initTableExtractor } from './tableExtractor';
 import {
@@ -103,7 +102,6 @@ export default function LabelView({
   TOCItemComponent: any;
   pvProfileData?: any;
 }) {
-  const { headerCollapsed, setHeaderCollapsed } = useLabel();
   const [currentIndex, setCurrentIndex] = useState(0); // 0-based index of sections
   const [navTab, setNavTab] = useState<'toc' | 'soc'>('toc');
   const [activeSoc, setActiveSoc] = useState<string | null>(null);
@@ -112,46 +110,6 @@ export default function LabelView({
   const [activeTermOccurIndex, setActiveTermOccurIndex] = useState<number>(0);
   const labelViewRef = useRef<HTMLDivElement>(null);
   const disableScrollObserver = useRef(false);
-
-  useEffect(() => {
-    const el = labelViewRef.current;
-    if (!el) return;
-
-    const onScroll = () => {
-      if (el.scrollTop > 50 && !headerCollapsed) {
-        setHeaderCollapsed(true);
-      }
-    };
-
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
-  }, [headerCollapsed, setHeaderCollapsed]);
-
-  // Handle wheel events on outer blank spaces / margins to scroll the content panel and fold header
-  useEffect(() => {
-    const handleGlobalWheel = (e: WheelEvent) => {
-      // If scrolling downward anywhere, minimize header
-      if (e.deltaY > 0 && !headerCollapsed) {
-        setHeaderCollapsed(true);
-      }
-
-      // If wheel event happened outside of the main label viewport and TOC panel (e.g. whitespace, header, margins)
-      const target = e.target as HTMLElement | null;
-      const isInsideTOC = target?.closest('#toc-panel');
-      const isInsideViewport = target?.closest('.label-viewport');
-      const isInsideModal = target?.closest('.modal') || target?.closest('[role="dialog"]') || target?.closest('#product-specs-btn');
-
-      if (!isInsideViewport && !isInsideTOC && !isInsideModal) {
-        const el = labelViewRef.current;
-        if (el) {
-          el.scrollTop += e.deltaY;
-        }
-      }
-    };
-
-    window.addEventListener('wheel', handleGlobalWheel, { passive: true });
-    return () => window.removeEventListener('wheel', handleGlobalWheel);
-  }, [headerCollapsed, setHeaderCollapsed]);
 
   // Flatten top-level sections into a single list for sequential navigation
   const sections = useMemo(() => [
@@ -282,7 +240,7 @@ export default function LabelView({
         }
       },
       {
-        root: labelViewRef.current,
+        root: labelViewRef.current?.closest('.afl-label-shell__scroll') ?? null,
         // Active zone: Trigger when sections are in the top portion (10% to 25% from top)
         rootMargin: '-10% 0px -75% 0px', 
         threshold: 0
@@ -618,13 +576,7 @@ export default function LabelView({
         </div>
 
         {/* Main Content */}
-        <div className="label-main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
-            {tocCollapsed && (
-              <button onClick={() => setTocCollapsed(false)} style={{ position: 'absolute', left: '20px', zIndex: 10, background: 'white', border: '1px solid var(--fdl-line)', borderRadius: 'var(--fdl-radius-sm, 2px)', padding: '5px 12px', fontSize: '0.72rem', fontWeight: 800, color: 'var(--fdl-navy-950)', cursor: 'pointer', boxShadow: 'none' }}>
-                ☰ SHOW MENU
-              </button>
-            )}
-
+        <div className="label-main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: 'visible' }}>
             {/* Continuous Vertical Scroll View */}
             <div className="vertical-scroll-container" style={{ 
                 flex: 1, 
@@ -637,7 +589,7 @@ export default function LabelView({
                 padding: '0',
                 position: 'relative',
                 boxShadow: 'none',
-                overflow: 'hidden'
+                overflow: 'visible'
             }}>
                 {/* Reading Progress Bar */}
                 <div className="spl-progress-track">
@@ -648,7 +600,7 @@ export default function LabelView({
                     ref={labelViewRef} 
                     style={{ 
                         flex: 1, 
-                        overflowY: 'auto', 
+                        overflow: 'visible',
                         padding: '32px 36px',
                         scrollBehavior: 'smooth'
                     }}
@@ -769,15 +721,13 @@ export default function LabelView({
                           );
                         })}
                     </div>
-                    {/* Spacer at bottom to allow scrolling last item to top */}
-                    <div style={{ height: '200px' }}></div>
                 </div>
             </div>
         </div>
 
         <style jsx>{`
             .toc-side-panel-inline { transition: width 0.3s ease; }
-            .toc-side-panel-inline.collapsed { width: 0 !important; margin-right: -20px; border: none; }
+            .toc-side-panel-inline.collapsed { width: 0 !important; margin-right: 0; visibility: hidden; border: none; }
             .toc-close-btn:hover { background-color: var(--fdl-line-soft) !important; color: var(--fdl-ink-soft) !important; border-color: var(--fdl-line) !important; }
             .label-viewport::-webkit-scrollbar { width: 8px; }
             .label-viewport::-webkit-scrollbar-track { background: transparent; }

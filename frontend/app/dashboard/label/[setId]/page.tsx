@@ -320,6 +320,13 @@ function LabelContent() {
   }, [router, setId]);
 
   const [tocCollapsed, setTocCollapsed] = useState(false);
+  const [readingFocus, setReadingFocus] = useState(false);
+
+  useEffect(() => {
+    const shell = document.querySelector('.afl-label-shell');
+    shell?.classList.toggle('afl-label-shell--focus', readingFocus);
+    return () => shell?.classList.remove('afl-label-shell--focus');
+  }, [readingFocus]);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [selectedSectionsForExport, setSelectedSectionsForExport] = useState<Set<string>>(new Set());
@@ -611,19 +618,21 @@ function LabelContent() {
     { id: 'examine-view', label: 'Examine', isAI: true },
   ];
 
+  // Measure wrapped toolbar rows so the sticky directory and anchor targets
+  // remain below the controls at every viewport width.
   useEffect(() => {
-    const scrollEl = document.querySelector('.afl-label-shell__scroll');
-    if (!scrollEl) return;
-
-    const onScroll = () => {
-      if (scrollEl.scrollTop > 80 && !headerCollapsed) {
-        setHeaderCollapsed(true);
-      }
+    const shell = document.querySelector<HTMLElement>('.afl-label-shell--reader');
+    const toolbar = shell?.querySelector<HTMLElement>('.afl-sticky-header-bar');
+    if (!shell || !toolbar) return;
+    const update = () => shell.style.setProperty('--reader-toolbar-height', `${toolbar.getBoundingClientRect().height + 12}px`);
+    const observer = new ResizeObserver(update);
+    observer.observe(toolbar);
+    update();
+    return () => {
+      observer.disconnect();
+      shell.style.removeProperty('--reader-toolbar-height');
     };
-
-    scrollEl.addEventListener('scroll', onScroll, { passive: true });
-    return () => scrollEl.removeEventListener('scroll', onScroll);
-  }, [headerCollapsed, setHeaderCollapsed]);
+  }, [loading, data, isToolbox]);
 
   if (loading) {
     return (
@@ -667,6 +676,7 @@ function LabelContent() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 {data.label_format && <span className={`afl-badge afl-badge--${data.label_format === 'PLR' ? 'success' : 'neutral'}`}>{data.label_format}</span>}
                 {data.is_rld && <span className="afl-badge afl-badge--danger">RLD</span>}
+              {data.has_boxed_warning && <a className="afl-badge afl-badge--danger" href={`#${data.table_of_contents?.find(item => item.is_boxed_warning)?.id || 'highlights-section'}`}>Boxed warning</a>}
                 {data.openfda_status && <span className={`afl-badge afl-badge--${data.openfda_status === 'Current' ? 'info' : 'warn'}`}>{data.openfda_status}</span>}
                 {data.application_number && <span className="afl-badge afl-badge--neutral" style={{ fontFamily: 'var(--fdl-font-mono, monospace)', letterSpacing: '0.04em' }}>{data.application_number}</span>}
                 <button
@@ -675,7 +685,7 @@ function LabelContent() {
                   className="afl-collapse-toggle-btn"
                   title="Expand full drug header"
                 >
-                  <span>Expand Header</span>
+                  <span>Label details</span>
                   <span>▲</span>
                 </button>
               </div>
@@ -690,7 +700,7 @@ function LabelContent() {
                 className="afl-collapse-toggle-btn"
                 title="Collapse drug header into compact bar"
               >
-                <span>Compact Header</span>
+                <span>Hide details</span>
                 <span>▼</span>
               </button>
             )}
@@ -739,6 +749,7 @@ function LabelContent() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
               {data.label_format && <span className={`afl-badge afl-badge--${data.label_format === 'PLR' ? 'success' : 'neutral'}`}>{data.label_format}</span>}
               {data.is_rld && <span className="afl-badge afl-badge--danger">RLD</span>}
+              {data.has_boxed_warning && <a className="afl-badge afl-badge--danger" href={`#${data.table_of_contents?.find(item => item.is_boxed_warning)?.id || 'highlights-section'}`}>Boxed warning</a>}
               {data.openfda_status && <span className={`afl-badge afl-badge--${data.openfda_status === 'Current' ? 'info' : 'warn'}`}>{data.openfda_status}</span>}
               {data.application_number && <span className="afl-badge afl-badge--neutral" style={{ fontFamily: 'var(--fdl-font-mono, monospace)', letterSpacing: '0.04em' }}>{data.application_number}</span>}
               <button
@@ -747,7 +758,7 @@ function LabelContent() {
                 className="afl-collapse-toggle-btn"
                 title="Expand full drug header"
               >
-                <span>Expand Header</span>
+                <span>Label details</span>
                 <span>▲</span>
               </button>
             </div>
@@ -763,12 +774,20 @@ function LabelContent() {
                 className="afl-collapse-toggle-btn"
                 title="Collapse drug header into compact bar"
               >
-                <span>Compact Header</span>
+                <span>Hide details</span>
                 <span>▼</span>
               </button>
             )}
           </div>
         <div className="label-toolbar">
+          <button type="button" className="label-tool-btn" aria-expanded={!tocCollapsed}
+            aria-controls="toc-panel" onClick={() => setTocCollapsed(!tocCollapsed)}>
+            <span aria-hidden="true">☰</span><span>Contents</span>
+          </button>
+          <button type="button" className="label-tool-btn" aria-pressed={readingFocus}
+            onClick={() => { setHeaderCollapsed(true); setReadingFocus(!readingFocus); }}>
+            <span>{readingFocus ? 'Exit focus' : 'Focus reading'}</span>
+          </button>
           {/* Product Specifications — pop window to the left of AI Chat */}
           <button
             id="product-specs-btn"
