@@ -18,6 +18,7 @@ import type { ToolboxWorkflow } from '../../../platform/registry';
 // The reader body. FAERS, Deep Dive and Examine are sibling routes now, and
 // the Header / identity chrome belongs to ../layout.tsx.
 import LabelView from './label';
+import ReaderToolbar from './ReaderToolbar';
 
 // Shared Types
 import { TOCItem } from './types';
@@ -618,22 +619,6 @@ function LabelContent() {
     { id: 'examine-view', label: 'Examine', isAI: true },
   ];
 
-  // Measure wrapped toolbar rows so the sticky directory and anchor targets
-  // remain below the controls at every viewport width.
-  useEffect(() => {
-    const shell = document.querySelector<HTMLElement>('.afl-label-shell--reader');
-    const toolbar = shell?.querySelector<HTMLElement>('.afl-sticky-header-bar');
-    if (!shell || !toolbar) return;
-    const update = () => shell.style.setProperty('--reader-toolbar-height', `${toolbar.getBoundingClientRect().height + 12}px`);
-    const observer = new ResizeObserver(update);
-    observer.observe(toolbar);
-    update();
-    return () => {
-      observer.disconnect();
-      shell.style.removeProperty('--reader-toolbar-height');
-    };
-  }, [loading, data, isToolbox]);
-
   if (loading) {
     return (
       <div className="hp-main-layout">
@@ -733,57 +718,28 @@ function LabelContent() {
 
   return (
     <>
-      <div className={`afl-sticky-header-bar ${headerCollapsed ? 'is-collapsed' : ''}`}>
-        {headerCollapsed && (
-          <div className="afl-sticky-line1">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
-              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a', textTransform: 'capitalize', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {[data.brand_name || data.drug_name, data.effective_time].filter(Boolean).join(' - ').toLowerCase()}
-              </span>
-              {data.generic_name && (
-                <span style={{ fontSize: '0.82rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '350px' }}>
-                  ({data.generic_name})
-                </span>
-              )}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-              {data.label_format && <span className={`afl-badge afl-badge--${data.label_format === 'PLR' ? 'success' : 'neutral'}`}>{data.label_format}</span>}
-              {data.is_rld && <span className="afl-badge afl-badge--danger">RLD</span>}
-              {data.has_boxed_warning && <a className="afl-badge afl-badge--danger" href={`#${data.table_of_contents?.find(item => item.is_boxed_warning)?.id || 'highlights-section'}`}>Boxed warning</a>}
-              {data.openfda_status && <span className={`afl-badge afl-badge--${data.openfda_status === 'Current' ? 'info' : 'warn'}`}>{data.openfda_status}</span>}
-              {data.application_number && <span className="afl-badge afl-badge--neutral" style={{ fontFamily: 'var(--fdl-font-mono, monospace)', letterSpacing: '0.04em' }}>{data.application_number}</span>}
-              <button
-                type="button"
-                onClick={() => setHeaderCollapsed(false)}
-                className="afl-collapse-toggle-btn"
-                title="Expand full drug header"
-              >
-                <span>Label details</span>
-                <span>▲</span>
-              </button>
-            </div>
-          </div>
+      <ReaderToolbar
+        title={data.brand_name || data.drug_name || 'Label document'}
+        date={data.effective_time} status={data.openfda_status}
+        tocCollapsed={tocCollapsed} onToggleContents={() => setTocCollapsed(!tocCollapsed)}
+        chatOpen={chatOpen} onToggleChat={() => setChatOpen(previous => !previous)}
+      >
+        <button type="button" className="label-tool-btn" aria-expanded={!headerCollapsed}
+          onClick={() => {
+            if (headerCollapsed) {
+              setReadingFocus(false);
+              setHeaderCollapsed(false);
+              requestAnimationFrame(() => document.querySelector('.afl-label-shell__scroll')?.scrollTo({ top: 0, behavior: 'smooth' }));
+            } else { setHeaderCollapsed(true); }
+          }}>
+          {headerCollapsed ? 'Label details' : 'Collapse details'}
+        </button>
+        {data.has_boxed_warning && (
+          <a className="label-tool-btn label-tool-meddra"
+            href={`#${data.table_of_contents?.find(item => item.is_boxed_warning)?.id || 'highlights-section'}`}>
+            Boxed warning
+          </a>
         )}
-        <div className="afl-label-tools" style={{ margin: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <LabelToolStrip setId={setId} />
-            {!headerCollapsed && (
-              <button
-                type="button"
-                onClick={() => setHeaderCollapsed(true)}
-                className="afl-collapse-toggle-btn"
-                title="Collapse drug header into compact bar"
-              >
-                <span>Hide details</span>
-                <span>▼</span>
-              </button>
-            )}
-          </div>
-        <div className="label-toolbar">
-          <button type="button" className="label-tool-btn" aria-expanded={!tocCollapsed}
-            aria-controls="toc-panel" onClick={() => setTocCollapsed(!tocCollapsed)}>
-            <span aria-hidden="true">☰</span><span>Contents</span>
-          </button>
           <button type="button" className="label-tool-btn" aria-pressed={readingFocus}
             onClick={() => { setHeaderCollapsed(true); setReadingFocus(!readingFocus); }}>
             <span>{readingFocus ? 'Exit focus' : 'Focus reading'}</span>
@@ -797,18 +753,6 @@ function LabelContent() {
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
             <span>Specs</span>
-            <svg className="pop-indicator" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-          </button>
-
-          {/* Chat — always available */}
-          <button
-            id="chat-bubble"
-            className="label-tool-btn label-tool-chat"
-            data-tooltip="AI Assistant Chat"
-            onClick={() => setChatOpen((prev) => !prev)}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-            <span>AI Chat</span>
             <svg className="pop-indicator" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
           </button>
 
@@ -892,9 +836,9 @@ function LabelContent() {
             <span>Projects</span>
             <svg className="pop-indicator" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
           </button>
-        </div>
-      </div>
-      </div>
+
+        <div className="afl-reader-toolbar__tools"><LabelToolStrip setId={setId} /></div>
+      </ReaderToolbar>
 
       <div className="function-content-area" style={{ 
           flex: 1, 

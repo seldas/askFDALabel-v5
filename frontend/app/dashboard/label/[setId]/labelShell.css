@@ -819,3 +819,126 @@
 .afl-label-shell--reader .label-section-item {
   padding: clamp(20px, 2.5vw, 36px) !important;
 }
+
+.afl-label-shell--reader .afl-label-identity__title-row {
+  flex-wrap: wrap;
+}
+.afl-label-shell--reader .afl-label-identity__badges {
+  align-items: center;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+.afl-label-identity__collapse {
+  min-height: 32px;
+  padding: 6px 10px;
+  color: var(--fdl-ink);
+}
+.afl-label-identity__collapse:focus-visible {
+  outline: 2px solid var(--fdl-blue-600);
+  outline-offset: 2px;
+}
+
+/* Reading controls use the same paper, rules and typography as the document
+   rail. The sticky slot preserves document position when the bar contracts. */
+.afl-reader-toolbar-sentinel { height: 1px; margin-bottom: -1px; flex-shrink: 0; }
+.afl-reader-toolbar-slot {
+  position: sticky;
+  top: 8px;
+  z-index: 40;
+  min-height: var(--reader-toolbar-rest-height, 112px);
+  margin-bottom: 12px;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+.afl-reader-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 20px;
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--fdl-paper, #fff);
+  color: var(--fdl-ink);
+  border: 1px solid var(--fdl-line);
+  border-top: 2px solid var(--fdl-navy-800);
+  border-radius: var(--fdl-radius-sm, 2px);
+  pointer-events: auto;
+}
+.afl-reader-toolbar__identity { display: grid; gap: 3px; min-width: 0; }
+.afl-reader-toolbar__eyebrow {
+  font: 700 0.62rem var(--fdl-font-mono);
+  color: var(--fdl-blue-700);
+  letter-spacing: 0.06em;
+}
+.afl-reader-toolbar__identity strong {
+  font-size: 0.95rem;
+  font-weight: 750;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.afl-reader-toolbar__metadata { font-size: 0.73rem; color: var(--fdl-muted); }
+.afl-reader-toolbar__primary, .afl-reader-toolbar__secondary { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.afl-reader-toolbar__secondary { grid-column: 1 / -1; padding-top: 10px; border-top: 1px solid var(--fdl-line-soft); }
+.afl-reader-toolbar__tools { margin-left: auto; }
+.afl-reader-toolbar__more { display: none; }
+.afl-reader-toolbar .label-tool-btn:focus-visible {
+  outline: 2px solid var(--fdl-blue-600);
+  outline-offset: 2px;
+}
+.afl-reader-toolbar-slot.is-floating .afl-reader-toolbar {
+  position: relative;
+  width: min(680px, 100%);
+  gap: 8px 16px;
+  padding: 9px 12px;
+  box-shadow: 0 4px 14px rgba(7, 31, 61, 0.12);
+}
+.is-floating .afl-reader-toolbar__eyebrow,
+.is-floating .afl-reader-toolbar__metadata { display: none; }
+.is-floating .afl-reader-toolbar__identity strong { font-size: 0.82rem; }
+.is-floating .afl-reader-toolbar__more { display: inline-flex; }
+.is-floating .afl-reader-toolbar__secondary {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: min(300px, calc(100vw - 48px));
+  max-height: calc(100dvh - var(--fdl-header-height, 56px) - 88px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px;
+  border: 1px solid var(--fdl-line);
+  border-radius: var(--fdl-radius-sm, 2px);
+  background: var(--fdl-paper, #fff);
+  box-shadow: 0 6px 18px rgba(7, 31, 61, 0.12);
+}
+.is-floating .afl-reader-toolbar__secondary.is-open { display: flex; flex-direction: column; align-items: stretch; }
+.is-floating .afl-reader-toolbar__secondary .label-tool-btn { justify-content: flex-start; min-height: 34px; border-color: transparent; }
+.is-floating .afl-reader-toolbar__secondary .pop-indicator { margin-left: auto; }
+.is-floating .afl-reader-toolbar__secondary [data-tooltip]::before,
+.is-floating .afl-reader-toolbar__secondary [data-tooltip]::after { display: none; }
+.is-floating .afl-reader-toolbar__tools { margin: 4px 0 0; padding-top: 8px; border-top: 1px solid var(--fdl-line-soft); }
+.afl-label-shell--reader #toc-panel.afl-label-nav-rail {
+  top: var(--reader-toolbar-height);
+}
+.afl-label-shell--reader .label-viewport [id],
+.afl-label-shell--reader .label-section-item {
+  scroll-margin-top: calc(var(--reader-toolbar-height) + 16px);
+}
+.afl-label-shell--reader .spl-progress-track {
+  top: var(--reader-toolbar-height);
+}
+@media (max-width: 1099px) {
+  .afl-reader-toolbar__tools { width: 100%; margin-left: 0; }
+  .afl-reader-toolbar-slot.is-floating .afl-reader-toolbar { width: min(600px, 100%); }
+}
+@media (max-width: 600px) {
+  .afl-reader-toolbar { gap: 8px; padding: 10px; }
+  .afl-reader-toolbar__primary { gap: 4px; }
+  .afl-reader-toolbar__primary .label-tool-btn { padding-inline: 7px; }
+  .afl-reader-toolbar__identity strong { font-size: 0.8rem; }
+}
+
+/* The masthead already occupies a flex row above the reader scrollport. */
+.afl-label-shell--reader > header { flex-shrink: 0; }
+.afl-label-shell--reader .afl-label-shell__scroll { padding-top: 0; }

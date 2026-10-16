@@ -196,6 +196,18 @@ export default function LabelLayout({
                       {data.openfda_status}
                     </Badge>
                   ) : null}
+                  {!headerCollapsed && activeToolId === 'label-reader' && (
+                    <button
+                      type="button"
+                      className="afl-collapse-toggle-btn afl-label-identity__collapse"
+                      onClick={() => setHeaderCollapsed(true)}
+                      aria-label="Collapse label details"
+                      title="Collapse label details"
+                    >
+                      <span>Collapse details</span>
+                      <span aria-hidden="true">⌃</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
