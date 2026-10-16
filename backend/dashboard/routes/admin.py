@@ -109,10 +109,11 @@ def update_user(user_id):
                 return jsonify({'success': False, 'error': 'Username already exists'}), 400
             user.username = new_username
     if 'ai_provider' in data:
-        from dashboard.services.ai_handler import _check_is_internal
-        if _check_is_internal() and data['ai_provider'] == 'gemini':
-            return jsonify({'success': False, 'error': 'Gemini model is disabled in internal environment.'}), 400
-        user.ai_provider = data['ai_provider']
+        from dashboard.services.ai_preferences import normalize_provider, allowed_providers
+        provider = normalize_provider(data['ai_provider'])
+        if provider and provider not in allowed_providers():
+            return jsonify(success=False, error='This model is not available in this deployment.'), 400
+        user.ai_provider = provider or None
 
     db.session.commit()
     return jsonify({'success': True})

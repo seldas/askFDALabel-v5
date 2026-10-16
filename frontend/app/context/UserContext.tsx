@@ -32,6 +32,10 @@ export interface UserSession {
   permissions?: Record<string, boolean>;
   username?: string;
   ai_provider?: string;
+  ai_preference?: string;
+  ai_default_provider?: string;
+  ai_model_name?: string;
+  ai_models?: { id: string; name: string; model: string }[];
   custom_gemini_key?: string;
   openai_api_key?: string;
   openai_base_url?: string;
@@ -178,7 +182,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       const data = await res.json();
       if (data.success) {
-        setSession(prev => prev ? { ...prev, ai_provider: provider } : null);
+        await fetchSession();
       }
     } catch (e) {
       console.error("Failed to update AI provider", e);

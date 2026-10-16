@@ -121,20 +121,8 @@ class User(UserMixin, db.Model):
         """Whether this account may choose the labeling database to query."""
         return self.effective_role in _DEVELOPER_ROLES
 
-    @staticmethod
-    def _default_ai_provider():
-        try:
-            from dashboard.services.ai_handler import _check_is_internal
-            if _check_is_internal():
-                return 'elsa'
-        except Exception:
-            pass
-        default_model = os.getenv("DEFAULT_AI_MODEL")
-        if default_model:
-            return default_model
-        return 'gemini'
-
-    ai_provider = db.Column(db.String(20), default=_default_ai_provider)
+    # An empty preference follows the deployment default at request time.
+    ai_provider = db.Column(db.String(20), nullable=True, default=None)
     custom_gemini_key = db.Column(db.String(255), nullable=True)
     openai_api_key = db.Column(db.String(255), nullable=True)
     openai_base_url = db.Column(db.String(255), nullable=True)

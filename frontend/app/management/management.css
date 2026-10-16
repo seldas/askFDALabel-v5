@@ -34,3 +34,22 @@
 .management-container .provider-panel.is-selected { border-left-color: var(--fdl-blue-600) !important; }
 @media (max-width: 1439px) { .management-workstation { grid-template-columns: 190px minmax(0, 1fr); } .management-content { padding: 1rem; } }
 @media (max-width: 1099px) { .management-main { padding: 1rem; } .management-workstation { grid-template-columns: 170px minmax(0, 1fr); } .management-container .sidebar-tab { font-size: 0.8rem; gap: 8px; } }
+
+/* Personal model choice, with optional administrator connection overrides. */
+.ai-preferences { max-width: 760px; }
+.ai-preferences > p, .ai-preferences__advanced p { color: var(--fdl-muted); line-height: 1.6; }
+.ai-preferences__current { display: grid; gap: 6px; padding: 18px; margin: 20px 0; background: var(--fdl-blue-050); border: 1px solid var(--fdl-line); }
+.ai-preferences__current > span { font-size: 0.78rem; color: var(--fdl-muted); }
+.ai-preferences__current strong { font-size: 1.1rem; }
+.ai-preferences small { display: block; color: var(--fdl-muted); font-size: 0.78rem; overflow-wrap: anywhere; }
+.ai-preferences fieldset { border: 0; padding: 0; margin: 24px 0; }
+.ai-preferences legend { font-weight: 700; margin-bottom: 12px; }
+.ai-preferences__option { display: flex; gap: 12px; align-items: center; padding: 12px; border-bottom: 1px solid var(--fdl-line-soft); cursor: pointer; }
+.ai-preferences__option:has(input:checked) { background: var(--fdl-blue-050); }
+.ai-preferences input[type=radio] { accent-color: var(--fdl-blue-600); }
+.ai-preferences__advanced { border: 1px solid var(--fdl-line); padding: 16px; }
+.ai-preferences summary { cursor: pointer; font-weight: 700; }
+.ai-preferences__field { display: grid; gap: 6px; margin-top: 14px; font-size: 0.85rem; }
+.ai-preferences__field input { width: 100%; padding: 10px; border: 1px solid var(--fdl-line); background: var(--fdl-paper); color: var(--fdl-ink); }
+.ai-preferences__actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+.ai-preferences [role=alert] { color: var(--fdl-red); }

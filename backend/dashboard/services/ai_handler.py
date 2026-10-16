@@ -114,101 +114,26 @@ class AIClientFactory:
         Caches clients to avoid 'client closed' errors during streaming.
         In internal environment (CDER-CBER available), Gemini is strictly disabled.
         """
-        is_internal = _check_is_internal()
+        from dashboard.services.ai_preferences import resolve_provider, connection_config
+        provider, _ = resolve_provider(user)
+        config = connection_config(provider, user)
+        if provider == 'elsa':
+            client, model = AIClientFactory._get_elsa_client({'elsa': config})
+            return 'elsa', client, model
+        if provider in ('llama-4', 'muse'):
+            if not config['url'] or not config['model_name']:
+                raise ValueError(f'{provider} connection URL and model are not configured.')
+            cache_key = (provider, config['api_key'], config['url'])
+            if cache_key not in AIClientFactory._clients:
+                AIClientFactory._clients[cache_key] = OpenAI(
+                    api_key=config['api_key'] or 'not-required', base_url=config['url'],
+                    timeout=httpx.Timeout(600.0, connect=30.0))
+            return 'llama', AIClientFactory._clients[cache_key], config['model_name']
+        cache_key = ('gemini', config['api_key'])
+        if cache_key not in AIClientFactory._clients:
+            AIClientFactory._clients[cache_key] = genai.Client(api_key=config['api_key'])
+        return 'gemini', AIClientFactory._clients[cache_key], config['model_name']
 
-        # Read allowed providers and global default
-        allowed_raw = os.getenv("ALLOWED_AI_PROVIDERS", "gemini,elsa,llama,vllm,ollama,customized")
-        allowed_providers = [p.strip().lower() for p in allowed_raw.split(',') if p.strip()]
-        if is_internal:
-            allowed_providers = [p for p in allowed_providers if p != 'gemini']
-
-        if is_internal:
-            default_provider = "elsa" if "elsa" in allowed_providers else (allowed_providers[0] if allowed_providers else "elsa")
-        else:
-            default_provider = os.getenv("DEFAULT_AI_MODEL", "elsa" if "elsa" in allowed_providers else (allowed_providers[0] if allowed_providers else "gemini"))
-
-        provider = EnvService.get_setting("ai_model_provider") or default_provider
-        if is_internal and provider == 'gemini':
-            provider = default_provider
-        if provider not in allowed_providers:
-            provider = default_provider
-        use_llama = False
-        
-        # User override logic: custom AI settings and provider overrides are restricted to admins
-        is_admin = bool(user and user.is_authenticated and getattr(user, 'is_admin', False))
-        if is_admin and user.ai_provider:
-            if user.ai_provider in allowed_providers and (not is_internal or user.ai_provider != 'gemini'):
-                provider = user.ai_provider
-                
-        # Load user settings if available (admins only)
-        user_settings = {}
-        if is_admin and user.ai_settings:
-            try:
-                import json
-                user_settings = json.loads(user.ai_settings)
-            except Exception as e:
-                logger.error(f"Failed to parse user.ai_settings: {e}")
-
-        if provider == "llama" or provider == "vllm" or provider == "ollama" or provider == "customized":
-             use_llama = True
-             
-        if use_llama:
-             if provider == "customized":
-                 api_key = EnvService.get_setting("custom_llm_key") or ""
-                 base_url = EnvService.get_setting("custom_llm_url") or ""
-                 model = os.getenv("LLM_MODEL", "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8")
-             elif provider == "vllm" or provider == "llama":
-                 # Check user customized options: url, api_key, model_name
-                 vllm_opts = user_settings.get("vllm", {}) if provider == "vllm" else user_settings.get("llama", {})
-                 api_key = vllm_opts.get("api_key") or (user.openai_api_key if user else None) or os.getenv("LLM_KEY", "")
-                 base_url = vllm_opts.get("url") or (user.openai_base_url if user else None) or os.getenv("LLM_URL", "")
-                 model = vllm_opts.get("model_name") or (user.openai_model_name if user else None) or os.getenv("LLM_MODEL", "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8")
-             elif provider == "ollama":
-                 ollama_opts = user_settings.get("ollama", {})
-                 base_url = ollama_opts.get("url") or "http://localhost:11434/v1"
-                 model = ollama_opts.get("model_name") or "llama3"
-                 api_key = "ollama"
-             else:
-                 api_key = os.getenv("LLM_KEY", "")
-                 base_url = os.getenv("LLM_URL", "")
-                 model = os.getenv("LLM_MODEL", "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8")
-
-             # Force v1 suffix for Ollama if url doesn't end with /v1
-             if provider == "ollama" and base_url and not base_url.endswith("/v1") and not base_url.endswith("/v1/"):
-                 base_url = base_url.rstrip("/") + "/v1"
-
-             cache_key = (provider, api_key, base_url)
-             if cache_key not in AIClientFactory._clients:
-                 # Use a generous timeout: vision inference + large base64 payloads
-                 # easily exceed 30 s, which causes vLLM to receive a truncated
-                 # message and respond "did not receive an image".
-                 AIClientFactory._clients[cache_key] = OpenAI(
-                     api_key=api_key,
-                     base_url=base_url,
-                     timeout=httpx.Timeout(600.0, connect=30.0),
-                 )
-             return "llama", AIClientFactory._clients[cache_key], model
-
-        if provider == 'rapid':
-             api_key = os.getenv("RAPID_KEY", "")
-             base_url = os.getenv("RAPID_URL", "")
-             model = os.getenv("RAPID_MODEL", "")
-
-             rapid_config = {
-                 'api_key': api_key,
-                 'base_url': base_url
-             }
-             return "rapid", rapid_config, model
-
-        if provider == 'elsa' or is_internal or 'gemini' not in allowed_providers:
-            elsa_client, elsa_model = AIClientFactory._get_elsa_client(user_settings)
-            return "elsa", elsa_client, elsa_model
-
-        # Default: Gemini (external/public environments only)
-        gemini_key = user_settings.get("gemini", {}).get("api_key") or (user.custom_gemini_key if user else None) or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-        if (provider, gemini_key) not in AIClientFactory._clients:
-            AIClientFactory._clients[(provider, gemini_key)] = genai.Client(api_key=gemini_key)
-        return "gemini", AIClientFactory._clients[(provider, gemini_key)], os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 
 
 
@@ -302,8 +227,8 @@ def call_llm(user, system_prompt, user_message, history=None, model_override=Non
         except Exception as e:
             if not kwargs.get('allow_fallback', True):
                 raise
-            allowed_raw = os.getenv("ALLOWED_AI_PROVIDERS", "gemini,elsa,llama,vllm,ollama,customized")
-            allowed_providers = [p.strip().lower() for p in allowed_raw.split(',') if p.strip()]
+            from dashboard.services.ai_preferences import allowed_providers as get_allowed_providers
+            allowed_providers = get_allowed_providers()
             
             # 1. Try Elsa fallback if allowed
             if "elsa" in allowed_providers and provider != "elsa":

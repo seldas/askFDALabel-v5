@@ -5,6 +5,7 @@ import { useUser } from '../context/UserContext';
 import AccessRestricted from '../components/AccessRestricted';
 import Header from '../components/Header';
 import './management.css';
+import AiPreferences from './AiPreferences';
 import { useRouter } from 'next/navigation';
 
 interface User {
@@ -84,87 +85,10 @@ export default function ManagementPage() {
 
   const [activeTasks, setActiveTasks] = useState<Record<number, any>>({});
 
-  const [selectedProvider, setSelectedProvider] = useState<string>('elsa');
-  const [customSettings, setCustomSettings] = useState({
-    gemini: { api_key: '' },
-    vllm: { url: '', api_key: '', model_name: '' },
-    elsa: { url: '', user: '', key: '', model_id: '', model_name: '' },
-    ollama: { url: '', model_name: '' }
-  });
-  const [savingSettings, setSavingSettings] = useState(false);
   const [editingUserModelId, setEditingUserModelId] = useState<number | null>(null);
-  const [selectedUserModelProvider, setSelectedUserModelProvider] = useState<string>('elsa');
+  const [selectedUserModelProvider, setSelectedUserModelProvider] = useState<string>('');
   const [savingUserModel, setSavingUserModel] = useState<boolean>(false);
   const [userModelError, setUserModelError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (session) {
-      if (session.ai_provider) {
-        if (session.is_internal && session.ai_provider === 'gemini') {
-          setSelectedProvider('elsa');
-        } else {
-          setSelectedProvider(session.ai_provider);
-        }
-      }
-      try {
-        const parsed = session.ai_settings ? JSON.parse(session.ai_settings) : {};
-        setCustomSettings({
-          gemini: {
-            api_key: parsed.gemini?.api_key || session.custom_gemini_key || ''
-          },
-          vllm: {
-            url: parsed.vllm?.url || session.openai_base_url || '',
-            api_key: parsed.vllm?.api_key || session.openai_api_key || '',
-            model_name: parsed.vllm?.model_name || session.openai_model_name || ''
-          },
-          elsa: {
-            url: parsed.elsa?.url || '',
-            user: parsed.elsa?.user || '',
-            key: parsed.elsa?.key || '',
-            model_id: parsed.elsa?.model_id || '',
-            model_name: parsed.elsa?.model_name || ''
-          },
-          ollama: {
-            url: parsed.ollama?.url || '',
-            model_name: parsed.ollama?.model_name || ''
-          }
-        });
-      } catch (e) {
-        console.error("Failed to parse session ai_settings", e);
-      }
-    }
-  }, [session]);
-
-  const handleSaveSettings = async () => {
-    setSavingSettings(true);
-    try {
-      const res = await fetch('/api/dashboard/preferences', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ai_provider: selectedProvider,
-          ai_settings: customSettings,
-          custom_gemini_key: customSettings.gemini.api_key,
-          openai_api_key: customSettings.vllm.api_key,
-          openai_base_url: customSettings.vllm.url,
-          openai_model_name: customSettings.vllm.model_name
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        if (typeof refreshSession === 'function') {
-          await refreshSession();
-        }
-        alert('AI settings saved successfully!');
-      } else {
-        alert(data.error || 'Failed to save settings');
-      }
-    } catch (e) {
-      console.error(e);
-      alert('Error saving settings');
-    }
-    setSavingSettings(false);
-  };
 
   // Modals state
   const [activeTab, setActiveTab] = useState<string>('users');
@@ -175,14 +99,14 @@ export default function ManagementPage() {
       const requestedTab = typeof window === 'undefined'
         ? null
         : new URLSearchParams(window.location.search).get('tab');
-      if (requestedTab === 'ai' && session.is_admin) {
+      if (requestedTab === 'ai' && !session.is_guest) {
         setActiveTab('ai');
       } else if (session.username?.toLowerCase() === 'guest') {
         setActiveTab('tokens');
       } else if (session.is_admin) {
         setActiveTab(requestedTab || 'ai');
       } else {
-        setActiveTab(requestedTab === 'tokens' ? 'tokens' : 'users');
+        setActiveTab(requestedTab === 'tokens' ? 'tokens' : requestedTab === 'users' ? 'users' : 'ai');
       }
       setInitialTabSet(true);
     }
@@ -912,7 +836,7 @@ export default function ManagementPage() {
   const handleManageUserDone = async () => {
     if (!managingUser || savingUserModel) return;
     if (session?.is_admin && managingUser.is_active !== false &&
-        selectedUserModelProvider !== (managingUser.ai_provider || 'elsa')) {
+        selectedUserModelProvider !== (managingUser.ai_provider || '')) {
       const saved = await handleSaveUserModel(managingUser.id, selectedUserModelProvider);
       if (!saved) return;
     }
@@ -1197,14 +1121,14 @@ export default function ManagementPage() {
 
       <main className="management-main">
         <h1 className="management-title">
-          System Management
+          {session?.is_admin ? 'System Management' : 'Settings & Preferences'}
         </h1>
 
         <div className="management-workstation">
 
           {/* SIDEBAR NAVIGATION */}
           <nav className="management-nav" aria-label="System management sections">
-            {session?.is_admin && (
+            {!session?.is_guest && (
               <button
                 className={`sidebar-tab ${activeTab === 'ai' ? 'active' : ''}`}
                 aria-current={activeTab === 'ai' ? 'page' : undefined}
@@ -1304,430 +1228,11 @@ export default function ManagementPage() {
           <div className="management-content">
 
 
-            {activeTab === 'ai' && session?.is_admin && (
-              <section id="ai-settings" className="mgmt-card" style={{ maxWidth: '800px' }}>
-                <h2 className="section-title">AI Model Preferences</h2>
-                <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.5 }}>
-                  Select your active AI provider and customize the connection settings for toxicity analysis.
-                </p>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  
-                  {/* Gemini connection */}
-                  {!session?.is_internal && (!session?.allowed_ai_providers || session.allowed_ai_providers.includes('gemini')) && (
-                  <div 
-                    className={`provider-panel ${selectedProvider === 'gemini' ? 'is-selected' : ''}`}
-                    onClick={() => setSelectedProvider('gemini')}
-                    style={{
-                      padding: '1.5rem',
-                      borderRadius: '2px',
-                      border: selectedProvider === 'gemini' ? '2px solid var(--fdl-blue-600)' : '1px solid var(--fdl-line)',
-                      background: selectedProvider === 'gemini' ? 'var(--fdl-blue-050)' : 'white',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: 'none',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <input
-                        type="radio"
-                        name="management-ai-provider"
-                        aria-label="Select gemini"
-                        checked={selectedProvider === 'gemini'}
-                        onChange={() => setSelectedProvider('gemini')}
-                        onClick={e => e.stopPropagation()}
-                      />
-                      <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '2px',
-                        background: selectedProvider === 'gemini' ? 'var(--fdl-blue-600)' : 'var(--fdl-line)',
-                        color: selectedProvider === 'gemini' ? 'white' : 'var(--fdl-canvas0)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 'bold',
-                        transition: 'all 0.3s',
-                      }}>
-                        G
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--fdl-ink)' }}>Google Gemini</span>
-                          {selectedProvider === 'gemini' && (
-                            <span style={{ background: 'var(--fdl-blue-600)', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '2px', fontWeight: 800 }}>ACTIVE</span>
-                          )}
-                        </div>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--fdl-canvas0)', lineHeight: 1.4 }}>
-                          High-performance multimodal model from Google. Recommended for standard toxicity analysis.
-                        </p>
-                      </div>
-                    </div>
-
-                    {selectedProvider === 'gemini' && (
-                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--fdl-line)' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Gemini API Key</label>
-                          <input
-                            type="password"
-                            placeholder={session?.has_gemini_key ? "Gemini API Key configured in backend .env (Leave blank to use default)" : "Enter your Gemini API Key"}
-                            value={customSettings.gemini.api_key}
-                            onChange={(e) => setCustomSettings({
-                              ...customSettings,
-                              gemini: { ...customSettings.gemini, api_key: e.target.value }
-                            })}
-                            style={{
-                              padding: '0.6rem 0.8rem',
-                              borderRadius: '2px',
-                              border: '1px solid var(--fdl-line)',
-                              fontSize: '0.9rem',
-                              width: '100%',
-                              maxWidth: '500px',
-                            }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  )}
-
-                  {/* ELSA Card */}
-                  {(!session?.allowed_ai_providers || session.allowed_ai_providers.includes('elsa')) && (
-                  <div 
-                    className={`provider-panel ${selectedProvider === 'elsa' ? 'is-selected' : ''}`}
-                    onClick={() => setSelectedProvider('elsa')}
-                    style={{
-                      padding: '1.5rem',
-                      borderRadius: '2px',
-                      border: selectedProvider === 'elsa' ? '2px solid var(--fdl-blue-600)' : '1px solid var(--fdl-line)',
-                      background: selectedProvider === 'elsa' ? 'var(--fdl-blue-050)' : 'white',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: 'none',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <input
-                        type="radio"
-                        name="management-ai-provider"
-                        aria-label="Select elsa"
-                        checked={selectedProvider === 'elsa'}
-                        onChange={() => setSelectedProvider('elsa')}
-                        onClick={e => e.stopPropagation()}
-                      />
-                      <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '2px',
-                        background: selectedProvider === 'elsa' ? 'var(--fdl-blue-600)' : 'var(--fdl-line)',
-                        color: selectedProvider === 'elsa' ? 'white' : 'var(--fdl-canvas0)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 'bold',
-                        transition: 'all 0.3s',
-                      }}>
-                        E
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--fdl-ink)' }}>ELSA</span>
-                          {selectedProvider === 'elsa' && (
-                            <span style={{ background: 'var(--fdl-blue-600)', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '2px', fontWeight: 800 }}>ACTIVE</span>
-                          )}
-                        </div>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--fdl-canvas0)', lineHeight: 1.4 }}>
-                          FDA Enterprise AI model. Optimized for compliance and institutional toxicity classification.
-                        </p>
-                      </div>
-                    </div>
-
-                    {selectedProvider === 'elsa' && (
-                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--fdl-line)' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', maxWidth: '600px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Elsa URL</label>
-                            <input
-                              type="text"
-                              placeholder={session?.env_elsa_url || "https://elsa.fda.gov/api"}
-                              value={customSettings.elsa.url}
-                              onChange={(e) => setCustomSettings({
-                                ...customSettings,
-                                elsa: { ...customSettings.elsa, url: e.target.value }
-                              })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Elsa User</label>
-                            <input
-                              type="text"
-                              placeholder={session?.env_elsa_user || "Username"}
-                              value={customSettings.elsa.user}
-                              onChange={(e) => setCustomSettings({
-                                ...customSettings,
-                                elsa: { ...customSettings.elsa, user: e.target.value }
-                              })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Elsa Key</label>
-                            <input
-                              type="password"
-                              placeholder={session?.has_elsa_key ? "Elsa Key configured in backend .env (Leave blank to use default)" : "API Key"}
-                              value={customSettings.elsa.key}
-                              onChange={(e) => setCustomSettings({
-                                ...customSettings,
-                                elsa: { ...customSettings.elsa, key: e.target.value }
-                              })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Elsa Model ID</label>
-                            <input
-                              type="text"
-                              placeholder={session?.env_elsa_model_id || "e.g. claude-3-5-sonnet"}
-                              value={customSettings.elsa.model_id}
-                              onChange={(e) => setCustomSettings({
-                                ...customSettings,
-                                elsa: { ...customSettings.elsa, model_id: e.target.value }
-                              })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Elsa Model Name</label>
-                            <input
-                              type="text"
-                              placeholder={session?.env_elsa_model_name || "e.g. CLAUDE_4_SONNET"}
-                              value={customSettings.elsa.model_name}
-                              onChange={(e) => setCustomSettings({
-                                ...customSettings,
-                                elsa: { ...customSettings.elsa, model_name: e.target.value }
-                              })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  )}
-
-                  {/* vLLM Card */}
-                  {(!session?.allowed_ai_providers || session.allowed_ai_providers.includes('vllm') || session.allowed_ai_providers.includes('llama')) && (
-                  <div 
-                    className={`provider-panel ${selectedProvider === 'vllm' ? 'is-selected' : ''}`}
-                    onClick={() => setSelectedProvider('vllm')}
-                    style={{
-                      padding: '1.5rem',
-                      borderRadius: '2px',
-                      border: selectedProvider === 'vllm' ? '2px solid var(--fdl-blue-600)' : '1px solid var(--fdl-line)',
-                      background: selectedProvider === 'vllm' ? 'var(--fdl-blue-050)' : 'white',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: 'none',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <input
-                        type="radio"
-                        name="management-ai-provider"
-                        aria-label="Select vllm"
-                        checked={selectedProvider === 'vllm'}
-                        onChange={() => setSelectedProvider('vllm')}
-                        onClick={e => e.stopPropagation()}
-                      />
-                      <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '2px',
-                        background: selectedProvider === 'vllm' ? 'var(--fdl-blue-600)' : 'var(--fdl-line)',
-                        color: selectedProvider === 'vllm' ? 'white' : 'var(--fdl-canvas0)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 'bold',
-                        transition: 'all 0.3s',
-                      }}>
-                        V
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--fdl-ink)' }}>vLLM / Llama</span>
-                          {selectedProvider === 'vllm' && (
-                            <span style={{ background: 'var(--fdl-blue-600)', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '2px', fontWeight: 800 }}>ACTIVE</span>
-                          )}
-                        </div>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--fdl-canvas0)', lineHeight: 1.4 }}>
-                          Self-hosted LLMs running on vLLM or similar OpenAI-compatible servers.
-                        </p>
-                      </div>
-                    </div>
-
-                    {selectedProvider === 'vllm' && (
-                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--fdl-line)' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', maxWidth: '500px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>vLLM Base URL</label>
-                            <input
-                              type="text"
-                              placeholder={session?.env_vllm_url || "http://localhost:8000/v1"}
-                              value={customSettings.vllm.url}
-                              onChange={(e) => setCustomSettings({
-                                ...customSettings,
-                                vllm: { ...customSettings.vllm, url: e.target.value }
-                              })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>API Key</label>
-                            <input
-                              type="password"
-                              placeholder={session?.has_vllm_key ? "vLLM API Key configured in backend .env (Leave blank to use default)" : "API Key (if required)"}
-                              value={customSettings.vllm.api_key}
-                              onChange={(e) => setCustomSettings({
-                                ...customSettings,
-                                vllm: { ...customSettings.vllm, api_key: e.target.value }
-                              })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Model Name</label>
-                            <input
-                              type="text"
-                              placeholder={session?.env_vllm_model || "e.g. meta-llama/Llama-4-Maverick-17B-Instruct"}
-                              value={customSettings.vllm.model_name}
-                              onChange={(e) => setCustomSettings({
-                                ...customSettings,
-                                vllm: { ...customSettings.vllm, model_name: e.target.value }
-                              })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  )}
-
-                  {/* Ollama connection */}
-                  {(!session?.allowed_ai_providers || session.allowed_ai_providers.includes('ollama')) && (
-                  <div 
-                    className={`provider-panel ${selectedProvider === 'ollama' ? 'is-selected' : ''}`}
-                    onClick={() => setSelectedProvider('ollama')}
-                    style={{
-                      padding: '1.5rem',
-                      borderRadius: '2px',
-                      border: selectedProvider === 'ollama' ? '2px solid var(--fdl-blue-600)' : '1px solid var(--fdl-line)',
-                      background: selectedProvider === 'ollama' ? 'var(--fdl-blue-050)' : 'white',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: 'none',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <input
-                        type="radio"
-                        name="management-ai-provider"
-                        aria-label="Select ollama"
-                        checked={selectedProvider === 'ollama'}
-                        onChange={() => setSelectedProvider('ollama')}
-                        onClick={e => e.stopPropagation()}
-                      />
-                      <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '2px',
-                        background: selectedProvider === 'ollama' ? 'var(--fdl-blue-600)' : 'var(--fdl-line)',
-                        color: selectedProvider === 'ollama' ? 'white' : 'var(--fdl-canvas0)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 'bold',
-                        transition: 'all 0.3s',
-                      }}>
-                        O
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--fdl-ink)' }}>Ollama</span>
-                          {selectedProvider === 'ollama' && (
-                            <span style={{ background: 'var(--fdl-blue-600)', color: 'white', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '2px', fontWeight: 800 }}>ACTIVE</span>
-                          )}
-                        </div>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--fdl-canvas0)', lineHeight: 1.4 }}>
-                          Locally running LLMs using Ollama. Run private, offline model inferences on your local device.
-                        </p>
-                      </div>
-                    </div>
-
-                    {selectedProvider === 'ollama' && (
-                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--fdl-line)' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', maxWidth: '500px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Ollama URL</label>
-                            <input
-                              type="text"
-                              placeholder={session?.env_ollama_url || "http://localhost:11434"}
-                              value={customSettings.ollama.url}
-                              onChange={(e) => setCustomSettings({
-                                ...customSettings,
-                                ollama: { ...customSettings.ollama, url: e.target.value }
-                              })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Model Name</label>
-                            <input
-                              type="text"
-                              placeholder="e.g. llama3, gemma2"
-                              value={customSettings.ollama.model_name}
-                              onChange={(e) => setCustomSettings({
-                                ...customSettings,
-                                ollama: { ...customSettings.ollama, model_name: e.target.value }
-                              })}
-                              style={{ padding: '0.5rem 0.75rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  )}
-
-
-                </div>
-
-                <div style={{ marginTop: '2.5rem', borderTop: '1px solid var(--fdl-line)', paddingTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
-                  <button
-                    onClick={handleSaveSettings}
-                    disabled={savingSettings}
-                    className="btn-primary"
-                    style={{
-                      padding: '0.75rem 2.0rem',
-                      borderRadius: '2px',
-                      fontSize: '1rem',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      boxShadow: 'none',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    {savingSettings ? 'Saving Settings...' : 'Save AI Settings'}
-                  </button>
-                </div>
-              </section>
-            )}
+            {activeTab === 'ai' && !session?.is_guest && <AiPreferences />}
 
             {activeTab === 'users' && session?.username?.toLowerCase() !== 'guest' && (
               <section className="mgmt-card">
-                <h2 className="section-title">User Management</h2>
+                <h2 className="section-title">{session?.is_admin ? 'User Management' : 'My Account'}</h2>
 
                 {/* Create User Form */}
                 {session?.is_admin && (
@@ -1947,7 +1452,7 @@ export default function ManagementPage() {
                                   setUserModelError(null);
                                   setManagingUser(user);
                                   setEditPassword('');
-                                  setSelectedUserModelProvider(user.ai_provider || 'elsa');
+                                  setSelectedUserModelProvider(['vllm', 'llama'].includes(user.ai_provider) ? 'llama-4' : user.ai_provider || '');
                                 }}
                                 className="btn-ghost"
                                 style={{ padding: '6px 14px', fontWeight: 600, fontSize: '0.8rem' }}
@@ -3487,12 +2992,8 @@ else:
                       style={{ flex: 1 }}
                       disabled={savingUserModel || managingUser.is_active === false}
                     >
-                      <option value="elsa">ELSA</option>
-                      {!session?.is_internal && (!session?.allowed_ai_providers || session.allowed_ai_providers.includes('gemini')) && (
-                        <option value="gemini">Gemini</option>
-                      )}
-                      <option value="vllm">vLLM</option>
-                      <option value="ollama">Ollama</option>
+                      <option value="">Follow system default</option>
+                      {session?.ai_models?.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}
                     </select>
                     <button
                       onClick={async () => {

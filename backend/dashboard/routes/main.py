@@ -643,35 +643,41 @@ def preferences():
     if not data:
         return jsonify({'success': False, 'error': 'No data provided'}), 400
 
-    ai_fields = {'ai_provider', 'custom_gemini_key', 'openai_api_key', 'openai_base_url', 'openai_model_name', 'ai_settings'}
-    has_ai_settings = any(k in data for k in ai_fields)
-    if has_ai_settings and not getattr(current_user, 'is_admin', False):
-        return jsonify({'success': False, 'error': 'Custom AI configuration is restricted to administrators.'}), 403
-
-    from dashboard.services.ai_handler import _check_is_internal
-    is_internal = _check_is_internal()
-
-    if 'ai_provider' in data:
-        req_provider = data.get('ai_provider')
-        if is_internal and req_provider == 'gemini':
-            return jsonify({'success': False, 'error': 'Gemini model is disabled in internal environment.'}), 400
-        current_user.ai_provider = req_provider
-    if 'custom_gemini_key' in data and not is_internal:
-        current_user.custom_gemini_key = data.get('custom_gemini_key')
-    if 'openai_api_key' in data:
-        current_user.openai_api_key = data.get('openai_api_key')
-    if 'openai_base_url' in data:
-        current_user.openai_base_url = data.get('openai_base_url')
-    if 'openai_model_name' in data:
-        current_user.openai_model_name = data.get('openai_model_name')
+    if not isinstance(data, dict):
+        return jsonify(success=False, error='Preferences must be a JSON object.'), 400
+    from dashboard.services.ai_preferences import allowed_providers, normalize_provider
+    if 'ai_provider' in data and not isinstance(data['ai_provider'], str):
+        return jsonify(success=False, error='Model preference must be a string.'), 400
+    if current_user.is_guest:
+        return jsonify(success=False, error='Guest accounts cannot save preferences.'), 403
+    connection_fields = {'custom_gemini_key', 'openai_api_key', 'openai_base_url', 'openai_model_name', 'ai_settings'}
+    if any(k in data for k in connection_fields) and not current_user.is_admin:
+        return jsonify(success=False, error='Connection settings are restricted to administrators.'), 403
+    provider = normalize_provider(data.get('ai_provider'))
+    if 'ai_provider' in data and provider and provider not in allowed_providers():
+        return jsonify(success=False, error='This model is not available in this deployment.'), 400
     if 'ai_settings' in data:
-        settings = data.get('ai_settings')
-        if isinstance(settings, (dict, list)):
-            import json
-            current_user.ai_settings = json.dumps(settings)
-        else:
-            current_user.ai_settings = settings
-    
+        settings = data['ai_settings']
+        if not isinstance(settings, dict):
+            return jsonify(success=False, error='Connection settings must be an object.'), 400
+        allowed_keys = {
+            'elsa': {'url', 'user', 'key', 'model_id', 'model_name'},
+            'llama-4': {'url', 'api_key', 'model_name'},
+            'muse': {'url', 'api_key', 'model_name'},
+            'gemini': {'api_key', 'model_name'},
+        }
+        for name, options in settings.items():
+            if name not in allowed_providers() or not isinstance(options, dict):
+                return jsonify(success=False, error='Invalid model connection settings.'), 400
+            if any(key not in allowed_keys[name] or not isinstance(value, str) for key, value in options.items()):
+                return jsonify(success=False, error='Invalid connection field.'), 400
+            url = options.get('url', '')
+            if url and not url.startswith(('http://', 'https://')):
+                return jsonify(success=False, error='Connection URL must use http or https.'), 400
+        current_user.ai_settings = json.dumps(settings)
+    if 'ai_provider' in data:
+        current_user.ai_provider = provider or None
+
     db.session.commit()
     return jsonify({'success': True, 'message': 'Preferences saved successfully!'})
 

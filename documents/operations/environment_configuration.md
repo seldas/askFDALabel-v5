@@ -68,3 +68,28 @@ Templates are provided at:
 | `SPL_STORAGE_DIR` | Directory containing primary DailyMed SPL ZIPs. | `DATA_DIR/spl_storage` |
 | `SPL_STORAGE_DIR_ARCHIVED` | Directory containing archived SPL XMLs. | `DATA_DIR/spl_storage_archived` |
 | `SPL_CACHE_DIR` | Directory for dynamic read-through Oracle SPL XML cache. | `DATA_DIR/spl_cache` |
+
+
+### AI model preferences
+
+The management page lets registered users choose a model or follow the system default.
+Guests always follow the default. Only administrators can override connection fields;
+these overrides apply to their own account, not the entire deployment.
+
+Internal deployments (identified by `ELSA_API_NAME`) offer ELSA, Llama-4 (Local), and
+Muse (Local). External deployments offer Gemini. `ALLOWED_AI_PROVIDERS` can further
+restrict these choices. Canonical IDs are `elsa`, `llama-4`, `muse`, and `gemini`;
+legacy `llama` and `vllm` IDs map to `llama-4`.
+
+Llama-4 uses `LLM_URL`, `LLM_KEY`, and `LLM_MODEL`. Muse independently uses
+`MUSE_LLM_URL`, `MUSE_LLM_KEY`, and `MUSE_LLM_MODEL`. Both URLs must point to
+OpenAI-compatible API roots (normally ending in `/v1`). Set each model name to
+the exact model ID served by that endpoint. ELSA and Gemini keep their existing
+configuration variables. `DEFAULT_AI_MODEL` sets the deployment default; if it is
+unavailable in that environment, the first allowed model is used. At least one
+model must be enabled.
+
+Changing `.env` requires recreating/restarting backend and worker services with the
+new environment. Updating personal preferences takes effect on the next AI call,
+including calls from other processes; it does not alter requests already running.
+No live, system-wide connection editing is provided by the preferences page.

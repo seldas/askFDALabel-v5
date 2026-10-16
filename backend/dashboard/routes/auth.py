@@ -159,15 +159,14 @@ def session():
         logger.error(f"Error checking internal status: {e}")
         is_internal = False
     
-    allowed_providers = [p.strip().lower() for p in os.getenv("ALLOWED_AI_PROVIDERS", "gemini,elsa,llama,vllm,ollama,customized").split(',') if p.strip()]
-    if is_internal:
-        allowed_providers = [p for p in allowed_providers if p != 'gemini']
-
+    from dashboard.services.ai_preferences import allowed_providers as get_allowed, resolve_provider, public_catalog, connection_config, normalize_provider
+    allowed_providers = get_allowed()
     if current_user.is_authenticated:
-        effective_provider = current_user.ai_provider or os.getenv("DEFAULT_AI_MODEL") or ('elsa' if is_internal else 'gemini')
-        if is_internal and effective_provider == 'gemini':
-            effective_provider = 'elsa' if 'elsa' in allowed_providers else (allowed_providers[0] if allowed_providers else 'elsa')
-
+        effective_provider, default_provider = resolve_provider(current_user)
+        effective_config = connection_config(effective_provider, current_user)
+        preference = normalize_provider(current_user.ai_provider)
+        if current_user.is_guest or preference not in allowed_providers:
+            preference = ''
         return jsonify({
             **public_config(),
             'auth_method': 'saml' if current_user.sso_identities else 'password',
@@ -195,11 +194,15 @@ def session():
             # account. Enforced on the routes as well as hidden in the UI.
             'is_guest': current_user.is_guest,
             'ai_provider': effective_provider,
-            'custom_gemini_key': '' if is_internal else current_user.custom_gemini_key,
-            'openai_api_key': current_user.openai_api_key,
-            'openai_base_url': current_user.openai_base_url,
-            'openai_model_name': current_user.openai_model_name,
-            'ai_settings': current_user.ai_settings,
+            'ai_preference': preference,
+            'ai_model_name': effective_config.get('model_id') or effective_config.get('model_name', ''),
+            'ai_default_provider': default_provider,
+            'ai_models': public_catalog(),
+            'custom_gemini_key': current_user.custom_gemini_key if current_user.is_admin and not is_internal else '',
+            'openai_api_key': current_user.openai_api_key if current_user.is_admin else '',
+            'openai_base_url': current_user.openai_base_url if current_user.is_admin else '',
+            'openai_model_name': current_user.openai_model_name if current_user.is_admin else '',
+            'ai_settings': current_user.ai_settings if current_user.is_admin else None,
             'is_internal': is_internal,
             'api_key': getattr(current_user, 'api_key', None),
             'gemini_model': '' if is_internal else os.environ.get('GEMINI_MODEL', 'Gemini'),
