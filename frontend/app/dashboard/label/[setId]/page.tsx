@@ -8,12 +8,11 @@ import LabelAnnotations from './LabelAnnotations';
 import NotesModal from './NotesModal';
 import TableExtractorModal from './TableExtractorModal';
 import { TOOL_LABEL, useLabel } from './LabelContext';
-import { labelRoute, type LaunchContext } from '../../../platform/context';
+import { labelRoute } from '../../../platform/context';
 import { useUser } from '../../../context/UserContext';
 import { withApiBase } from '../../../utils/appPaths';
-import { ToolIcon } from '../../../platform/icons';
-import { LabelToolStrip, useToolboxTools } from '../../../platform/ToolLauncher';
-import type { ToolboxWorkflow } from '../../../platform/registry';
+import { LabelToolStrip } from '../../../platform/ToolLauncher';
+import ToolboxPanel from './ToolboxPanel';
 
 // The reader body. FAERS, Deep Dive and Examine are sibling routes now, and
 // the Header / identity chrome belongs to ../layout.tsx.
@@ -142,159 +141,6 @@ function ExportSectionItem({
   );
 }
 
-function ToolboxPanel({ setId, data }: { setId: string; data: any }) {
-  const brandName = data?.brand_name || data?.drug_name || 'this product';
-  const applicationNumber = String(data?.application_number || data?.metadata?.application_number || '').trim();
-  // A label can carry several application numbers, separated by commas or
-  // semicolons. The application profile follows one identifier at a time.
-  const historyApplicationNumber = applicationNumber.split(/[;,]/, 1)[0].trim();
-  const hasApplicationNumber = Boolean(historyApplicationNumber && !/^n\/?a$/i.test(historyApplicationNumber));
-  const [favoriteToolIds, setFavoriteToolIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('askfdalabel_favorite_tools');
-      if (stored) {
-        const saved = JSON.parse(stored) as string[];
-        // `label-tox` was the previous default id before the organ-specific
-        // agents were split; retain the user's intent by pinning DILI instead.
-        setFavoriteToolIds([...new Set(saved.map((id) => id === 'label-tox' ? 'label-tox-dili' : id))]);
-      } else {
-        setFavoriteToolIds(['label-faers', 'label-tox-dili']);
-      }
-    } catch (e) {
-      console.error('Failed to load favorite tools:', e);
-    }
-  }, []);
-
-  const toggleFavoriteTool = (toolId: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setFavoriteToolIds((prev) => {
-      const next = prev.includes(toolId) ? prev.filter((id) => id !== toolId) : [...prev, toolId];
-      try {
-        localStorage.setItem('askfdalabel_favorite_tools', JSON.stringify(next));
-      } catch (err) {
-        console.error('Failed to save favorite tools:', err);
-      }
-      return next;
-    });
-  };
-
-  /*
-   * The toolbox renders the platform registry, not a list of its own. A tool
-   * added to platform/registry.ts shows up here automatically, and one the
-   * account is not permitted to use is filtered out by the same resolver the
-   * navigation and the tool directory use.
-   */
-  const launchContext = useMemo<LaunchContext>(
-    () => ({
-      setIds: [setId],
-      applicationNumber: hasApplicationNumber ? historyApplicationNumber : undefined,
-    }),
-    [setId, hasApplicationNumber, historyApplicationNumber],
-  );
-
-  const registryTools = useToolboxTools(launchContext);
-
-  const toolsList = useMemo(
-    () =>
-      registryTools.map((tool) => ({
-        id: tool.id,
-        name: tool.name,
-        blurb: tool.blurbFor?.(launchContext) ?? tool.blurb,
-        iconId: tool.iconId,
-        href: tool.href(launchContext),
-        workflow: tool.toolboxWorkflow ?? 'review',
-      })),
-    [registryTools, launchContext],
-  );
-
-  const workflowDetails: Record<ToolboxWorkflow, { code: string; title: string; description: string }> = {
-    review: { code: 'REVIEW / 01', title: 'Label review', description: 'Prompted review and structured label interpretation.' },
-    safety: { code: 'SAFETY / 02', title: 'Safety signals', description: 'Adverse-event evidence, extraction, and safety profiling.' },
-    toxicity: { code: 'TOX / 03', title: 'Toxicology assessment', description: 'Organ-specific risk assessment and toxicity classification.' },
-    comparison: { code: 'COMPARE / 04', title: 'Cross-label analysis', description: 'Version history, peer context, and label comparison.' },
-  };
-  const workflowOrder: ToolboxWorkflow[] = ['review', 'safety', 'toxicity', 'comparison'];
-  const pinnedTools = toolsList.filter((tool) => favoriteToolIds.includes(tool.id));
-  const workflowSets = workflowOrder
-    .map((workflow) => ({
-      workflow,
-      tools: toolsList.filter((tool) => tool.workflow === workflow && !favoriteToolIds.includes(tool.id)),
-    }))
-    .filter(({ tools }) => tools.length > 0);
-
-  const renderToolCard = (t: typeof toolsList[number]) => {
-    const isFav = favoriteToolIds.includes(t.id);
-    const detail = workflowDetails[t.workflow];
-    return (
-      <article key={t.id} className={`afl-toolbox__tool${isFav ? ' is-pinned' : ''}`} data-workflow={t.workflow}>
-        <header className="afl-toolbox__tool-header">
-          <span className="afl-toolbox__tool-icon" aria-hidden="true"><ToolIcon id={t.iconId as any} size={20} /></span>
-          <div className="afl-toolbox__tool-title-group">
-            <span className="afl-toolbox__tool-category">{detail?.title ?? t.workflow}</span>
-            <h3><a className="afl-toolbox__tool-name" href={t.href} target="_blank" rel="noopener noreferrer">{t.name}</a></h3>
-          </div>
-          <button type="button" className="afl-toolbox__pin" onClick={(e) => toggleFavoriteTool(t.id, e)} aria-pressed={isFav} aria-label={`${isFav ? 'Unpin' : 'Pin'} ${t.name}`} title={isFav ? 'Unpin tool' : 'Pin tool'}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill={isFav ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M16 9V3H8v6l-3 3v3h14v-3l-3-3Z" />
-              <path d="M12 15v6" />
-            </svg>
-          </button>
-        </header>
-        <p>{t.blurb}</p>
-        <a className="afl-toolbox__launch" href={t.href} target="_blank" rel="noopener noreferrer">
-          Open analysis <span aria-hidden="true">↗</span>
-        </a>
-      </article>
-    );
-  };
-
-  return (
-    <section className="afl-toolbox" aria-labelledby="toolbox-title">
-      <header className="afl-toolbox__header">
-        <div className="afl-toolbox__heading">
-          <span className="afl-toolbox__region">TOOL SET / {String(toolsList.length).padStart(2, '0')}</span>
-          <h2 id="toolbox-title">Product Toolbox</h2>
-          <p>Launch label-specific analyses for {brandName}. Tools are organized by analytical workflow.</p>
-        </div>
-        <dl className="afl-toolbox__metadata">
-          <div><dt>LABEL SET</dt><dd>{setId}</dd></div>
-          {hasApplicationNumber && <div><dt>APPLICATION</dt><dd>{historyApplicationNumber}</dd></div>}
-        </dl>
-      </header>
-
-      <aside className="afl-toolbox__notice" aria-label="Toolbox collaboration contact">
-        <span>Tool requests or research collaboration:</span>{' '}
-        <a href="mailto:askfdalabel@fda.hhs.gov">askfdalabel@fda.hhs.gov</a>
-      </aside>
-
-      {pinnedTools.length > 0 && (
-        <section className="afl-toolbox__section afl-toolbox__section--pinned" aria-labelledby="pinned-tools-title">
-          <header className="afl-toolbox__section-header">
-            <div><span>PINNED / {String(pinnedTools.length).padStart(2, '0')}</span><h3 id="pinned-tools-title">Pinned tools</h3></div>
-            <p>Frequently used analyses for this workspace.</p>
-          </header>
-          <div className="afl-toolbox__grid">{pinnedTools.map(renderToolCard)}</div>
-        </section>
-      )}
-
-      {workflowSets.map(({ workflow, tools }) => {
-        const detail = workflowDetails[workflow];
-        return (
-          <section key={workflow} className="afl-toolbox__section" data-workflow={workflow} aria-labelledby={`toolbox-${workflow}`}>
-            <header className="afl-toolbox__section-header">
-              <div><span>{detail.code} / {String(tools.length).padStart(2, '0')}</span><h3 id={`toolbox-${workflow}`}>{detail.title}</h3></div>
-              <p>{detail.description}</p>
-            </header>
-            <div className="afl-toolbox__grid">{tools.map(renderToolCard)}</div>
-          </section>
-        );
-      })}
-    </section>
-  );
-}
 
 function LabelContent() {
   const router = useRouter();
@@ -326,9 +172,9 @@ function LabelContent() {
 
   useEffect(() => {
     const shell = document.querySelector('.afl-label-shell');
-    shell?.classList.toggle('afl-label-shell--focus', readingFocus);
+    shell?.classList.toggle('afl-label-shell--focus', readingFocus && !isToolbox);
     return () => shell?.classList.remove('afl-label-shell--focus');
-  }, [readingFocus]);
+  }, [readingFocus, isToolbox]);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [selectedSectionsForExport, setSelectedSectionsForExport] = useState<Set<string>>(new Set());
@@ -644,57 +490,7 @@ function LabelContent() {
   if (!data) return null;
 
   if (isToolbox) {
-    return (
-      <>
-        <div className={`afl-sticky-header-bar ${headerCollapsed ? 'is-collapsed' : ''}`}>
-          {headerCollapsed && (
-            <div className="afl-sticky-line1">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
-                <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a', textTransform: 'capitalize', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {[data.brand_name || data.drug_name, data.effective_time].filter(Boolean).join(' - ').toLowerCase()}
-                </span>
-                {data.generic_name && (
-                  <span style={{ fontSize: '0.82rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '350px' }}>
-                    ({data.generic_name})
-                  </span>
-                )}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                {data.label_format && <span className={`afl-badge afl-badge--${data.label_format === 'PLR' ? 'success' : 'neutral'}`}>{data.label_format}</span>}
-                {data.is_rld && <span className="afl-badge afl-badge--danger">RLD</span>}
-              {data.has_boxed_warning && <a className="afl-badge afl-badge--danger" href={`#${data.table_of_contents?.find(item => item.is_boxed_warning)?.id || 'highlights-section'}`}>Boxed warning</a>}
-                {data.openfda_status && <span className={`afl-badge afl-badge--${data.openfda_status === 'Current' ? 'info' : 'warn'}`}>{data.openfda_status}</span>}
-                {data.application_number && <span className="afl-badge afl-badge--neutral" style={{ fontFamily: 'var(--fdl-font-mono, monospace)', letterSpacing: '0.04em' }}>{data.application_number}</span>}
-                <button
-                  type="button"
-                  onClick={() => setHeaderCollapsed(false)}
-                  className="afl-collapse-toggle-btn"
-                  title="Expand full drug header"
-                >
-                  <span>Label details</span>
-                  <span>▲</span>
-                </button>
-              </div>
-            </div>
-          )}
-          <div className="afl-label-tools" style={{ margin: 0 }}>
-            <LabelToolStrip setId={setId} />
-            {!headerCollapsed && (
-              <button
-                type="button"
-                onClick={() => setHeaderCollapsed(true)}
-                className="afl-collapse-toggle-btn"
-                title="Collapse drug header into compact bar"
-              >
-                <span>Hide details</span>
-                <span>▼</span>
-              </button>
-            )}
-          </div>
-        </div>
-        <ToolboxPanel setId={setId} data={data} />
-      </>
-    );
+    return <ToolboxPanel setId={setId} data={data} />;
   }
 
   const handleDownloadMeddraProfile = async () => {
