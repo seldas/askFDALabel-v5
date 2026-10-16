@@ -91,7 +91,8 @@ export default function LabelView({
   expandedSections,
   toggleSection,
   TOCItemComponent,
-  pvProfileData
+  pvProfileData,
+  onProgressChange
 }: { 
   data: LabelData; 
   activeTab: string;
@@ -101,6 +102,7 @@ export default function LabelView({
   toggleSection: (id: string) => void;
   TOCItemComponent: any;
   pvProfileData?: any;
+  onProgressChange?: (percent: number) => void;
 }) {
   const [currentIndex, setCurrentIndex] = useState(0); // 0-based index of sections
   const [navTab, setNavTab] = useState<'toc' | 'soc'>('toc');
@@ -121,6 +123,8 @@ export default function LabelView({
   const progressPercent = sections.length > 0
     ? Math.round(((currentIndex + 1) / sections.length) * 100)
     : 0;
+
+  useEffect(() => { onProgressChange?.(progressPercent); }, [progressPercent, onProgressChange]);
 
   // Helper to find which top-level section contains a specific ID (for TOC links)
   const findSectionIdxForId = (id: string) => {
@@ -591,10 +595,6 @@ export default function LabelView({
                 boxShadow: 'none',
                 overflow: 'visible'
             }}>
-                {/* Reading Progress Bar */}
-                <div className="spl-progress-track">
-                    <div className="spl-progress-bar" style={{ width: `${progressPercent}%` }} />
-                </div>
                 <div 
                     className="label-viewport" 
                     ref={labelViewRef} 

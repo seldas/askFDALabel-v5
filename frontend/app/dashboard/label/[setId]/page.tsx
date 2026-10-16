@@ -322,6 +322,7 @@ function LabelContent() {
 
   const [tocCollapsed, setTocCollapsed] = useState(false);
   const [readingFocus, setReadingFocus] = useState(false);
+  const [readingProgress, setReadingProgress] = useState(0);
 
   useEffect(() => {
     const shell = document.querySelector('.afl-label-shell');
@@ -720,30 +721,10 @@ function LabelContent() {
     <>
       <ReaderToolbar
         title={data.brand_name || data.drug_name || 'Label document'}
-        date={data.effective_time} status={data.openfda_status}
+        date={data.effective_time} status={data.openfda_status} progress={readingProgress}
         tocCollapsed={tocCollapsed} onToggleContents={() => setTocCollapsed(!tocCollapsed)}
         chatOpen={chatOpen} onToggleChat={() => setChatOpen(previous => !previous)}
       >
-        <button type="button" className="label-tool-btn" aria-expanded={!headerCollapsed}
-          onClick={() => {
-            if (headerCollapsed) {
-              setReadingFocus(false);
-              setHeaderCollapsed(false);
-              requestAnimationFrame(() => document.querySelector('.afl-label-shell__scroll')?.scrollTo({ top: 0, behavior: 'smooth' }));
-            } else { setHeaderCollapsed(true); }
-          }}>
-          {headerCollapsed ? 'Label details' : 'Collapse details'}
-        </button>
-        {data.has_boxed_warning && (
-          <a className="label-tool-btn label-tool-meddra"
-            href={`#${data.table_of_contents?.find(item => item.is_boxed_warning)?.id || 'highlights-section'}`}>
-            Boxed warning
-          </a>
-        )}
-          <button type="button" className="label-tool-btn" aria-pressed={readingFocus}
-            onClick={() => { setHeaderCollapsed(true); setReadingFocus(!readingFocus); }}>
-            <span>{readingFocus ? 'Exit focus' : 'Focus reading'}</span>
-          </button>
           {/* Product Specifications — pop window to the left of AI Chat */}
           <button
             id="product-specs-btn"
@@ -837,6 +818,26 @@ function LabelContent() {
             <svg className="pop-indicator" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
           </button>
 
+        <button type="button" className="label-tool-btn" aria-expanded={!headerCollapsed}
+          onClick={() => {
+            if (headerCollapsed) {
+              setReadingFocus(false);
+              setHeaderCollapsed(false);
+              requestAnimationFrame(() => document.querySelector('.afl-label-shell__scroll')?.scrollTo({ top: 0, behavior: 'smooth' }));
+            } else { setHeaderCollapsed(true); }
+          }}>
+          {headerCollapsed ? 'Label details' : 'Collapse details'}
+        </button>
+        {data.has_boxed_warning && (
+          <a className="label-tool-btn label-tool-meddra"
+            href={`#${data.table_of_contents?.find(item => item.is_boxed_warning)?.id || 'highlights-section'}`}>
+            Boxed warning
+          </a>
+        )}
+          <button type="button" className="label-tool-btn" aria-pressed={readingFocus}
+            onClick={() => { setHeaderCollapsed(true); setReadingFocus(!readingFocus); }}>
+            <span>{readingFocus ? 'Exit focus' : 'Focus reading'}</span>
+          </button>
         <div className="afl-reader-toolbar__tools"><LabelToolStrip setId={setId} /></div>
       </ReaderToolbar>
 
@@ -859,7 +860,7 @@ function LabelContent() {
             an activeTab check, so every tool's scripts and effects ran on
             every view.
           */}
-          <LabelView data={data} activeTab={activeTab} tocCollapsed={tocCollapsed} setTocCollapsed={setTocCollapsed} expandedSections={expandedSections} toggleSection={toggleSection} TOCItemComponent={TOCItemComponent} pvProfileData={pvProfileData} />
+          <LabelView data={data} activeTab={activeTab} tocCollapsed={tocCollapsed} setTocCollapsed={setTocCollapsed} expandedSections={expandedSections} toggleSection={toggleSection} TOCItemComponent={TOCItemComponent} pvProfileData={pvProfileData} onProgressChange={setReadingProgress} />
       </div>
 
       {/* Product Specifications Modal Dialog */}
