@@ -93,3 +93,18 @@ Changing `.env` requires recreating/restarting backend and worker services with 
 new environment. Updating personal preferences takes effect on the next AI call,
 including calls from other processes; it does not alter requests already running.
 No live, system-wide connection editing is provided by the preferences page.
+
+
+AI connection overrides must be explicitly keyed by `llama-4` or `muse` in
+account settings. Legacy `vllm`/`llama` connection blobs and generic OpenAI fields
+are no longer imported automatically, since they may point to a different
+engine. Legacy provider selections still map to `llama-4`. Clear any explicit
+Llama-4 override fields and save to use `LLM_*` deployment defaults.
+
+`IMAGE_REVIEW_AI_TIMEOUT_SECONDS` controls each quick, detailed, and extraction
+AI call in background image review (default 600 seconds). Retries remain disabled
+for those stages. Next.js rewrites and generated nginx frontend/API proxies allow
+660 seconds of upstream inactivity. Rebuild/restart the frontend and reload or
+regenerate nginx configuration when deploying these proxy changes; restart Celery
+to apply the new image-review setting. External upstream gateways may impose
+additional timeouts outside this repository.

@@ -117,6 +117,10 @@ class AIClientFactory:
         from dashboard.services.ai_preferences import resolve_provider, connection_config
         provider, _ = resolve_provider(user)
         config = connection_config(provider, user)
+        # Log the selected model and host, never credentials or URL queries.
+        endpoint = urlsplit(config.get('url', ''))
+        logger.info('AI route: provider=%s model=%s host=%s', provider,
+                    config.get('model_id') or config.get('model_name'), endpoint.hostname or provider)
         if provider == 'elsa':
             client, model = AIClientFactory._get_elsa_client({'elsa': config})
             return 'elsa', client, model

@@ -27,6 +27,8 @@ const normalizedApiBase = apiBase === '/' ? '' : apiBase.replace(/\/$/, '');
 
 const nextConfig: NextConfig = {
   turbopack: {},
+  // Rewritten API calls may wait for a complete non-streaming AI response.
+  experimental: { proxyTimeout: 660_000 },
   async rewrites() {
     const rewrites: any[] = [
       {

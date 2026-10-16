@@ -28,10 +28,7 @@ export default function AiPreferences() {
       const parsed = JSON.parse(session?.ai_settings || '{}');
       const settings: Connections = {};
       for (const model of models) {
-        const legacy = model.id === 'llama-4'
-          ? { url: session?.openai_base_url, api_key: session?.openai_api_key, model_name: session?.openai_model_name }
-          : model.id === 'gemini' ? { api_key: session?.custom_gemini_key } : {};
-        const source = { ...legacy, ...(parsed[model.id] || (model.id === 'llama-4' ? parsed.vllm || parsed.llama : {}) || {}) };
+        const source = { ...(model.id === 'gemini' ? { api_key: session?.custom_gemini_key } : {}), ...(parsed[model.id] || {}) };
         settings[model.id] = Object.fromEntries(fields[model.id].map(([key]) => [key, typeof source[key] === 'string' ? source[key] : '']));
       }
       setConnections(settings);

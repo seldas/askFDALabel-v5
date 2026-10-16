@@ -63,17 +63,10 @@ def connection_config(provider, user=None):
     except (ValueError, TypeError):
         settings = {}
     options = settings.get(provider, {})
-    if provider == 'llama-4':
-        options = settings.get(provider, settings.get('vllm', settings.get('llama', {})))
     if not isinstance(options, dict):
         options = {}
-    # Preserve older administrator profiles until they save the new form.
-    legacy = {}
-    if provider == 'llama-4':
-        legacy = dict(url=getattr(user, 'openai_base_url', ''),
-                      api_key=getattr(user, 'openai_api_key', ''),
-                      model_name=getattr(user, 'openai_model_name', ''))
-    elif provider == 'gemini':
-        legacy = dict(api_key=getattr(user, 'custom_gemini_key', ''))
-    options = {**{k: v for k, v in legacy.items() if v}, **options}
+    if provider == 'gemini' and 'api_key' not in options:
+        options = {**options, 'api_key': getattr(user, 'custom_gemini_key', '')}
+    # Generic OpenAI / vllm settings may belong to another local engine.
+    # Only explicitly named model overrides may replace deployment defaults.
     return {key: options.get(key) or value for key, value in defaults.items()}
