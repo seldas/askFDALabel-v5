@@ -998,7 +998,34 @@
 .afl-toolbox__contact { padding-block: 14px; border-top: 1px solid var(--fdl-line-soft); color: var(--fdl-muted); font-size: 0.75rem; }
 .afl-toolbox__contact a { color: var(--fdl-blue-700); }
 .afl-toolbox__sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
-.afl-toolbox--adaptive .afl-toolbox__grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+.afl-toolbox--adaptive .afl-toolbox__grid {
+  /* Keep empty tracks so small categories do not stretch. The minimum track
+     width grows after five columns, preventing a sixth at any window size. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, max(260px, calc((100% - 40px) / 5))), 1fr));
+}
+.afl-toolbox__table tbody tr[data-workflow] {
+  --toolbox-row-accent: var(--fdl-blue-700);
+  --toolbox-row-tint: color-mix(in srgb, var(--fdl-blue-050) 60%, var(--fdl-paper));
+  background: var(--toolbox-row-tint);
+}
+.afl-toolbox__table tbody tr[data-workflow='safety'] {
+  --toolbox-row-accent: var(--fdl-amber);
+  --toolbox-row-tint: color-mix(in srgb, var(--fdl-amber-050) 70%, var(--fdl-paper));
+}
+.afl-toolbox__table tbody tr[data-workflow='toxicity'] {
+  --toolbox-row-accent: var(--fdl-green);
+  --toolbox-row-tint: color-mix(in srgb, var(--fdl-green-050) 70%, var(--fdl-paper));
+}
+.afl-toolbox__table tbody tr[data-workflow='comparison'] {
+  --toolbox-row-accent: var(--fdl-navy-800);
+  --toolbox-row-tint: color-mix(in srgb, var(--fdl-navy-800) 5%, var(--fdl-paper));
+}
+.afl-toolbox__table tbody tr[data-workflow]:hover {
+  background: color-mix(in srgb, var(--toolbox-row-tint) 93%, var(--toolbox-row-accent));
+}
+.afl-toolbox__table tbody tr[data-workflow] > td:first-child {
+  border-left: 3px solid color-mix(in srgb, var(--toolbox-row-accent) 40%, var(--fdl-paper));
+}
 .afl-toolbox--adaptive .afl-toolbox__tool { padding: 16px; }
 .afl-toolbox--adaptive .afl-toolbox__tool > p { margin: 10px 0 16px; }
 @media (max-width: 1099px) {

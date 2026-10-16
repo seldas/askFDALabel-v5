@@ -221,7 +221,7 @@ export default function ToolboxPanel({ setId, data }: { setId: string; data: Lab
             <th scope="col" className="afl-toolbox__category-column" aria-sort={sort.column === 'workflow' ? sort.descending ? 'descending' : 'ascending' : 'none'}><button type="button" onClick={() => changeSort('workflow')}>Category {sort.column === 'workflow' ? sort.descending ? '↓' : '↑' : '↕'}</button></th>
             <th scope="col" className="afl-toolbox__open-column">Action</th>
           </tr></thead>
-          <tbody>{tableTools.map(tool => <tr key={tool.id} data-pinned={favoriteToolIds.includes(tool.id)}>
+          <tbody>{tableTools.map(tool => <tr key={tool.id} data-workflow={tool.workflow} data-pinned={favoriteToolIds.includes(tool.id)}>
             <td>{renderPin(tool)}</td>
             <th scope="row"><a className="afl-toolbox__table-name" href={tool.href} target="_blank" rel="noopener noreferrer"><ToolIcon id={tool.iconId} size={18} />{tool.name}</a><span className="afl-toolbox__mobile-purpose">{tool.blurb}</span></th>
             <td className="afl-toolbox__purpose-column"><span>{tool.blurb}</span></td>
