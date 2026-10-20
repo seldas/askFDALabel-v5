@@ -418,7 +418,7 @@ const PLATFORM_TOOLS: ToolDef[] = [
   {
     id: 'wiki',
     name: 'User Guide & Wiki',
-    blurb: 'Documentation, usage guidance, and FAQs for AskFDALabel v3.0.',
+    blurb: 'Review workflows, data sources, analysis methods, and evidence verification.',
     iconId: 'document',
     kind: 'embedded',
     group: 'reference',

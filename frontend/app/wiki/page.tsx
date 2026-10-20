@@ -1,505 +1,144 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import Footer from '../components/Footer';
-import { useUser } from '../context/UserContext';
-import { getHandbookParts, HandbookTopic, HandbookPart } from './wikiData';
+import { ARTICLES, LEGACY_TOPICS, PATHS, searchableText, type ReadingPath, type WikiArticle } from './wikiData';
+import './wiki.css';
+
+const INDEX = new Map(ARTICLES.map(article => [article.id, article]));
+const FEATURED = ['first-review', 'find-labeling', 'pv-guide', 'compare-guide', 'visual-guide'];
 
 export default function WikiPage() {
-  const { session } = useUser();
-  const apiHost = session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov';
-  const parts = useMemo(() => getHandbookParts(apiHost), [apiHost]);
+  const [route, setRoute] = useState('home');
+  const [query, setQuery] = useState('');
+  const [scope, setScope] = useState<'all' | ReadingPath>('all');
+  const [retired, setRetired] = useState(false);
+  const search = useRef<HTMLInputElement>(null);
+  const main = useRef<HTMLElement>(null);
+  const ready = useRef(false);
 
-  // Flattened ordered array of all topics
-  const allTopics = useMemo(() => {
-    return parts.flatMap((p) => p.sections.flatMap((s) => s.topics));
-  }, [parts]);
-
-  // States
-  const [activeTopicId, setActiveTopicId] = useState<string>(allTopics[0]?.id || '1-1-account-login');
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Keyboard shortcut: Ctrl+K / Cmd+K focus on search
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        document.getElementById('handbook-search-input')?.focus();
+    const sync = () => {
+      let requested = '';
+      try { requested = decodeURIComponent(window.location.hash.slice(1)); } catch { requested = 'invalid-link'; }
+      if (!requested) requested = new URLSearchParams(window.location.search).get('topic') || 'home';
+      setRetired(requested === '10-1-device-clearances-recalls');
+      const canonical = LEGACY_TOPICS[requested] || requested;
+      if (canonical !== requested) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('topic');
+        url.hash = canonical;
+        window.history.replaceState(null, '', url);
+      }
+      setRoute(canonical);
+      setQuery('');
+      if (ready.current) {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        main.current?.focus({ preventScroll: true });
+      }
+      ready.current = true;
+    };
+    sync();
+    window.addEventListener('hashchange', sync);
+    const shortcut = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault(); search.current?.focus();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', shortcut);
+    return () => {
+      window.removeEventListener('hashchange', sync);
+      window.removeEventListener('keydown', shortcut);
+    };
   }, []);
 
-  // Filtered parts and topics based on search
-  const q = searchQuery.toLowerCase().trim();
+  const article = INDEX.get(route);
+  const activePath: ReadingPath | undefined = article?.path || (route === 'guides' || route === 'methods' ? route : undefined);
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const matches = useMemo(() => ARTICLES.filter(item => (scope === 'all' || item.path === scope) &&
+    words.every(word => searchableText(item).includes(word))), [query, scope]);
+  const pathMatches = ARTICLES.filter(item => item.path === activePath);
+  const groups = [...new Set(pathMatches.map(item => item.group))];
+  const pathArticles = groups.flatMap(group => pathMatches.filter(item => item.group === group));
+  const position = pathArticles.findIndex(item => item.id === article?.id);
+  const previous = pathArticles[position - 1];
+  const next = position >= 0 ? pathArticles[position + 1] : undefined;
+  const searching = words.length > 0;
 
-  const filteredParts = useMemo(() => {
-    if (!q) return parts;
-    return parts
-      .map((part) => ({
-        ...part,
-        sections: part.sections
-          .map((sec) => ({
-            ...sec,
-            topics: sec.topics.filter(
-              (t) =>
-                t.number.toLowerCase().includes(q) ||
-                t.title.toLowerCase().includes(q) ||
-                t.summary.toLowerCase().includes(q) ||
-                t.sectionTitle.toLowerCase().includes(q) ||
-                t.tags.some((tag) => tag.toLowerCase().includes(q))
-            ),
-          }))
-          .filter((sec) => sec.topics.length > 0),
-      }))
-      .filter((part) => part.sections.length > 0);
-  }, [parts, q]);
+  useEffect(() => {
+    document.title = `${article?.title || (searching ? 'Search' : activePath ? PATHS[activePath].title : 'Reviewer handbook')} | AskFDALabel`;
+  }, [article, activePath, searching]);
 
-  // Total matching topics
-  const totalMatches = useMemo(() => {
-    return filteredParts.reduce(
-      (acc, p) => acc + p.sections.reduce((sAcc, s) => sAcc + s.topics.length, 0),
-      0
-    );
-  }, [filteredParts]);
+  const articleLink = (item: WikiArticle, className = '') => <a key={item.id} className={className} href={`#${item.id}`} onClick={() => setQuery('')}>
+    <span className="wiki-kind">{PATHS[item.path].short} / {item.group}</span>
+    <strong>{item.title}</strong><p>{item.summary}</p><span className="wiki-read">Read article →</span>
+  </a>;
 
-  // Active topic object
-  const activeTopic = useMemo(() => {
-    return allTopics.find((t) => t.id === activeTopicId) || allTopics[0];
-  }, [allTopics, activeTopicId]);
-
-  // Linear Pager (Previous / Next)
-  const currentIndex = allTopics.findIndex((t) => t.id === activeTopic?.id);
-  const prevTopic = currentIndex > 0 ? allTopics[currentIndex - 1] : null;
-  const nextTopic = currentIndex < allTopics.length - 1 ? allTopics[currentIndex + 1] : null;
-
-  // Topic Selection Handler
-  const selectTopic = (id: string) => {
-    setActiveTopicId(id);
-  };
-
-  return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
-      {/* Minimalist Top Brand Bar */}
-      <header
-        style={{
-          background: '#ffffff',
-          borderBottom: '1px solid #e2e8f0',
-          padding: '0.75rem 2rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '1rem', fontWeight: 800, color: '#002e5d', letterSpacing: '-0.01em' }}>
-            AskFDALabel Handbook
-          </span>
-          <span
-            style={{
-              fontSize: '0.7rem',
-              fontWeight: 700,
-              color: '#475569',
-              background: '#f1f5f9',
-              border: '1px solid #cbd5e1',
-              padding: '1px 6px',
-              borderRadius: 'var(--fdl-radius-sm, 2px)',
-            }}
-          >
-            v5.0
-          </span>
-        </div>
-      </header>
-
-      {/* Two-Column Handbook Body */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'row',
-          maxWidth: '1440px',
-          width: '100%',
-          margin: '0 auto',
-          padding: '1.5rem',
-          gap: '2rem',
-          boxSizing: 'border-box',
-          alignItems: 'flex-start',
-          flex: 1,
-        }}
-      >
-        {/* LEFT COLUMN: Sidebar Index (320px fixed) */}
-        <aside
-          style={{
-            width: '320px',
-            minWidth: '300px',
-            maxWidth: '340px',
-            flexShrink: 0,
-            position: 'sticky',
-            top: '72px',
-            maxHeight: 'calc(100vh - 96px)',
-            overflowY: 'auto',
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: 'var(--fdl-radius-sm, 2px)',
-            padding: '1rem',
-            boxSizing: 'border-box',
-          }}
-        >
-          {/* Search Box on top of Left Index */}
-          <div style={{ marginBottom: '1rem', position: 'relative' }}>
-            <input
-              id="handbook-search-input"
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search index (Ctrl+K)..."
-              style={{
-                width: '100%',
-                padding: '7px 28px 7px 10px',
-                fontSize: '0.82rem',
-                borderRadius: 'var(--fdl-radius-sm, 2px)',
-                border: '1px solid #cbd5e1',
-                outline: 'none',
-                background: '#f8fafc',
-                color: '#0f172a',
-                boxSizing: 'border-box',
-              }}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                style={{
-                  position: 'absolute',
-                  right: '8px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  color: '#64748b',
-                  cursor: 'pointer',
-                  fontSize: '0.75rem',
-                }}
-              >
-                ✕
-              </button>
-            )}
-            {q && (
-              <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px', paddingLeft: '2px' }}>
-                {totalMatches} matching topic{totalMatches !== 1 ? 's' : ''}
-              </div>
-            )}
-          </div>
-
-          {/* Section Index Tree */}
-          {filteredParts.length === 0 ? (
-            <div style={{ padding: '1.5rem 0.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.8rem' }}>
-              No topics matched &ldquo;{searchQuery}&rdquo;.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {filteredParts.map((part) => (
-                <div key={part.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {/* Part Title Header */}
-                  <div
-                    style={{
-                      fontSize: '0.72rem',
-                      fontWeight: 800,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
-                      color: '#002e5d',
-                      borderBottom: '1px solid #e2e8f0',
-                      paddingBottom: '4px',
-                    }}
-                  >
-                    {part.title}
-                  </div>
-
-                  {/* Sections */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                    {part.sections.map((sec) => (
-                        <div key={sec.id}>
-                          {/* Section Header */}
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              width: '100%',
-                              padding: '4px 6px',
-                              textAlign: 'left',
-                            }}
-                          >
-                            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e293b' }}>
-                              <span style={{ color: '#002e5d', marginRight: '6px' }}>{sec.number}</span>
-                              {sec.title}
-                            </span>
-                          </div>
-
-                          {/* Topic Links */}
-                          <div
-                            style={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '1px',
-                              paddingLeft: '0.75rem',
-                              borderLeft: '1.5px solid #e2e8f0',
-                              marginLeft: '0.5rem',
-                              marginTop: '2px',
-                            }}
-                          >
-                            {sec.topics.map((t) => {
-                              const isActive = t.id === activeTopic?.id;
-                              return (
-                                <button
-                                  key={t.id}
-                                  type="button"
-                                  onClick={() => selectTopic(t.id)}
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    width: '100%',
-                                    padding: '5px 8px',
-                                    borderRadius: 'var(--fdl-radius-sm, 2px)',
-                                    border: 'none',
-                                    textAlign: 'left',
-                                    cursor: 'pointer',
-                                    fontSize: '0.78rem',
-                                    lineHeight: 1.35,
-                                    fontWeight: isActive ? 700 : 500,
-                                    color: isActive ? '#002e5d' : '#475569',
-                                    background: isActive ? '#eff6ff' : 'transparent',
-                                    borderLeft: isActive ? '3px solid #002e5d' : '3px solid transparent',
-                                  }}
-                                >
-                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    <span style={{ color: isActive ? '#002e5d' : '#64748b', marginRight: '5px', fontWeight: 600 }}>
-                                      {t.number}
-                                    </span>
-                                    {t.title}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </aside>
-
-        {/* RIGHT COLUMN: Main Content Area (flex: 1) */}
-        <main
-          style={{
-            flex: 1,
-            minWidth: 0,
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: 'var(--fdl-radius-sm, 2px)',
-            padding: '2rem 2.5rem',
-            boxSizing: 'border-box',
-          }}
-        >
-          {activeTopic ? (
-            <div>
-              {/* Breadcrumb Path */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '8px',
-                  marginBottom: '0.75rem',
-                  fontSize: '0.75rem',
-                  color: '#64748b',
-                }}
-              >
-                <div>
-                  <span>{activeTopic.partTitle}</span>
-                  <span style={{ margin: '0 6px' }}>/</span>
-                  <span>{activeTopic.sectionNumber} {activeTopic.sectionTitle}</span>
-                  <span style={{ margin: '0 6px' }}>/</span>
-                  <span style={{ color: '#002e5d', fontWeight: 600 }}>{activeTopic.number}</span>
-                </div>
-
-                {activeTopic.toolLink && (
-                  <Link
-                    href={activeTopic.toolLink.href}
-                    style={{
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      color: '#002e5d',
-                      background: '#f1f5f9',
-                      border: '1px solid #cbd5e1',
-                      padding: '3px 10px',
-                      borderRadius: 'var(--fdl-radius-sm, 2px)',
-                      textDecoration: 'none',
-                    }}
-                  >
-                    Open {activeTopic.toolLink.label} &rarr;
-                  </Link>
-                )}
-              </div>
-
-              {/* Title with Numeric Index */}
-              <h1
-                style={{
-                  fontSize: '1.6rem',
-                  fontWeight: 800,
-                  color: '#0f172a',
-                  margin: '0 0 0.5rem 0',
-                  lineHeight: 1.3,
-                  letterSpacing: '-0.01em',
-                }}
-              >
-                <span style={{ color: '#002e5d', marginRight: '8px' }}>{activeTopic.number}</span>
-                {activeTopic.title}
-              </h1>
-
-              {/* Summary Lead */}
-              <p style={{ fontSize: '0.92rem', color: '#475569', margin: '0 0 1rem 0', lineHeight: 1.55 }}>
-                {activeTopic.summary}
-              </p>
-
-              {/* Metadata Tags */}
-              <div
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  alignItems: 'center',
-                  gap: '4px',
-                  marginBottom: '1.5rem',
-                  paddingBottom: '0.75rem',
-                  borderBottom: '1px solid #f1f5f9',
-                }}
-              >
-                {activeTopic.badge && (
-                  <span
-                    style={{
-                      fontSize: '0.68rem',
-                      fontWeight: 700,
-                      background: '#f1f5f9',
-                      color: '#334155',
-                      border: '1px solid #cbd5e1',
-                      padding: '1px 6px',
-                      borderRadius: 'var(--fdl-radius-sm, 2px)',
-                    }}
-                  >
-                    {activeTopic.badge}
-                  </span>
-                )}
-                {activeTopic.tags.map((tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => setSearchQuery(tag)}
-                    style={{
-                      fontSize: '0.68rem',
-                      color: '#64748b',
-                      background: 'transparent',
-                      border: '1px solid #e2e8f0',
-                      padding: '1px 6px',
-                      borderRadius: 'var(--fdl-radius-sm, 2px)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    #{tag}
-                  </button>
-                ))}
-              </div>
-
-              {/* Topic Article Content */}
-              <div style={{ fontSize: '0.9rem', color: '#1e293b', lineHeight: 1.65 }}>
-                {activeTopic.content}
-              </div>
-
-              {/* Linear Pager Navigation */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginTop: '2.5rem',
-                  paddingTop: '1.25rem',
-                  borderTop: '1px solid #e2e8f0',
-                  flexWrap: 'wrap',
-                  gap: '12px',
-                }}
-              >
-                {prevTopic ? (
-                  <button
-                    type="button"
-                    onClick={() => selectTopic(prevTopic.id)}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: 'var(--fdl-radius-sm, 2px)',
-                      padding: '8px 12px',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      maxWidth: '260px',
-                    }}
-                  >
-                    <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#64748b' }}>
-                      &larr; Previous [{prevTopic.number}]
-                    </span>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#002e5d', marginTop: '2px' }}>
-                      {prevTopic.title}
-                    </span>
-                  </button>
-                ) : (
-                  <div />
-                )}
-
-                {nextTopic ? (
-                  <button
-                    type="button"
-                    onClick={() => selectTopic(nextTopic.id)}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-end',
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: 'var(--fdl-radius-sm, 2px)',
-                      padding: '8px 12px',
-                      cursor: 'pointer',
-                      textAlign: 'right',
-                      maxWidth: '260px',
-                    }}
-                  >
-                    <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#64748b' }}>
-                      Next [{nextTopic.number}] &rarr;
-                    </span>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#002e5d', marginTop: '2px' }}>
-                      {nextTopic.title}
-                    </span>
-                  </button>
-                ) : (
-                  <div />
-                )}
-              </div>
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
-              Select a section from the index on the left.
-            </div>
-          )}
-        </main>
-      </div>
-
-      <Footer />
+  return <div className="wiki-shell">
+    <header className="wiki-masthead">
+      <a href="#home" className="wiki-brand" onClick={() => setQuery('')}><span>AskFDALabel</span><strong>Reviewer handbook</strong></a>
+      <nav aria-label="Handbook navigation">
+        <a href="#guides" aria-current={activePath === 'guides' ? 'page' : undefined} onClick={() => setQuery('')}>Guides</a>
+        <a href="#methods" aria-current={activePath === 'methods' ? 'page' : undefined} onClick={() => setQuery('')}>Data & methods</a>
+        <Link href="/">Back to workspace ↗</Link>
+      </nav>
+    </header>
+    <div className="wiki-layout">
+      <aside className="wiki-sidebar" aria-label="Handbook index">
+        <form role="search" onSubmit={event => { event.preventDefault(); main.current?.focus(); }}>
+          <label htmlFor="wiki-search">Search the handbook</label>
+          <div className="wiki-search-field"><input ref={search} id="wiki-search" type="search" placeholder="Task, term, or question…" value={query} onChange={event => setQuery(event.target.value)} />
+            <kbd aria-hidden="true">Ctrl K</kbd></div>
+          <label className="wiki-sr-only" htmlFor="wiki-search-scope">Search scope</label>
+          <select id="wiki-search-scope" value={scope} onChange={event => setScope(event.target.value as typeof scope)}>
+            <option value="all">Search both paths</option><option value="guides">Guides only</option><option value="methods">Data & methods only</option>
+          </select>
+        </form>
+        <nav aria-label="Reading paths" className="wiki-path-nav">
+          <a href="#home" onClick={() => setQuery('')} aria-current={route === 'home' ? 'page' : undefined}>Handbook home</a>
+          {(Object.keys(PATHS) as ReadingPath[]).map(path => <a key={path} href={`#${path}`} onClick={() => setQuery('')} aria-current={activePath === path ? 'page' : undefined}>{PATHS[path].title}</a>)}
+        </nav>
+        {activePath && !searching && <nav aria-label={`${PATHS[activePath].short} articles`} className="wiki-topic-nav">
+          {groups.map(group => <div key={group}><h2>{group}</h2>{pathArticles.filter(item => item.group === group).map(item =>
+            <a href={`#${item.id}`} key={item.id} aria-current={route === item.id ? 'page' : undefined}>{item.title}</a>)}</div>)}
+        </nav>}
+        {!activePath && !searching && <div className="wiki-sidebar-note"><strong>For safety scientists and reviewers</strong><p>Practical workflows and explanations of evidence. Start with a task, then follow its methods links when you need more depth.</p></div>}
+        <p className="wiki-search-status" role="status">{searching ? `${matches.length} matching article${matches.length === 1 ? '' : 's'}` : `${ARTICLES.length} articles across two reading paths`}</p>
+      </aside>
+      <main id="wiki-main" ref={main} tabIndex={-1} className="wiki-main">
+        {searching ? <>
+          <span className="wiki-eyebrow">HANDBOOK SEARCH</span><h1>Find guidance and explanations</h1><p className="wiki-lead">Results for “{query.trim()}” · {matches.length} articles</p>
+          {matches.length ? <div className="wiki-search-results">{matches.map(item => <div key={item.id}>{articleLink(item, 'wiki-result')}
+            <p className="wiki-search-excerpt">{item.sections.flatMap(section => [...(section.paragraphs || []), ...(section.steps || [])]).find(text => words.some(word => text.toLowerCase().includes(word))) || item.summary}</p>
+          </div>)}</div> : <div className="wiki-empty"><h2>No matching articles</h2><p>Try a tool name, a broader term, or search both paths.</p><button type="button" onClick={() => { setQuery(''); setScope('all'); search.current?.focus(); }}>Clear search</button></div>}
+        </> : article ? <>
+          <nav className="wiki-breadcrumbs" aria-label="Breadcrumb"><a href="#home">Handbook</a><span>/</span><a href={`#${article.path}`}>{PATHS[article.path].short}</a><span>/ {article.group}</span></nav>
+          {retired && <p className="wiki-notice">The previous Device Intelligence article has been retired from the reviewer handbook. That tool is currently disabled in the tool catalog. This page explains feature availability.</p>}
+          <article>
+            <span className="wiki-eyebrow">{PATHS[article.path].short} / {article.group}</span><h1>{article.title}</h1><p className="wiki-lead">{article.summary}</p>
+            {article.action && <div className="wiki-action"><Link href={article.action.href}>{article.action.label} ↗</Link><span>Access depends on your account and installation.</span></div>}
+            <nav className="wiki-onpage" aria-label="On this page"><strong>On this page</strong>{article.sections.map((section, index) => <button key={section.heading} type="button" onClick={() => document.getElementById(`wiki-section-${index}`)?.scrollIntoView({ behavior: 'auto', block: 'start' })}>{section.heading}</button>)}</nav>
+            {article.sections.map((section, index) => <section className="wiki-article-section" id={`wiki-section-${index}`} key={section.heading}>
+              <h2>{section.heading}</h2>{section.paragraphs?.map(text => <p key={text}>{text}</p>)}
+              {section.steps && <ol>{section.steps.map(text => <li key={text}>{text}</li>)}</ol>}
+            </section>)}
+            {article.references?.length && <section className="wiki-references"><h2>Sources and further reading</h2><ul>{article.references.map(reference => <li key={reference.href}><a href={reference.href} target="_blank" rel="noopener noreferrer">{reference.title} ↗</a></li>)}</ul></section>}
+          </article>
+          <section className="wiki-related" aria-labelledby="wiki-related-heading"><h2 id="wiki-related-heading">Continue your review</h2><div className="wiki-related-grid">{article.related.map(id => INDEX.get(id)).filter((item): item is WikiArticle => Boolean(item)).map(item => articleLink(item, 'wiki-related-card'))}</div></section>
+          <nav className="wiki-pager" aria-label="Articles in this reading path">{previous ? <a href={`#${previous.id}`}><span>← Previous {PATHS[article.path].short.toLowerCase()}</span><strong>{previous.title}</strong></a> : <span />}{next && <a href={`#${next.id}`}><span>Next {PATHS[article.path].short.toLowerCase()} →</span><strong>{next.title}</strong></a>}</nav>
+        </> : route === 'home' ? <>
+          <span className="wiki-eyebrow">EVIDENCE / INTERPRETATION / REVIEW</span><h1>From a review question<br />to traceable evidence.</h1><p className="wiki-lead">A handbook for drug safety scientists and reviewers. Learn how to complete a task, understand its results, and verify what supports your conclusions.</p>
+          <div className="wiki-path-cards">{(Object.keys(PATHS) as ReadingPath[]).map((path, index) => <a key={path} href={`#${path}`} data-path={path}><span className="wiki-eyebrow">0{index + 1} / {PATHS[path].short}</span><h2>{PATHS[path].title}</h2><p>{PATHS[path].description}</p><strong>Explore this path →</strong></a>)}</div>
+          <section className="wiki-start"><span className="wiki-eyebrow">NEW TO THE WORKSPACE?</span><h2>Start with one complete review</h2><p>Confirm the product and version, read the original evidence, choose an analysis, and save a record another reviewer can follow.</p><a href="#first-review">Follow the first-review guide →</a></section>
+          <section className="wiki-featured"><h2>What do you need to do?</h2><div className="wiki-related-grid">{FEATURED.map(id => articleLink(INDEX.get(id)!, 'wiki-related-card'))}</div></section>
+          <section className="wiki-questions"><h2>Questions about your results?</h2>{['no-results', 'evidence-types', 'versions', 'availability', 'waiting-results'].map(id => <a key={id} href={`#${id}`}>{INDEX.get(id)!.title}<span aria-hidden="true">→</span></a>)}</section>
+        </> : activePath ? <>
+          <span className="wiki-eyebrow">{PATHS[activePath].short}</span><h1>{PATHS[activePath].title}</h1><p className="wiki-lead">{PATHS[activePath].description}</p>
+          {groups.map(group => <section className="wiki-group" key={group}><h2>{group}</h2><div className="wiki-related-grid">{pathArticles.filter(item => item.group === group).map(item => articleLink(item, 'wiki-related-card'))}</div></section>)}
+        </> : <div className="wiki-empty"><h1>Article not found</h1><p>This address does not match a handbook topic. Search for the subject or return to the handbook home.</p><a href="#home">Handbook home →</a></div>}
+      </main>
     </div>
-  );
+    <Footer />
+  </div>;
 }
