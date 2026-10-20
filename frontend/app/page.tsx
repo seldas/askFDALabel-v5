@@ -305,7 +305,7 @@ function HomePage() {
           </span>
         ) : (
           <span className="fdl-active-tag fdl-active-tag--none">
-            All Labels (No filters applied)
+            {checkedPrefilters > 0 ? 'All Labels (before selected filters)' : 'All Labels (No filters applied)'}
           </span>
         )}
         {checkedPrefilters > 0 ? (

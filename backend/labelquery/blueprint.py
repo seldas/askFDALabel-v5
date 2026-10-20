@@ -1885,6 +1885,7 @@ Rules:
 7. Never return an empty "groups" array when medical concepts, drug names, or labeling sections are requested.
 8. When the user explicitly asks for combination/fixed-dose combination products containing multiple ingredients joined by "and" or "with", emit one "productName" criterion per ingredient in the SAME group, with op="contains" for each. These criteria are ANDed by the query builder. Never put the whole conjunction into one productName text value, and do not use equals for these ingredient fragments.
 9. For a plain request to find labels for a named drug or ingredient, prefer op="equals" so the application can resolve it to standardized names and expand the product list. Use op="contains" or "startsWith" only when the user explicitly asks for a partial, substring, or prefix match. The application also attempts entity expansion when you choose "contains" for an ordinary drug-name request, then falls back to that operator if the name cannot be resolved.
+10. Empty "groups" means all labels in the selected database scope. For requests such as "all oral drugs", emit "groups": [] and the ORAL route prefilter. For "all labels", emit empty groups and empty prefilters. Never invent a drug-name or text criterion just to fill groups.
 """
 
 
@@ -2197,7 +2198,10 @@ def _sanitize_translation(parsed, target_db, intent=''):
     harvested = []
     notes_from_pharm = []
     combination_intent = bool(re.search(r'\b(?:combination|combo|fixed[ -]dose)\b', intent, re.I))
-    for group in (parsed.get('groups') or [])[:5]:
+    raw_groups = parsed.get('groups')
+    for group in (raw_groups if isinstance(raw_groups, list) else [])[:5]:
+        if not isinstance(group, dict):
+            continue
         criteria = []
         raw_criteria = group.get('criteria') or []
         # Backstop the LLM schema instruction: split a single conjunction such
@@ -2410,11 +2414,9 @@ def translate():
     notes.extend(prefilter_notes)
 
     if not query['groups']:
-        return jsonify({
-            'error': 'Could not turn that into search criteria. Try naming a drug, '
-                     'a labeling section, or an adverse event.',
-            'notes': notes,
-        }), 422
+        # The compilers already interpret an empty backbone as all labels.
+        # Keep categorical picks separate so the UI can apply them on top.
+        notes.append('Search scope: all labels in the selected database, narrowed by any selected filters.')
 
     # Validate before handing it to the UI: a criterion that cannot compile is
     # better caught here than when the user presses Search.

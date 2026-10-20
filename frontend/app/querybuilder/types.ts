@@ -646,7 +646,7 @@ export function applyPrefilters(query: LabelQuery, prefilters: PreFilter[]): Lab
 
   return {
     ...query,
-    groups: query.groups.map((group) => {
+    groups: (query.groups.length ? query.groups : [makeDefaultGroup()]).map((group) => {
       const criteria = group.criteria.slice();
       for (const pre of active) {
         const index = criteria.findIndex((c) => c.type === pre.type);
