@@ -134,3 +134,10 @@
 .wiki-related-links { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
 .wiki-related-links a { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--fdl-line-soft); color: var(--fdl-blue-700); font-size: 0.81rem; text-decoration: none; }
 .wiki-related-links a:hover { text-decoration: underline; }
+
+/* Tool documentation: category > catalog tool name > articles. */
+.wiki-tool-section { margin: 16px 0 24px; }
+.wiki-tool-section h3 { font-size: 1rem; color: var(--fdl-ink); margin: 0 0 10px; }
+.wiki-topic-nav .wiki-tool-section { margin: 12px 0 18px; }
+.wiki-topic-nav .wiki-tool-section h3 { font-size: 0.8rem; margin: 0 0 4px 10px; }
+.wiki-tool-path { display: block; color: var(--fdl-muted); font-size: 0.65rem; }

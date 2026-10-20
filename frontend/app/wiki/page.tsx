@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import Footer from '../components/Footer';
-import { ARTICLES, LEGACY_TOPICS, PATHS, SEARCH_CHAPTER_IDS, searchableText, type ReadingPath, type WikiArticle } from './wikiData';
+import { ARTICLES, LEGACY_TOPICS, PATHS, SEARCH_CHAPTER_IDS, searchableText, toolName, type ReadingPath, type WikiArticle } from './wikiData';
 import './wiki.css';
 import { SearchWorkflow, CriteriaLogicExample } from './WikiSearchExamples';
 
@@ -63,7 +63,7 @@ export default function WikiPage() {
   const groups = [...new Set(pathMatches.map(item => item.group))];
   const pathArticles = groups.flatMap(group => pathMatches.filter(item => item.group === group));
   const inSearchChapter = SEARCH_CHAPTER_IDS.includes(route);
-  const readingSequence = inSearchChapter ? SEARCH_CHAPTER_IDS.map(id => INDEX.get(id)!) : pathArticles;
+  const readingSequence = article?.toolId ? ARTICLES.filter(item => item.toolId === article.toolId) : inSearchChapter ? SEARCH_CHAPTER_IDS.map(id => INDEX.get(id)!) : pathArticles;
   const position = readingSequence.findIndex(item => item.id === article?.id);
   const previous = readingSequence[position - 1];
   const next = position >= 0 ? readingSequence[position + 1] : undefined;
@@ -74,7 +74,7 @@ export default function WikiPage() {
   }, [article, activePath, searching]);
 
   const articleLink = (item: WikiArticle, className = '') => <a key={item.id} className={className} href={`#${item.id}`} onClick={() => setQuery('')}>
-    <span className="wiki-kind">{PATHS[item.path].short} / {item.group}</span>
+    <span className="wiki-kind">{PATHS[item.path].short} / {item.group}{item.toolId && ` / ${toolName(item)}`}</span>
     <strong>{item.title}</strong><p>{item.summary}</p><span className="wiki-read">Read article →</span>
   </a>;
 
@@ -106,8 +106,14 @@ export default function WikiPage() {
           <h2>Search labeling / chapter</h2>{SEARCH_CHAPTER_IDS.map((id, index) => <a key={id} href={`#${id}`} aria-current={route === id ? 'page' : undefined}><span className="wiki-chapter-number">{index + 1}</span>{INDEX.get(id)?.title}</a>)}
         </nav>}
         {activePath && !searching && <nav aria-label={`${PATHS[activePath].short} articles`} className="wiki-topic-nav">
-          {groups.filter(group => !(inSearchChapter && group === 'Search labeling')).map(group => <div key={group}><h2>{group}</h2>{pathArticles.filter(item => item.group === group).map(item =>
-            <a href={`#${item.id}`} key={item.id} aria-current={route === item.id ? 'page' : undefined}>{item.title}</a>)}</div>)}
+          {groups.filter(group => !(inSearchChapter && group === 'Search labeling')).map(group => <div key={group}>
+            <h2>{group}</h2>
+            {[...new Set(pathArticles.filter(item => item.group === group).map(item => item.toolId || ''))].map(owner => <div key={owner} className={owner ? 'wiki-tool-section' : undefined}>
+              {owner && <h3>{toolName(pathArticles.find(item => item.toolId === owner)!)}</h3>}
+              {(owner ? ARTICLES.filter(item => item.toolId === owner) : pathArticles.filter(item => item.group === group && !item.toolId)).map(item =>
+                <a href={`#${item.id}`} key={item.id} aria-current={route === item.id ? 'page' : undefined}>{item.title}{owner && <small className="wiki-tool-path">{PATHS[item.path].short}</small>}</a>)}
+            </div>)}
+          </div>)}
         </nav>}
         {!activePath && !searching && <div className="wiki-sidebar-note"><strong>For safety scientists and reviewers</strong><p>Practical workflows and explanations of evidence. Start with a task, then follow its methods links when you need more depth.</p></div>}
         <p className="wiki-search-status" role="status">{searching ? `${matches.length} matching article${matches.length === 1 ? '' : 's'}` : `${ARTICLES.length} articles across two reading paths`}</p>
@@ -119,10 +125,10 @@ export default function WikiPage() {
             <p className="wiki-search-excerpt">{item.sections.flatMap(section => [...(section.paragraphs || []), ...(section.steps || [])]).find(text => words.some(word => text.toLowerCase().includes(word))) || item.summary}</p>
           </div>)}</div> : <div className="wiki-empty"><h2>No matching articles</h2><p>Try a tool name, a broader term, or search both paths.</p><button type="button" onClick={() => { setQuery(''); setScope('all'); search.current?.focus(); }}>Clear search</button></div>}
         </> : article ? <>
-          <nav className="wiki-breadcrumbs" aria-label="Breadcrumb"><a href="#home">Handbook</a><span>/</span><a href={`#${article.path}`}>{PATHS[article.path].short}</a><span>/ {article.group}</span></nav>
+          <nav className="wiki-breadcrumbs" aria-label="Breadcrumb"><a href="#home">Handbook</a><span>/</span><a href={`#${article.path}`}>{PATHS[article.path].short}</a><span>/ {article.group}</span>{article.toolId && <span>/ {toolName(article)}</span>}</nav>
           {retired && <p className="wiki-notice">The previous Device Intelligence article has been retired from the reviewer handbook. That tool is currently disabled in the tool catalog. This page explains feature availability.</p>}
           <article>
-            <span className="wiki-eyebrow">{PATHS[article.path].short} / {article.group}</span><h1>{article.title}</h1><p className="wiki-lead">{article.summary}</p>
+            <span className="wiki-eyebrow">{PATHS[article.path].short} / {article.group}{article.toolId && ` / ${toolName(article)}`}</span><h1>{article.title}</h1><p className="wiki-lead">{article.summary}</p>
             {article.action && <div className="wiki-action"><Link href={article.action.href}>{article.action.label} ↗</Link><span>Access depends on your account and installation.</span></div>}
             <nav className="wiki-onpage" aria-label="On this page"><strong>On this page</strong>{article.sections.map((section, index) => <button key={section.heading} type="button" onClick={() => document.getElementById(`wiki-section-${index}`)?.scrollIntoView({ behavior: 'auto', block: 'start' })}>{section.heading}</button>)}</nav>
             {article.sections.map((section, index) => <section className="wiki-article-section" id={`wiki-section-${index}`} key={section.heading}>
@@ -148,7 +154,12 @@ export default function WikiPage() {
           <section className="wiki-questions"><h2>Questions about your results?</h2>{['no-results', 'evidence-types', 'versions', 'availability', 'waiting-results'].map(id => <a key={id} href={`#${id}`}>{INDEX.get(id)!.title}<span aria-hidden="true">→</span></a>)}</section>
         </> : activePath ? <>
           <span className="wiki-eyebrow">{PATHS[activePath].short}</span><h1>{PATHS[activePath].title}</h1><p className="wiki-lead">{PATHS[activePath].description}</p>
-          {groups.map(group => <section className="wiki-group" key={group}><h2>{group}</h2><div className="wiki-related-grid">{pathArticles.filter(item => item.group === group).map(item => articleLink(item, 'wiki-related-card'))}</div></section>)}
+          {groups.map(group => <section className="wiki-group" key={group}><h2>{group}</h2>
+            {[...new Set(pathArticles.filter(item => item.group === group).map(item => item.toolId || ''))].map(owner => <div key={owner} className="wiki-tool-section">
+              {owner && <h3>{toolName(pathArticles.find(item => item.toolId === owner)!)}</h3>}
+              <div className="wiki-related-grid">{(owner ? ARTICLES.filter(item => item.toolId === owner) : pathArticles.filter(item => item.group === group && !item.toolId)).map(item => articleLink(item, 'wiki-related-card'))}</div>
+            </div>)}
+          </section>)}
         </> : <div className="wiki-empty"><h1>Article not found</h1><p>This address does not match a handbook topic. Search for the subject or return to the handbook home.</p><a href="#home">Handbook home →</a></div>}
       </main>
     </div>

@@ -1,3 +1,5 @@
+import { TOOLS } from '../platform/registry';
+
 /** Reviewer-facing knowledge: product workflows and evidence interpretation. */
 export type ReadingPath = 'guides' | 'methods';
 export interface WikiSection {
@@ -6,7 +8,7 @@ export interface WikiSection {
   illustration?: 'search-workflow' | 'criteria-logic';
 }
 export interface WikiArticle {
-  id: string; path: ReadingPath; group: string; title: string; summary: string;
+  id: string; path: ReadingPath; group: string; toolId?: string; title: string; summary: string;
   tags: string[]; sections: WikiSection[]; related: string[];
   action?: { href: string; label: string };
   references?: { title: string; href: string }[];
@@ -32,7 +34,7 @@ function guide(id: string, group: string, title: string, summary: string, steps:
 function method(id: string, group: string, title: string, summary: string, sections: WikiSection[], related: string[], references?: WikiArticle['references']): WikiArticle {
   return { id, path: 'methods', group, title, summary, tags: [group, ...related], sections, related, references };
 }
-export const ARTICLES: WikiArticle[] = [
+const CONTENT: WikiArticle[] = [
   guide('first-review', 'Start a review', 'Your first labeling review', 'A practical route from a safety question to a saved, traceable observation.', [
     'Write a focused review question: which product, population, safety topic, and version are relevant?',
     'Search for the product and inspect the identifiers, dosage form, route, application number, and available version before opening a result.',
@@ -40,11 +42,61 @@ export const ARTICLES: WikiArticle[] = [
     'Open Toolbox and choose an analysis suited to the question. Keep the original document available while examining extracted or generated output.',
     'Record the finding, the source passage and version, any uncertainty, and your next verification step. Save notes or export the relevant evidence where available.',
   ], ['Check that the quoted passage supports the observation in its original context.', 'Distinguish your interpretation from source text and AI-generated suggestions.'], ['versions', 'evidence-types', 'toolbox-guide', 'review-record'], home),
-  guide('account-access', 'Start a review', 'Accounts and available features', 'Understand personal accounts, guest browsing, and why tools may differ between users.', [
-    'Use the account menu to sign in. If your deployment offers institutional sign-in, follow that option; its credentials are managed by the institution.',
-    'Use a personal account for features that save per-account review state. Guest access is shared and does not offer the same saved preferences or personal records.',
-    'If a tool is missing, check the available tool directory and the selected labeling. Contact your administrator if the feature is required for your work.',
-  ], ['Do not assume a colleague has the same tools, database scope, or saved records.', 'For institutional sign-in, use the identity provider’s password-management process.'], ['availability', 'ai-preferences', 'saved-work'], { href: '/dashboard', label: 'Open My Dashboard' }),
+  {
+    id: 'account-access', path: 'guides', group: 'Account & preferences',
+    title: 'Sign in and sign out', summary: 'Use your own account for personal review work.',
+    tags: ['login', 'logout', 'SSO', 'guest', 'account'],
+    related: ['change-password', 'login-help', 'saved-work'],
+    sections: [
+      { heading: 'Sign in', steps: ['Click Login in the header.', 'Choose institutional sign-in when offered, or enter your account username and password.', 'Open the account menu to check which account is signed in.'], paragraphs: ['Guest access uses a shared account. AI preferences and personal search history are unavailable to Guest.'] },
+      { heading: 'Sign out', paragraphs: ['Open the account menu and choose Sign Out.'] },
+    ],
+  },
+  {
+    id: 'change-password', path: 'guides', group: 'Account & preferences',
+    title: 'Change your password', summary: 'Update the password for an account that uses password sign-in.',
+    tags: ['password', 'security', 'account', 'SSO'], related: ['account-access', 'login-help'],
+    sections: [
+      { heading: 'Update your password', steps: ['Open the account menu and choose Change Password.', 'Enter the new password in New Password and Confirm New Password.', 'Click Update Password and check the confirmation.'] },
+      { heading: 'No Change Password option?', paragraphs: ['Institutional SSO passwords are managed by your institution. Guest accounts cannot change passwords.'] },
+    ],
+  },
+  {
+    id: 'login-help', path: 'guides', group: 'Account & preferences',
+    title: 'Trouble signing in', summary: 'Find the right help for your sign-in method.',
+    tags: ['forgot password', 'reset password', 'login', 'SSO', 'locked out'],
+    related: ['account-access', 'change-password', 'availability'],
+    sections: [
+      { heading: 'Choose your sign-in method', table: { columns: ['You use', 'What to do'], rows: [
+        ['Account username and password', 'Check the username and password. If you have forgotten the password, contact your askFDALabel administrator; there is no self-service email reset.'],
+        ['Institutional sign-in (SSO)', 'Use your institution’s password recovery or IT support.'],
+      ] } },
+      { heading: 'Signed in, but a feature is missing?', paragraphs: ['Check the account name in the menu. Feature access can differ by account and deployment; ask your administrator about the feature you need.'] },
+    ],
+  },
+  {
+    id: 'ai-preferences', path: 'guides', group: 'Account & preferences',
+    title: 'Choose your AI model', summary: 'Set the model for your next AI request.',
+    tags: ['AI', 'model', 'ELSA', 'Llama-4', 'Muse', 'Gemini', 'system default'],
+    related: ['ai-usage', 'availability', 'waiting-results'],
+    action: { href: '/management?tab=ai', label: 'Open AI Preferences' },
+    sections: [
+      { heading: 'Change the model', steps: ['Open the account menu and choose AI preferences.', 'Select an available model.', 'Click Save preferences. Check the current model shown on the page.'], paragraphs: ['Your choice applies to your account’s next AI requests.'] },
+      { heading: 'Follow the system default', paragraphs: ['Select Follow system default and click Save preferences to remove your personal model choice.'] },
+      { heading: 'Which models are available?', paragraphs: ['Internal environments offer ELSA, Llama-4 (Local), and Muse (Local); external environments offer Gemini. Your installation may limit this list further.', 'Guest accounts cannot save an AI preference. If AI preferences is unavailable on your personal account, ask your administrator about access. Connection addresses and keys are managed by administrators.'] },
+    ],
+  },
+  {
+    id: 'ai-usage', path: 'guides', group: 'Account & preferences',
+    title: 'View your AI usage', summary: 'Check recorded model use and token counts for your account.',
+    tags: ['AI', 'token usage', 'history', 'model', 'date filter'],
+    related: ['ai-preferences', 'history-guide'],
+    action: { href: '/management?tab=tokens', label: 'Open My Token Usage' },
+    sections: [
+      { heading: 'Find a record', steps: ['Open Settings & Preferences from the account menu.', 'Choose My Token Usage.', 'Filter by date or model. The initial view shows the last 7 days.'] },
+      { heading: 'Read the records', paragraphs: ['Each record shows a model name, time, and input, output, and total token counts. This view does not contain the question or answer text.', 'Settings & Preferences must be enabled for your personal account.'] },
+    ],
+  },
   {
     id: 'find-labeling', path: 'guides', group: 'Search labeling',
     title: 'Find labeling by name or identifier', summary: 'Start with the identifier you have, then confirm the product.',
@@ -255,29 +307,55 @@ export const ARTICLES: WikiArticle[] = [
     'When an AI interpretation is available, compare it with the underlying displayed terms and query settings.',
     'Return to labeling and other relevant evidence before deciding how a reporting pattern informs the review question.',
   ], ['Retain the query terms, time window, and filters when recording an observation.', 'Use the FAERS interpretation article before comparing counts across products.'], ['faers-method', 'evidence-types', 'review-record']),
-  guide('compare-guide', 'Compare and track changes', 'Compare labeling across products or versions', 'Select comparable inputs, inspect text differences, and verify any AI summary.', [
-    'Choose the intended labeling records for Compare. Confirm each product, version, route, formulation, and comparison purpose.',
-    'Inspect aligned sections and the available text differences. Read the complete paragraphs and table contexts on both sides.',
-    'If an AI comparison summary is generated, trace each material statement back to both source documents.',
-    'For a historical question, use available version history to select specific versions rather than assuming the default documents represent the intended dates.',
-  ], ['A text change needs scientific interpretation; it may reflect wording, formatting, product context, or a substantive difference.', 'Product-name matching alone does not establish an RLD/RS relationship or therapeutic equivalence.'], ['comparison-method', 'versions', 'history-guide'], { href: '/labelcomp', label: 'Open Compare' }),
-  guide('history-guide', 'Compare and track changes', 'Trace available versions and application context', 'Use version history and application-linked records to establish the comparison set.', [
-    'Open Archived Version Track for available versions of a labeling set.',
-    'Use FDA Application Profile when the selected labeling has a suitable application number and the tool is available.',
-    'Inspect the identifiers, displayed dates, and source availability of each candidate before launching a comparison.',
-  ], ['A list of available records is not proof of a complete regulatory or labeling history.', 'Record which exact documents you reviewed and note missing historical material.'], ['versions', 'source-availability', 'comparison-method']),
+  {
+    id: 'compare-guide', path: 'guides', group: 'Compare and track changes',
+    title: 'Compare labeling documents', summary: 'Read 2–4 labelings side by side and investigate their differences.',
+    tags: ['Compare', 'Label Compare', 'diff', 'SPL Set ID', 'JSON', 'clinical summary'],
+    related: ['comparison-method', 'history-guide', 'saved-work'],
+    action: { href: '/labelcomp', label: 'Open Compare' },
+    sections: [
+      { heading: 'When to use it', paragraphs: ['Compare wording across products, or examine changes between selected labeling versions. For packaging and artwork, use Visual Review instead.'] },
+      { heading: 'Start a comparison', steps: [
+        'Open Compare from Toolbox or the tool directory. A selected labeling may already be included.',
+        'Click Add Label. Choose labelings from a saved project or enter an SPL Set ID; select 2–4 documents.',
+        'Check the products and dates, then launch the comparison. For a historical review, start from version history and confirm the versions loaded.',
+      ] },
+      { heading: 'Read the results', table: { columns: ['On screen', 'How to use it'], rows: [
+        ['Discrepancy Panel', 'Expand a section and read the corresponding text in each column. Boxed warnings appear first.'],
+        ['IDENTICAL / CHANGES DETECTED', 'Use these text-comparison flags to locate passages; check full wording and tables.'],
+        ['FILTER BY SEVERITY GAP', 'Focus on large text differences. Switch it off to return to all sections; it does not rank clinical severity.'],
+        ['Generate Clinical Summary', 'Request an AI summary of differing sections. Verify important statements against the source passages.'],
+      ] } },
+      { heading: 'Keep the comparison', paragraphs: ['Use Favorite to choose a project, enter a title, and Save to Project. Reopen it from the project’s saved comparisons.', 'Export downloads a JSON file containing comparison text and analysis instructions, not a formatted report or the displayed AI summary. The severity filter does not limit the export.'] },
+      { heading: 'Before drawing a conclusion', paragraphs: ['Differences can reflect formulation, indication, document structure, or wording. A highlighted change alone does not establish a new safety finding or product equivalence.'], steps: ['Check document identity and version, and read the surrounding passage.', 'For alignment, filter, and AI-summary limitations, see Interpret labeling differences below.'] },
+    ],
+  },
+  guide('history-guide', 'Comparisons', 'Find archived labeling versions', 'Select available documents for a historical review.', [
+    'Open Archived Version Track from the selected labeling.',
+    'Inspect the listed document identifiers and dates. Choose the versions needed for your question.',
+    'Open the selected documents or launch Compare where offered; confirm the versions actually loaded.',
+  ], ['Available records may not cover the complete labeling history. Record missing versions.'], ['versions', 'source-availability', 'compare-guide']),
+  guide('application-guide', 'Comparisons', 'Explore an FDA application', 'Find application-linked labeling records for the selected product.', [
+    'Open FDA Application Profile from a labeling with an application number.',
+    'Check the application identity and inspect the available linked records.',
+    'Confirm each document and date before using it in a review or comparison.',
+  ], ['Application-linked records do not by themselves establish a complete regulatory history.'], ['versions', 'source-availability', 'compare-guide']),
   guide('visual-guide', 'Compare and track changes', 'Review packaging artwork, confusion, and consistency', 'Choose the right visual-review purpose and inspect the evidence behind findings.', [
     'Open Labeling Visual Review. Choose labeling and a specific image on each required side, or upload artwork and confirm its labeling association.',
     'Use Artwork Comparison for visible changes, Product Confusion for distinguishing features, or Labeling Consistency to compare an image with its own labeling reference.',
     'For product-confusion workflows, check and confirm the identified packaging information before comparison. Other visual-review modes may provide a quick overview before detailed findings.',
     'Inspect numbered findings and their evidence regions. Confirm or dismiss findings, add reviewer notes, and correct inaccurate localization where supported.',
   ], ['Confirm product, strength, route, selected image, and reference version; an upload does not prove its own provenance.', 'Missing carton text alone does not establish a contradiction with labeling. A partial overview does not replace a completed detailed review.'], ['visual-method', 'waiting-results', 'review-record'], { href: '/image-review', label: 'Open Labeling Visual Review' }),
-  guide('agent-guide', 'Organize safety evidence', 'Use organ-safety and PGx analyses', 'Choose a focused agent and review its supporting evidence.', [
-    'Choose DILI, DICT, DIRI, or PGx in the selected labeling’s Toolbox according to the question being reviewed.',
-    'Inspect the returned evidence and references, separating labeling-derived statements from reference classifications or generated interpretation.',
-    'Use Examine for a focused prompt when available. Use Deep Dive for the peer context offered by the tool, checking whether the comparison group suits the question.',
-    'Use askDrugTox for its available reference resources; do not treat a reference classification and a newly generated assessment as interchangeable.',
-  ], ['Resolve unsupported or contradictory statements against their cited sources.', 'A generated category is not, on its own, an individual-patient causal assessment.'], ['agent-method', 'evidence-types', 'ro2-guide']),
+  ...[
+    ['agent-guide', 'DILI Agent', 'liver'],
+    ['dict-guide', 'DICT Agent', 'cardiac'],
+    ['diri-guide', 'DIRI Agent', 'renal'],
+    ['pgx-guide', 'PGx Agent', 'pharmacogenomic'],
+  ].map(([id, name, topic]) => guide(id, 'Toxicity & pharmacogenomics', `Use ${name}`, `Review ${topic} evidence for the selected labeling.`, [
+    `Open ${name} from the selected labeling’s Toolbox.`,
+    'Check the product context, returned evidence, and cited sources.',
+    'Verify material statements against the labeling and references before recording a conclusion.',
+  ], ['Keep source evidence separate from generated interpretation. Resolve unsupported or conflicting findings.'], [id === 'agent-guide' ? 'agent-method' : `${id}-method`, 'evidence-types', 'review-record'])),
   guide('ro2-guide', 'Organize safety evidence', 'Inspect a Rule-of-Two screening result', 'Check the dose and structure inputs before interpreting the displayed quadrant.', [
     'Open Rule of Two for the selected product and inspect the reference, structure, and dose information shown.',
     'Verify the daily-dose value, units, regimen, formulation, and route against the relevant labeling. Review the source sentence and edit the input when justified.',
@@ -288,11 +366,6 @@ export const ARTICLES: WikiArticle[] = [
     'Choose exact, substructure, or similarity matching. For similarity, inspect the threshold before searching.',
     'Review the matched structures/substances, scores where present, and linked labeling records.',
   ], ['Confirm the intended structure, salt/form, and product context.', 'Structure similarity is a retrieval aid, not a demonstrated shared safety profile.'], ['structure-method', 'search-scope'], { href: '/chemsearch', label: 'Open Chemical Structure Search' }),
-  guide('ai-preferences', 'Resolve common obstacles', 'Choose your AI model preference', 'Understand your account preference, system default, and model availability.', [
-    'Open AI Preferences from your account menu. Inspect the currently used model and whether you follow the system default.',
-    'Choose an available model or Follow system default, then save. The preference applies to subsequent AI requests.',
-    'Internal deployments offer their permitted ELSA/local models; external deployments offer Gemini. Your available list is authoritative for that installation.',
-  ], ['Connection settings are managed by administrators; their personal connection overrides do not change the entire site.', 'A model change may affect later generated results. Recheck source support and retain model information when available.'], ['evidence-types', 'availability', 'review-record'], { href: '/management?tab=ai', label: 'Open AI Preferences' }),
   guide('waiting-results', 'Resolve common obstacles', 'Handle waiting, failures, and partial results', 'Keep useful evidence while determining what actually completed.', [
     'Read the task status and current stage. Some engines return their answer only when generation finishes; silence is not proof that the task failed.',
     'For background tasks, return to the available status/results view rather than starting repeated copies while a run remains active.',
@@ -365,19 +438,535 @@ export const ARTICLES: WikiArticle[] = [
     { heading: 'What the source can support', paragraphs: ['FDA describes spontaneous reports as useful for safety surveillance but limited by reporting variability, incomplete information, and other biases. A report does not itself demonstrate that a product caused the event. Report counts are not incidence rates.'] },
     { heading: 'Reviewer checks', steps: ['Retain the drug query, event terms, reporting window, and filters.', 'Interpret any increase with attention to the query definition and reporting context.', 'Seek supporting evidence rather than ranking products by raw counts.'] },
   ], ['faers-guide', 'frequency-context', 'review-record'], [faers]),
-  method('comparison-method', 'Comparisons and screening', 'Interpret differences between labeling documents', 'Aligned sections and highlighted changes support reading; they do not decide the scientific importance of a difference.', [
-    { heading: 'Two distinct questions', paragraphs: ['Historical comparison asks what changed between selected versions. Cross-product comparison asks how labeling differs between selected products. These require different checks on identity, date, formulation, route, population, and indication.'] },
-    { heading: 'Reviewer checks', steps: ['Read the full passage on both sides of a highlighted change.', 'Check whether missing material reflects source availability or alignment rather than a substantive omission.', 'Verify AI statements against each source and establish regulatory relationships from appropriate records when relevant.'] },
-  ], ['compare-guide', 'history-guide', 'versions']),
+  method('comparison-method', 'Comparisons and screening', 'Interpret labeling differences', 'Text alignment helps you find changes; scientific importance requires source review.', [
+    { heading: 'How sections are matched', paragraphs: ['Compare reads the available SPL documents and aligns sections by section number for PLR labeling, or normalized title for other formats. Different structures can leave related passages in separate rows. A blank cell is not proof that the topic is absent from the full document.'] },
+    { heading: 'What the markings mean', table: { columns: ['Output', 'Meaning and limit'], rows: [
+      ['IDENTICAL', 'The normalized text matches. Case, punctuation, and formatting differences may be ignored; this is not a visual comparison.'],
+      ['Word highlights', 'For two documents, additions and deletions mark wording differences. For 3–4 documents, read the parallel columns rather than expecting pairwise word highlights.'],
+      ['Significant Section Overhaul', 'A large rewrite is shown without word highlights for readability. The label describes text change, not clinical importance.'],
+      ['Severity Gap filter', 'Selects sections using text similarity, while retaining boxed warnings. It is most useful with two documents; with 3–4 it does not provide a meaningful severity ranking.'],
+    ] } },
+    { heading: 'AI summary and saved comparisons', paragraphs: ['AI summaries use the differing sections, independently of the visible severity filter. Large comparisons can exceed the summary limit; Export still lets you retain the comparison text.', 'An existing summary may be reused. Saved comparisons and summary reuse are associated with labeling Set IDs rather than a frozen copy of each version. When reviewing historical changes, confirm the loaded dates and source passages instead of treating a saved comparison or summary as a version-pinned record.'] },
+    { heading: 'Reviewer checks', steps: ['For historical changes, confirm both versions and their dates. Across products, check formulation, route, indication, and population.', 'Verify material findings in the original documents, including tables and footnotes. Establish RLD/RS relationships from the appropriate records.'] },
+  ], ['compare-guide', 'history-guide', 'versions', 'source-availability']),
   method('visual-method', 'Comparisons and screening', 'Interpret image findings and partial visual reviews', 'Visible artwork, product-confusion concerns, and reference consistency are separate review questions.', [
     { heading: 'Inputs determine the scope', paragraphs: ['Only selected/uploaded images and the supplied labeling references are examined. A visible region cannot establish properties of unseen packaging, physical print size, or an upload’s provenance.'] },
     { heading: 'Stages and localization', paragraphs: ['A quick overview and a detailed finding are different outputs. Some modes can finish with an overview when point-to-point comparison is unsuitable. An overview is not a completed consistency assessment and does not supply validated evidence coordinates.', 'Numbered regions help locate a proposed finding; inspect the actual image and correct localization where supported before accepting it.'] },
     { heading: 'Reviewer checks', steps: ['Confirm product identities, image types, strengths, and reference versions.', 'Distinguish absent text from contradictory text.', 'Preserve confirmed, dismissed, and unresolved findings in the review record.'] },
   ], ['visual-guide', 'waiting-results', 'review-record']),
-  method('agent-method', 'Comparisons and screening', 'Interpret focused safety-agent outputs', 'A focused analysis brings evidence together; its categories and references still require review.', [
-    { heading: 'Different evidence roles', paragraphs: ['A reference classification, a labeling statement, a literature citation, and a generated organ-safety or PGx assessment are not interchangeable. Read the output’s stated sources and scope before using its category or conclusion.'] },
-    { heading: 'Reviewer checks', steps: ['Inspect whether the evidence concerns the intended product, route, dose, population, and question.', 'Follow citations and retain conflicting or missing evidence.', 'Use peer comparisons as context, rather than assuming a shared class or structure proves the same safety effect.'] },
-  ], ['agent-guide', 'evidence-types', 'structure-method']),
+  {
+    id: 'agent-method', path: 'methods', group: 'Toxicity & pharmacogenomics',
+    title: 'Interpret DILI Agent results',
+    summary: 'Understand how labeling evidence, sentence scores, and section priority produce a DILI concern class.',
+    tags: ['DILI Agent', 'liver injury', 'hepatotoxicity', 'severity score', 'Most', 'Less', 'No', 'ALT', 'bilirubin'],
+    related: ['agent-guide', 'versions', 'source-availability', 'review-record'],
+    sections: [
+      { heading: 'What the assessment measures', paragraphs: [
+        'DILI Agent asks an AI model to identify liver-related evidence in a labeling document, assign a score to each selected sentence, and produce Most, Less, or No DILI Concern. The conclusion combines the type of liver finding with where it appears in labeling.',
+        'This is the application’s labeling-based rubric. A score is not an event rate, probability of injury, or patient-level causality score. A newly generated assessment is not a lookup of an independently established DILIrank classification.',
+      ] },
+      { heading: 'Which document and sections are read?', paragraphs: [
+        'A new assessment looks for the latest labeling document for the Set ID. It reads available Boxed Warning, Contraindications, Warnings and Precautions, Adverse Reactions, Drug Interactions, and Use in Specific Populations sections. Available Highlights of Prescribing Information are also supplied to the model.',
+        'This is a selected-section review, not a search of every section, the literature, patient reports, or FAERS. Opening the agent from an older labeling does not pin the assessment to that version. Confirm the source document and date when the version matters.',
+      ] },
+      { heading: 'Why only a few evidence sentences appear', paragraphs: [
+        'The model is instructed to search in this priority order: Boxed Warning → Warnings and Precautions → Contraindications → Adverse Reactions → Drug Interactions → Use in Specific Populations.',
+        'Once meaningful evidence is found in a higher-priority section, lower-priority evidence is normally omitted. The report is limited to three evidence items in total and two from any one section. Repeated sentences are omitted; a sentence with several relevant findings receives the highest applicable score.',
+        'The displayed evidence is therefore a selected explanation of the conclusion, not a complete inventory of hepatic findings. For example, a boxed-warning finding can explain why the report does not also list liver-enzyme findings from Adverse Reactions.',
+      ] },
+      { heading: 'Read the sentence score: 0–8', paragraphs: [
+        'The table below reproduces the application’s scoring instructions. The numbers are categories in this rubric, not a validated clinical severity scale; a higher number does not mean a proportionally higher risk.',
+      ], table: { columns: ['Score', 'Finding used by the rubric', 'What to check in the sentence'], rows: [
+        ['8', 'Fatal liver failure, death associated with liver failure, or liver transplantation', 'The fatal outcome or transplantation must relate to hepatic injury, not an unrelated event.'],
+        ['7', 'Acute liver failure, liver/hepatic failure, or fulminant hepatic necrosis', 'Check whether the text describes a treatment-associated outcome or a pre-existing condition.'],
+        ['6', 'Histologically confirmed liver necrosis', 'Check that necrosis is actually stated and supported by the quoted context.'],
+        ['5', 'Clinically apparent jaundice', 'Distinguish a reported clinical finding from a hypothetical symptom patients are told to watch for.'],
+        ['4', 'Elevated bilirubin without visible jaundice', 'Check the population, threshold, and any alternative context supplied by the labeling.'],
+        ['3', 'Abnormal liver function tests or increased ALT, AST, or transaminases', 'Read the magnitude, frequency, comparator, and accompanying findings when provided.'],
+        ['2', 'Cholestasis, hepatitis, steatohepatitis, or liver damage/toxicity', 'This rubric places these terms below enzyme increases; do not read that ordering as a general clinical judgment.'],
+        ['1', 'Steatosis or fatty liver', 'Check whether this is a drug-related finding or the condition being treated.'],
+        ['0', 'Pre-existing condition, patient history, or contraindication context', 'Mentioning hepatic disease does not by itself mean the drug caused it. Read what the restriction actually says.'],
+      ] } },
+      { heading: 'How Most, Less, and No are assigned', paragraphs: [
+        'The class is not calculated by adding scores or taking their average. Section location changes the result. If every identified item is only a pre-existing-condition finding (score 0), the instructed outcome is No DILI Concern.',
+      ], table: { columns: ['Conclusion', 'Instruction given to the model'], rows: [
+        ['Most DILI Concern', 'Relevant evidence in Boxed Warning, or evidence scored 4–8 in Warnings and Precautions.'],
+        ['Less DILI Concern', 'Evidence scored 1–3 in Warnings and Precautions, or relevant evidence in lower-priority sections.'],
+        ['No DILI Concern', 'No DILI-related evidence identified in the supplied material, or all findings exclusively describe pre-existing conditions (score 0).'],
+      ] }, steps: [
+        'Locate the evidence section, then read the assigned sentence score.',
+        'Check whether the quoted text describes a drug-related finding rather than history, an indication, a negation, or a precaution alone.',
+        'Compare the conclusion with the rule above. The model generates both the score and conclusion; the report is not proof that the rule was followed correctly.',
+      ] },
+      { heading: 'Worked examples', paragraphs: ['These are illustrative sentences, not findings about a particular drug.'], table: { columns: ['Evidence and location', 'Expected reading under this rubric'], rows: [
+        ['“Elevations in ALT were observed” in Warnings and Precautions', 'Score 3 → Less DILI Concern, if the surrounding text supports a relevant treatment-associated finding.'],
+        ['The same ALT finding in Boxed Warning', 'Score 3 → Most DILI Concern because boxed-warning placement changes the class.'],
+        ['A bilirubin increase without jaundice in Warnings and Precautions', 'Score 4 → Most DILI Concern. Confirm the actual passage supports that finding.'],
+        ['Hepatic failure reported only in Adverse Reactions', 'The sentence can receive score 7 while the section-based conclusion remains Less DILI Concern. Less does not mean the reported outcome is mild.'],
+        ['Only a history of liver disease is mentioned', 'Score 0 → No DILI Concern if all identified evidence is exclusively pre-existing disease. This does not establish that the drug is free of hepatic risk.'],
+      ] } },
+      { heading: 'Read the evidence, summary, and class together', paragraphs: [
+        'Highlighted terms identify what the model used; the quoted sentence provides context; the score labels the finding; the summary explains the selected evidence; and the final class applies the section-based rule. Start with the sentence rather than accepting the colored class badge alone.',
+        'If the badge, written conclusion, and evidence disagree, keep the disagreement explicit. The application extracts the stored class from generated text, and an unrecognized conclusion can currently be stored as No. An empty, malformed, failed, or unsupported assessment must not be interpreted as a negative safety finding.',
+      ] },
+      { heading: 'Existing records and new assessments', paragraphs: [
+        'Assessment Records may show a stored result rather than a newly run analysis. Check the model and assessment date where displayed, and distinguish the assessment date from the labeling effective date. Run New Assessment requests another analysis of the available labeling; it does not collect new clinical evidence.',
+        'A rerun may change because the labeling, model, or generated interpretation changed. Preserve the evidence sentences, their sections, and the document identifiers alongside the conclusion when recording a review finding.',
+      ] },
+    ],
+  },
+  {
+    "id": "dict-guide-method",
+    "path": "methods",
+    "group": "Toxicity & pharmacogenomics",
+    "title": "Interpret DICT Agent results",
+    "summary": "Read cardiac evidence levels and understand how section location changes the concern class.",
+    "tags": [
+      "DICT Agent",
+      "cardiac",
+      "QT",
+      "LVEF",
+      "Severe",
+      "Moderate",
+      "Mild"
+    ],
+    "related": [
+      "dict-guide",
+      "versions",
+      "review-record"
+    ],
+    "sections": [
+      {
+        "heading": "What the result measures",
+        "paragraphs": [
+          "DICT Agent identifies cardiac evidence in selected labeling sections, assigns Severe, Moderate, Mild, or 0 to each selected sentence, and generates Most, Less, or No DICT Concern. These are the application\u2019s labeling-based categories, not event rates, validated patient-level risk scores, or a causal assessment."
+        ]
+      },
+      {
+        "heading": "Source document and evidence selection",
+        "paragraphs": [
+          "A new assessment seeks the latest available labeling for the Set ID. It reads Boxed Warning, Contraindications, Warnings and Precautions, Adverse Reactions, Drug Interactions, and Use in Specific Populations, plus available Highlights. It does not pin itself to a historical version previously opened in Label View.",
+          "Evidence priority is Boxed Warning > Warnings and Precautions > Contraindications > Adverse Reactions > Drug Interactions > Use in Specific Populations. The model is instructed to retain only the highest-priority section containing meaningful evidence, normally omitting lower-priority sections.",
+          "The report contains at most three evidence items, with at most two from one section. A sentence with several findings receives its highest applicable level. The displayed list is selected support for the conclusion, not an exhaustive list of findings."
+        ]
+      },
+      {
+        "heading": "Read the evidence level",
+        "paragraphs": [
+          "The following terms come from the current scoring instructions. Their placement is specific to this rubric; it is not a general ranking of clinical seriousness."
+        ],
+        "table": {
+          "columns": [
+            "Level",
+            "Heart damage / hemodynamic findings",
+            "Arrhythmia findings"
+          ],
+          "rows": [
+            [
+              "Severe",
+              "Death or transplantation related to cardiac injury; myocardial infarction, cardiac failure/CHF, cardiomyopathy, myocarditis, reduced LVEF/ejection fraction, LV dysfunction, cardiac tamponade, coronary artery disease, myocardial ischemia, cardiogenic shock, valvular heart disease.",
+              "Cardiac arrest, Torsade de Pointes, third-degree AV block, ventricular fibrillation, Brugada syndrome."
+            ],
+            [
+              "Moderate",
+              "Angina, pericarditis, pericardial effusion, mitral valve regurgitation, valve thickening, cardio spasm.",
+              "Ventricular or supraventricular tachycardia, long QT syndrome, QT prolongation, ventricular arrhythmias."
+            ],
+            [
+              "Mild",
+              "Hypotension, hypertension.",
+              "First- or second-degree AV block, atrial fibrillation, tachycardia, bradycardia, palpitations, sinus node dysfunction."
+            ],
+            [
+              "0",
+              "Pre-existing disease, history, contraindication context, or baseline risk factors.",
+              "Check whether the passage describes an existing condition rather than a treatment-associated finding."
+            ]
+          ]
+        }
+      },
+      {
+        "heading": "How the concern class is assigned",
+        "paragraphs": [
+          "The class combines the evidence level and section; it is not an average of sentence levels. Exclusively pre-existing-condition evidence (level 0) is instructed to produce No DICT Concern."
+        ],
+        "table": {
+          "columns": [
+            "Class",
+            "Rule"
+          ],
+          "rows": [
+            [
+              "Most DICT Concern",
+              "Relevant evidence in Boxed Warning, or Severe evidence in Warnings and Precautions."
+            ],
+            [
+              "Less DICT Concern",
+              "Moderate or Mild evidence in Warnings and Precautions, or relevant evidence in lower-priority sections."
+            ],
+            [
+              "No DICT Concern",
+              "No cardiac evidence identified in the supplied material, or all evidence exclusively describes pre-existing conditions."
+            ]
+          ]
+        }
+      },
+      {
+        "heading": "Worked examples",
+        "paragraphs": [
+          "These examples illustrate the application\u2019s rules, not findings about a particular drug."
+        ],
+        "table": {
+          "columns": [
+            "Passage and section",
+            "Expected interpretation"
+          ],
+          "rows": [
+            [
+              "QT prolongation in Warnings and Precautions",
+              "Moderate -> Less DICT Concern. The class does not say whether an individual patient will develop an arrhythmia."
+            ],
+            [
+              "The same QT finding in Boxed Warning",
+              "Moderate -> Most DICT Concern because section placement changes the class."
+            ],
+            [
+              "Reduced LVEF attributed to treatment in Warnings and Precautions",
+              "Severe -> Most DICT Concern. Check the actual LVEF change and study context."
+            ],
+            [
+              "Cardiac failure reported only in Adverse Reactions",
+              "Severe evidence can still yield Less DICT Concern under the section rule. Less does not mean a mild outcome."
+            ],
+            [
+              "Only a history of heart failure is described",
+              "Level 0 -> No DICT Concern if all identified evidence is baseline disease. It does not establish cardiac safety."
+            ]
+          ]
+        }
+      },
+      {
+        "heading": "What to verify in the source",
+        "steps": [
+          "For QT findings, check the measured change, exposure, population, co-medications, and whether clinical arrhythmias are actually reported. Do not equate a QT finding with a reported Torsade de Pointes event.",
+          "For LVEF or failure findings, distinguish a measurement change, diagnosed dysfunction, and symptomatic failure; read monitoring and treatment instructions in context.",
+          "Check negation and attribution. A screening instruction or baseline exclusion criterion is different from a treatment-associated event. Follow the original labeling for any stated action."
+        ]
+      },
+      {
+        "heading": "Stored results, reruns, and conflicting output",
+        "paragraphs": [
+          "Assessment Records can contain previously generated results. Check the assessment date and model where available; the assessment date is different from the labeling effective date. Run New Assessment requests another analysis of available labeling, rather than collecting new patient or literature evidence.",
+          "The AI assigns the evidence level and writes the conclusion; the application then extracts the stored class from that text. An unrecognized conclusion can currently be stored as No. If the badge, conclusion, and quoted evidence disagree, record the inconsistency and verify the source. A failure, missing source, or unsupported conclusion is not a negative finding.",
+          "Preserve the evidence passage, section, document identity, assessment date, and unresolved questions. Repeated assessments are not guaranteed to create separate records: a result from the same day and model can replace the existing result."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "diri-guide-method",
+    "path": "methods",
+    "group": "Toxicity & pharmacogenomics",
+    "title": "Interpret DIRI Agent results",
+    "summary": "Separate renal findings, evidence levels, and the section-based concern class.",
+    "tags": [
+      "DIRI Agent",
+      "renal",
+      "Certain",
+      "Possible",
+      "AKI",
+      "creatinine",
+      "GFR"
+    ],
+    "related": [
+      "diri-guide",
+      "versions",
+      "review-record"
+    ],
+    "sections": [
+      {
+        "heading": "What Certain and Possible mean here",
+        "paragraphs": [
+          "DIRI Agent assigns Certain, Possible, or 0 to selected renal evidence sentences, then generates Most, Less, or No DIRI Concern. Certain and Possible are names in the application\u2019s term-based rubric. They are not measured confidence, probabilities, or proof that a drug caused an individual patient\u2019s renal injury."
+        ]
+      },
+      {
+        "heading": "Source document and evidence selection",
+        "paragraphs": [
+          "A new assessment seeks the latest available labeling for the Set ID. It reads Boxed Warning, Contraindications, Warnings and Precautions, Adverse Reactions, Drug Interactions, and Use in Specific Populations, plus available Highlights. It does not pin itself to a historical version previously opened in Label View.",
+          "Evidence priority is Boxed Warning > Warnings and Precautions > Contraindications > Adverse Reactions > Drug Interactions > Use in Specific Populations. The model is instructed to retain only the highest-priority section containing meaningful evidence, normally omitting lower-priority sections.",
+          "The report contains at most three evidence items, with at most two from one section. A sentence with several findings receives its highest applicable level. The displayed list is selected support for the conclusion, not an exhaustive list of findings."
+        ]
+      },
+      {
+        "heading": "Read the evidence level",
+        "table": {
+          "columns": [
+            "Level",
+            "Terms used by the rubric",
+            "Interpretation check"
+          ],
+          "rows": [
+            [
+              "Certain",
+              "Renal failure, AKI, anuria, nephrotoxicity/renal toxicity, glomerulonephritis, acute tubular necrosis, drug-secondary CKD, interstitial nephritis, nephropathy, nephrotic syndrome, nephritis, Fanconi syndrome, rhabdomyolysis-induced renal failure.",
+              "Read the diagnosis, attribution, timing, and context. A term match alone does not confirm drug causality."
+            ],
+            [
+              "Possible",
+              "Elevated creatinine, reduced creatinine clearance/GFR, proteinuria, albuminuria, hematuria, oliguria, hyperkalemia, pyuria, urinary casts, increased BUN, nephrolithiasis, renal impairment/insufficiency/dysfunction, azotemia, renal tubular acidosis, renal function deterioration.",
+              "These can include substantial findings. Possible is the tool\u2019s category, not a statement that the finding is mild or unimportant."
+            ],
+            [
+              "0",
+              "History or baseline renal impairment.",
+              "Distinguish pre-existing disease and altered drug clearance from a finding of treatment-associated injury."
+            ]
+          ]
+        }
+      },
+      {
+        "heading": "How the concern class is assigned",
+        "paragraphs": [
+          "Scores are not added. The section and evidence level jointly determine the instructed class; exclusively baseline-condition evidence is assigned No DIRI Concern."
+        ],
+        "table": {
+          "columns": [
+            "Class",
+            "Rule"
+          ],
+          "rows": [
+            [
+              "Most DIRI Concern",
+              "Relevant evidence in Boxed Warning, or Certain evidence in Warnings and Precautions."
+            ],
+            [
+              "Less DIRI Concern",
+              "Possible evidence in Warnings and Precautions, or relevant evidence in lower-priority sections."
+            ],
+            [
+              "No DIRI Concern",
+              "No renal-injury evidence identified in the supplied material, or all evidence exclusively describes pre-existing conditions."
+            ]
+          ]
+        }
+      },
+      {
+        "heading": "Worked examples",
+        "paragraphs": [
+          "These illustrate the rubric and are not findings about a named drug."
+        ],
+        "table": {
+          "columns": [
+            "Passage and section",
+            "Expected interpretation"
+          ],
+          "rows": [
+            [
+              "Treatment-associated creatinine increase in Warnings and Precautions",
+              "Possible -> Less DIRI Concern. Check magnitude, baseline, reversibility, and associated findings."
+            ],
+            [
+              "The same creatinine finding in Boxed Warning",
+              "Possible -> Most DIRI Concern because of section placement."
+            ],
+            [
+              "Acute kidney injury associated with treatment in Warnings and Precautions",
+              "Certain -> Most DIRI Concern, without establishing patient-level causality."
+            ],
+            [
+              "Renal failure reported only in Adverse Reactions",
+              "Certain evidence can yield Less DIRI Concern. The section-based class does not downgrade the seriousness of renal failure."
+            ],
+            [
+              "A passage only describes pre-existing renal impairment",
+              "Level 0 -> No DIRI Concern if no other relevant evidence is identified. A renal dose adjustment alone does not establish drug-induced injury."
+            ]
+          ]
+        }
+      },
+      {
+        "heading": "What to verify in the source",
+        "steps": [
+          "Read whether renal impairment is a baseline population, a reason for dose adjustment, or a newly reported outcome.",
+          "Check creatinine/GFR units, baseline, change over time, population, and any concomitant drugs or other explanations supplied in the labeling.",
+          "Separate biomarker changes from a stated diagnosis, and distinguish monitoring advice from evidence that injury occurred. Use the source wording when recording a finding."
+        ]
+      },
+      {
+        "heading": "Stored results, reruns, and conflicting output",
+        "paragraphs": [
+          "Assessment Records can contain previously generated results. Check the assessment date and model where available; the assessment date is different from the labeling effective date. Run New Assessment requests another analysis of available labeling, rather than collecting new patient or literature evidence.",
+          "The AI assigns the evidence level and writes the conclusion; the application then extracts the stored class from that text. An unrecognized conclusion can currently be stored as No. If the badge, conclusion, and quoted evidence disagree, record the inconsistency and verify the source. A failure, missing source, or unsupported conclusion is not a negative finding.",
+          "Preserve the evidence passage, section, document identity, assessment date, and unresolved questions. Repeated assessments are not guaranteed to create separate records: a result from the same day and model can replace the existing result."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pgx-guide-method",
+    "path": "methods",
+    "group": "Toxicity & pharmacogenomics",
+    "title": "Interpret PGx Agent results",
+    "summary": "Trace biomarker candidates to labeling evidence and understand the Actionable and Informational labels.",
+    "tags": [
+      "PGx Agent",
+      "biomarker",
+      "Actionable PGx",
+      "Informational PGx",
+      "FDA table",
+      "cache"
+    ],
+    "related": [
+      "pgx-guide",
+      "versions",
+      "review-record"
+    ],
+    "sections": [
+      {
+        "heading": "What the agent produces",
+        "paragraphs": [
+          "PGx Agent identifies candidate biomarkers, asks AI to interpret their relevance in labeling, and returns a summary for each retained biomarker. Its categories are Actionable PGx, Informational PGx, and No Biomarkers Found; it does not use the organ-toxicity agents\u2019 Most/Less/No rubric.",
+          "Candidates cover metabolism enzymes, HLA associations, transporters, and target biomarkers. A biomarker mention can concern metabolism, safety, dosing, treatment selection, or efficacy; it is not necessarily a toxicity finding or an inherited variant."
+        ]
+      },
+      {
+        "heading": "Where candidates come from",
+        "table": {
+          "columns": [
+            "Input",
+            "Role in the assessment"
+          ],
+          "rows": [
+            [
+              "Labeling text",
+              "A synonym dictionary scans selected sections for biomarker names. Alternate terms are normalized to canonical names, for example OATP1B1 to SLCO1B1. A text match is a candidate, not confirmation of clinical action."
+            ],
+            [
+              "Local FDA PGx table reference",
+              "The application looks for expected biomarkers by drug name in its imported reference data. Matching can fall back to the first word of a multiword name; verify combination-product and name matches. This is not a live FDA lookup."
+            ],
+            [
+              "AI review",
+              "The model receives candidates, expected table entries, and labeling text. It is asked to extract evidence, identify the section, and explain the clinical implication. The response still requires source verification."
+            ]
+          ]
+        }
+      },
+      {
+        "heading": "Which labeling is examined?",
+        "paragraphs": [
+          "Without a reusable cached result, the agent seeks the latest available document for the Set ID. It supplies Indications and Usage, Dosage and Administration, Contraindications, Boxed Warning, Warnings and Precautions, Clinical Pharmacology, Pharmacogenomics, Clinical Studies, Description, Drug Interactions, Use in Specific Populations, and available Highlights.",
+          "It does not automatically analyze every section, external literature, genetic test results, or a patient genotype. Starting from an archived document does not pin the assessment to that version."
+        ]
+      },
+      {
+        "heading": "Read each biomarker entry",
+        "table": {
+          "columns": [
+            "Field or text",
+            "Meaning and check"
+          ],
+          "rows": [
+            [
+              "Biomarker name",
+              "The normalized candidate. Confirm the exact allele, mutation, phenotype, tumor marker, or enzyme context in the source. Broad gene names can hide important distinctions."
+            ],
+            [
+              "Clinical summary",
+              "AI interpretation of relevance and potential implications. Separate an explicit labeling instruction from a background association or metabolism statement."
+            ],
+            [
+              "Label section and evidence quotation",
+              "The proposed source location and excerpt. Find the passage in the document; section defaults or incomplete quotations can be misleading."
+            ],
+            [
+              "FDA PGx Table: Yes / reference note",
+              "A claimed reference association, not a universal requirement to test or adjust treatment. AI-supplied membership flags are not independently rechecked for every retained entry."
+            ],
+            [
+              "Listed in FDA Table, but no explicit dosing guidance found",
+              "An expected reference biomarker was not retained as a confirmed text finding. It is appended as an unconfirmed note, without an evidence quotation; it must not be presented as confirmed guidance from this labeling."
+            ]
+          ]
+        }
+      },
+      {
+        "heading": "How Actionable and Informational are assigned",
+        "paragraphs": [
+          "For a newly processed result, the application checks retained valid entries for specific words in the section and summary. The class is therefore a text-based indicator, not a complete guideline assessment."
+        ],
+        "table": {
+          "columns": [
+            "Class",
+            "Current rule and limitation"
+          ],
+          "rows": [
+            [
+              "Actionable PGx",
+              "At least one valid entry contains contraindication, boxed warning, black box, dose reduction, adjust dose, or avoid in its section/summary. A section name alone can trigger this label; negation and the precise clinical instruction are not separately evaluated by this rule."
+            ],
+            [
+              "Informational PGx",
+              "At least one valid biomarker entry is retained, but none triggers those keywords. Explicit guidance expressed in other words can be missed, so Informational does not establish that no action is described."
+            ],
+            [
+              "No Biomarkers Found",
+              "No valid entries remain, or the scan ends early for lack of candidates or relevant text. Unconfirmed FDA-table notes can still be displayed; read them separately."
+            ]
+          ]
+        }
+      },
+      {
+        "heading": "Worked examples",
+        "paragraphs": [
+          "These examples describe processing behavior, not drug-specific recommendations."
+        ],
+        "table": {
+          "columns": [
+            "Result",
+            "How to read it"
+          ],
+          "rows": [
+            [
+              "An enzyme is described only as metabolizing the drug",
+              "A mention is not by itself genotype-based dosing or a testing requirement. Verify whether the passage addresses genetic variation or only enzyme inhibition/induction."
+            ],
+            [
+              "A biomarker entry cites Contraindications",
+              "The section name can trigger Actionable PGx. Read the exact population, allele/phenotype, and instruction rather than relying on the class."
+            ],
+            [
+              "A tumor biomarker is mentioned for patient selection",
+              "Check the exact mutation/expression criterion and indication. Do not treat all biomarkers as inherited drug-metabolism variants."
+            ],
+            [
+              "Only an FDA Table Reference note appears",
+              "The reference expected the biomarker, but current-text confirmation is missing. It can coexist with No Biomarkers Found."
+            ],
+            [
+              "\u201cBiomarker mention detected in label text\u201d with no evidence quote",
+              "This can be a fallback after the AI response could not be parsed. It confirms a dictionary match, not a completed clinical interpretation."
+            ]
+          ]
+        }
+      },
+      {
+        "heading": "Empty results and incomplete interpretation",
+        "paragraphs": [
+          "If no dictionary candidates and no expected reference entries are found, the agent can return No Biomarkers Found without calling AI. Unknown synonyms, drug-name mismatches, missing reference data, and section coverage can all limit detection.",
+          "If AI returns an unusable structured response, the application can retain detected candidates as generic informational entries. Missing quotes and generic mention-only text require a return to the labeling; they do not provide an independently supported clinical conclusion."
+        ]
+      },
+      {
+        "heading": "Stored results and the Run New Assessment button",
+        "paragraphs": [
+          "PGx results are cached by Set ID and can be returned before the current labeling is read. The current Run New Assessment button does not request a forced cache refresh, so it may return the same stored result. A current on-screen date does not prove the biomarker analysis was regenerated.",
+          "Review the source document and available stored assessment metadata. Preserve the biomarker, exact variant/phenotype, quoted passage, section, and source date; do not infer a testing requirement, dose change, or treatment choice from the class badge alone."
+        ]
+      }
+    ]
+  },
   method('ro2-method', 'Comparisons and screening', 'Understand Rule-of-Two screening', 'Review the association, inputs, and scope behind a displayed screening quadrant.', [
     { heading: 'Method context', paragraphs: ['Chen et al. studied daily dose and lipophilicity in oral medications. The reported rule used daily dose of at least 100 mg and logP of at least 3. This association is a screening context, not a patient-specific prediction or proof of a drug’s causal role in an injury.'] },
     { heading: 'Application inputs', paragraphs: ['Check the actual thresholds and lipophilicity method displayed by the application. A computed ALogP value, selected structure, or extracted maximum daily dose needs its own source and assumptions; do not silently substitute one input definition for another.'] },
@@ -397,6 +986,35 @@ export const ARTICLES: WikiArticle[] = [
   ], ['account-access', 'toolbox-guide', 'waiting-results']),
 ];
 
+/** One owner per tool article; names come from the product catalog. */
+const ARTICLE_TO_TOOL: Record<string, string> = {
+  'compare-guide': 'labelcomp', 'comparison-method': 'labelcomp',
+  'visual-guide': 'label-image-review', 'visual-method': 'label-image-review',
+  'history-guide': 'label-history-set-id', 'application-guide': 'label-history-application',
+  'pv-guide': 'label-pv-profile', 'pv-method': 'label-pv-profile', 'frequency-context': 'label-pv-profile',
+  'ae-guide': 'label-labeling-ae', 'annotation-method': 'label-labeling-ae',
+  'faers-guide': 'label-faers', 'faers-method': 'label-faers',
+  'agent-guide': 'label-tox-dili', 'agent-method': 'label-tox-dili',
+  'dict-guide': 'label-tox-dict', 'dict-guide-method': 'label-tox-dict',
+  'diri-guide': 'label-tox-diri', 'diri-guide-method': 'label-tox-diri',
+  'pgx-guide': 'label-tox-pgx', 'pgx-guide-method': 'label-tox-pgx',
+  'ro2-guide': 'label-ro2', 'ro2-method': 'label-ro2',
+  'chem-guide': 'chemsearch', 'structure-method': 'chemsearch',
+};
+const TOOL_CATEGORIES: Record<string, string> = {
+  comparison: 'Comparisons', safety: 'Safety evidence',
+  toxicity: 'Toxicity & pharmacogenomics', review: 'Clinical review',
+};
+export function toolName(article: WikiArticle): string | undefined {
+  return TOOLS.find(tool => tool.id === article.toolId)?.name;
+}
+export const ARTICLES: WikiArticle[] = CONTENT.map(article => {
+  const toolId = ARTICLE_TO_TOOL[article.id];
+  if (!toolId) return article;
+  const tool = TOOLS.find(item => item.id === toolId)!;
+  return { ...article, toolId, group: TOOL_CATEGORIES[tool.toolboxWorkflow || ''] || 'Discovery' };
+});
+
 /** Every old topic has a destination, including the retired device entry. */
 export const LEGACY_TOPICS: Record<string, string> = {
   '1-1-account-login': 'account-access', '1-2-personal-dashboard': 'saved-work',
@@ -412,6 +1030,6 @@ export const LEGACY_TOPICS: Record<string, string> = {
   '9-1-chemsearch-similarity': 'chem-guide', '10-1-device-clearances-recalls': 'availability', '11-1-reviewer-faq': 'waiting-results',
 };
 export function searchableText(article: WikiArticle): string {
-  return [article.title, article.summary, article.group, ...article.tags,
+  return [article.title, article.summary, article.group, toolName(article) || '', ...article.tags,
     ...article.sections.flatMap(section => [section.heading, ...(section.paragraphs || []), ...(section.steps || []), ...(section.table?.columns || []), ...(section.table?.rows.flat() || [])])].join(' ').toLowerCase();
 }
