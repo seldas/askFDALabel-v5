@@ -93,3 +93,44 @@
   .wiki-masthead { flex-wrap: wrap; }
   .wiki-path-cards, .wiki-related-grid { grid-template-columns: 1fr; }
 }
+
+.wiki-article-table { margin: 20px 0; overflow-x: auto; }
+.wiki-article-table table { width: 100%; border-collapse: collapse; font-size: 0.84rem; line-height: 1.7; }
+.wiki-article-table th, .wiki-article-table td { border: 1px solid var(--fdl-line-soft); padding: 12px 14px; text-align: left; vertical-align: top; }
+.wiki-article-table thead th { background: var(--fdl-blue-050); color: var(--fdl-navy-950); }
+.wiki-article-table tbody th { width: 28%; color: var(--fdl-ink); font-weight: 600; }
+.wiki-article-table td { color: var(--fdl-ink-soft); }
+
+.wiki-chapter-nav { padding-bottom: 18px; margin-bottom: 22px; border-bottom: 1px solid var(--fdl-line); }
+.wiki-chapter-nav > h2 { margin-bottom: 10px; }
+.wiki-chapter-nav > a { display: flex; gap: 9px; align-items: baseline; }
+.wiki-chapter-number { color: var(--fdl-muted); font: 0.69rem var(--fdl-font-mono); flex-shrink: 0; }
+.wiki-example { margin: 24px 0; padding: 18px; border: 1px solid var(--fdl-line); background: var(--fdl-canvas); }
+.wiki-example figcaption { display: grid; gap: 5px; padding-bottom: 14px; border-bottom: 1px solid var(--fdl-line-soft); }
+.wiki-example figcaption strong { color: var(--fdl-navy-950); font-size: 0.88rem; }
+.wiki-example figcaption span { color: var(--fdl-muted); font-size: 0.72rem; }
+.wiki-example .wiki-workflow { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 10px; padding: 0; margin: 18px 0; list-style: none; }
+.wiki-example .wiki-workflow li { padding: 12px; margin: 0; border: 1px solid var(--fdl-line-soft); border-top: 2px solid var(--fdl-blue-600); background: var(--fdl-paper); }
+.wiki-example-number { display: block; font: 0.65rem var(--fdl-font-mono); color: var(--fdl-blue-700); margin-bottom: 8px; }
+.wiki-workflow strong { display: block; font-size: 0.8rem; line-height: 1.5; }
+.wiki-example .wiki-workflow p, .wiki-example .wiki-example-note { font-size: 0.78rem; line-height: 1.7; color: var(--fdl-muted); margin-bottom: 0; }
+.wiki-logic-options { border: 0; margin: 18px 0; padding: 0; display: flex; flex-wrap: wrap; gap: 12px 20px; }
+.wiki-logic-options legend { margin-bottom: 10px; font-size: 0.79rem; font-weight: 600; }
+.wiki-logic-options label { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; cursor: pointer; }
+.wiki-logic-options input { accent-color: var(--fdl-blue-600); }
+.wiki-example-groups { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-block: 18px; }
+.wiki-example-group { flex: 1 1 160px; min-width: 0; display: grid; justify-items: start; gap: 10px; padding: 14px; background: var(--fdl-paper); border: 1px solid var(--fdl-line); }
+.wiki-example-group > strong { font-size: 0.73rem; color: var(--fdl-muted); }
+.wiki-example-condition { padding: 7px 9px; border: 1px solid var(--fdl-line); background: var(--fdl-blue-050); font-size: 0.77rem; color: var(--fdl-ink-soft); }
+.wiki-example-group b, .wiki-example-or { font: 700 0.7rem var(--fdl-font-mono); color: var(--fdl-blue-700); }
+.wiki-example .wiki-article-table { margin-block: 18px; }
+.wiki-example .wiki-article-table table { font-size: 0.74rem; background: var(--fdl-paper); }
+.wiki-example .wiki-article-table caption { text-align: left; font-size: 0.72rem; color: var(--fdl-muted); margin-bottom: 8px; }
+.wiki-example .wiki-article-table th, .wiki-example .wiki-article-table td { padding: 9px; }
+.wiki-example tr[data-matches=true] { background: var(--fdl-green-050); }
+.wiki-example tr[data-matches=true] td:last-child { color: var(--fdl-green); font-weight: 700; }
+.wiki-example .wiki-example-result { font-size: 0.82rem; font-weight: 600; color: var(--fdl-ink); }
+
+.wiki-related-links { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
+.wiki-related-links a { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--fdl-line-soft); color: var(--fdl-blue-700); font-size: 0.81rem; text-decoration: none; }
+.wiki-related-links a:hover { text-decoration: underline; }

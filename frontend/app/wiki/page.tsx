@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import Footer from '../components/Footer';
-import { ARTICLES, LEGACY_TOPICS, PATHS, searchableText, type ReadingPath, type WikiArticle } from './wikiData';
+import { ARTICLES, LEGACY_TOPICS, PATHS, SEARCH_CHAPTER_IDS, searchableText, type ReadingPath, type WikiArticle } from './wikiData';
 import './wiki.css';
+import { SearchWorkflow, CriteriaLogicExample } from './WikiSearchExamples';
 
 const INDEX = new Map(ARTICLES.map(article => [article.id, article]));
-const FEATURED = ['first-review', 'find-labeling', 'pv-guide', 'compare-guide', 'visual-guide'];
+const FEATURED = ['query-guide', 'saved-work', 'read-labeling', 'notes-guide', 'label-export-guide'];
 
 export default function WikiPage() {
   const [route, setRoute] = useState('home');
@@ -61,9 +62,11 @@ export default function WikiPage() {
   const pathMatches = ARTICLES.filter(item => item.path === activePath);
   const groups = [...new Set(pathMatches.map(item => item.group))];
   const pathArticles = groups.flatMap(group => pathMatches.filter(item => item.group === group));
-  const position = pathArticles.findIndex(item => item.id === article?.id);
-  const previous = pathArticles[position - 1];
-  const next = position >= 0 ? pathArticles[position + 1] : undefined;
+  const inSearchChapter = SEARCH_CHAPTER_IDS.includes(route);
+  const readingSequence = inSearchChapter ? SEARCH_CHAPTER_IDS.map(id => INDEX.get(id)!) : pathArticles;
+  const position = readingSequence.findIndex(item => item.id === article?.id);
+  const previous = readingSequence[position - 1];
+  const next = position >= 0 ? readingSequence[position + 1] : undefined;
   const searching = words.length > 0;
 
   useEffect(() => {
@@ -99,8 +102,11 @@ export default function WikiPage() {
           <a href="#home" onClick={() => setQuery('')} aria-current={route === 'home' ? 'page' : undefined}>Handbook home</a>
           {(Object.keys(PATHS) as ReadingPath[]).map(path => <a key={path} href={`#${path}`} onClick={() => setQuery('')} aria-current={activePath === path ? 'page' : undefined}>{PATHS[path].title}</a>)}
         </nav>
+        {inSearchChapter && !searching && <nav className="wiki-topic-nav wiki-chapter-nav" aria-label="Search labeling chapter">
+          <h2>Search labeling / chapter</h2>{SEARCH_CHAPTER_IDS.map((id, index) => <a key={id} href={`#${id}`} aria-current={route === id ? 'page' : undefined}><span className="wiki-chapter-number">{index + 1}</span>{INDEX.get(id)?.title}</a>)}
+        </nav>}
         {activePath && !searching && <nav aria-label={`${PATHS[activePath].short} articles`} className="wiki-topic-nav">
-          {groups.map(group => <div key={group}><h2>{group}</h2>{pathArticles.filter(item => item.group === group).map(item =>
+          {groups.filter(group => !(inSearchChapter && group === 'Search labeling')).map(group => <div key={group}><h2>{group}</h2>{pathArticles.filter(item => item.group === group).map(item =>
             <a href={`#${item.id}`} key={item.id} aria-current={route === item.id ? 'page' : undefined}>{item.title}</a>)}</div>)}
         </nav>}
         {!activePath && !searching && <div className="wiki-sidebar-note"><strong>For safety scientists and reviewers</strong><p>Practical workflows and explanations of evidence. Start with a task, then follow its methods links when you need more depth.</p></div>}
@@ -122,11 +128,18 @@ export default function WikiPage() {
             {article.sections.map((section, index) => <section className="wiki-article-section" id={`wiki-section-${index}`} key={section.heading}>
               <h2>{section.heading}</h2>{section.paragraphs?.map(text => <p key={text}>{text}</p>)}
               {section.steps && <ol>{section.steps.map(text => <li key={text}>{text}</li>)}</ol>}
+              {section.illustration === 'search-workflow' && <SearchWorkflow />}
+              {section.illustration === 'criteria-logic' && <CriteriaLogicExample />}
+              {section.table && <div className="wiki-article-table"><table>
+                <caption className="wiki-sr-only">{section.heading}</caption>
+                <thead><tr>{section.table.columns.map(column => <th scope="col" key={column}>{column}</th>)}</tr></thead>
+                <tbody>{section.table.rows.map(row => <tr key={row[0]}>{row.map((cell, index) => index === 0 ? <th scope="row" key={index}>{cell}</th> : <td key={index}>{cell}</td>)}</tr>)}</tbody>
+              </table></div>}
             </section>)}
             {article.references?.length && <section className="wiki-references"><h2>Sources and further reading</h2><ul>{article.references.map(reference => <li key={reference.href}><a href={reference.href} target="_blank" rel="noopener noreferrer">{reference.title} ↗</a></li>)}</ul></section>}
           </article>
-          <section className="wiki-related" aria-labelledby="wiki-related-heading"><h2 id="wiki-related-heading">Continue your review</h2><div className="wiki-related-grid">{article.related.map(id => INDEX.get(id)).filter((item): item is WikiArticle => Boolean(item)).map(item => articleLink(item, 'wiki-related-card'))}</div></section>
-          <nav className="wiki-pager" aria-label="Articles in this reading path">{previous ? <a href={`#${previous.id}`}><span>← Previous {PATHS[article.path].short.toLowerCase()}</span><strong>{previous.title}</strong></a> : <span />}{next && <a href={`#${next.id}`}><span>Next {PATHS[article.path].short.toLowerCase()} →</span><strong>{next.title}</strong></a>}</nav>
+          <section className="wiki-related" aria-labelledby="wiki-related-heading"><h2 id="wiki-related-heading">Continue your review</h2>{inSearchChapter ? <ul className="wiki-related-links">{article.related.map(id => INDEX.get(id)).filter((item): item is WikiArticle => Boolean(item)).map(item => <li key={item.id}><a href={`#${item.id}`}>{item.title} <span aria-hidden="true">→</span></a></li>)}</ul> : <div className="wiki-related-grid">{article.related.map(id => INDEX.get(id)).filter((item): item is WikiArticle => Boolean(item)).map(item => articleLink(item, 'wiki-related-card'))}</div>}</section>
+          <nav className="wiki-pager" aria-label="Continue reading">{previous ? <a href={`#${previous.id}`}><span>← Previous {inSearchChapter ? 'in search chapter' : PATHS[article.path].short.toLowerCase()}</span><strong>{previous.title}</strong></a> : <span />}{next && <a href={`#${next.id}`}><span>Next {inSearchChapter ? 'in search chapter' : PATHS[article.path].short.toLowerCase()} →</span><strong>{next.title}</strong></a>}</nav>
         </> : route === 'home' ? <>
           <span className="wiki-eyebrow">EVIDENCE / INTERPRETATION / REVIEW</span><h1>From a review question<br />to traceable evidence.</h1><p className="wiki-lead">A handbook for drug safety scientists and reviewers. Learn how to complete a task, understand its results, and verify what supports your conclusions.</p>
           <div className="wiki-path-cards">{(Object.keys(PATHS) as ReadingPath[]).map((path, index) => <a key={path} href={`#${path}`} data-path={path}><span className="wiki-eyebrow">0{index + 1} / {PATHS[path].short}</span><h2>{PATHS[path].title}</h2><p>{PATHS[path].description}</p><strong>Explore this path →</strong></a>)}</div>

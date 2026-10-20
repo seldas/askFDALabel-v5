@@ -1,6 +1,10 @@
 /** Reviewer-facing knowledge: product workflows and evidence interpretation. */
 export type ReadingPath = 'guides' | 'methods';
-export interface WikiSection { heading: string; paragraphs?: string[]; steps?: string[]; }
+export interface WikiSection {
+  heading: string; paragraphs?: string[]; steps?: string[];
+  table?: { columns: string[]; rows: string[][] };
+  illustration?: 'search-workflow' | 'criteria-logic';
+}
 export interface WikiArticle {
   id: string; path: ReadingPath; group: string; title: string; summary: string;
   tags: string[]; sections: WikiSection[]; related: string[];
@@ -11,6 +15,7 @@ export const PATHS = {
   guides: { title: 'Complete a review task', short: 'Guides', description: 'Find the right labeling, examine evidence, and preserve your review.' },
   methods: { title: 'Understand data & results', short: 'Data & methods', description: 'Understand sources, analytical outputs, uncertainty, and verification.' },
 };
+export const SEARCH_CHAPTER_IDS = ['query-guide', 'find-labeling', 'search-scope', 'manual-query', 'ai-query', 'match-expansion', 'search-results', 'query-codes'];
 const home = { href: '/', label: 'Find labeling' };
 const tools = { href: '/tools', label: 'Browse available tools' };
 const dailyMed = { title: 'NLM: About DailyMed', href: 'https://www.dailymed.nlm.nih.gov/dailymed/about-dailymed.cfm' };
@@ -40,36 +45,185 @@ export const ARTICLES: WikiArticle[] = [
     'Use a personal account for features that save per-account review state. Guest access is shared and does not offer the same saved preferences or personal records.',
     'If a tool is missing, check the available tool directory and the selected labeling. Contact your administrator if the feature is required for your work.',
   ], ['Do not assume a colleague has the same tools, database scope, or saved records.', 'For institutional sign-in, use the identity provider’s password-management process.'], ['availability', 'ai-preferences', 'saved-work'], { href: '/dashboard', label: 'Open My Dashboard' }),
-  guide('find-labeling', 'Find the right labeling', 'Find labeling by name or identifier', 'Use a brand, ingredient, NDC, or application number, then confirm the matched product.', [
-    'Enter the identifying information you have in the home search or Query Builder. Choose the available database scope.',
-    'Inspect matched names and identifiers. Narrow by product category, route, dosage form, or other available criteria when needed.',
-    'Open the intended result and confirm its application, product presentation, and version. Similar names are not sufficient to establish equivalence.',
-  ], ['A returned record is a match within the selected data scope, not proof that every relevant product was retrieved.', 'Record the scope and criteria if the search supports a review conclusion.'], ['search-scope', 'versions', 'query-guide'], home),
-  guide('query-guide', 'Find the right labeling', 'Build and check a structured search', 'Combine product, market, route, dosage, class, and supported section criteria.', [
-    'Choose the database scope before assembling criteria. Available criteria differ between Local and internal scopes.',
-    'Add product identifiers and the appropriate market, dosage-form, route, or EPC conditions. Inspect candidate lists and selected values.',
-    'Use AND/OR groups deliberately. For a combination-product question, check whether the conditions require both ingredients or either ingredient.',
-    'For a safety-text question, select a supported section and review the resolved terms. Inspect Exact match and any related-name or MedDRA expansion.',
-    'Run the search, check filtered versus underlying totals, and inspect representative matches in the original labeling.',
-  ], ['A zero-result search needs a scope, terminology, and filter check before it can support a conclusion.', 'Retain a query code and the version identifiers of records used as evidence.'], ['search-scope', 'match-expansion', 'query-codes', 'no-results'], home),
-  guide('ai-query', 'Find the right labeling', 'Use AI to draft search criteria', 'Turn a plain-language request into criteria you can inspect before searching.', [
-    'Enter a focused request in AI Query Builder. Leave Quick search unchecked when you want to inspect the generated criteria first.',
-    'Review the proposed names, terms, groups, categorical chips, and translation notes. Correct unsupported or unintended conditions.',
-    'Run Search Labels after reviewing the criteria. Quick search instead runs a successful translation without this confirmation step.',
-    'If you use an external AI tool, follow the application’s external query instructions and inspect imported criteria before execution.',
-  ], ['An AI response is not itself a database search result.', 'Restore a query code to reuse known conditions rather than translating the same request again.'], ['evidence-types', 'match-expansion', 'query-codes'], home),
-  guide('query-codes', 'Find the right labeling', 'Filter results and reuse a query code', 'Preserve search conditions while keeping result filters and scope visible.', [
-    'Inspect the result header and active sidebar filters. Facet counts and filtered table totals serve different purposes.',
-    'Choose Copy Query Code from the results export menu. Copy the complete FDALABEL-Q1 code from the confirmation dialog.',
-    'Paste the code into AI Query Builder and restore it. Recheck the database scope, Exact match setting, candidate selections, and result filters.',
-    'When a query is too large, narrow selected names or conditions rather than assuming the restore completed successfully.',
-  ], ['Restoring conditions does not freeze the underlying data or grant additional database access.', 'Treat a shared code as readable search information; avoid placing confidential material in criteria you share.'], ['search-scope', 'review-record'], home),
-  guide('read-labeling', 'Read and preserve evidence', 'Read labeling and navigate the workspace', 'Use the document, contents rail, compact controls, and label details together.', [
-    'Confirm the product and version, then use Contents to jump to a section. Expand Label details for product metadata and collapse it to regain reading space.',
-    'Scroll through the continuous document. Controls remain at the top and move less-used actions into More when space is limited.',
-    'Use browser Find to locate text, then read the section, table headings, comparator columns, and footnotes around each occurrence.',
-    'Open Toolbox for label-specific analysis. Return to Label View to verify generated findings against source text.',
-  ], ['The thin progress indicator tracks section position; it does not indicate review completeness.', 'Missing text, unavailable versions, or changed source versions require attention before citing a passage.'], ['versions', 'source-availability', 'toolbox-guide'], home),
+  {
+    id: 'find-labeling', path: 'guides', group: 'Search labeling',
+    title: 'Find labeling by name or identifier', summary: 'Start with the identifier you have, then confirm the product.',
+    tags: ['brand', 'ingredient', 'NDC', 'application number'], action: home,
+    related: ['query-guide', 'search-scope', 'versions'],
+    sections: [
+      { heading: 'Choose an input', table: { columns: ['You have', 'Enter'], rows: [
+        ['Product name', 'Brand name or ingredient; inspect the suggested matches.'],
+        ['Application number', 'NDA, ANDA, or BLA number.'],
+        ['NDC', 'The code for the product or package you are investigating.'],
+      ] } },
+      { heading: 'Confirm the match', steps: ['Check the database scope and select the intended candidate.', 'Run the search. Open a result and check its identifiers, route, dosage form, and version.'], paragraphs: ['A similar name does not establish product equivalence.'] },
+    ],
+  },
+  {
+    id: 'query-guide', path: 'guides', group: 'Search labeling',
+    title: 'Search labeling',
+    summary: 'Find labeling, check the matches, and choose documents to review.',
+    tags: ['search', 'core workspace', 'query builder', 'AI Query Builder', 'review set'], action: home,
+    related: ['find-labeling', 'search-scope', 'manual-query', 'ai-query', 'match-expansion', 'search-results', 'query-codes'],
+    sections: [
+      { heading: 'The workflow', illustration: 'search-workflow' },
+      { heading: 'Build your query', table: {
+        columns: ['Start with', 'What to do'], rows: [
+          ['Names or known conditions', 'Enter them directly in the Query Builder.'],
+          ['A question in plain language', 'Use AI Query Builder, then review the generated conditions.'],
+        ],
+      }, paragraphs: ['Both routes use the same editable criteria. Leave Quick search unchecked to review an AI draft before searching.'] },
+      { heading: 'Check the scope', paragraphs: ['Search uses the database scope shown in the workspace—not necessarily Local. Available records and conditions depend on that scope.'] },
+    ],
+  },
+  {
+    id: 'manual-query', path: 'guides', group: 'Search labeling',
+    title: 'Build criteria manually',
+    summary: 'Add conditions, check their grouping, then run Search Labels.',
+    tags: ['manual search', 'criteria', 'AND', 'OR', 'ingredient', 'route', 'section', 'grouping'], action: home,
+    related: ['query-guide', 'search-scope', 'match-expansion', 'ai-query', 'search-results', 'query-codes'],
+    sections: [
+      { heading: 'Set up the search', steps: [
+        'Check Search database. It determines which records and conditions are available.',
+        'Enter product names or identifiers. Confirm the suggested matches.',
+        'Add the section and text or medical terms you need. Review any selected categorical chips.',
+      ] },
+      { heading: 'Combine conditions', paragraphs: ['Within one group, conditions apply together (AND). Add Alternative Criteria Group accepts either group (OR). Try the example below.'], illustration: 'criteria-logic' },
+      { heading: 'Before clicking Search Labels', steps: [
+        'Check the selected names, terms, section, and chips.',
+        'For a product containing both ingredients, verify that the conditions require both. A list of names may mean alternatives.',
+        'Check Exact match: it controls related-entity expansion, separately from equals or contains within a condition.',
+      ] },
+    ],
+  },
+  {
+    id: 'ai-query', path: 'guides', group: 'Search labeling',
+    title: 'Use AI to draft search criteria', summary: 'Describe the search, inspect the draft, then run it.',
+    tags: ['AI Query Builder', 'Quick search', 'Build Criteria', 'external AI'], action: home,
+    related: ['manual-query', 'match-expansion', 'query-codes'],
+    sections: [
+      { heading: 'Build and review', steps: ['Enter your request in AI Query Builder. Leave Quick search unchecked.', 'Click Build Criteria. Check names, terms, sections, AND/OR groups, and selected chips.', 'Correct the draft, then click Search Labels.'] },
+      { heading: 'Other starting points', table: { columns: ['Option', 'What changes'], rows: [
+        ['Quick search', 'Runs a successful translation immediately, without criteria confirmation.'],
+        ['Restore Query', 'Loads saved conditions from a query code.'],
+        ['External AI', 'Use the provided query instructions, then import and check the generated conditions.'],
+      ] } },
+    ],
+  },
+  {
+    id: 'search-results', path: 'guides', group: 'Search labeling',
+    title: 'Read and refine your search results', summary: 'Check what matched before narrowing or exporting the set.',
+    tags: ['results', 'filters', 'facets', 'total', 'Back to search'], action: home,
+    related: ['manual-query', 'no-results', 'query-codes', 'read-labeling'],
+    sections: [
+      { heading: 'Read the numbers', table: { columns: ['Display', 'Meaning'], rows: [
+        ['Underlying total', 'Records matching the query before sidebar filters.'],
+        ['Filtered total', 'Records remaining after the active filters.'],
+        ['Facet counts', 'Category counts for the underlying query, without sidebar filters.'],
+      ] }, paragraphs: ['These are labeling-record counts, not necessarily unique-drug counts.'] },
+      { heading: 'Refine the set', steps: ['Open representative and unexpected matches. Check product identity, version, and the source passage.', 'Use sidebar filters to narrow the set; use Back to search to change the criteria.', 'If results are missing, check scope, terms, and filters. Before exporting, check which records will be included.'] },
+    ],
+  },
+  {
+    id: 'query-codes', path: 'guides', group: 'Search labeling',
+    title: 'Save and restore a search', summary: 'A query code saves conditions and filters, not a frozen result set.',
+    tags: ['query code', 'FDALABEL-Q1', 'Copy Query Code', 'Restore Query'], action: home,
+    related: ['search-results', 'search-scope', 'review-record'],
+    sections: [
+      { heading: 'Save → restore → check', steps: ['From the results export menu, choose Copy Query Code. Copy the complete FDALABEL-Q1 code.', 'Paste it into AI Query Builder and choose Restore Query.', 'Check scope, conditions, Exact match, and filters before searching again.'] },
+      { heading: 'Keep the evidence separately', paragraphs: ['Save the reviewed document versions and exports alongside the code. Data can change between searches; restoring a code does not grant additional access.', 'Shared codes contain readable search information. Do not include confidential content.'] },
+    ],
+  },
+  {
+    id: 'saved-work', path: 'guides', group: 'Dashboard',
+    title: 'Dashboard overview', summary: 'Return to saved review collections and their labeling.',
+    tags: ['Dashboard', 'Task', 'Project', 'saved labeling'], action: { href: '/dashboard', label: 'Open My Dashboard' },
+    related: ['project-guide', 'saved-labels', 'read-labeling'],
+    sections: [
+      { heading: 'Find your work', steps: ['Open My Dashboard from the account menu.', 'Search or filter the task list, then open a task.', 'Choose its labeling list to reopen a document. Saved comparisons appear in a separate tab.'] },
+      { heading: 'Names in the interface', paragraphs: ['Dashboard calls a saved review project a Task. The Projects action in a labeling workspace adds that labeling to a collection. Use a personal account for saved work.'] },
+    ],
+  },
+  {
+    id: 'project-guide', path: 'guides', group: 'Dashboard',
+    title: 'Create and manage a task', summary: 'Create a collection for a review question.',
+    tags: ['project', 'Create Task', 'New Task', 'delete', 'tags'], action: { href: '/dashboard', label: 'Open My Dashboard' },
+    related: ['saved-work', 'saved-labels'],
+    sections: [
+      { heading: 'Create', steps: ['Open Create Task on Dashboard and choose New Task.', 'Enter a name that identifies the review question.', 'Create an empty task, or use the optional file-import controls to populate it.'] },
+      { heading: 'Manage', paragraphs: ['Use task search, tags, and sorting to find a collection. Open it to manage its contents. Deleting a project requires confirmation; check that it is the intended collection.'] },
+    ],
+  },
+  {
+    id: 'saved-labels', path: 'guides', group: 'Dashboard',
+    title: 'Add, remove, and reopen labeling', summary: 'Maintain the documents in a saved review collection.',
+    tags: ['Projects', 'Add to Task', 'Remove from Task', 'saved labels'], action: { href: '/dashboard', label: 'Open My Dashboard' },
+    related: ['saved-work', 'project-guide', 'versions', 'highlights-guide'],
+    sections: [
+      { heading: 'Add', steps: ['From a labeling workspace, open Projects and choose the target collection.', 'From search results, select labeling records and use the available add-to-task action.', 'Open the collection on Dashboard to confirm its contents.'] },
+      { heading: 'Reopen or remove', paragraphs: ['Click a saved labeling name to reopen it. Check the displayed version again—saving a set is not the same as pinning a historical document.', 'Use Remove from Task to remove a saved entry. This removes it from the collection, not from the source labeling database.'] },
+    ],
+  },
+  {
+    id: 'read-labeling', path: 'guides', group: 'Labeling workspace',
+    title: 'Navigate a labeling', summary: 'Find a section, inspect product details, and move through the document.',
+    tags: ['navigation', 'Contents', 'Label details', 'Find', 'Focus reading'], action: home,
+    related: ['versions', 'highlights-guide', 'notes-guide', 'label-chat-guide', 'label-export-guide'],
+    sections: [
+      { heading: 'Find your place', table: { columns: ['Control', 'Use it to'], rows: [
+        ['Contents', 'Open the section list and jump to a heading. Toggle it off for more reading width.'],
+        ['Label details', 'Inspect product metadata. Collapse details to regain space.'],
+        ['Browser Find (Ctrl+F / Cmd+F)', 'Find text in the rendered document. Read surrounding text and table footnotes.'],
+        ['Focus reading', 'Hide the global navigation while reading; Exit focus restores it.'],
+        ['More', 'Find actions that do not fit in the toolbar at the current window width.'],
+      ] } },
+      { heading: 'Check the document', paragraphs: ['Confirm the product and version before taking notes. The thin progress line shows section position, not review completion.'] },
+    ],
+  },
+  {
+    id: 'highlights-guide', path: 'guides', group: 'Labeling workspace',
+    title: 'Highlight source text', summary: 'Mark a passage you want to revisit.',
+    tags: ['highlight', 'selection', 'color', 'annotation'], action: home,
+    related: ['read-labeling', 'notes-guide', 'label-export-guide'],
+    sections: [
+      { heading: 'Create a highlight', steps: ['Select text within the labeling.', 'Choose Highlight in the selection toolbar, then choose a color.', 'Click the marked passage to inspect it or use Delete to remove the saved annotation.'] },
+      { heading: 'Find it again', paragraphs: ['Open Notes in the document toolbar and choose the Highlight entry to return to the passage. Saving annotations requires permission for your account.'] },
+    ],
+  },
+  {
+    id: 'notes-guide', path: 'guides', group: 'Labeling workspace',
+    title: 'Add comments and find notes', summary: 'Attach a comment to source text; use Notes to revisit it.',
+    tags: ['Notes', 'Comment', 'Save', 'annotations', 'QA'], action: home,
+    related: ['highlights-guide', 'read-labeling', 'label-chat-guide', 'label-export-guide'],
+    sections: [
+      { heading: 'Comment on a passage', steps: ['Select the source text and choose Comment in the selection toolbar.', 'Enter your observation and click Save.', 'Click the annotated passage to read the comment or delete it.'] },
+      { heading: 'Use the Notes list', table: { columns: ['Entry', 'What it represents'], rows: [
+        ['Comment', 'A remark attached to selected source text.'],
+        ['Highlight', 'A marked passage.'],
+        ['QA', 'A question-and-answer annotation displayed on the document, when present.'],
+      ] }, paragraphs: ['Choose an entry to return to its location. Notes lists annotations currently displayed on the document; it is not a separate blank notebook.'] },
+    ],
+  },
+  {
+    id: 'label-chat-guide', path: 'guides', group: 'Labeling workspace',
+    title: 'Ask AI about the current labeling', summary: 'Use AI Chat alongside the document you are reading.',
+    tags: ['AI Chat', 'AI Assistant', 'Reset Chat', 'conversation'], action: home,
+    related: ['read-labeling', 'notes-guide', 'evidence-types', 'ai-preferences'],
+    sections: [
+      { heading: 'Ask and check', steps: ['Open AI Chat from the labeling toolbar.', 'Ask a focused question. For example: “Summarize the monitoring instructions and identify the relevant section.”', 'Find the supporting passage in the document and check the answer against it.'] },
+      { heading: 'Manage the conversation', paragraphs: ['Close Chat hides the panel. Reset Chat clears the conversation after confirmation. History is stored in this browser for the labeling set; check the version before continuing an older conversation.', 'Chat history is separate from saved comments and is not included in a section export.'] },
+    ],
+  },
+  {
+    id: 'label-export-guide', path: 'guides', group: 'Labeling workspace',
+    title: 'Export labeling sections', summary: 'Choose sections and download their content.',
+    tags: ['export', 'HTML', 'XML', 'TEXT', 'GENERATE EXPORT FILE'], action: home,
+    related: ['read-labeling', 'notes-guide', 'search-results', 'review-record'],
+    sections: [
+      { heading: 'Export', steps: ['Open Export in the labeling toolbar or More menu.', 'Select the sections you need. Use ALL or CLEAR to adjust the selection.', 'Choose HTML, XML, or TEXT, then click GENERATE EXPORT FILE.'] },
+      { heading: 'Check the file', paragraphs: ['Confirm the product, source version, and selected content before using the file. Section exports do not include personal highlights, comments, or chat history.', '“Highlights of Prescribing Information” is a source-document section, not your personal highlighting. Search-result exports are described separately.'] },
+    ],
+  },
   guide('toolbox-guide', 'Read and preserve evidence', 'Choose tools in Cards or Table view', 'Find an appropriate analysis without losing the labeling context.', [
     'Open Toolbox from the labeling workspace. Use the task-to-tool map below if you are unsure where to start.',
     'Search by tool name or purpose, filter a category, and switch between Cards and Table. Both views share the same filters.',
@@ -83,12 +237,6 @@ export const ARTICLES: WikiArticle[] = [
     'Review a specific clinical question: use Examine where available. For selected packaging images use Image Analysis or Labeling Visual Review according to the intended task.',
     'Find structurally related products: use Chemical Structure Search; then inspect the resulting labeling and product context.',
   ], ['Check whether an output is original evidence, an annotation, an aggregate, or an AI interpretation.', 'Open label-specific tools from a selected labeling; this handbook does not create a substitute product context.'], ['pv-guide', 'faers-guide', 'compare-guide', 'visual-guide', 'agent-guide']),
-  guide('saved-work', 'Read and preserve evidence', 'Save notes, projects, and exports', 'Keep the review question, selected evidence, and your interpretation together.', [
-    'Use your personal Dashboard and project actions to organize a review cohort where these actions are enabled.',
-    'Record observations using the available Notes or annotation controls. Distinguish source quotations from your own interpretation.',
-    'Export from the relevant result table or labeling action. Read the export dialog to determine the selected records, sections, format, and active filters.',
-    'Inspect the exported file before using it in a review record. Different tools expose different fields and export scopes.',
-  ], ['Record product/version identifiers and the date of your analysis alongside the exported material.', 'Do not assume notes are shared with colleagues or that exporting a table exports every matching record.'], ['review-record', 'query-codes'], { href: '/dashboard', label: 'Open My Dashboard' }),
   guide('pv-guide', 'Organize safety evidence', 'Generate a PV Profile and review QC findings', 'Use a structured safety profile as an index back to labeling evidence.', [
     'Open PV-Profile from the selected labeling’s Toolbox and confirm the document version before generation.',
     'Review extracted terms, source quotations, section locations, and any reported drug/comparator frequency information.',
@@ -156,16 +304,31 @@ export const ARTICLES: WikiArticle[] = [
     { heading: 'Dates and coverage', paragraphs: ['Read each date according to its displayed field. Do not substitute a labeling effective date for an approval date, a database refresh date, or the date of your review.', 'DailyMed describes in-use labeling, which can differ from the latest FDA-approved labeling. A label appearing in a repository does not alone establish its approval status.'] },
     { heading: 'Reviewer checks', steps: ['Confirm identifiers on every comparison input and exported record.', 'Keep source/version substitutions or unavailable historical documents explicit in your review record.'] },
   ], ['find-labeling', 'history-guide', 'source-availability'], [dailyMed]),
-  method('search-scope', 'Sources and scope', 'Understand search scope and coverage', 'Interpret a search in the context of the selected database, available records, and supported criteria.', [
-    { heading: 'Scope affects the question you can ask', paragraphs: ['Local searches support product metadata and limited section criteria such as Product Title and Initial U.S. Approval. Full labeling-text and MedDRA section searches require the appropriate available internal scope.', 'CDER-CBER and FDA ver. are different internal search scopes. Your account may not be permitted to choose every scope; inspect the scope shown in the application.'] },
-    { heading: 'What a match establishes', paragraphs: ['A search returns records matching supported conditions in that scope. It does not establish complete coverage of all products, regulatory approval, or therapeutic equivalence. Active filters can further narrow the displayed subset.'] },
-    { heading: 'Reviewer checks', steps: ['Record the scope, criteria, and filters.', 'Check representative positive matches and investigate unexpectedly missing products before interpreting totals.'] },
-  ], ['query-guide', 'match-expansion', 'no-results']),
-  method('match-expansion', 'Queries and terminology', 'Understand Exact match and term expansion', 'Inspect the selected entities rather than assuming a name or term means the same thing in every search.', [
-    { heading: 'Names and terms', paragraphs: ['Name resolution can suggest related brand, generic, or ingredient candidates. Exact match limits related-entity expansion; it is different from the equals/contains/starts-with operator of an individual criterion.', 'MedDRA searches support PT/LLT selections and related-term expansion where offered. Check the selected hierarchy and expanded candidates rather than inferring coverage from a single typed phrase.'] },
-    { heading: 'AI versus executed criteria', paragraphs: ['An AI draft can misread scope, names, negation, or AND/OR intent. The criteria you review and execute define the search, not the fluent explanation alone.'] },
-    { heading: 'Reviewer checks', steps: ['Inspect candidates and groups before execution.', 'Compare Exact match and expanded searches when sensitivity to terminology matters, documenting the difference.'] },
-  ], ['ai-query', 'query-guide', 'meddra-method']),
+  {
+    id: 'search-scope', path: 'methods', group: 'Sources and scope',
+    title: 'Understand search scope and coverage', summary: 'Search database tells you where the search runs and which conditions it supports.',
+    tags: ['Local', 'CDER-CBER', 'FDA ver.', 'database scope'], related: ['query-guide', 'manual-query', 'no-results'],
+    sections: [
+      { heading: 'Compare the scopes', table: { columns: ['Scope', 'Coverage'], rows: [
+        ['Local', 'Product metadata. Section criteria are limited to Product Title and Initial U.S. Approval.'],
+        ['CDER-CBER', 'Internal human-labeling scope, with supported labeling-text and MedDRA searches.'],
+        ['FDA ver.', 'Broader internal scope, including animal and other non-human labeling.'],
+      ] } },
+      { heading: 'Before interpreting results', paragraphs: ['Your account may have a fixed scope. Confirm the displayed scope and supported conditions; the core workspace is not limited to Local.', 'A match does not establish complete product coverage, approval status, or therapeutic equivalence.'] },
+    ],
+  },
+  {
+    id: 'match-expansion', path: 'methods', group: 'Queries and terminology',
+    title: 'Understand Exact match and term expansion', summary: 'Check the selected names and terms—not just the phrase you typed.',
+    tags: ['Exact match', 'expansion', 'PT', 'LLT', 'equals', 'contains'], related: ['manual-query', 'ai-query', 'meddra-method'],
+    sections: [
+      { heading: 'Two separate controls', table: { columns: ['Control', 'What it determines'], rows: [
+        ['Exact match', 'Whether related entities are added through expansion.'],
+        ['Equals / contains / starts-with', 'How an individual identifier condition matches its value.'],
+      ] } },
+      { heading: 'Inspect the selected list', steps: ['Review brand, ingredient, and generic-name candidates. Remove unintended names.', 'For MedDRA conditions, inspect the selected PT/LLT and any expanded terms.', 'Recheck selections after changing Exact match. Compare expanded and unexpanded searches when the distinction matters.'] },
+    ],
+  },
   method('no-results', 'Queries and terminology', 'What does no match mean?', 'An empty search or absent highlight is a starting point for checking coverage, not a universal negative finding.', [
     { heading: 'Possible explanations', paragraphs: ['The product or version may be absent, the selected scope may not support the criterion, the wording may differ, or filters may exclude the record. An annotation/highlight adds its own matching and source-availability limits.'] },
     { heading: 'Reviewer checks', steps: ['Check product identity and data scope.', 'Relax filters and inspect resolved names or terms.', 'Search an available source passage directly and record what was and was not examined.'] },
@@ -238,10 +401,10 @@ export const ARTICLES: WikiArticle[] = [
 export const LEGACY_TOPICS: Record<string, string> = {
   '1-1-account-login': 'account-access', '1-2-personal-dashboard': 'saved-work',
   '2-1-quick-search': 'find-labeling', '2-2-plain-language-search': 'ai-query', '2-3-reading-label': 'read-labeling',
-  '3-1-qb-market-filters': 'query-guide', '3-2-qb-dosage-routes': 'query-guide', '3-3-qb-safety-sections': 'query-guide',
+  '3-1-qb-market-filters': 'manual-query', '3-2-qb-dosage-routes': 'manual-query', '3-3-qb-safety-sections': 'manual-query',
   '3-4-ai-quick-search': 'ai-query', '3-5-portable-query-codes': 'query-codes', '3-6-external-ai-query': 'ai-query',
-  '3-7-scope-and-expansion': 'search-scope', '3-8-result-filters': 'query-codes',
-  '4-1-export-excel': 'saved-work', '4-2-task-organization': 'saved-work',
+  '3-7-scope-and-expansion': 'search-scope', '3-8-result-filters': 'search-results',
+  '4-1-export-excel': 'search-results', '4-2-task-organization': 'project-guide',
   '5-1-ae-viewer': 'ae-guide', '5-2-meddra-highlighting': 'meddra-method',
   '6-1-pv-evidence-grid': 'pv-guide', '6-2-pv-qc-audit': 'pv-method',
   '7-1-labelcomp-rld': 'compare-guide', '7-2-labelcomp-history': 'history-guide', '7-3-labelcomp-ai-summary': 'compare-guide',
@@ -250,5 +413,5 @@ export const LEGACY_TOPICS: Record<string, string> = {
 };
 export function searchableText(article: WikiArticle): string {
   return [article.title, article.summary, article.group, ...article.tags,
-    ...article.sections.flatMap(section => [section.heading, ...(section.paragraphs || []), ...(section.steps || [])])].join(' ').toLowerCase();
+    ...article.sections.flatMap(section => [section.heading, ...(section.paragraphs || []), ...(section.steps || []), ...(section.table?.columns || []), ...(section.table?.rows.flat() || [])])].join(' ').toLowerCase();
 }
