@@ -24,7 +24,7 @@ server {
     # at the 3,000-row cap -- past nginx's 1 MB default.
     client_max_body_size 16m;
 
-    # Test SAML IdP (removed from rapid-generated configurations).
+    # Test SAML IdP (removed from FDA SSO configurations).
     location ^~ /sso/ {
         proxy_pass http://keycloak:8080;
         proxy_set_header Host $http_host;

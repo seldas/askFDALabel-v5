@@ -83,12 +83,13 @@ def run_apptainer(args, env_vars, local_db):
 
     include_nginx = nginx_enabled(args)
 
+    sso_config = resolve_sso(env_vars, args.mode, args.rapid, include_nginx, 'apptainer', args.sso_provider)
     services = ['redis', 'backend', 'celery', 'frontend']
     if local_db:
         services.insert(0, 'db')
     if include_nginx:
         services.append('nginx')
-    if not args.rapid:
+    if sso_config['SSO_PROVIDER'] == 'keycloak':
         services.insert(0, 'keycloak')
 
     if args.down:
@@ -116,8 +117,7 @@ def run_apptainer(args, env_vars, local_db):
     db_image       = APPTAINER_IMAGES / 'fdalabel-v3-db.sif'
     nginx_image    = APPTAINER_IMAGES / 'fdalabel-v3-nginx.sif'
     keycloak_image = APPTAINER_IMAGES / 'fdalabel-v3-keycloak.sif'
-    sso_config = resolve_sso(env_vars, args.mode, args.rapid, include_nginx, 'apptainer')
-    if not args.rapid:
+    if sso_config['SSO_PROVIDER'] == 'keycloak':
         keycloak_folder, keycloak_credentials = prepare_keycloak(ROOT, sso_config)
         if args.build or not keycloak_image.exists():
             _build_keycloak = True
@@ -129,7 +129,7 @@ def run_apptainer(args, env_vars, local_db):
         _run(['apptainer', 'build', '--fakeroot', '--force',
               str(sif_path), str(def_path)], args.dry_run)
 
-    if not args.rapid and _build_keycloak:
+    if sso_config['SSO_PROVIDER'] == 'keycloak' and _build_keycloak:
         _build_sif(keycloak_image, APPTAINER_DIR / 'keycloak.def')
 
     # --- Build or refresh custom .def images ---
@@ -199,7 +199,7 @@ def run_apptainer(args, env_vars, local_db):
         'APPTAINERENV_POSTGRES_PASSWORD':     pg_password,
     })
     runtime_env.update({'APPTAINERENV_' + k: str(v) for k, v in sso_config.items() if not k.startswith('KEYCLOAK_')})
-    if not args.rapid:
+    if sso_config['SSO_PROVIDER'] == 'keycloak':
         runtime_env.update({
             'APPTAINERENV_KC_HOSTNAME': sso_config['KEYCLOAK_PUBLIC_URL'],
             'APPTAINERENV_KC_HTTP_RELATIVE_PATH': sso_config['KEYCLOAK_RELATIVE_PATH'],
@@ -212,9 +212,9 @@ def run_apptainer(args, env_vars, local_db):
     old_env = os.environ.copy()
     os.environ.update(runtime_env)
     try:
-        if args.rapid and not args.dry_run and _apptainer_instance_exists(APPTAINER_INSTANCES['keycloak']):
+        if sso_config['SSO_PROVIDER'] != 'keycloak' and not args.dry_run and _apptainer_instance_exists(APPTAINER_INSTANCES['keycloak']):
             _run(['apptainer', 'instance', 'stop', APPTAINER_INSTANCES['keycloak']], check=False)
-        if not args.rapid:
+        if sso_config['SSO_PROVIDER'] == 'keycloak':
             _start_apptainer_instance(
                 ['apptainer', 'instance', 'start', '--writable-tmpfs', '--bind',
                  f'{keycloak_folder / "db"}:/opt/keycloak/data,{keycloak_folder / "import"}:/opt/keycloak/data/import:ro',
@@ -261,11 +261,11 @@ def run_apptainer(args, env_vars, local_db):
 
         _start_apptainer_instance(
             ['apptainer', 'instance', 'start', '--bind', backend_bind_arg, str(backend_image), APPTAINER_INSTANCES['backend']],
-            APPTAINER_INSTANCES['backend'], args, restart_on_build=True,
+            APPTAINER_INSTANCES['backend'], args, restart_on_build=True, restart=args.sso_provider is not None,
         )
         _start_apptainer_instance(
             ['apptainer', 'instance', 'start', '--app', 'celery', '--bind', backend_bind_arg, str(backend_image), APPTAINER_INSTANCES['celery']],
-            APPTAINER_INSTANCES['celery'], args, restart_on_build=True,
+            APPTAINER_INSTANCES['celery'], args, restart_on_build=True, restart=args.sso_provider is not None,
         )
 
         frontend_binds = [
@@ -336,7 +336,8 @@ def run_apptainer(args, env_vars, local_db):
     app_url = sso_config['SSO_PUBLIC_ORIGIN'] + sso_config['SSO_APP_BASE'] + '/'
     print('\n[SUCCESS] AskFDALabel is running with Apptainer.')
     print(f'          UI: {app_url}')
-    if not args.rapid:
+    print(f'          SSO: {sso_config["SSO_PROVIDER"]}')
+    if sso_config['SSO_PROVIDER'] == 'keycloak':
         print(f'          Test SSO: {sso_config["KEYCLOAK_PUBLIC_URL"]}')
         print(f'          SSO credentials: {keycloak_folder / "credentials.json"}')
     print('          Persistent updates: data/monthly_updates/ (host-owned by the launching user)')
@@ -419,14 +420,14 @@ def nginx_enabled(args):
     return not getattr(args, 'no_nginx', False) and (getattr(args, 'nginx', False) or args.mode == 'prod' or args.rapid)
 
 
-def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=None, env_vars=None):
+def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=None, env_vars=None, sso_provider=None):
     """Builds the dictionary representation of docker-compose based on options."""
     services = {}
     if include_nginx is None:
         include_nginx = mode == 'prod' or rapid
     env_vars = load_env(ROOT / '.env') if env_vars is None else env_vars
-    sso_config = resolve_sso(env_vars, mode, rapid, include_nginx)
-    if not rapid:
+    sso_config = resolve_sso(env_vars, mode, rapid, include_nginx, sso_provider=sso_provider)
+    if sso_config['SSO_PROVIDER'] == 'keycloak':
         keycloak_folder, credentials = prepare_keycloak(ROOT, sso_config)
         # Named volumes allow Keycloak's non-root uid to write its persistent DB.
         services['keycloak'] = {
@@ -563,7 +564,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
         },
         "restart": "always"
     }
-    backend_service['depends_on'] = ['redis'] + ([] if rapid else ['keycloak'])
+    backend_service['depends_on'] = ['redis'] + (['keycloak'] if sso_config['SSO_PROVIDER'] == 'keycloak' else [])
 
     if not rapid:
         backend_service["build"] = {
@@ -682,7 +683,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
                 "dockerfile": "Dockerfile"
             },
             "container_name": "fdalabel-v3-nginx",
-            "depends_on": ["frontend", "backend"] + ([] if rapid else ['keycloak']),
+            "depends_on": ["frontend", "backend"] + (['keycloak'] if sso_config['SSO_PROVIDER'] == 'keycloak' else []),
             "ports": ["80:80", "443:443"],
             "healthcheck": {
                 "test": ["CMD-SHELL", f"curl -f http://localhost{sso_config['SSO_APP_BASE']}/ || exit 1"],
@@ -730,7 +731,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
             }
         }
     }
-    if not rapid:
+    if sso_config['SSO_PROVIDER'] == 'keycloak':
         compose_dict['volumes'] = {f'keycloak-{keycloak_folder.name}': {}}
     return compose_dict
 
@@ -784,6 +785,8 @@ def main():
                         help="Generate docker-compose.yml but do not execute any docker compose commands")
     parser.add_argument("--rapid", action="store_true",
                         help="Start in rapid mode: FDA SSO, internal Nginx, prebuilt images and remote database")
+    parser.add_argument('--sso-provider', choices=['fda', 'keycloak'], default=None,
+                        help='SSO provider (default: fda for rapid, keycloak otherwise)')
     nginx_flags = parser.add_mutually_exclusive_group()
     nginx_flags.add_argument("--nginx", action="store_true",
                         help="Include Nginx (default in prod and rapid; optional in dev)")
@@ -798,11 +801,11 @@ def main():
     # Load environment variables to resolve DB mode
     env_vars = load_env(ROOT / '.env')
     sso = resolve_sso(env_vars, args.mode, args.rapid,
-                      nginx_enabled(args), args.runtime)
-    if args.rapid and not args.down:
+                      nginx_enabled(args), args.runtime, args.sso_provider)
+    if sso['SSO_PROVIDER'] == 'fda' and not args.down:
         missing = [key for key in ('FDA_SAML_ENTITY_ID', 'FDA_SAML_ACS_URL') if not env_vars.get(key)]
         if missing:
-            print('[WARNING] FDA SSO requires registered values: ' + ', '.join(missing))
+            print("[WARNING] FDA SSO requires this server's registered values: " + ", ".join(missing))
             if not args.dry_run:
                 sys.exit(1)
     
@@ -828,12 +831,13 @@ def main():
     print(f"Generating Docker Compose configuration...")
     print(f"  Mode:       {args.mode.upper()}")
     print(f"  Rapid:      {args.rapid}")
+    print(f"  SSO:        {sso['SSO_PROVIDER']}")
     print(f"  Efficient:  {args.efficient}")
     print(f"  Local DB:   {local_db_active}")
     print(f"  Nginx:      {include_nginx}")
 
     # Generate dictionary structure
-    compose_dict = generate_compose_dict(args.mode, args.efficient, local_db_active, args.rapid, include_nginx, env_vars)
+    compose_dict = generate_compose_dict(args.mode, args.efficient, local_db_active, args.rapid, include_nginx, env_vars, args.sso_provider)
     
     # Convert to YAML format
     yaml_content = "# Generated dynamically by start_server.py. Do not edit directly.\n"
@@ -884,7 +888,7 @@ def main():
             print("\n" + "=" * 60)
             print(f"[SUCCESS] askFDALabel ({args.mode.upper()} mode) is up and running!")
             print(f"          Application UI: {app_url}")
-            if not args.rapid:
+            if sso['SSO_PROVIDER'] == 'keycloak':
                 folder, _ = prepare_keycloak(ROOT, sso)
                 print(f'          Test SSO:       {sso["KEYCLOAK_PUBLIC_URL"]}')
                 print(f'          Credentials:    {folder / "credentials.json"}')

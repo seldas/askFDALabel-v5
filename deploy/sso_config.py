@@ -11,10 +11,14 @@ KEYCLOAK_REALM_REVISION = 1
 AUTH_PATH = '/api/dashboard/auth/saml'
 
 
-def resolve_sso(env, mode, rapid=False, nginx=False, runtime='docker'):
+def resolve_sso(env, mode, rapid=False, nginx=False, runtime='docker', sso_provider=None):
+    provider = sso_provider or ('fda' if rapid else 'keycloak')
+    if provider not in ('fda', 'keycloak'):
+        raise ValueError('SSO provider must be fda or keycloak')
+    fda = provider == 'fda'
     registered_acs = env.get('FDA_SAML_ACS_URL', '')
     origin = env.get('SSO_PUBLIC_ORIGIN', '').rstrip('/')
-    if rapid and registered_acs:
+    if fda and registered_acs:
         parsed_acs = urlsplit(registered_acs)
         origin = f'{parsed_acs.scheme}://{parsed_acs.netloc}'
     # Docker prod is also used on HPC. Use its configured public address rather
@@ -33,11 +37,10 @@ def resolve_sso(env, mode, rapid=False, nginx=False, runtime='docker'):
         origin = f'{"https" if tls else "http"}://{host}{port if tls else (":8080" if runtime == "apptainer" else "")}' if nginx else f'http://{host}:8841'
     app_base = (env.get('NEXT_PUBLIC_APP_BASE') or env.get('NEXT_PUBLIC_DASHBOARD_BASE') or '/fdalabel-v3').rstrip('/')
     api_base = env.get('NEXT_PUBLIC_API_BASE', '/fdalabel-v3_api').rstrip('/')
-    provider = 'fda' if rapid else 'keycloak'
-    entity = env.get('FDA_SAML_ENTITY_ID', '') if rapid else (env.get('KEYCLOAK_SP_ENTITY_ID') or origin + api_base + AUTH_PATH + '/metadata')
-    acs = registered_acs if rapid else origin + api_base + AUTH_PATH + '/acs'
+    entity = env.get('FDA_SAML_ENTITY_ID', '') if fda else (env.get('KEYCLOAK_SP_ENTITY_ID') or origin + api_base + AUTH_PATH + '/metadata')
+    acs = registered_acs if fda else origin + api_base + AUTH_PATH + '/acs'
     # FDA can have a registered ACS path different from our default route.
-    acs_path = (env.get('FDA_SAML_ACS_PATH') or AUTH_PATH + '/acs') if rapid else AUTH_PATH + '/acs'
+    acs_path = (env.get('FDA_SAML_ACS_PATH') or AUTH_PATH + '/acs') if fda else AUTH_PATH + '/acs'
     config = {
         'SSO_PROVIDER': provider,
         'SSO_PUBLIC_ORIGIN': origin,
@@ -49,7 +52,7 @@ def resolve_sso(env, mode, rapid=False, nginx=False, runtime='docker'):
         'SAML_REDIS_URL': 'redis://redis:6379/0' if runtime == 'docker' else env.get('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0'),
         'SESSION_COOKIE_SECURE': 'true' if origin.startswith('https:') else 'false',
     }
-    if rapid:
+    if fda:
         config['SAML_IDP_METADATA_FILE'] = '/deploy/SSO_config/sso2.xml'
     else:
         public = env.get('KEYCLOAK_PUBLIC_URL', '').rstrip('/') or (origin + '/sso' if nginx else 'http://' + urlsplit(origin).hostname + ':8843')
@@ -75,7 +78,7 @@ def resolve_sso(env, mode, rapid=False, nginx=False, runtime='docker'):
                 raise ValueError(f'{name} must be an absolute HTTP(S) URL without credentials, query or fragment')
     if urlsplit(origin).path:
         raise ValueError('SSO_PUBLIC_ORIGIN must contain only scheme, host and optional port')
-    if rapid:
+    if fda:
         if registered_acs and not origin.startswith('https://'):
             raise ValueError('FDA SSO requires an HTTPS SSO_PUBLIC_ORIGIN')
         if acs and not acs.startswith('https://'):

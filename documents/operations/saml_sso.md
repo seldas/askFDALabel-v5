@@ -1,4 +1,4 @@
-# SAML login: FDA in rapid, Keycloak in dev/prod
+# SAML login: selectable FDA or Keycloak provider
 
 `start_server.py` automatically selects the identity provider:
 
@@ -7,9 +7,10 @@
 | `--mode dev` | Keycloak | Started automatically |
 | `--mode prod` | Keycloak | Started automatically |
 | `--rapid` | FDA SSO | Not started; an old Docker Keycloak orphan is removed |
+| `--mode dev/prod --sso-provider fda` | FDA SSO | Not started |
 
 This applies to both Docker and HPC's rootless Apptainer runtime. The app's
-`prod` mode still uses a **test** IdP. Keycloak has a single-node file database
+`prod` mode uses a **test** IdP unless `--sso-provider fda` is specified. Keycloak has a single-node file database
 and generated test credentials; it is not the institutional production IdP.
 
 ## Configuration
@@ -103,6 +104,38 @@ the current startup; after a profile change, passwords from older profiles do
 not apply. For Docker, rerun the startup command to recreate the container with
 its new volume. For Apptainer, stop the old instances before starting again.
 
+### FDA SSO on gpu01 or another non-rapid server
+
+SSO can be selected independently of deployment mode and database settings:
+
+```bash
+python start_server.py --mode prod --sso-provider fda
+# Docker instead of the default Apptainer runtime:
+python start_server.py --runtime docker --mode prod --sso-provider fda
+```
+
+Set `FDA_SAML_ENTITY_ID` and `FDA_SAML_ACS_URL` in the repo-root `.env` to
+values registered with FDA SSO for this server. Set `FDA_SAML_ACS_PATH` to
+the backend path after proxy prefix stripping. Do not reuse the pre-prod
+registration for gpu01 unless that is the actual registered public endpoint.
+For example, a gpu01 ACS URL must use its registered HTTPS hostname and port.
+FDA public origin is derived from `FDA_SAML_ACS_URL`; `SSO_PUBLIC_ORIGIN`
+does not override it. The FDA IdP metadata remains `deploy/SSO_config/sso2.xml`.
+
+`--sso-provider fda` skips local Keycloak and generates the registered ACS
+proxy route, with no `/sso/` upstream. It preserves the selected deployment
+mode, local/remote database selection, image build behavior and non-rapid TLS
+settings (`NGINX_CERT_FILE` / `NGINX_KEY_FILE`). With `--no-nginx`, the external
+proxy must forward the registered ACS POST to the configured Flask path.
+
+When an explicit `--sso-provider` is supplied, Apptainer restarts backend and
+Celery instances so their SSO environment is updated. Docker Compose recreates
+services whose configuration changes. Switching to FDA also stops the managed
+local Keycloak instance; its stored data is retained.
+
+Without the flag, defaults remain FDA for `--rapid` and Keycloak otherwise.
+Use `--sso-provider keycloak` to explicitly select the test provider.
+
 ### FDA / rapid
 
 The examples record this pre-prod SP registration, now populated in both templates:
@@ -117,7 +150,7 @@ FDA_SAML_ACS_PATH=/api/auth/saml
 prefix. If the registered ACS uses another path, configure that route and ensure
 the upstream sends its POST to Flask. These registered values are required for
 actual rapid startup; `--dry-run` warns about missing values and remains usable.
-Rapid derives its public origin from the registered ACS URL; `SSO_PUBLIC_ORIGIN`
+FDA mode derives its public origin from the registered ACS URL; `SSO_PUBLIC_ORIGIN`
 remains a local/HPC Keycloak setting. The FDA ACS must use HTTPS. Next's existing
 base-path-independent `/api/:path*` rewrite remains available. `--rapid` now
 starts bundled nginx by default. It generates an exact location from the path

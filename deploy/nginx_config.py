@@ -39,7 +39,7 @@ def generate_nginx_config(root, config, rapid, runtime='docker', env=None):
     api_base = _path(config['SSO_API_BASE'])
     backend = 'http://backend:8842' if runtime == 'docker' else 'http://127.0.0.1:8842'
     acs = ''
-    if rapid and config['SAML_ACS_URL']:
+    if config['SSO_PROVIDER'] == 'fda' and config['SAML_ACS_URL']:
         external_path = _path(urlsplit(config['SAML_ACS_URL']).path)
         backend_path = _path(config['SAML_ACS_PATH'])
         acs = f'''    # Registered FDA ACS: proxy the POST directly; never redirect it.
@@ -65,7 +65,7 @@ def generate_nginx_config(root, config, rapid, runtime='docker', env=None):
         # Escape literal path characters in the rewrite's regular expression.
         content = content.replace('rewrite ^' + api_base + '/', 'rewrite ^' + re.escape(api_base) + '/')
         content = content.replace('    # FDA_ACS_ROUTE', acs.rstrip())
-        if rapid:
+        if config['SSO_PROVIDER'] == 'fda':
             content = re.sub(r'    # Test SAML IdP.*?    # End test SAML IdP\n', '', content, flags=re.S)
         # Preserve the configured public port when redirecting (e.g. HPC :8443).
         origin = config['SSO_PUBLIC_ORIGIN']
