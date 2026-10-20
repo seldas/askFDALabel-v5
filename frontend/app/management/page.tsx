@@ -11,6 +11,10 @@ import { useRouter } from 'next/navigation';
 interface User {
   id: number;
   username: string;
+  display_name?: string;
+  email?: string | null;
+  office?: string | null;
+  is_sso?: boolean;
   is_admin: boolean;
   role?: 'user' | 'developer' | 'admin';
   can_comment?: boolean;
@@ -606,6 +610,7 @@ export default function ManagementPage() {
         setUsers([{
           id: session.id || 0,
           username: session.username || 'Unknown',
+          display_name: session.display_name,
           is_admin: false,
           role: 'user',
           ai_provider: session.ai_provider || 'elsa',
@@ -1273,7 +1278,7 @@ export default function ManagementPage() {
                   <div style={{ flex: '1 1 200px' }}>
                     <input
                       type="text"
-                      placeholder="Search by username..."
+                      placeholder="Search by name, username or email..."
                       value={userSearch}
                       onChange={e => setUserSearch(e.target.value)}
                       className="mgmt-input"
@@ -1311,7 +1316,7 @@ export default function ManagementPage() {
                     <option value="last_login_asc">Last Login (Oldest)</option>
                     <option value="created_at_desc">Created (Newest)</option>
                     <option value="created_at_asc">Created (Oldest)</option>
-                    <option value="username_asc">Username (A-Z)</option>
+                    <option value="username_asc">Name (A-Z)</option>
                   </select>
                 </div>
 
@@ -1333,7 +1338,7 @@ export default function ManagementPage() {
                           .filter(u => {
                             if (userSearch.trim()) {
                               const q = userSearch.toLowerCase();
-                              if (!u.username.toLowerCase().includes(q)) return false;
+                              if (![u.display_name, u.username, u.email, u.office].some(value => value?.toLowerCase().includes(q))) return false;
                             }
                             if (userRoleFilter !== 'all') {
                               const r = u.role ?? (u.is_admin ? 'admin' : 'user');
@@ -1345,7 +1350,7 @@ export default function ManagementPage() {
                           })
                           .sort((a, b) => {
                             if (userSortBy === 'username_asc') {
-                              return a.username.localeCompare(b.username);
+                              return (a.display_name || a.username).localeCompare(b.display_name || b.username);
                             }
                             if (userSortBy === 'created_at_desc') {
                               return (b.created_at || '').localeCompare(a.created_at || '');
@@ -1389,9 +1394,9 @@ export default function ManagementPage() {
                                   textOverflow: 'ellipsis',
                                   whiteSpace: 'nowrap'
                                 }}
-                                title={user.username}
+                                title={user.display_name || user.username}
                               >
-                                {user.username}
+                                {user.display_name || user.username}
                               </div>
                               {user.is_active === false && (
                                 <span style={{ fontSize: '0.65rem', background: 'var(--fdl-red-050)', color: 'var(--fdl-red)', padding: '2px 6px', borderRadius: '2px', fontWeight: 800, marginTop: '2px', display: 'inline-block' }}>DEACTIVATED</span>
@@ -2933,7 +2938,7 @@ else:
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', borderBottom: '1px solid var(--fdl-line)', paddingBottom: '1rem' }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--fdl-ink)', fontWeight: 800 }}>
-                  Manage Account: {managingUser.username}
+                  Manage Account: {managingUser.display_name || managingUser.username}
                 </h3>
                 <div style={{ fontSize: '0.8rem', color: 'var(--fdl-canvas0)', marginTop: '4px' }}>
                   Role: <strong style={{ textTransform: 'capitalize' }}>{managingUser.role || (managingUser.is_admin ? 'Admin' : 'User')}</strong>
@@ -2952,6 +2957,15 @@ else:
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ background: 'var(--fdl-canvas)', padding: '1rem', border: '1px solid var(--fdl-line)', overflowWrap: 'anywhere' }}>
+                <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: '90px 1fr', gap: '8px' }}>
+                  <dt>Name</dt><dd style={{ margin: 0 }}>{managingUser.display_name || managingUser.username}</dd>
+                  <dt>Username</dt><dd style={{ margin: 0 }}>{managingUser.username}</dd>
+                  <dt>Email</dt><dd style={{ margin: 0 }}>{managingUser.email || '—'}</dd>
+                  <dt>Office</dt><dd style={{ margin: 0 }}>{managingUser.office || '—'}</dd>
+                </dl>
+              </div>
+              {managingUser.is_sso && <p style={{ margin: 0 }}>SSO account details and password are managed by the identity provider.</p>}
               {/* Password Section */}
               <div style={{ background: 'var(--fdl-canvas)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
                 <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink)', marginBottom: '0.5rem' }}>
@@ -2964,14 +2978,14 @@ else:
                     value={editPassword}
                     onChange={e => setEditPassword(e.target.value)}
                     className="mgmt-input"
-                    disabled={managingUser.is_active === false}
+                    disabled={managingUser.is_active === false || managingUser.is_sso === true}
                   />
                   <button
                     onClick={async () => {
                       await handleChangePassword(managingUser.id);
                     }}
                     className="btn-primary"
-                    disabled={!editPassword || managingUser.is_active === false}
+                    disabled={!editPassword || managingUser.is_active === false || managingUser.is_sso === true}
                   >
                     Save
                   </button>

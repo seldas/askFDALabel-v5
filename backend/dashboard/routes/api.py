@@ -1113,6 +1113,7 @@ def save_label_annotation():
         'project_id': new_ann.project_id,
         'is_global': new_ann.project_id is None,
         'username': current_user.username,
+        'display_name': current_user.display_name,
         'created_at': new_ann.created_at.isoformat() + 'Z'
     })
 
@@ -1165,6 +1166,7 @@ def get_label_annotations(set_id):
             'comment': ann.comment,
             'user_id': ann.user_id,
             'username': ann.user.username if ann.user else None,
+            'display_name': ann.user.display_name if ann.user else None,
             'created_at': ann.created_at.isoformat() + 'Z' if ann.created_at else None,
             'project_id': ann.project_id,  # helpful for debugging/UI
             'is_global': ann.project_id is None

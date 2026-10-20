@@ -13,6 +13,7 @@ export interface AnnotationData {
   comment?: string | null;
   user_id?: string | number | null;
   username?: string | null;
+  display_name?: string | null;
   created_at?: string | null;
 }
 
@@ -155,7 +156,7 @@ export default function LabelAnnotations({
           if (ann.color === 'none') return null;
           span.className = 'text-highlight';
           span.style.backgroundColor = ann.color || '#ffeb3b';
-          span.title = `Highlighted by ${ann.username || 'User'}`;
+          span.title = `Highlighted by ${ann.display_name || ann.username || 'User'}`;
         } else {
           span.className = 'text-comment';
           span.title = 'Click to view comment';
@@ -361,6 +362,7 @@ export default function LabelAnnotations({
           color: data.color,
           comment: data.comment,
           username: resData.username,
+          display_name: resData.display_name,
           user_id: resData.user_id || currentUserId,
           created_at: resData.created_at,
         });
@@ -518,7 +520,7 @@ export default function LabelAnnotations({
         >
           <div className="ann-meta">
             <span>
-              <strong>{readPopover.annotation.username || 'User'}</strong>
+              <strong>{readPopover.annotation.display_name || readPopover.annotation.username || 'User'}</strong>
             </span>
             <span>
               {readPopover.annotation.created_at

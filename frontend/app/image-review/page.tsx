@@ -938,7 +938,7 @@ function FindingDetails({
           />
           <span>🔒 Private (Only me)</span>
         </label>
-        <label className="ivr-visibility-option" title="Public comments are visible to all users, showing your username">
+        <label className="ivr-visibility-option" title="Public comments are visible to all users, showing your name">
           <input
             type="radio"
             name={`visibility-${finding.id}`}
@@ -957,7 +957,7 @@ function FindingDetails({
       </div>
       <p className="ivr-comment-visibility-hint">
         {decision.is_public
-          ? '🌐 Public: Visible to all reviewers and colleagues with your username.'
+          ? '🌐 Public: Visible to all reviewers and colleagues with your name.'
           : '🔒 Private (Default): Saved to database, visible only to your personal account.'}
       </p>
 
@@ -1029,7 +1029,7 @@ function FindingDetails({
               <div key={c.id} className="ivr-team-comment-item">
                 <div className="ivr-team-comment-header">
                   <span className="ivr-comment-author">
-                    <strong>@{c.username}</strong>
+                    <strong>@{c.display_name || c.username}</strong>
                     <span className="ivr-badge-public">Public</span>
                   </span>
                   <span className={`ivr-comment-decision is-${c.decision}`}>

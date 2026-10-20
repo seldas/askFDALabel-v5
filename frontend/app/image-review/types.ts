@@ -28,6 +28,7 @@ export type ReviewComment = {
   finding_id: number;
   user_id: number;
   username: string;
+  display_name?: string;
   set_id?: string | null;
   decision: 'unreviewed' | 'confirmed' | 'dismissed';
   comment: string;

@@ -27,12 +27,16 @@ def admin_required(f):
 @login_required
 @admin_required
 def get_users():
-    users = User.query.all()
+    users = User.query.options(db.selectinload(User.sso_identities)).all()
     return jsonify({
         'success': True,
         'users': [{
             'id': u.id,
             'username': u.username,
+            'display_name': u.display_name,
+            'email': u.sso_identities[0].email if u.sso_identities else None,
+            'office': u.sso_identities[0].office if u.sso_identities else None,
+            'is_sso': bool(u.sso_identities),
             'is_admin': u.is_admin,
             'role': u.effective_role,
             'can_select_db': u.can_select_database,

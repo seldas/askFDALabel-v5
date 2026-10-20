@@ -142,6 +142,15 @@ class User(UserMixin, db.Model):
     favorites = db.relationship('Favorite', backref='user', lazy=True)
     comparisons = db.relationship('FavoriteComparison', backref='user', lazy=True)
 
+    @property
+    def display_name(self):
+        """Human-readable SSO name, falling back to the local account name."""
+        for identity in self.sso_identities:
+            name = (identity.display_name or '').strip()
+            if name:
+                return name
+        return self.username
+
     def set_password(self, password):
         if self.sso_identities:
             raise ValueError('SSO accounts cannot use local passwords')
@@ -281,6 +290,7 @@ class ImageReviewComment(db.Model):
             'finding_id': self.finding_id,
             'user_id': self.user_id,
             'username': self.user.username if self.user else 'Unknown',
+            'display_name': self.user.display_name if self.user else 'Unknown',
             'set_id': self.set_id,
             'decision': self.decision,
             'comment': self.comment or '',

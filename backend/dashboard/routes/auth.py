@@ -170,7 +170,7 @@ def session():
         return jsonify({
             **public_config(),
             'auth_method': 'saml' if current_user.sso_identities else 'password',
-            'display_name': current_user.sso_identities[0].display_name if current_user.sso_identities else current_user.username,
+            'display_name': current_user.display_name,
             'is_authenticated': True,
             'id': current_user.id,
             'username': current_user.username,
