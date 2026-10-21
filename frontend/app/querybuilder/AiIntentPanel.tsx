@@ -9,6 +9,7 @@ import { EXTERNAL_QUERY_START, externalAiInstructions, parseExternalQuery } from
 import type { OptionLists } from './CriterionCard';
 import { QUERY_CODE_PREFIX, decodeQueryCode, type SavedQuery } from './queryCode';
 import { PreFilterChips } from './PreFilterChips';
+import { queryErrorMessage, readQueryResponse } from './apiResponse';
 
 /* Clean SVG icons for professional scientific workbench */
 function AssistantIcon({ size = 16 }: { size?: number }) {
@@ -230,10 +231,10 @@ export function AiIntentPanel({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ intent: trimmed, target_db: targetDb, exact_match: exactMatch }),
       });
-      const json = await res.json();
+      const json = await readQueryResponse(res);
       if (!res.ok) {
         setNotes(json.notes || []);
-        throw new Error(json.error || `Translation failed (${res.status})`);
+        throw new Error(queryErrorMessage(json, `Translation failed (${res.status})`));
       }
       const translatedQuery = fromWire(json.query);
       const translatedPrefilters = fromWirePrefilters(json.prefilters);
@@ -266,8 +267,8 @@ export function AiIntentPanel({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ intent: trimmed, target_db: targetDb }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || `Refinement failed (${res.status})`);
+      const json = await readQueryResponse(res);
+      if (!res.ok) throw new Error(queryErrorMessage(json, `Refinement failed (${res.status})`));
       if (json.refined_intent) {
         setIntent(json.refined_intent);
       }
@@ -325,6 +326,7 @@ export function AiIntentPanel({
                 }
               }}
             />
+            <div className="fdl-ai__input-actions">
             <button
               type="button"
               className="fdl-btn fdl-btn--ai"
@@ -346,6 +348,16 @@ export function AiIntentPanel({
                 </>
               )}
             </button>
+            <button
+              type="button"
+              className="fdl-link fdl-ai__clear"
+              disabled={disabled || busy || refining || !intent}
+              onClick={() => setIntent('')}
+              title="Clear all text in the query input"
+            >
+              Clear all
+            </button>
+            </div>
           </div>
 
           <div className="fdl-ai__examples">

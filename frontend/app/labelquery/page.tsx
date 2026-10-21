@@ -1,4 +1,5 @@
 'use client';
+import { queryErrorMessage, readQueryResponse } from '../querybuilder/apiResponse';
 
 /*
  * Query results — the window Search opens.
@@ -173,7 +174,7 @@ function ResultsPage() {
     (async () => {
       try {
         const res = await fetch(`/api/labelquery/options?target_db=${currentTargetDb}`);
-        const json = await res.json();
+        const json = await readQueryResponse(res);
         if (cancelled) return;
         if (res.ok) {
           setOptions({
@@ -230,10 +231,10 @@ function ResultsPage() {
             target_db: currentTargetDb,
           }),
         });
-        const json = await res.json();
+        const json = await readQueryResponse(res);
         if (cancelled) return;
         if (!res.ok) {
-          const errObj = new Error(json.error || `Search failed (${res.status})`);
+          const errObj = new Error(queryErrorMessage(json, `Search failed (${res.status})`));
           (errObj as any).query = json.query || json.sql || null;
           throw errObj;
         }

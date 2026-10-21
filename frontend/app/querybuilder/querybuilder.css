@@ -35,6 +35,9 @@
 .fdl-ai__title, .fdl-step-title, .fdl-card__title { color: var(--fdl-navy-950); }
 .fdl-ai__lede { max-width: 900px; margin: 6px 0 0; color: var(--fdl-ink-soft); font-size: .82rem; line-height: 1.5; }
 .fdl-ai__field { display: flex; align-items: stretch; gap: 10px; margin-top: 15px; }
+.fdl-ai__input-actions { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+.fdl-ai__input-actions .fdl-btn--ai { flex: 1; }
+.fdl-ai__input-actions .fdl-ai__clear { align-self: flex-end; font-size: .72rem; }
 .fdl-ai__input, .fdl-input, .fdl-textarea, .fdl-select, .fdl-date-input {
   border: 1px solid var(--fdl-line);
   border-radius: 2px;

@@ -21,6 +21,8 @@ from datetime import datetime
 
 from flask import Blueprint, request, jsonify, send_file, current_app
 from flask_login import current_user
+from werkzeug.exceptions import HTTPException
+from .validation import QueryShapeError, validate_query_shape
 
 from dashboard.services.fdalabel_db import FDALabelDBService
 from dashboard.services import feature_gates
@@ -47,6 +49,50 @@ from .facets import (
 )
 
 labelquery_bp = Blueprint('labelquery', __name__)
+
+
+@labelquery_bp.before_request
+def validate_request_shape():
+    if request.method != 'POST':
+        return
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({'error': 'Request body must be a JSON object.'}), 400
+    if 'intent' in payload and not isinstance(payload['intent'], str):
+        return jsonify({'error': 'intent must be a string.'}), 400
+    if 'query' in payload:
+        try:
+            validate_query_shape(payload['query'])
+            for group in payload['query'].get('groups') or []:
+                for criterion in group.get('criteria') or []:
+                    if not isinstance(criterion['value'], dict):
+                        raise QueryShapeError('Search criterion value must be an object.')
+        except QueryShapeError as exc:
+            return jsonify({'error': str(exc)}), 400
+
+
+@labelquery_bp.errorhandler(Exception)
+def query_unexpected_error(exc):
+    if isinstance(exc, HTTPException):
+        return exc
+    import uuid
+    error_ref = uuid.uuid4().hex[:8]
+    operation = request.endpoint.rsplit('.', 1)[-1]
+    current_app.logger.exception('Label query %s failed [ref: %s]', operation, error_ref)
+    if isinstance(exc, TimeoutError):
+        message = 'The query service or database timed out. Narrow the search and try again.'
+        status = 504
+    elif isinstance(exc, ConnectionError):
+        message = 'The query service could not connect to a required service. Ask the administrator to check database and AI provider connectivity.'
+        status = 503
+    else:
+        message = 'The server could not complete this operation. Share the reference with the administrator to locate the full error.'
+        status = 500
+    return jsonify({
+        'error': f'Label query {operation} failed ({type(exc).__name__}).',
+        'message': message,
+        'error_ref': error_ref,
+    }), status
 
 MAX_LIMIT = 3000
 # How far into a match set the UI will page. FDALabel shows the most recent N
@@ -2197,6 +2243,7 @@ def _sanitize_translation(parsed, target_db, intent=''):
     unavailable = []
     harvested = []
     notes_from_pharm = []
+    notes = []
     combination_intent = bool(re.search(r'\b(?:combination|combo|fixed[ -]dose)\b', intent, re.I))
     raw_groups = parsed.get('groups')
     for group in (raw_groups if isinstance(raw_groups, list) else [])[:5]:
@@ -2358,7 +2405,7 @@ def _sanitize_translation(parsed, target_db, intent=''):
         if criteria:
             groups.append({'criteria': criteria})
 
-    notes = [str(n) for n in (parsed.get('notes') or []) if n][:5]
+    notes = [str(n) for n in (parsed.get('notes') or []) if n][:5] + notes
     notes.extend(notes_from_pharm)
     if dropped:
         notes.append('Dropped unsupported criteria: ' + ', '.join(sorted(set(dropped))))
@@ -2403,6 +2450,11 @@ def translate():
     parsed = _parse_json_object(raw)
     if not isinstance(parsed, dict):
         return jsonify({'error': 'The model did not return a usable query.'}), 502
+
+    try:
+        validate_query_shape(parsed)
+    except QueryShapeError as exc:
+        return jsonify({'error': f'AI returned malformed search criteria: {exc} Please rebuild the criteria.'}), 502
 
     query, notes, harvested = _sanitize_translation(parsed, target_db, intent)
     query['exactMatch'] = bool(payload.get('exact_match', False))
