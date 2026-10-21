@@ -32,9 +32,7 @@ export default function AuthModals() {
     let endpoint = '/api/dashboard/auth/login';
     let body: any = { username, password };
 
-    if (authModal === 'register') {
-      endpoint = '/api/dashboard/auth/register';
-    } else if (authModal === 'change_password') {
+    if (authModal === 'change_password') {
       endpoint = '/api/dashboard/auth/change_password';
       body = { password };
     }
@@ -166,92 +164,7 @@ export default function AuthModals() {
           >
             {authLoading ? 'Signing in...' : 'Sign in with account'}
           </button>
-          <div style={{ textAlign: 'center', fontSize: '0.825rem', color: 'var(--fdl-muted, #5e6e7c)' }}>
-            Don't have an account? <button type="button" onClick={() => { openAuthModal('register'); setAuthError(null); setShowPassword(false); }} style={{ color: 'var(--fdl-blue-700, #0759a5)', fontWeight: 700, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>Create one</button>
-          </div>
-        </form>
-      </Modal>
 
-      {/* Create Account Modal */}
-      <Modal 
-        isOpen={authModal === 'register'} 
-        onClose={handleClose}
-        title="Create Account"
-      >
-        <form onSubmit={handleAuthAction} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {authError && (
-            <div style={{ color: '#991b1b', background: '#fef2f2', padding: '10px 14px', borderRadius: 'var(--fdl-radius-sm, 2px)', fontSize: '0.85rem', fontWeight: 600, border: '1px solid #fecaca' }}>
-              {authError}
-            </div>
-          )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '0.825rem', fontWeight: 700, color: 'var(--fdl-ink-soft, #273843)' }}>Username</label>
-            <input 
-              type="text" 
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              style={inputStyle}
-              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--fdl-blue-700, #0759a5)'; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--fdl-line, #b8c8d7)'; }}
-              placeholder="Choose a username"
-            />
-            <span style={{ fontSize: '0.72rem', color: 'var(--fdl-muted, #5e6e7c)' }}>Use letters, numbers, and . @ _ - +</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '0.825rem', fontWeight: 700, color: 'var(--fdl-ink-soft, #273843)' }}>Password</label>
-            <div style={{ position: 'relative' }}>
-              <input 
-                type={showPassword ? "text" : "password"} 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                style={{ ...inputStyle, width: '100%', paddingRight: '44px' }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--fdl-blue-700, #0759a5)'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--fdl-line, #b8c8d7)'; }}
-                placeholder="••••••••"
-              />
-              <button 
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fdl-muted, #5e6e7c)', display: 'flex', alignItems: 'center', padding: '4px' }}
-              >
-                {showPassword ? (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-                ) : (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                )}
-              </button>
-            </div>
-          </div>
-          
-          <div style={{
-            backgroundColor: 'var(--fdl-blue-050, #edf4fa)',
-            border: '1px solid var(--fdl-line-soft, #d7e0e7)',
-            borderRadius: 'var(--fdl-radius-sm, 2px)',
-            padding: '10px 14px',
-            marginTop: '2px',
-            fontSize: '0.8rem',
-            color: 'var(--fdl-navy-800, #12375b)',
-            lineHeight: 1.5
-          }}>
-            <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-              <li><strong>Registration is free and encouraged.</strong></li>
-              <li>Single Sign-On is available in deployments configured with an identity provider.</li>
-              <li>This tool is under development, and personal data may not be saved and transferred to the prod version.</li>
-            </ul>
-          </div>
-
-          <button 
-            type="submit" 
-            disabled={authLoading}
-            style={primaryBtnStyle}
-          >
-            {authLoading ? 'Creating account...' : 'Create Account'}
-          </button>
-          <div style={{ textAlign: 'center', fontSize: '0.825rem', color: 'var(--fdl-muted, #5e6e7c)' }}>
-            Already have an account? <button type="button" onClick={() => { openAuthModal('login'); setAuthError(null); setShowPassword(false); }} style={{ color: 'var(--fdl-blue-700, #0759a5)', fontWeight: 700, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>Sign in</button>
-          </div>
         </form>
       </Modal>
 

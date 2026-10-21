@@ -5,12 +5,11 @@ import styles from './StartPage.module.css';
 
 interface StartPageProps {
   onLogin: () => void;
-  onSignUp: () => void;
   onGuest: () => void;
   ssoEnabled: boolean;
 }
 
-export default function StartPage({ onLogin, onSignUp, onGuest, ssoEnabled }: StartPageProps) {
+export default function StartPage({ onLogin, onGuest, ssoEnabled }: StartPageProps) {
   return (
     <main className={styles.page}>
       <section className={styles.card} aria-labelledby="welcome-title">
@@ -25,8 +24,8 @@ export default function StartPage({ onLogin, onSignUp, onGuest, ssoEnabled }: St
           <h2 id="sso-notice-title">We’re moving to Single Sign-On</h2>
           <p>
             We are working on moving to Single Sign-On (SSO), but it is not ready yet.
-            Until SSO is available, please continue using Account login to sign in,
-            or Sign up to create an account and use askFDALabel.
+            Please use Account login with an existing account, or SSO when available.
+            Self-registration is disabled. Contact an administrator if you need access.
           </p>
         </aside>
 
@@ -53,7 +52,6 @@ export default function StartPage({ onLogin, onSignUp, onGuest, ssoEnabled }: St
           <div className={styles.alternativeLinks}>
             <button type="button" onClick={onLogin}>Account login</button>
             <button type="button" onClick={onGuest}>Continue as guest</button>
-            <button type="button" onClick={onSignUp}>Sign up</button>
           </div>
         </div>
 

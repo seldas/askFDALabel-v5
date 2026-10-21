@@ -76,8 +76,8 @@ interface UserContextType {
   activeTasks: ActiveTask[];
   updateAiProvider: (provider: string) => Promise<void>;
   refreshSession: () => Promise<void>;
-  authModal: 'login' | 'register' | 'change_password' | null;
-  openAuthModal: (type: 'login' | 'register' | 'change_password' | null) => void;
+  authModal: 'login' | 'change_password' | null;
+  openAuthModal: (type: 'login' | 'change_password' | null) => void;
   refreshTasks: () => Promise<void>;
 }
 
@@ -87,13 +87,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<UserSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTasks, setActiveTasks] = useState<ActiveTask[]>([]);
-  const [authModal, setAuthModal] = useState<'login' | 'register' | 'change_password' | null>(null);
+  const [authModal, setAuthModal] = useState<'login' | 'change_password' | null>(null);
   const pathname = usePathname();
   const router = useRouter();
 
 
 
-  const openAuthModal = (type: 'login' | 'register' | 'change_password' | null) => {
+  const openAuthModal = (type: 'login' | 'change_password' | null) => {
     setAuthModal(type);
   };
 

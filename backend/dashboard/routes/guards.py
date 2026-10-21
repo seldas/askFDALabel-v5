@@ -18,10 +18,10 @@ from dashboard.services import feature_gates
 #: Sent back when the guest account touches a feature reserved for real
 #: accounts. 403 rather than 401: the request is authenticated, it is the
 #: account that is not permitted, so the client should not prompt to log in
-#: again -- it should prompt to register.
+#: again -- it should prompt to sign in.
 GUEST_FORBIDDEN_MESSAGE = (
     'This feature is not available for the guest account. '
-    'Please register or sign in to use it.'
+    'Please sign in with an existing account or contact an administrator.'
 )
 
 

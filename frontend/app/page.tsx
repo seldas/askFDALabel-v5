@@ -283,7 +283,6 @@ function HomePage() {
       <StartPage
         ssoEnabled={Boolean(session?.sso_enabled)}
         onLogin={() => openAuthModal('login')}
-        onSignUp={() => openAuthModal('register')}
         onGuest={handleGuestLogin}
       />
     );

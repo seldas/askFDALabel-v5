@@ -614,9 +614,7 @@ export default function Header({
             <button onClick={() => openAuthModal('login')} className="btn-login">
               Login
             </button>
-            <button onClick={() => openAuthModal('register')} className="btn-register">
-              Register
-            </button>
+
           </div>
         )}
 

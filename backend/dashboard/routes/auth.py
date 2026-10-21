@@ -1,5 +1,4 @@
 import os
-import re
 from flask import Blueprint, request, jsonify
 from flask_login import login_user, login_required, logout_user, current_user
 from database import db, User, ROLE_USER, utc_now
@@ -56,39 +55,10 @@ def login():
 @auth_bp.route('/register', methods=['POST'])
 @rate_limit('5 per minute')
 def register():
-    if current_user.is_authenticated:
-        if (current_user.username or '').lower() == 'guest':
-            logout_user()
-        else:
-            return jsonify({'success': True, 'message': 'Already authenticated'})
-
-    data = request.get_json()
-    if not data:
-        return jsonify({'success': False, 'error': 'Missing JSON data'}), 400
-
-    username = (data.get('username') or '').strip().lower()
-    password = data.get('password')
-    
-    if not username:
-        return jsonify({'success': False, 'error': 'Username is required'}), 400
-        
-    if not re.match(r'^[a-zA-Z0-9.@_\+-]+$', username):
-        return jsonify({
-            'success': False, 
-            'error': 'Invalid username. Use only letters, numbers, and . @ _ - + (no spaces)'
-        }), 400
-
-    if User.query.filter(db.func.lower(User.username) == username.lower()).first():
-        return jsonify({'success': False, 'error': 'Username already exists'}), 400
-    
-    new_user = User(username=username)
-    new_user.set_role(ROLE_USER)
-    new_user.set_password(password)
-    db.session.add(new_user)
-    db.session.commit()
-    
-    login_user(new_user)
-    return jsonify({'success': True})
+    return jsonify({
+        'success': False,
+        'error': 'Self-registration is disabled. Please sign in with an existing account or contact an administrator.',
+    }), 403
 
 @auth_bp.route('/logout')
 @login_required
