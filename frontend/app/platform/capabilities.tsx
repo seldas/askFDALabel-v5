@@ -24,6 +24,7 @@ import {
 } from 'react';
 
 export interface Capabilities {
+  externalServices?: ExternalServices;
   /** On the FDA internal network (either FDA or CDER endpoint reachable). */
   isInternal: boolean;
   /** fdalabel.fda.gov reachable. */
@@ -34,6 +35,9 @@ export interface Capabilities {
   localAccessible: boolean;
   allowLocalQuery: boolean;
 }
+
+export type ServiceStatus = { status: 'checking' | 'available' | 'unavailable' | 'degraded' | 'unknown'; message: string };
+export type ExternalServices = Partial<Record<'openfda' | 'dailymed', ServiceStatus>>;
 
 /**
  * Defaults are the safe, public-internet answer and match the error branches
@@ -65,6 +69,26 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    const refresh = async () => {
+      try {
+        const response = await fetch('/api/external-services');
+        if (!response.ok) throw new Error('Service check failed');
+        const externalServices: ExternalServices = await response.json();
+        if (!cancelled) setCapabilities(previous => ({ ...previous, externalServices }));
+      } catch {
+        if (!cancelled) setCapabilities(previous => ({ ...previous, externalServices: {
+          openfda: { status: 'unknown', message: 'Server connectivity check is unavailable.' },
+          dailymed: { status: 'unknown', message: 'Server connectivity check is unavailable.' },
+        } }));
+      }
+    };
+    refresh();
+    const timer = setInterval(refresh, 60_000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
 
     (async () => {
       try {
@@ -72,16 +96,17 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
         if (!res.ok) throw new Error(`check-fdalabel returned ${res.status}`);
         const data = await res.json();
         if (cancelled) return;
-        setCapabilities({
+        setCapabilities(previous => ({
+          ...previous,
           isInternal: Boolean(data.isInternal),
           fdaAccessible: Boolean(data.fdaAccessible),
           cderAccessible: Boolean(data.cderAccessible),
           localAccessible: Boolean(data.localAccessible),
           allowLocalQuery: Boolean(data.allowLocalQuery),
-        });
+        }));
       } catch {
         // Keep defaults: assume public internet, local query allowed.
-        if (!cancelled) setCapabilities(DEFAULT_CAPABILITIES);
+        if (!cancelled) setCapabilities(previous => ({ ...DEFAULT_CAPABILITIES, externalServices: previous.externalServices }));
       } finally {
         if (!cancelled) setReady(true);
       }

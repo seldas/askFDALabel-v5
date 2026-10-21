@@ -75,6 +75,8 @@ def read_local_artwork(source, inventory, asset_id):
         raise NotFound('Archived labeling image is currently not available in askFDALabel.')
 
     # For the current version (or set_id query), fallback to DailyMed
+    from dashboard.services.external_services import require_service
+    require_service('dailymed')
     import requests
     try:
         resp = requests.get(

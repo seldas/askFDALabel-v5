@@ -1,4 +1,5 @@
 "use client"
+import { useCapabilities } from '../platform/capabilities';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Header from "../components/Header";
@@ -73,6 +74,8 @@ const getTECodeExplanation = (code: string) => {
 };
 
 const LocalQueryContent = () => {
+    const { capabilities } = useCapabilities();
+    const deviceUnavailable = capabilities.externalServices?.openfda?.status === 'unavailable';
     const searchParams = useSearchParams();
     const { session } = useUser();
     const urlQuery = searchParams.get('q');
@@ -133,6 +136,7 @@ const LocalQueryContent = () => {
 
     const handleSearch = async (e?: React.FormEvent, selectedQuery?: string) => {
         if (e) e.preventDefault();
+        if (searchMode === 'device' && deviceUnavailable) return;
         const finalQuery = selectedQuery || query;
         if (!finalQuery.trim()) return;
 
@@ -190,6 +194,7 @@ const LocalQueryContent = () => {
     };
 
     const handleRandom = async () => {
+        if (searchMode === 'device' && deviceUnavailable) return;
         setIsLoading(true);
         setHasSearched(true);
         setQuery('');
@@ -332,6 +337,8 @@ const LocalQueryContent = () => {
                             <button
                                 role="tab"
                                 aria-selected={searchMode === 'device'}
+                                disabled={deviceUnavailable}
+                                title={deviceUnavailable ? 'This server cannot reach OpenFDA. Device queries are temporarily disabled.' : undefined}
                                 className="lq-mode-tab"
                                 onClick={() => { setSearchMode('device'); setHasSearched(false); setDeviceResults([]); setSelectedDevices([]); }}
                             >
@@ -375,10 +382,10 @@ const LocalQueryContent = () => {
                                 </div>
                             )}
                         </div>
-                        <Button type="submit" variant="primary" size="lg" disabled={isLoading || !query.trim()}>
+                        <Button type="submit" variant="primary" size="lg" disabled={isLoading || !query.trim() || (searchMode === 'device' && deviceUnavailable)}>
                             {isLoading && query ? 'Searching...' : 'Search'}
                         </Button>
-                        <Button type="button" variant="secondary" size="lg" onClick={handleRandom} disabled={isLoading}>
+                        <Button type="button" variant="secondary" size="lg" onClick={handleRandom} disabled={isLoading || (searchMode === 'device' && deviceUnavailable)}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M2 18h2c4.3 0 6-7 10-7h2"></path>
                                 <path d="M2 6h2c4.3 0 6 7 10 7h2"></path>

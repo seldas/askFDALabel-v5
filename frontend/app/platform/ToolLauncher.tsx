@@ -28,6 +28,7 @@ import {
   type ToolGroup,
 } from './registry';
 import './toolLauncher.css';
+import { ServiceWarning, toolServiceState } from './ServiceWarning';
 
 function meetsRequirement(req: Requirement, caps: Capabilities): boolean {
   switch (req) {
@@ -131,6 +132,14 @@ function ToolAnchor({
   className?: string;
   children: React.ReactNode;
 } & React.AnchorHTMLAttributes<HTMLAnchorElement>) {
+  const { capabilities } = useCapabilities();
+  const state = toolServiceState(tool, capabilities);
+  if (state.disabled) {
+    return <span className={className} role="group" title={state.message} tabIndex={0}>
+      <span aria-disabled="true">{children}</span>
+      {tool.id === 'label-faers' && <Link href={href}>View saved results</Link>}
+    </span>;
+  }
   if (tool.kind === 'external') {
     return (
       <a
@@ -161,6 +170,7 @@ function ToolCard({ tool, ctx }: { tool: ToolDef; ctx: LaunchContext }) {
       <span className="afl-tool-card__body">
         <span className="afl-tool-card__title">
           {tool.name}
+          <ServiceWarning toolId={tool.id} compact />
           {tool.kind === 'external' ? (
             <span className="afl-tool-card__external" title="Opens in a new tab">
               <ToolIcon id="external" size={13} />
@@ -216,6 +226,7 @@ export function ToolLauncher({
           >
             <ToolIcon id={tool.iconId} size={15} />
             {tool.name}
+            <ServiceWarning toolId={tool.id} compact />
           </ToolAnchor>
         ))}
       </Tabs>

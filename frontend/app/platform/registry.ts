@@ -45,6 +45,8 @@ export type ToolboxWorkflow = 'review' | 'safety' | 'toxicity' | 'comparison';
 export type ToolPattern = 'dots' | 'grid' | 'stripes';
 
 export interface ToolDef {
+  /** Server-side dependency; browser links are deliberately excluded. */
+  externalService?: { name: 'openfda' | 'dailymed'; required: boolean };
   id: string;
   name: string;
   /** One line, shown on directory cards and launcher tooltips. */
@@ -119,6 +121,7 @@ const LABEL_TOOLS: ToolDef[] = [
   },
   {
     id: 'label-faers',
+    externalService: { name: 'openfda', required: true },
     name: 'FAERS',
     blurb: 'Adverse event reports and MedDRA term profile for this product.',
     iconId: 'pulse',
@@ -222,6 +225,7 @@ const LABEL_TOOLS: ToolDef[] = [
   },
   {
     id: 'label-image-analysis',
+    externalService: { name: 'dailymed', required: false },
     name: 'Image Analysis',
     blurb: 'Extract, normalize and compare text from label and package images.',
     iconId: 'image',
@@ -237,6 +241,7 @@ const LABEL_TOOLS: ToolDef[] = [
   },
   {
     id: 'label-image-review',
+    externalService: { name: 'dailymed', required: false },
     name: 'Labeling Visual Review',
     blurb: 'Compare artwork with localized findings, product confusion review, and labeling consistency checks.',
     iconId: 'image',
@@ -428,6 +433,7 @@ const PLATFORM_TOOLS: ToolDef[] = [
   },
   {
     id: 'device',
+    externalService: { name: 'openfda', required: true },
     name: 'Device Intelligence',
     blurb: '510(k), PMA, MAUDE and recall lookups for medical devices.',
     iconId: 'device',

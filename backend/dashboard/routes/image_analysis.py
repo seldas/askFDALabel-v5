@@ -162,6 +162,8 @@ def _read_artwork(set_id, spl_id, asset_id):
     if not is_latest:
         abort(404, description="Archived labeling image is currently not available in askFDALabel.")
 
+    from dashboard.services.external_services import require_service
+    require_service('dailymed')
     # The existing label reader also uses DailyMed for SPL media. Keep the
     # host fixed here; never accept an arbitrary image URL from the browser.
     try:

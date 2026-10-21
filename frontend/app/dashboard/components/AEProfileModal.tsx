@@ -1,4 +1,5 @@
 'use client';
+import { ServiceWarning } from '../../platform/ServiceWarning';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Modal from '../../components/Modal';
@@ -245,6 +246,7 @@ export default function AEProfileModal({ isOpen, onClose, projectId, projectName
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="AE Profile Generation" compact>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}><ServiceWarning service="openfda" /></div>
       <div>
         <p style={{ 
           fontSize: '0.82rem', 

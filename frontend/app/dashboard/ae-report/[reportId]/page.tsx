@@ -15,6 +15,7 @@ interface ReportDetail {
     project_title: string;
     created_at: string;
     status: string;
+    faers_unavailable?: boolean;
   };
   frequent_contexts: Array<{
     snippet: string;
@@ -27,9 +28,9 @@ interface ReportDetail {
     generic_name: string;
     is_labeled: boolean;
     found_sections: Array<{ section: string; snippet: string }>;
-    faers_count: number;
-    faers_1yr_count: number;
-    faers_5yr_count: number;
+    faers_count: number | null;
+    faers_1yr_count: number | null;
+    faers_5yr_count: number | null;
   }>;
 }
 
@@ -139,7 +140,7 @@ export default function AEReportPage() {
         total1yr, 
         percentLabeled: ((labeled / total) * 100).toFixed(1) 
       },
-      chartData: finalChartData.filter(d => d.value > 0)
+      chartData: data.report.faers_unavailable ? [] : finalChartData.filter(d => d.value > 0)
     };
   }, [data, chartType]);
 
@@ -149,6 +150,7 @@ export default function AEReportPage() {
   return (
     <main style={{ minHeight: '100vh', backgroundColor: 'var(--fdl-canvas, #f3f6f8)' }}>
       <Header activeApp="dashboard" />
+      {data.report.faers_unavailable && <p role="status" style={{ padding: '12px 24px' }}>⚠ This report contains unavailable FAERS counts because OpenFDA data could not be retrieved. Missing counts are not zero. Label scanning results remain available.</p>}
       
       <div className="hp-container" style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
         {/* Header Section */}
@@ -259,11 +261,11 @@ export default function AEReportPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginTop: '1.5rem' }}>
             <StatCard label="Total Labels" value={stats?.total || 0} icon="📄" color="var(--fdl-blue-700, #0759a5)" />
             <StatCard label="Labeled Presence" value={`${stats?.labeled} (${stats?.percentLabeled}%)`} icon="✅" color="var(--fdl-green, #2d7a4c)" />
-            <div onClick={() => { setChartType('total'); setShowChartModal(true); }} style={{ cursor: 'pointer' }}>
-              <StatCard label="Total FAERS Cases" value={stats?.totalFaers?.toLocaleString() || 0} icon="📊" color="var(--fdl-ink, #132332)" badge="Click for Chart" />
+            <div onClick={() => { setChartType('total'); !data.report.faers_unavailable && setShowChartModal(true); }} style={{ cursor: 'pointer' }}>
+              <StatCard label="Total FAERS Cases" value={data.report.faers_unavailable ? 'Unavailable' : stats?.totalFaers?.toLocaleString() || 0} icon="📊" color="var(--fdl-ink, #132332)" badge="Click for Chart" />
             </div>
-            <div onClick={() => { setChartType('1yr'); setShowChartModal(true); }} style={{ cursor: 'pointer' }}>
-              <StatCard label="Last Year Cases" value={stats?.total1yr?.toLocaleString() || 0} icon="📅" color="var(--fdl-blue-600, #0071bc)" badge="Click for Chart" />
+            <div onClick={() => { setChartType('1yr'); !data.report.faers_unavailable && setShowChartModal(true); }} style={{ cursor: 'pointer' }}>
+              <StatCard label="Last Year Cases" value={data.report.faers_unavailable ? 'Unavailable' : stats?.total1yr?.toLocaleString() || 0} icon="📅" color="var(--fdl-blue-600, #0071bc)" badge="Click for Chart" />
             </div>
           </div>
         </div>
@@ -480,9 +482,9 @@ export default function AEReportPage() {
                         </div>
                       ) : '—'}
                     </td>
-                    <td style={{ padding: '0.875rem 1.25rem', fontWeight: 700, color: 'var(--fdl-ink, #132332)' }}>{res.faers_count?.toLocaleString() || 0}</td>
-                    <td style={{ padding: '0.875rem 1.25rem', fontWeight: 700, color: 'var(--fdl-muted, #5e6e7c)' }}>{res.faers_5yr_count?.toLocaleString() || 0}</td>
-                    <td style={{ padding: '0.875rem 1.25rem', fontWeight: 700, color: 'var(--fdl-blue-600, #0071bc)' }}>{res.faers_1yr_count?.toLocaleString() || 0}</td>
+                    <td style={{ padding: '0.875rem 1.25rem', fontWeight: 700, color: 'var(--fdl-ink, #132332)' }}>{res.faers_count?.toLocaleString() ?? 'Unavailable'}</td>
+                    <td style={{ padding: '0.875rem 1.25rem', fontWeight: 700, color: 'var(--fdl-muted, #5e6e7c)' }}>{res.faers_5yr_count?.toLocaleString() ?? 'Unavailable'}</td>
+                    <td style={{ padding: '0.875rem 1.25rem', fontWeight: 700, color: 'var(--fdl-blue-600, #0071bc)' }}>{res.faers_1yr_count?.toLocaleString() ?? 'Unavailable'}</td>
                   </tr>
                 ))}
               </tbody>

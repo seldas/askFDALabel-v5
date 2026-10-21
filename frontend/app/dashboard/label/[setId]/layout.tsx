@@ -1,4 +1,5 @@
 'use client';
+import { ServiceWarning } from '../../../platform/ServiceWarning';
 
 /*
  * Label workspace shell.
@@ -133,6 +134,7 @@ export default function LabelLayout({
       <Header activeApp="dashboard" />
 
       <div className="afl-label-shell__scroll">
+        {activeToolId === 'label-image-analysis' && <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 20px' }}><ServiceWarning toolId={activeToolId} /></div>}
         <div className="afl-label-shell__inner">
           {!hideCrumbsAndTools && !headerCollapsed && (
             <nav className="afl-label-crumbs">

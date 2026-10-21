@@ -1,4 +1,5 @@
 'use client';
+import { ServiceWarning } from '../platform/ServiceWarning';
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -425,6 +426,7 @@ function Workbench() {
             </p>
           </div>
           <div className="ivr-heading-actions">
+            <ServiceWarning toolId="label-image-review" compact />
             <button
               type="button"
               className="ivr-button"

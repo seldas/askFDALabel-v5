@@ -8,8 +8,11 @@ import { useToolboxTools } from '../../../platform/ToolLauncher';
 import type { ToolboxWorkflow } from '../../../platform/registry';
 import type { LabelData } from './types';
 import { useLabel } from './LabelContext';
+import { useCapabilities } from '../../../platform/capabilities';
+import { ServiceWarning, toolServiceState } from '../../../platform/ServiceWarning';
 
 export default function ToolboxPanel({ setId, data }: { setId: string; data: LabelData }) {
+  const { capabilities } = useCapabilities();
   const brandName = data?.brand_name || data?.drug_name || 'this product';
   const applicationNumber = String(data?.application_number || data?.metadata?.application_number || '').trim();
   // A label can carry several application numbers, separated by commas or
@@ -107,13 +110,15 @@ export default function ToolboxPanel({ setId, data }: { setId: string; data: Lab
     () =>
       registryTools.map((tool) => ({
         id: tool.id,
+        disabled: toolServiceState(tool, capabilities).disabled,
+        serviceMessage: toolServiceState(tool, capabilities).message,
         name: tool.name,
         blurb: tool.blurbFor?.(launchContext) ?? tool.blurb,
         iconId: tool.iconId,
         href: tool.href(launchContext),
         workflow: tool.toolboxWorkflow ?? 'review',
       })),
-    [registryTools, launchContext],
+    [registryTools, launchContext, capabilities],
   );
 
   const workflowDetails: Record<ToolboxWorkflow, { code: string; title: string; description: string }> = {
@@ -162,14 +167,16 @@ export default function ToolboxPanel({ setId, data }: { setId: string; data: Lab
           <span className="afl-toolbox__tool-icon" aria-hidden="true"><ToolIcon id={t.iconId} size={20} /></span>
           <div className="afl-toolbox__tool-title-group">
             <span className="afl-toolbox__tool-category">{detail?.title ?? t.workflow}</span>
-            <h3><a className="afl-toolbox__tool-name" href={t.href} target="_blank" rel="noopener noreferrer">{t.name}</a></h3>
+            <h3><a className="afl-toolbox__tool-name" href={t.disabled ? undefined : t.href} aria-disabled={t.disabled || undefined} title={t.serviceMessage} target="_blank" rel="noopener noreferrer">{t.name}</a></h3>
           </div>
+          <ServiceWarning toolId={t.id} compact />
           {renderPin(t)}
         </header>
         <p>{t.blurb}</p>
-        <a className="afl-toolbox__launch" href={t.href} target="_blank" rel="noopener noreferrer">
-          Open analysis <span aria-hidden="true">↗</span>
+        <a className="afl-toolbox__launch" href={t.disabled ? undefined : t.href} aria-disabled={t.disabled || undefined} title={t.serviceMessage} target="_blank" rel="noopener noreferrer">
+          {t.disabled ? 'Temporarily unavailable' : 'Open analysis'} <span aria-hidden="true">↗</span>
         </a>
+        {t.disabled && t.id === 'label-faers' && <Link href={t.href} target="_blank">View saved results ↗</Link>}
       </article>
     );
   };
@@ -223,10 +230,10 @@ export default function ToolboxPanel({ setId, data }: { setId: string; data: Lab
           </tr></thead>
           <tbody>{tableTools.map(tool => <tr key={tool.id} data-workflow={tool.workflow} data-pinned={favoriteToolIds.includes(tool.id)}>
             <td>{renderPin(tool)}</td>
-            <th scope="row"><a className="afl-toolbox__table-name" href={tool.href} target="_blank" rel="noopener noreferrer"><ToolIcon id={tool.iconId} size={18} />{tool.name}</a><span className="afl-toolbox__mobile-purpose">{tool.blurb}</span></th>
+            <th scope="row"><a className="afl-toolbox__table-name" href={tool.disabled ? undefined : tool.href} aria-disabled={tool.disabled || undefined} title={tool.serviceMessage} target="_blank" rel="noopener noreferrer"><ToolIcon id={tool.iconId} size={18} />{tool.name}</a><ServiceWarning toolId={tool.id} compact /><span className="afl-toolbox__mobile-purpose">{tool.blurb}</span></th>
             <td className="afl-toolbox__purpose-column"><span>{tool.blurb}</span></td>
             <td className="afl-toolbox__category-column">{workflowDetails[tool.workflow].title}</td>
-            <td className="afl-toolbox__open-column"><a className="label-tool-btn" href={tool.href} target="_blank" rel="noopener noreferrer" aria-label={`Open ${tool.name} in a new tab`}>Open ↗</a></td>
+            <td className="afl-toolbox__open-column"><a className="label-tool-btn" href={tool.disabled ? undefined : tool.href} aria-disabled={tool.disabled || undefined} title={tool.serviceMessage} target="_blank" rel="noopener noreferrer">{tool.disabled ? 'Unavailable' : 'Open ↗'}</a>{tool.disabled && tool.id === 'label-faers' && <Link href={tool.href} target="_blank">View saved results ↗</Link>}</td>
           </tr>)}</tbody>
         </table>
       )}

@@ -35,7 +35,7 @@ from dashboard.config import Config
 from dashboard.services.fdalabel_db import FDALabelDBService
 from dashboard.services.spl_version_diff import compare_spl_xml
 from dashboard.services.deep_dive_service import DeepDiveService
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, null
 from dashboard.services.name_matching import separator_variants
 from dashboard.services.meddra_matcher import scan_label_for_meddra
 
@@ -1908,6 +1908,11 @@ def extract_ngram(text, target, n_prev=5, n_after=5):
     ngram = f"{context_pre} {actual_match} {context_post}".strip()
     return ngram
 
+def _faers_total(drugs, period):
+    values = [counts[period] for counts in drugs.values()]
+    return None if any(value is None for value in values) else sum(values)
+
+
 def run_ae_report_generation(task_id, report_id, project_id, target_pt):
     # This function is now called by TaskService.start_background_task
     # which provides the app_context.
@@ -2021,37 +2026,51 @@ def run_ae_report_generation(task_id, report_id, project_id, target_pt):
         date_1yr_ago = (now - timedelta(days=365)).strftime('%Y%m%d')
         date_5yr_ago = (now - timedelta(days=365*5)).strftime('%Y%m%d')
 
+        from dashboard.services.external_services import service_status
+        openfda_available = service_status('openfda')['status'] != 'unavailable'
+
         for i, drug_name in enumerate(unique_drug_names):
             db.session.refresh(report)
             if report.status != 'processing':
                 return
 
-            counts = {'all': 0, '1yr': 0, '5yr': 0}
+            counts = {'all': None, '1yr': None, '5yr': None}
             try:
+                if not openfda_available:
+                    raise ConnectionError('OpenFDA is unreachable from this server')
                 base_url = "https://api.fda.gov/drug/event.json"
                 search_base = f'(patient.drug.openfda.brand_name:"{drug_name}" OR patient.drug.openfda.generic_name:"{drug_name}") AND patient.reaction.reactionmeddrapt.exact:"{target_pt}"'
                 
                 # 1. All counts
                 params = {'search': search_base}
                 if Config.OPENFDA_API_KEY: params['api_key'] = Config.OPENFDA_API_KEY
-                resp = requests.get(base_url, params=params)
+                resp = requests.get(base_url, params=params, timeout=(3, 10))
                 if resp.status_code == 200:
                     counts['all'] = resp.json().get('meta', {}).get('results', {}).get('total', 0)
+                    if counts['all'] == 0:
+                        counts = {'all': 0, '1yr': 0, '5yr': 0}
                 
-                if counts['all'] > 0:
+                elif resp.status_code == 404:
+                    counts = {'all': 0, '1yr': 0, '5yr': 0}
+
+                if counts['all'] is not None and counts['all'] > 0:
                     # 2. Last 1 year
                     params_1y = {'search': f"{search_base} AND receivedate:[{date_1yr_ago} TO {date_today}]"}
                     if Config.OPENFDA_API_KEY: params_1y['api_key'] = Config.OPENFDA_API_KEY
-                    resp_1y = requests.get(base_url, params=params_1y)
+                    resp_1y = requests.get(base_url, params=params_1y, timeout=(3, 10))
                     if resp_1y.status_code == 200:
                         counts['1yr'] = resp_1y.json().get('meta', {}).get('results', {}).get('total', 0)
+                    elif resp_1y.status_code == 404:
+                        counts['1yr'] = 0
                         
                     # 3. Last 5 years
                     params_5y = {'search': f"{search_base} AND receivedate:[{date_5yr_ago} TO {date_today}]"}
                     if Config.OPENFDA_API_KEY: params_5y['api_key'] = Config.OPENFDA_API_KEY
-                    resp_5y = requests.get(base_url, params=params_5y)
+                    resp_5y = requests.get(base_url, params=params_5y, timeout=(3, 10))
                     if resp_5y.status_code == 200:
                         counts['5yr'] = resp_5y.json().get('meta', {}).get('results', {}).get('total', 0)
+                    elif resp_5y.status_code == 404:
+                        counts['5yr'] = 0
 
             except Exception as e:
                 logger.error(f"FAERS error for report {report_id}, drug {drug_name}: {e}")
@@ -2080,9 +2099,9 @@ def run_ae_report_generation(task_id, report_id, project_id, target_pt):
                 generic_name=d_data['generic_name'],
                 is_labeled=d_data['is_labeled'],
                 found_sections=d_data['found_sections'],
-                faers_count=d_data.get('faers_count', 0),
-                faers_1yr_count=d_data.get('faers_1yr_count', 0),
-                faers_5yr_count=d_data.get('faers_5yr_count', 0)
+                faers_count=d_data['faers_count'] if d_data.get('faers_count') is not None else null(),
+                faers_1yr_count=d_data['faers_1yr_count'] if d_data.get('faers_1yr_count') is not None else null(),
+                faers_5yr_count=d_data['faers_5yr_count'] if d_data.get('faers_5yr_count') is not None else null()
             )
             db.session.add(detail)
 
@@ -2355,7 +2374,8 @@ def get_ae_report_detail(report_id):
             'target_pt': report.target_pt,
             'project_title': report.project.title,
             'created_at': report.created_at.isoformat() + 'Z',
-            'status': report.status
+            'status': report.status,
+            'faers_unavailable': any(d.faers_count is None or d.faers_1yr_count is None or d.faers_5yr_count is None for d in details)
         },
         'frequent_contexts': frequent_contexts,
         'results': [{
@@ -2364,9 +2384,9 @@ def get_ae_report_detail(report_id):
             'generic_name': d.generic_name,
             'is_labeled': d.is_labeled,
             'found_sections': json.loads(d.found_sections) if d.found_sections else [],
-            'faers_count': d.faers_count or 0,
-            'faers_1yr_count': d.faers_1yr_count or 0,
-            'faers_5yr_count': d.faers_5yr_count or 0
+            'faers_count': d.faers_count,
+            'faers_1yr_count': d.faers_1yr_count,
+            'faers_5yr_count': d.faers_5yr_count
         } for d in details]
     })
 
@@ -2435,6 +2455,7 @@ def export_ae_report_json(report_id):
         "using a similarity clustering algorithm (threshold 0.80) to group near-identical phrasing together, "
         "ignoring punctuation and whitespace during comparison. "
         "The 'label_details' section provides document-level findings, including specific snippets and FAERS (FDA Adverse Event Reporting System) counts. "
+        "Null FAERS counts mean data could not be retrieved, not zero reports; do not infer absence of reports from null values. "
         "Analyze this data to identify patterns in how this adverse event is described across different drugs, "
         "correlate labeling mentions with FAERS counts, and summarize the typical clinical context (e.g., severity, population, or co-medications) "
         "associated with this event."
@@ -2449,9 +2470,9 @@ def export_ae_report_json(report_id):
         name = (d.generic_name or d.brand_name or "Unknown").split(',')[0].strip()
         if name not in unique_drugs:
             unique_drugs[name] = {
-                'all': d.faers_count or 0,
-                '1yr': d.faers_1yr_count or 0,
-                '5yr': d.faers_5yr_count or 0
+                'all': d.faers_count,
+                '1yr': d.faers_1yr_count,
+                '5yr': d.faers_5yr_count
             }
 
     export_obj = {
@@ -2465,9 +2486,9 @@ def export_ae_report_json(report_id):
         'ai_instructions': ai_prompt,
         'summary_statistics': {
             'labeled_presence_count': len([d for d in details if d.is_labeled]),
-            'total_faers_reports': sum(v['all'] for v in unique_drugs.values()),
-            'last_1yr_total': sum(v['1yr'] for v in unique_drugs.values()),
-            'last_5yr_total': sum(v['5yr'] for v in unique_drugs.values())
+            'total_faers_reports': _faers_total(unique_drugs, 'all'),
+            'last_1yr_total': _faers_total(unique_drugs, '1yr'),
+            'last_5yr_total': _faers_total(unique_drugs, '5yr')
         },
         'frequent_contexts': [
             {'snippet': s, 'document_frequency': len(set_ids)} 
@@ -2507,20 +2528,21 @@ def export_ae_report(report_id):
         name = (d.generic_name or d.brand_name or "Unknown").split(',')[0].strip()
         if name not in unique_drugs:
             unique_drugs[name] = {
-                'all': d.faers_count or 0,
-                '1yr': d.faers_1yr_count or 0,
-                '5yr': d.faers_5yr_count or 0
+                'all': d.faers_count,
+                '1yr': d.faers_1yr_count,
+                '5yr': d.faers_5yr_count
             }
 
     summary_data = [
+        ["FAERS Data", "Incomplete / unavailable; blank counts are not zero" if any(d.faers_count is None or d.faers_1yr_count is None or d.faers_5yr_count is None for d in details) else "Retrieved"],
         ["Target PT", report.target_pt],
         ["Project", report.project.title],
         ["Report Created", report.created_at.strftime('%Y-%m-%d %H:%M')],
         ["Total Labels", len(details)],
         ["Labeled Labels", len([d for d in details if d.is_labeled])],
-        ["Total FAERS Reports (All)", sum(v['all'] for v in unique_drugs.values())],
-        ["FAERS Reports (Last 5 Years)", sum(v['5yr'] for v in unique_drugs.values())],
-        ["FAERS Reports (Last 1 Year)", sum(v['1yr'] for v in unique_drugs.values())]
+        ["Total FAERS Reports (All)", _faers_total(unique_drugs, 'all')],
+        ["FAERS Reports (Last 5 Years)", _faers_total(unique_drugs, '5yr')],
+        ["FAERS Reports (Last 1 Year)", _faers_total(unique_drugs, '1yr')]
     ]
     
     for r_idx, row in enumerate(summary_data, 3):
@@ -2618,16 +2640,18 @@ def api_faers_trends():
             if Config.OPENFDA_API_KEY:
                 params['api_key'] = Config.OPENFDA_API_KEY
             
-            resp = requests.get(base_url, params=params)
+            resp = requests.get(base_url, params=params, timeout=(3, 10))
             if resp.status_code == 200:
                 raw_dates = resp.json().get('results', [])
                 raw_dates.sort(key=lambda x: x.get('time', ''))
                 trends[term] = raw_dates
-            else:
+            elif resp.status_code == 404:
                 trends[term] = []
+            else:
+                resp.raise_for_status()
         except Exception as e:
             logger.error(f"Error fetching trend for {term}: {e}")
-            trends[term] = []
+            return jsonify({'error': 'FAERS trend data could not be retrieved from OpenFDA. Please try again later.'}), 503
 
     return jsonify({'trends': trends})
 

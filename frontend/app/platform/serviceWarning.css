@@ -1,0 +1,6 @@
+.afl-service-warning { display: inline-flex; align-items: center; gap: 7px; color: var(--fdl-amber); font-size: .78rem; line-height: 1.5; }
+.afl-service-warning svg { flex: 0 0 auto; }
+.afl-service-warning--compact { position: relative; margin-left: auto; }
+.afl-service-warning__tooltip { display: none; position: absolute; right: 0; top: 100%; width: 290px; max-width: 75vw; padding: 10px; background: var(--fdl-paper); border: 1px solid currentColor; z-index: 40; }
+.afl-service-warning--compact:hover .afl-service-warning__tooltip, .afl-service-warning--compact:focus .afl-service-warning__tooltip { display: block; }
+[aria-disabled="true"].afl-tool-card, [aria-disabled="true"].afl-tab, a[aria-disabled="true"] { opacity: .6; cursor: not-allowed; }

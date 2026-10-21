@@ -52,6 +52,30 @@ def create_unified_app():
     app.register_blueprint(api_v1_bp, url_prefix='/api/v1')
     app.register_blueprint(image_analysis_bp, url_prefix='/api/image-analysis')
     app.register_blueprint(image_review_bp, url_prefix='/api/image-review')
+
+    @app.route('/api/external-services', methods=['GET'])
+    def external_services():
+        from dashboard.services.external_services import external_service_statuses
+        response = jsonify(external_service_statuses())
+        response.headers['Cache-Control'] = 'no-store'
+        return response
+
+    @app.before_request
+    def guard_external_queries():
+        from flask import request
+        from dashboard.services.external_services import require_service
+        path = request.path
+        if (path.startswith('/api/device/') and path != '/api/device/analyze') or (
+            path.startswith('/api/dashboard/faers/') and not path.endswith('/ai_results')
+        ) or re_match_faers_panel(path):
+            require_service('openfda')
+
+    def re_match_faers_panel(path):
+        return any(path.startswith(f'/api/dashboard/{kind}/faers/') for kind in ('dili', 'dict', 'diri'))
+
+    @app.errorhandler(503)
+    def service_unavailable(exc):
+        return jsonify({'error': 'External service unavailable', 'message': exc.description}), 503
     
     # 4. Security Headers Middleware
     @app.after_request

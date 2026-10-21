@@ -16,6 +16,8 @@ import {
 import './analysis.css';
 import Modal from '../../../components/Modal';
 import './faers.css';
+import { useCapabilities } from '../../../platform/capabilities';
+import { ServiceWarning } from '../../../platform/ServiceWarning';
 
 interface LabelMatch {
   section: string;
@@ -120,6 +122,7 @@ function EmergingAeAnalysis({
             body: JSON.stringify({ drug_name: drugName, terms: [term] })
         });
         const json = await resp.json();
+        if (!resp.ok) throw new Error(json.message || json.error || 'FAERS trend retrieval failed.');
         const rawPoints = json.trends[term] || [];
 
         // Transform to cumulative format with real timestamps
@@ -163,6 +166,8 @@ function EmergingAeAnalysis({
         }
     } catch (e) {
         console.error("Failed to fetch trend", e);
+        setTrendData([]);
+        setError(e instanceof Error ? e.message : 'FAERS trend retrieval failed.');
     } finally {
         setTrendLoading(false);
     }
@@ -189,7 +194,7 @@ function EmergingAeAnalysis({
       });
       if (!resp.ok) {
         const errJson = await resp.json();
-        throw new Error(errJson.error || 'Failed to fetch analysis');
+        throw new Error(errJson.message || errJson.error || 'Failed to fetch analysis');
       }
       const json = await resp.json();
       
@@ -628,9 +633,31 @@ export default function FaersView({
   drugName?: string;
   setId?: string;
 }) {
+  const { capabilities } = useCapabilities();
+  const status = capabilities.externalServices?.openfda?.status;
+  const unavailable = status === 'unavailable';
+  const [saved, setSaved] = useState<{ results?: AiMatch[]; timestamp?: string } | null>(null);
+  const [savedError, setSavedError] = useState('');
+  useEffect(() => {
+    if (!unavailable || !setId || !drugName || activeTab !== 'faers-view') return;
+    let cancelled = false;
+    setSaved(null);
+    setSavedError('');
+    fetch(`/api/dashboard/faers/ai_results?set_id=${encodeURIComponent(setId)}&drug_name=${encodeURIComponent(drugName)}`)
+      .then(response => { if (!response.ok) throw new Error('Could not load saved analysis.'); return response.json(); })
+      .then(result => { if (!cancelled) setSaved(result); })
+      .catch(error => { if (!cancelled) setSavedError(error.message); });
+    return () => { cancelled = true; };
+  }, [unavailable, setId, drugName, activeTab]);
   return (
     <div id="faers-view" className={`tab-content ${activeTab === 'faers-view' ? 'active' : ''}`} style={{ display: activeTab === 'faers-view' ? 'block' : 'none' }}>
-      <EmergingAeAnalysis drugName={drugName} setId={setId} activeTab={activeTab} />
+      <ServiceWarning toolId="label-faers" />
+      {!status ? <p>Checking server connectivity to OpenFDA…</p> : unavailable ? <section>
+        <h3>Saved semantic analysis</h3>
+        {saved?.timestamp && <p>Generated: {new Date(saved.timestamp).toLocaleString()}. Saved results do not reflect a new FAERS retrieval.</p>}
+        {savedError ? <p role="alert">{savedError}</p> : !saved ? <p>Loading saved results…</p> : !saved.results?.length ? <p>No saved semantic analysis is available for this product.</p> :
+          <table><thead><tr><th>Term</th><th>Label match</th><th>Explanation</th></tr></thead><tbody>{saved.results.map((result, i) => <tr key={`${result.term}-${i}`}><td>{result.term}</td><td>{result.found ? 'Yes' : 'No'}</td><td>{result.explanation}</td></tr>)}</tbody></table>}
+      </section> : <EmergingAeAnalysis drugName={drugName} setId={setId} activeTab={activeTab} />}
     </div>
   );
 }
