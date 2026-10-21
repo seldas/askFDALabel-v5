@@ -28,3 +28,17 @@ the cached check. Browser-side DailyMed images and external links are unchanged.
 
 Tool dependencies are declared in `frontend/app/platform/registry.ts`. Account
 feature gates remain independent and are still resolved per request.
+
+## Labeling AE in RAPID
+
+Labeling AE (Beta) is disabled in RAPID because its HPC annotation API is
+unavailable from that deployment. The tool remains visible with the reason;
+opening its page does not start an annotation request, and its API returns 503
+before contacting HPC (including the example route). Other tools are unaffected.
+
+`start_server.py --rapid` sets `DEPLOYMENT_ENV=rapid` in Docker and Apptainer.
+The RAPID environment template also declares it for direct launches. Regenerate
+the launch configuration with the updated orchestrator when upgrading an existing
+deployment. If the variable is absent, the backend supports the legacy runtime
+setting `active_environment=rapid`. This restriction does not use the AI provider
+or the SSO provider to infer deployment identity.

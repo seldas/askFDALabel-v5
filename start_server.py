@@ -182,6 +182,7 @@ def run_apptainer(args, env_vars, local_db):
     runtime_env = os.environ.copy()
     runtime_env.update(env_vars)
     runtime_env.update({
+        'APPTAINERENV_DEPLOYMENT_ENV':        'rapid' if args.rapid else env_vars.get('DEPLOYMENT_ENV', 'standard'),
         'APPTAINERENV_FLASK_ENV':             'development' if args.mode == 'dev' else 'production',
         'APPTAINERENV_NODE_ENV':              'development' if args.mode == 'dev' else 'production',
         'APPTAINERENV_BACKEND_PORT':          '8842',
@@ -505,6 +506,7 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
 
     # 3. Backend Service
     backend_env = {
+        "DEPLOYMENT_ENV": "rapid" if rapid else env_vars.get('DEPLOYMENT_ENV', 'standard'),
         **{k: v for k, v in sso_config.items() if not k.startswith('KEYCLOAK_')},
         "FLASK_ENV": "development" if mode == "dev" else "production",
         "DATABASE_URL": "${DATABASE_URL:-postgresql://${PG_USERNAME:-afd_user}:${PG_PASSWORD:-afd_password}@${PG_HOST:-db}:${PG_PORT:-5432}/${PG_DATABASE:-fdalabel-v3}}",

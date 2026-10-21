@@ -3819,6 +3819,12 @@ def get_labeling_ae_annotations(set_id):
     Configured via LABELING_AE_SERVER in .env (default: http://ncslphpcgpu02:8809).
     Target: {LABELING_AE_SERVER}/v1/safety/labels/{set_id}/annotations
     """
+    from dashboard.services.deployment import is_rapid
+    if is_rapid():
+        return jsonify({
+            'status': 'unreachable',
+            'error': 'Labeling AE (Beta) is disabled in RAPID because its HPC annotation service is not accessible from this environment.',
+        }), 503
     example_path = os.path.join(str(Config.PROJECT_ROOT), 'deploy', 'data_transfer', 'example.labelingAE.json')
     if set_id == 'example' and os.path.exists(example_path):
         try:

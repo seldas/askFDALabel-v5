@@ -24,6 +24,7 @@ import {
 } from 'react';
 
 export interface Capabilities {
+  isRapid?: boolean;
   externalServices?: ExternalServices;
   /** On the FDA internal network (either FDA or CDER endpoint reachable). */
   isInternal: boolean;
@@ -98,6 +99,7 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         setCapabilities(previous => ({
           ...previous,
+          isRapid: Boolean(data.isRapid),
           isInternal: Boolean(data.isInternal),
           fdaAccessible: Boolean(data.fdaAccessible),
           cderAccessible: Boolean(data.cderAccessible),

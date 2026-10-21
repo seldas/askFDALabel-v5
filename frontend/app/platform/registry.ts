@@ -45,6 +45,7 @@ export type ToolboxWorkflow = 'review' | 'safety' | 'toxicity' | 'comparison';
 export type ToolPattern = 'dots' | 'grid' | 'stripes';
 
 export interface ToolDef {
+  disabledInRapid?: string;
   /** Server-side dependency; browser links are deliberately excluded. */
   externalService?: { name: 'openfda' | 'dailymed'; required: boolean };
   id: string;
@@ -287,6 +288,7 @@ const LABEL_TOOLS: ToolDef[] = [
   },
   {
     id: 'label-labeling-ae',
+    disabledInRapid: 'Labeling AE (Beta) is disabled in RAPID because its HPC annotation service is not accessible from this environment.',
     name: 'LabelingAE(beta)',
     blurb: 'Safety annotations and adverse event extraction from external server.',
     iconId: 'pulse',

@@ -143,11 +143,13 @@ def create_unified_app():
     @app.route('/api/check-fdalabel', methods=['POST'])
     def check_fdalabel():
         from flask import current_app
+        from dashboard.services.deployment import is_rapid
         allow_local = current_app.config.get('LOCAL_QUERY', True)
         elsa_api = (os.environ.get('ELSA_API_NAME') or current_app.config.get('ELSA_API_NAME') or '').strip()
         has_elsa = bool(elsa_api)
         
         return jsonify({
+            "isRapid": is_rapid(),
             "isInternal": has_elsa,
             "fdaAccessible": has_elsa,
             "cderAccessible": has_elsa,

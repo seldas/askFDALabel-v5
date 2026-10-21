@@ -5,6 +5,7 @@ import { getTool, type ToolDef } from './registry';
 import './serviceWarning.css';
 
 export function toolServiceState(tool: ToolDef, caps: Capabilities) {
+  if (caps.isRapid && tool.disabledInRapid) return { disabled: true, message: tool.disabledInRapid };
   const dependency = tool.externalService;
   const service = dependency && caps.externalServices?.[dependency.name];
   const affected = Boolean(service && service.status !== 'available' && service.status !== 'checking');
