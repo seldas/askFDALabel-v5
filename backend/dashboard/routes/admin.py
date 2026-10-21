@@ -437,6 +437,7 @@ def get_token_usage():
             user_usage.append({
                 'user_id': u.id,
                 'username': u.username,
+                'display_name': u.display_name,
                 'stats': stats
             })
             
@@ -476,18 +477,19 @@ def get_user_token_usage_details(user_id):
 def get_all_token_usage_details():
     from database.models import TokenUsage, User
     try:
-        usages = db.session.query(TokenUsage, User.username).join(User, TokenUsage.user_id == User.id).order_by(TokenUsage.created_at.desc()).all()
+        usages = db.session.query(TokenUsage, User).join(User, TokenUsage.user_id == User.id).order_by(TokenUsage.created_at.desc()).all()
         return jsonify({
             'success': True,
             'details': [{
                 'id': us.id,
-                'username': username,
+                'username': user.username,
+                'display_name': user.display_name,
                 'model_name': us.model_name,
                 'input_tokens': us.input_tokens,
                 'output_tokens': us.output_tokens,
                 'total_tokens': us.total_tokens,
                 'created_at': us.created_at.isoformat() + 'Z' if us.created_at else None
-            } for us, username in usages]
+            } for us, user in usages]
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -630,6 +632,7 @@ def get_all_api_keys():
         keys.append({
             'user_id': u.id,
             'username': u.username,
+            'display_name': u.display_name,
             'role': u.effective_role,
             'is_active': getattr(u, 'is_active', True),
             'has_api_key': bool(key_val),
@@ -660,7 +663,7 @@ def admin_generate_api_key(user_id):
     return jsonify({
         'success': True,
         'api_key': new_key,
-        'message': f'API key generated for user {user.username}.'
+        'message': f'API key generated for user {user.display_name}.'
     })
 
 
@@ -676,5 +679,5 @@ def admin_revoke_api_key(user_id):
     db.session.commit()
     return jsonify({
         'success': True,
-        'message': f'API key revoked for user {user.username}.'
+        'message': f'API key revoked for user {user.display_name}.'
     })

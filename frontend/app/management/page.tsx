@@ -28,6 +28,7 @@ interface User {
 interface AdminApiKey {
   user_id: number;
   username: string;
+  display_name?: string;
   role: string;
   is_active: boolean;
   has_api_key: boolean;
@@ -618,7 +619,7 @@ export default function ManagementPage() {
           created_at: new Date().toISOString()
         }]);
         setActiveTab((prev) => (prev === 'users' ? 'tokens' : prev));
-        fetchUserTokenDetails(session.id || 0, session.username || '');
+        fetchUserTokenDetails(session.id || 0, session.display_name || session.username || '');
       }
     }
   }, [session]);
@@ -1916,7 +1917,7 @@ else:
                     <div style={{ flex: '1 1 200px' }}>
                       <input
                         type="text"
-                        placeholder="Search by username or key..."
+                        placeholder="Search by name, username or key..."
                         value={adminKeySearch}
                         onChange={e => setAdminKeySearch(e.target.value)}
                         className="mgmt-input"
@@ -1944,7 +1945,7 @@ else:
                       <option value="last_used_asc">Last Used (Oldest)</option>
                       <option value="created_at_desc">Generated (Newest)</option>
                       <option value="created_at_asc">Generated (Oldest)</option>
-                      <option value="username_asc">Username (A-Z)</option>
+                      <option value="username_asc">Name (A-Z)</option>
                     </select>
                   </div>
 
@@ -1965,7 +1966,7 @@ else:
                             .filter(k => {
                               if (adminKeySearch.trim()) {
                                 const q = adminKeySearch.toLowerCase();
-                                const matchUser = k.username.toLowerCase().includes(q);
+                                const matchUser = [k.display_name, k.username].some(value => value?.toLowerCase().includes(q));
                                 const matchKey = k.api_key && k.api_key.toLowerCase().includes(q);
                                 if (!matchUser && !matchKey) return false;
                               }
@@ -1980,7 +1981,7 @@ else:
                             })
                             .sort((a, b) => {
                               if (adminKeySortBy === 'username_asc') {
-                                return a.username.localeCompare(b.username);
+                                return (a.display_name || a.username).localeCompare(b.display_name || b.username);
                               }
                               if (adminKeySortBy === 'created_at_desc') {
                                 return (b.created_at || '').localeCompare(a.created_at || '');
@@ -2029,9 +2030,9 @@ else:
                                       textOverflow: 'ellipsis',
                                       whiteSpace: 'nowrap'
                                     }}
-                                    title={k.username}
+                                    title={k.display_name || k.username}
                                   >
-                                    {k.username}
+                                    {k.display_name || k.username}
                                   </div>
                                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
                                     <span style={{ fontSize: '0.7rem', color: 'var(--fdl-canvas0)', textTransform: 'capitalize' }}>
@@ -2106,7 +2107,7 @@ else:
                                       <>
                                         <button
                                           type="button"
-                                          onClick={() => handleAdminGenerateKey(k.user_id, k.username)}
+                                          onClick={() => handleAdminGenerateKey(k.user_id, k.display_name || k.username)}
                                           className="btn-ghost"
                                           disabled={isBusy || k.is_active === false}
                                           style={{ padding: '4px 8px', fontSize: '0.75rem' }}
@@ -2116,7 +2117,7 @@ else:
                                         </button>
                                         <button
                                           type="button"
-                                          onClick={() => handleAdminRevokeKey(k.user_id, k.username)}
+                                          onClick={() => handleAdminRevokeKey(k.user_id, k.display_name || k.username)}
                                           className="btn-danger-ghost"
                                           disabled={isBusy}
                                           style={{ padding: '4px 8px', fontSize: '0.75rem' }}
@@ -2128,7 +2129,7 @@ else:
                                     ) : (
                                       <button
                                         type="button"
-                                        onClick={() => handleAdminGenerateKey(k.user_id, k.username)}
+                                        onClick={() => handleAdminGenerateKey(k.user_id, k.display_name || k.username)}
                                         className="btn-primary-sm"
                                         disabled={isBusy || k.is_active === false}
                                         style={{ padding: '4px 10px', fontSize: '0.75rem' }}
@@ -2247,7 +2248,7 @@ else:
                       <thead>
                         <tr>
                           <th style={{ padding: '0 12px 8px', borderBottom: 'none' }}>Timestamp</th>
-                          {session?.is_admin && <th style={{ padding: '0 12px 8px', borderBottom: 'none' }}>Username</th>}
+                          {session?.is_admin && <th style={{ padding: '0 12px 8px', borderBottom: 'none' }}>Name</th>}
                           <th style={{ padding: '0 12px 8px', borderBottom: 'none' }}>Model</th>
                           <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Input</th>
                           <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Output</th>
@@ -2267,7 +2268,7 @@ else:
                               </td>
                               {session?.is_admin && (
                                 <td style={{ padding: '12px', borderBottom: 'none', fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', fontWeight: 600 }}>
-                                  {record.username}
+                                  {record.display_name || record.username}
                                 </td>
                               )}
                               <td style={{ padding: '12px', borderBottom: 'none', fontSize: '0.85rem', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>
@@ -2888,7 +2889,7 @@ else:
               <table className="user-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
                 <thead>
                   <tr>
-                    <th style={{ padding: '0 12px 8px', borderBottom: 'none' }}>Username</th>
+                    <th style={{ padding: '0 12px 8px', borderBottom: 'none' }}>Name</th>
                     <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>All Time</th>
                     <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Past 30 Days</th>
                     <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Past 7 Days</th>
@@ -2905,7 +2906,7 @@ else:
                       .map((u: any) => (
                         <tr key={u.user_id} style={{ background: 'var(--fdl-canvas)', borderRadius: '2px' }}>
                           <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '2px 0 0 2px', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>
-                            {u.username}
+                            {u.display_name || u.username}
                           </td>
                           <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 800, color: 'var(--fdl-ink)' }}>
                             {u.stats.total_all_time.toLocaleString()}

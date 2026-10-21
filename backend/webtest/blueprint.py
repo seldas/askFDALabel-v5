@@ -381,7 +381,7 @@ def report_from_data():
     if not results: return jsonify({"error": "No data"}), 400
     
     now_str = datetime.now().strftime("%Y/%m/%d, %H:%M")
-    username = current_user.username if current_user.is_authenticated else "Anonymous"
+    username = current_user.display_name if current_user.is_authenticated else "Anonymous"
     formatted = []
     
     for r in results:

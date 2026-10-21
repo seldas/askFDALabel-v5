@@ -392,7 +392,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onSearch }) => {
       {chatHistory.length === 0 ? (
         <div className="initial-view-container">
             <h1 className="hero-title-animated" style={{ fontSize: '3.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>
-              Hi, {session?.username ? (session.username.charAt(0).toUpperCase() + session.username.slice(1)) : 'User'}
+              Hi, {session?.display_name || session?.username || 'User'}
             </h1>
             
             <form onSubmit={handleSearch} className="centered-search-form">

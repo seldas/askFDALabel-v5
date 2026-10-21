@@ -1372,14 +1372,14 @@ def api_my_favorites():
                 'effective_time': fav.effective_time,
                 'tag': fav.tag,
                 'timestamp': fav.timestamp.isoformat() + 'Z',
-                'added_by': fav.user.username
+                'added_by': fav.user.display_name
             } for fav in favorites],
             'comparisons': [{
                 'id': comp.id,
                 'set_ids': json.loads(comp.set_ids),
                 'title': comp.title,
                 'timestamp': comp.timestamp.isoformat() + 'Z',
-                'added_by': comp.user.username
+                'added_by': comp.user.display_name
             } for comp in favorite_comparisons],
             'duplicates_removed': duplicates_removed
         })
@@ -1401,14 +1401,14 @@ def api_my_favorites():
                 'effective_time': fav.effective_time,
                 'tag': fav.tag,
                 'timestamp': fav.timestamp.isoformat() + 'Z',
-                'added_by': fav.user.username
+                'added_by': fav.user.display_name
             } for fav in favorites],
             'comparisons': [{
                 'id': comp.id,
                 'set_ids': json.loads(comp.set_ids),
                 'title': comp.title,
                 'timestamp': comp.timestamp.isoformat() + 'Z',
-                'added_by': comp.user.username
+                'added_by': comp.user.display_name
             } for comp in favorite_comparisons],
             'duplicates_removed': False
         })

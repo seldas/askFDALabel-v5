@@ -229,16 +229,16 @@ const Header: React.FC = () => {
                   fontWeight: 800,
                   color: 'white'
                 }}>
-                  {session.username?.[0].toUpperCase()}
+                  {(session.display_name || session.username)?.[0].toUpperCase()}
                 </div>
-                <span className="username-text" style={{ fontSize: '0.875rem', color: 'white' }}>{session.username}</span>
+                <span className="username-text" style={{ fontSize: '0.875rem', color: 'white' }}>{session.display_name || session.username}</span>
               </button>
 
               {activeDropdown === 'user' && (
                 <div className="dropdown-menu">
                   <div style={{ padding: '10px 16px', borderBottom: '1px solid #f1f5f9' }}>
                     <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>ACCOUNT</div>
-                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e293b' }}>{session.username}</div>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e293b' }}>{session.display_name || session.username}</div>
                   </div>
                   <div style={{ borderTop: '1px solid #f1f5f9', marginTop: '4px' }}>
                     <Link href="/dashboard" className="dropdown-item">My Dashboard</Link>
