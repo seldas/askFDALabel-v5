@@ -4,28 +4,28 @@ import { withAppBase } from '../utils/appPaths';
 import styles from './StartPage.module.css';
 
 interface StartPageProps {
-  onLogin: () => void;
-  onGuest: () => void;
+  onLogin?: () => void;
+  onGuest?: () => void;
   ssoEnabled: boolean;
 }
 
-export default function StartPage({ onLogin, onGuest, ssoEnabled }: StartPageProps) {
+export default function StartPage({ ssoEnabled }: StartPageProps) {
   return (
     <main className={styles.page}>
       <section className={styles.card} aria-labelledby="welcome-title">
         <header className={styles.header}>
           <img src={withAppBase('/askFDALabel_hero.png')} alt="AskFDALabel" className={styles.logo} />
           <h1 id="welcome-title">Welcome to AskFDALabel</h1>
-          <p>Sign in to explore FDA labeling and your workspace.</p>
+          <p>Sign in with your institutional account to explore FDA labeling and your workspace.</p>
         </header>
 
         <aside className={styles.notice} aria-labelledby="sso-notice-title">
-          <span className={styles.noticeLabel}>LOGIN UPDATE</span>
-          <h2 id="sso-notice-title">We’re moving to Single Sign-On</h2>
+          <span className={styles.noticeLabel}>SINGLE SIGN-ON (SSO)</span>
+          <h2 id="sso-notice-title">Single Sign-On Authentication</h2>
           <p>
-            We are working on moving to Single Sign-On (SSO), but it is not ready yet.
-            Please use Account login with an existing account, or SSO when available.
-            Self-registration is disabled. Contact an administrator if you need access.
+            AskFDALabel now uses Single Sign-On (SSO) as the primary authentication method.
+            Please sign in below using your institutional credentials. Guest access and self-registration
+            are disabled. If you require access or assistance, please contact your system administrator.
           </p>
         </aside>
 
@@ -40,19 +40,11 @@ export default function StartPage({ onLogin, onGuest, ssoEnabled }: StartPagePro
                 Sign in with SSO
                 <span aria-hidden="true">→</span>
               </a>
-              <p className={styles.primaryHint}>Recommended login method</p>
+              <p className={styles.primaryHint}>Sign in with your institutional credentials</p>
             </>
           ) : (
-            <p className={styles.unavailable}>SSO is not available on this deployment yet. Use an option below to sign in.</p>
+            <p className={styles.unavailable}>Single Sign-On is not configured on this deployment. Please contact an administrator.</p>
           )}
-        </div>
-
-        <div className={styles.alternatives}>
-          <p className={styles.alternativesLabel}>Other ways to access AskFDALabel</p>
-          <div className={styles.alternativeLinks}>
-            <button type="button" onClick={onLogin}>Account login</button>
-            <button type="button" onClick={onGuest}>Continue as guest</button>
-          </div>
         </div>
 
         <p className={styles.disclaimer}>

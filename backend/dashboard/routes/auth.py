@@ -26,7 +26,7 @@ def login():
     username = (data.get('username') or '').strip().lower()
     password = data.get('password')
 
-    if not username or not password:
+    if not username or not password or username == 'guest':
         return jsonify({'success': False, 'error': 'Invalid username or password'}), 401
 
     user = User.query.filter(db.func.lower(User.username) == username.lower()).first()
@@ -69,30 +69,10 @@ def logout():
 @auth_bp.route('/guest-login', methods=['POST'])
 @rate_limit('15 per minute')
 def guest_login():
-    if current_user.is_authenticated:
-        return jsonify({'success': True, 'message': 'Already authenticated'})
-        
-    guest_user = User.query.filter(db.func.lower(User.username) == 'guest').first()
-    if not guest_user:
-        guest_user = User(username='guest')
-        guest_user.set_role(ROLE_USER)
-        guest_user.set_password('guest')
-        db.session.add(guest_user)
-        db.session.commit()
-        
-    login_user(guest_user)
     return jsonify({
-        'success': True,
-        'user': {
-            'id': guest_user.id,
-            'username': guest_user.username,
-            'is_admin': guest_user.is_admin,
-            'role': guest_user.effective_role,
-            'can_select_db': guest_user.can_select_database,
-            'has_developer_access': guest_user.has_developer_access,
-            'is_guest': guest_user.is_guest
-        }
-    })
+        'success': False,
+        'error': 'Guest login has been disabled. Please use Single Sign-On (SSO) to sign in.'
+    }), 403
 
 @auth_bp.route('/change_password', methods=['POST'])
 @login_required
@@ -132,6 +112,13 @@ def session():
     from dashboard.services.ai_preferences import allowed_providers as get_allowed, resolve_provider, public_catalog, connection_config, normalize_provider
     allowed_providers = get_allowed()
     if current_user.is_authenticated:
+        if current_user.is_guest:
+            logout_user()
+            return jsonify({
+                **public_config(),
+                'is_authenticated': False,
+                'is_internal': is_internal,
+            })
         effective_provider, default_provider = resolve_provider(current_user)
         effective_config = connection_config(effective_provider, current_user)
         preference = normalize_provider(current_user.ai_provider)

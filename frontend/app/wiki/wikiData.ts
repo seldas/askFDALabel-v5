@@ -45,10 +45,10 @@ const CONTENT: WikiArticle[] = [
   {
     id: 'account-access', path: 'guides', group: 'Account & preferences',
     title: 'Sign in and sign out', summary: 'Use your own account for personal review work.',
-    tags: ['login', 'logout', 'SSO', 'guest', 'account'],
+    tags: ['login', 'logout', 'SSO', 'account'],
     related: ['change-password', 'login-help', 'saved-work'],
     sections: [
-      { heading: 'Sign in', steps: ['Click Login in the header.', 'Choose institutional sign-in when offered, or enter your account username and password.', 'Open the account menu to check which account is signed in.'], paragraphs: ['Guest access uses a shared account. AI preferences and personal search history are unavailable to Guest.'] },
+      { heading: 'Sign in', steps: ['Click Sign In on the welcome screen or in the header.', 'Sign in using your institutional credentials via Single Sign-On (SSO).', 'Open the account menu to check which account is signed in.'], paragraphs: ['AskFDALabel uses Single Sign-On (SSO) authentication. Guest access is disabled.'] },
       { heading: 'Sign out', paragraphs: ['Open the account menu and choose Sign Out.'] },
     ],
   },
@@ -58,7 +58,7 @@ const CONTENT: WikiArticle[] = [
     tags: ['password', 'security', 'account', 'SSO'], related: ['account-access', 'login-help'],
     sections: [
       { heading: 'Update your password', steps: ['Open the account menu and choose Change Password.', 'Enter the new password in New Password and Confirm New Password.', 'Click Update Password and check the confirmation.'] },
-      { heading: 'No Change Password option?', paragraphs: ['Institutional SSO passwords are managed by your institution. Guest accounts cannot change passwords.'] },
+      { heading: 'No Change Password option?', paragraphs: ['Institutional SSO passwords are managed by your institution’s identity provider.'] },
     ],
   },
   {

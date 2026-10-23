@@ -19,6 +19,8 @@ const DASHBOARD_PREFIXES = [
   "/management",
   "/tools",
   "/wiki",
+  "/admin_login",
+  "/admin-login",
 ];
 
 const normalizeRoute = (value: string) => value.replace(/\/{2,}/g, "/");

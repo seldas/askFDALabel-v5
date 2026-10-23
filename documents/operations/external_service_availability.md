@@ -4,8 +4,11 @@ The server independently probes OpenFDA and DailyMed through
 `GET /api/external-services`. This is a server network check, not a browser
 network check or an account permission. It applies to RAPID and other deployments.
 
-Probes run concurrently with short connection/read timeouts. Network failures
-and blocked/non-JSON responses are confirmed twice. Successful checks are cached
+Probes run concurrently with a five-second connection and fifteen-second read
+timeout. The OpenFDA probe uses the same drug/event endpoint and configured
+`OPENFDA_API_KEY` as FAERS. Timeouts are marked degraded and do not disable tools;
+connection failures and blocked/non-JSON responses are confirmed twice before
+marking a service unavailable. Successful checks are cached
 for five minutes per process; failed or degraded checks for one minute. The UI
 refreshes every minute. HTTP rate limits and temporary server errors are marked
 degraded, rather than permanently disabling the service. Check failures in the UI

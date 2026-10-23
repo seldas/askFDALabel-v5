@@ -269,21 +269,10 @@ function HomePage() {
     setPendingDb(null);
   }, [pendingDb]);
 
-  const handleGuestLogin = async () => {
-    try {
-      const res = await fetch('/api/dashboard/auth/guest-login', { method: 'POST' });
-      if (res.ok) await refreshSession();
-    } catch (err) {
-      console.error('Guest login failed', err);
-    }
-  };
-
   if (!loading && !isAuthed) {
     return (
       <StartPage
         ssoEnabled={Boolean(session?.sso_enabled)}
-        onLogin={() => openAuthModal('login')}
-        onGuest={handleGuestLogin}
       />
     );
   }

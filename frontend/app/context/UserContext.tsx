@@ -126,22 +126,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [session?.is_authenticated]);
 
   useEffect(() => {
-    if (!loading && !session?.is_authenticated && pathname !== '/') {
-      const autoGuestLogin = async () => {
-        try {
-          const res = await fetch('/api/dashboard/auth/guest-login', { method: 'POST' });
-          if (res.ok) {
-            await fetchSession();
-          } else {
-            router.push('/');
-          }
-        } catch (e) {
-          router.push('/');
-        }
-      };
-      autoGuestLogin();
+    if (!loading && !session?.is_authenticated) {
+      const publicPaths = ['/', '/admin_login', '/admin-login', '/disclaimer', '/wiki'];
+      const isPublic = pathname ? publicPaths.some(p => pathname === p || pathname.endsWith(p)) : true;
+      if (!isPublic) {
+        router.push('/');
+      }
     }
-  }, [loading, session?.is_authenticated, pathname, router, fetchSession]);
+  }, [loading, session?.is_authenticated, pathname, router]);
 
   useEffect(() => {
     fetchSession();

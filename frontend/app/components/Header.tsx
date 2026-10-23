@@ -591,11 +591,6 @@ export default function Header({
                         {session?.is_admin ? 'System Management' : 'Settings & Preferences'}
                       </Link>
                     )}
-                    {isGuest && (
-                      <button onClick={() => { openAuthModal('login'); setActiveDropdown(null); }} className="dropdown-item">
-                        Log In
-                      </button>
-                    )}
                     {!isGuest && session.auth_method !== 'saml' && (
                       <button onClick={() => { openAuthModal('change_password'); setActiveDropdown(null); }} className="dropdown-item dropdown-item--secondary-action">
                         Change Password
@@ -611,10 +606,15 @@ export default function Header({
           </>
         ) : (
           <div className="header-auth-buttons">
-            <button onClick={() => openAuthModal('login')} className="btn-login">
-              Login
-            </button>
-
+            {session?.sso_enabled ? (
+              <a href="/api/dashboard/auth/saml/login" className="btn-login">
+                Sign In
+              </a>
+            ) : (
+              <button onClick={() => openAuthModal('login')} className="btn-login">
+                Sign In
+              </button>
+            )}
           </div>
         )}
 
