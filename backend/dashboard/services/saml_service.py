@@ -21,8 +21,12 @@ def public_config():
     provider = os.getenv('SSO_PROVIDER', 'disabled')
     configured = provider in ('keycloak', 'fda') and all(os.getenv(k) for k in (
         'SSO_PUBLIC_ORIGIN', 'SAML_SP_ENTITY_ID', 'SAML_ACS_URL'))
-    return {'sso_enabled': bool(configured), 'sso_provider': provider,
-            'sso_label': 'FDA SSO' if provider == 'fda' else 'Test SSO (Keycloak)'}
+    if provider == 'fda':
+        idp_version = os.getenv('SSO_IDP_VERSION', '3')
+        sso_label = f'FDA SSO{idp_version}'
+    else:
+        sso_label = 'Test SSO (Keycloak)'
+    return {'sso_enabled': bool(configured), 'sso_provider': provider, 'sso_label': sso_label}
 
 
 def store():
@@ -56,7 +60,9 @@ def settings():
     if not public_config()['sso_enabled']:
         raise ValueError('SSO is not configured. Set the registered SP Entity ID, ACS URL and public origin.')
     if os.environ['SSO_PROVIDER'] == 'fda':
-        default = Path(__file__).resolve().parents[3] / 'deploy' / 'SSO_config' / 'sso2.xml'
+        idp_version = os.getenv('SSO_IDP_VERSION', '3')
+        default_file = 'sso2.xml' if idp_version == '2' else 'sso3-metadata.xml'
+        default = Path(__file__).resolve().parents[3] / 'deploy' / 'SSO_config' / default_file
         xml = Path(os.getenv('SAML_IDP_METADATA_FILE', str(default))).read_text(encoding='utf-8')
     else:
         # The trusted URL is deployment configuration, never request input.
@@ -78,9 +84,15 @@ def settings():
         raise ValueError('Both SAML_SP_CERT_FILE and SAML_SP_KEY_FILE must be configured')
     if cert_path:
         sp.update(x509cert=Path(cert_path).read_text(), privateKey=Path(key_path).read_text())
+    # SSO3 (HPC) signs the response envelope; SSO2 and Keycloak sign the assertion.
+    # Exactly one of the two must be required so there is always a verified signature.
+    idp_version = os.getenv('SSO_IDP_VERSION', '3')
+    sso3 = (os.environ['SSO_PROVIDER'] == 'fda' and idp_version == '3')
     return {**idp, 'strict': True, 'debug': False, 'sp': sp, 'security': {
-        'authnRequestsSigned': bool(cert_path), 'wantAssertionsSigned': True,
-        'wantMessagesSigned': False, 'wantAttributeStatement': True,
+        'authnRequestsSigned': bool(cert_path),
+        'wantAssertionsSigned': not sso3,   # SSO3: response-signed; SSO2/Keycloak: assertion-signed
+        'wantMessagesSigned': sso3,          # require response signature when assertion is unsigned
+        'wantAttributeStatement': True,
         'rejectUnsolicitedResponsesWithInResponseTo': True, 'requestedAuthnContext': False,
         'signatureAlgorithm': 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256',
         'digestAlgorithm': 'http://www.w3.org/2001/04/xmlenc#sha256',

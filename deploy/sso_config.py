@@ -53,7 +53,13 @@ def resolve_sso(env, mode, rapid=False, nginx=False, runtime='docker', sso_provi
         'SESSION_COOKIE_SECURE': 'true' if origin.startswith('https:') else 'false',
     }
     if fda:
-        config['SAML_IDP_METADATA_FILE'] = '/deploy/SSO_config/sso2.xml'
+        # Rapid deployments (NCTR pre-prod) stay on SSO2; HPC uses SSO3.
+        if rapid:
+            config['SAML_IDP_METADATA_FILE'] = '/deploy/SSO_config/sso2.xml'
+            config['SSO_IDP_VERSION'] = '2'
+        else:
+            config['SAML_IDP_METADATA_FILE'] = '/deploy/SSO_config/sso3-metadata.xml'
+            config['SSO_IDP_VERSION'] = '3'
     else:
         public = env.get('KEYCLOAK_PUBLIC_URL', '').rstrip('/') or (origin + '/sso' if nginx else 'http://' + urlsplit(origin).hostname + ':8843')
         relative = urlsplit(public).path.rstrip('/') or '/'

@@ -7,6 +7,7 @@ original flow before provisioning an account or establishing a login session.
 import json
 import hashlib
 import logging
+import os
 import secrets
 import time
 from urllib.parse import urlencode, urlsplit
@@ -70,7 +71,16 @@ def acs():
             raise ValueError('SAML response validation failed')
         subject = auth.get_nameid()
         attrs = auth.get_attributes()
-        email = attrs.get('Email', [])
+        # SSO3 (HPC) sends 'mail' + 'Username'; SSO2 (rapid/legacy) sends 'Email' + 'Name' + 'Office Info'.
+        idp_version = os.getenv('SSO_IDP_VERSION', '3')
+        if idp_version == '2':
+            email = attrs.get('Email', [])
+            display_name = (attrs.get('Name') or [''])[0]
+            office = (attrs.get('Office Info') or [''])[0]
+        else:
+            email = attrs.get('mail', [])
+            display_name = (attrs.get('Username') or [''])[0]
+            office = ''
         if not subject or len(subject) > 1024 or len(email) != 1 or not email[0] or len(email[0]) > 320:
             raise ValueError('SSO response is missing a valid NameID or Email attribute')
         # Always reject a message or assertion reused across different flows.
@@ -87,8 +97,8 @@ def acs():
             raise ValueError('SAML response was already used')
         handoff = secrets.token_urlsafe(32)
         flow['claims'] = {'issuer': auth.get_settings().get_idp_data()['entityId'], 'subject': subject,
-                          'email': email[0], 'name': (attrs.get('Name') or [''])[0],
-                          'office': (attrs.get('Office Info') or [''])[0]}
+                          'email': email[0], 'name': display_name,
+                          'office': office}
         cache.setex('saml:handoff:' + handoff, 60, json.dumps(flow))
         return redirect(saml.endpoint('/complete') + '?token=' + handoff, code=303)
     except Exception:
