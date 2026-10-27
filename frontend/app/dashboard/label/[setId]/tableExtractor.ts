@@ -61,7 +61,7 @@ export function initTableExtractor(root: HTMLElement | null): void {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'btn-extract-table';
-      btn.innerHTML = '<span aria-hidden="true">&#128229;</span> View table';
+      btn.textContent = 'View table';
       btn.title = 'View table and copy cells';
       btn.addEventListener('click', (e) => {
         e.preventDefault();

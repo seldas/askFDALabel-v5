@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
+import { Button } from '../../../platform/primitives';
 import { buildTableGrid, expandTableRange, tableRangeTSV, type TableRange } from './tableGrid';
 
 interface TableExtractorModalProps {
@@ -18,6 +19,8 @@ export default function TableExtractorModal({
   tableHtml = '',
 }: TableExtractorModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  // Keep the HTML prop stable: state updates must not replace selected cells.
+  const tableMarkup = useMemo(() => ({ __html: tableHtml }), [tableHtml]);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   const [hasSelection, setHasSelection] = useState(false);
 
@@ -234,74 +237,28 @@ export default function TableExtractorModal({
               {title || 'Table Viewer'}
             </h3>
             <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--fdl-muted, #5e6e7c)' }}>
-              Copy the whole table, or drag to select cells. Use Copy or Ctrl/Cmd+C.
+              {hasSelection ? 'Copy selected cells · Clear to copy all' : 'Drag to select cells · Copy all by default'}
             </p>
           </div>
 
-          <div className="table-extract-modal__actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <button
-                type="button"
-                onClick={handleCopySelection}
-                className="table-extract-modal__copy"
-                style={{ display: 'inline-flex' }}
-              >
-                {copyState === 'copied' ? (
-                  <><span>&#9989;</span> Copied!</>
-                ) : copyState === 'failed' ? (
-                  <><span>&#10060;</span> Copy Failed</>
-                ) : (
-                  <><span>&#128203;</span> {hasSelection ? 'Copy Selection' : 'Copy Table'}</>
-                )}
-              </button>
-            {hasSelection && <button type="button" onClick={() => {
+          <div className="table-extract-modal__actions">
+            <Button type="button" variant="primary" onClick={handleCopySelection}
+              title={hasSelection ? 'Copy selected cells' : 'Copy whole table'}>
+              {copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Retry copy' : 'Copy'}
+            </Button>
+            <Button type="button" variant="ghost" disabled={!hasSelection} title="Clear selection" onClick={() => {
               selectionRef.current = null;
               containerRef.current?.querySelectorAll('.selected-cell').forEach(cell => cell.classList.remove('selected-cell'));
               setHasSelection(false);
               setCopyState('idle');
-            }}>Clear selection</button>}
+            }}>Clear</Button>
+            <Button type="button" onClick={handleExportExcel} title="Download whole table as Excel">Excel</Button>
             <span role="status" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)' }}>{copyState === 'copied' ? 'Copied to clipboard.' : copyState === 'failed' ? 'Copy failed. Please try again.' : ''}</span>
-
-            <button
-              type="button"
-              onClick={handleExportExcel}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                backgroundColor: 'var(--fdl-green, #2d7a4c)',
-                color: 'white',
-                border: 'none',
-                borderRadius: 'var(--fdl-radius-sm, 2px)',
-                cursor: 'pointer',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-              }}
-            >
-              <span>📊</span> Export whole table (.xlsx)
-            </button>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="table-extract-modal__close"
-              aria-label="Close table extractor"
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: 'var(--fdl-radius-sm, 2px)',
-                border: '1px solid var(--fdl-line)',
-                background: 'white',
-                cursor: 'pointer',
-                fontSize: '20px',
-                color: 'var(--fdl-ink)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              &times;
-            </button>
+            <Button type="button" variant="ghost" onClick={onClose} aria-label="Close table" title="Close">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                <path d="m6 6 12 12M18 6 6 18" />
+              </svg>
+            </Button>
           </div>
         </div>
 
@@ -310,7 +267,7 @@ export default function TableExtractorModal({
           ref={containerRef}
           className="custom-modal-body table-extract-modal__body"
           style={{ flex: 1, overflow: 'auto', padding: '20px' }}
-          dangerouslySetInnerHTML={{ __html: tableHtml }}
+          dangerouslySetInnerHTML={tableMarkup}
         />
       </div>
     </div>
