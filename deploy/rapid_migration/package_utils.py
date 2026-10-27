@@ -20,7 +20,11 @@ def safe_target(root, name):
         raise ValueError(f'Unsafe archive path: {name}')
     root = Path(root).resolve()
     target = (root / normalized).resolve()
-    if not target.is_relative_to(root) or target == root:
+    try:
+        relative = target.relative_to(root)
+    except ValueError:
+        raise ValueError(f'Archive path escapes destination: {name}') from None
+    if relative == Path('.'):
         raise ValueError(f'Archive path escapes destination: {name}')
     return target
 
