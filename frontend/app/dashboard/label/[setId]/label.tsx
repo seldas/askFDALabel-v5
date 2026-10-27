@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react';
 import { Section, LabelData, TOCItem } from './types';
 import Link from 'next/link';
+import SectionTitle, { isUnclassifiedTitle } from './SectionTitle';
 import { initTableExtractor } from './tableExtractor';
 import {
   scanAndHighlightMeddraTerms,
@@ -21,14 +22,16 @@ const SectionComponent = memo(function SectionComponent({ section }: { section: 
       data-section-number={section.numeric_id}
       style={{ marginBottom: '28px' }}
     >
-      {section.title && <h2 style={{ 
+      {section.title?.trim() && (isUnclassifiedTitle(section.title) ? (
+        <div style={{ marginBottom: '8px' }}><SectionTitle title={section.title} /></div>
+      ) : <h2 style={{
         fontSize: '1.35rem', 
         color: 'var(--fdl-navy-950)', 
         borderBottom: '1px solid var(--fdl-line)', 
         paddingBottom: '10px',
         marginBottom: '18px',
         fontWeight: 700
-      }}>{section.title}</h2>}
+      }}><SectionTitle title={section.title} /></h2>)}
       {section.content && <div className="spl-content" dangerouslySetInnerHTML={{ __html: section.content }} />}
       {section.children && section.children.map((child, idx) => (
         <SectionComponent key={idx} section={child} />
@@ -63,14 +66,14 @@ const HighlightsComponent = memo(function HighlightsComponent({
                 <div className="highlight-item-header">
                     {h.source_section_title !== 'Untitled Section' && (
                         <span className="source-title" style={{ fontWeight: 700, color: 'var(--fdl-ink-soft)', textTransform: 'uppercase', fontSize: '0.75rem' }}>
-                            {h.source_section_title}
+                            <SectionTitle title={h.source_section_title} />
                         </span>
                     )}
                     {onGoToSection && h.source_section_title && h.source_section_title !== 'Untitled Section' && (
                         <button
                             className="highlight-goto-link"
                             onClick={() => onGoToSection(h.source_section_title)}
-                            title={`Go to ${h.source_section_title}`}
+                            title={isUnclassifiedTitle(h.source_section_title) ? 'Go to section' : `Go to ${h.source_section_title}`}
                         >
                             ↗ Go to section
                         </button>

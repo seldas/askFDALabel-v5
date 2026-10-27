@@ -541,7 +541,6 @@ export default function SidebarFilters({
                       { id: 'all', label: 'All Formats', count: totalResults },
                       { id: 'plr', label: 'PLR Format', count: getFacetCount('labelingFormat', 'plr') },
                       { id: 'non_plr', label: 'non-PLR Format', count: getFacetCount('labelingFormat', 'non_plr') },
-                      { id: 'unclassified', label: 'Unclassified / Other', count: getFacetCount('labelingFormat', 'unclassified') },
                     ].map((fmt) => (
                       <label key={fmt.id} className="fdl-radio-label">
                         <input

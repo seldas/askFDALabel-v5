@@ -270,7 +270,7 @@ def _process_non_plr_label(sections):
         
         num_id = s.get('numeric_id')
         
-        if not num_id and not is_boxed and not is_excluded:
+        if title and not num_id and not is_boxed and not is_excluded:
             # Auto-number ONLY if it's not excluded
             num_id = str(count)
             # Update the section title in place for the view?

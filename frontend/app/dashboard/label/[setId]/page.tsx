@@ -18,6 +18,7 @@ import ToolboxPanel from './ToolboxPanel';
 // the Header / identity chrome belongs to ../layout.tsx.
 import LabelView from './label';
 import ReaderToolbar from './ReaderToolbar';
+import SectionTitle from './SectionTitle';
 
 // Shared Types
 import { TOCItem } from './types';
@@ -39,6 +40,13 @@ function TOCItemComponent({
   const isExpanded = expandedSections.has(item.id);
   const isActive = item.id === activeSectionId;
   const hasChildren = item.children && item.children.length > 0;
+
+  if (!item.title?.trim()) {
+    return <>{item.children?.map(child => (
+      <TOCItemComponent key={child.id} item={child} level={level}
+        expandedSections={expandedSections} toggleSection={toggleSection} activeSectionId={activeSectionId} />
+    ))}</>;
+  }
 
   let specialClass = '';
   if (item.is_boxed_warning) specialClass = 'toc-boxed-warning';
@@ -74,7 +82,7 @@ function TOCItemComponent({
             }
           }}
         >
-          {item.title}
+          <SectionTitle title={item.title} />
         </a>
       </div>
       {hasChildren && isExpanded && item.children && (
@@ -125,7 +133,7 @@ function ExportSectionItem({
           textTransform: level === 0 ? 'uppercase' : 'none',
           letterSpacing: level === 0 ? '0.02em' : 'normal'
         }}>
-          {item.title}
+          <SectionTitle title={item.title} />
         </span>
       </label>
       {hasChildren && item.children.map((child: any) => (
