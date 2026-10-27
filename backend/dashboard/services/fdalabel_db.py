@@ -1357,7 +1357,7 @@ class FDALabelDBService:
                 SELECT s.set_id, s.product_names, s.generic_names, s.manufacturer, s.appr_num,
                        s.ndc_codes, s.revised_date, s.market_categories, s.doc_type, s.local_path, s.spl_id,
                        (SELECT COUNT(*) > 1 FROM {schema}sum_spl h WHERE h.set_id = s.set_id) as has_history
-                FROM {schema}sum_spl TABLESAMPLE SYSTEM (%(pct)s) AS s
+                FROM {schema}sum_spl AS s TABLESAMPLE SYSTEM (%(pct)s)
                 {w_stmt}
                 ORDER BY RANDOM()
                 LIMIT %(limit)s

@@ -30,7 +30,7 @@ import {
 export type ToolKind = 'embedded' | 'external';
 
 /** Deployment capabilities a tool depends on. See capabilities.tsx. */
-export type Requirement = 'internal' | 'fdaAccessible' | 'cderAccessible' | 'localQuery';
+export type Requirement = 'internal' | 'fdaAccessible' | 'cderAccessible' | 'localQuery' | 'nonRapid';
 
 export type ToolGroup = 'discover' | 'analyze' | 'manage' | 'validate' | 'reference';
 
@@ -412,6 +412,7 @@ const PLATFORM_TOOLS: ToolDef[] = [
   },
   {
     id: 'webtest',
+    requires: ['nonRapid'],
     name: 'Web-test Tool',
     blurb: 'Automated regression testing of FDALabel web endpoints.',
     iconId: 'wrench',

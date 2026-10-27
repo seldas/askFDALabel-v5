@@ -65,6 +65,11 @@
   box-shadow: none;
 }
 
+.lq-mode-tab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .lq-search-form { display: flex; gap: 0.75rem; }
 
 .lq-search-field { flex: 1; position: relative; }

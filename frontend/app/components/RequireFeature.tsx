@@ -18,12 +18,14 @@ import Header from './Header';
 import Footer from './Footer';
 import AccessRestricted from './AccessRestricted';
 import { useUser } from '../context/UserContext';
+import { useCapabilities } from '../platform/capabilities';
 import type { ActiveApp } from './Header';
 
 export default function RequireFeature({
   feature,
   featureKey,
   activeApp,
+  nonRapid = false,
   children,
 }: {
   /** Tool name, used in the refusal heading. */
@@ -31,14 +33,27 @@ export default function RequireFeature({
   /** Feature-gate key, matching the backend catalog. */
   featureKey: string;
   activeApp?: ActiveApp;
+  nonRapid?: boolean;
   children: React.ReactNode;
 }) {
   const { session, loading } = useUser();
+  const { capabilities, ready } = useCapabilities();
 
   // Render nothing decisive until the session resolves, or an authorized user
   // sees the refusal flash before their access is known.
-  if (loading) {
+  if (loading || (nonRapid && !ready)) {
     return <div style={{ padding: '2rem', textAlign: 'center' }}>Verifying access...</div>;
+  }
+
+  if (nonRapid && capabilities.isRapid !== false) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Header activeApp={activeApp} />
+        <AccessRestricted feature={feature} title={`${feature} is unavailable in this deployment`}
+          body={`${feature} is disabled in RAPID deployments.`} />
+        <Footer />
+      </div>
+    );
   }
 
   if (!session?.permissions?.[featureKey]) {

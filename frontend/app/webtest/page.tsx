@@ -986,7 +986,7 @@ function WebTestingPageInner() {
 
 export default function WebTestingPage() {
     return (
-        <RequireFeature feature="Web-test Tool" featureKey="webtest" activeApp="webtest">
+        <RequireFeature feature="Web-test Tool" featureKey="webtest" activeApp="webtest" nonRapid>
             <WebTestingPageInner />
         </RequireFeature>
     );

@@ -74,8 +74,13 @@ const getTECodeExplanation = (code: string) => {
 };
 
 const LocalQueryContent = () => {
-    const { capabilities } = useCapabilities();
-    const deviceUnavailable = capabilities.externalServices?.openfda?.status === 'unavailable';
+    const { capabilities, ready: capabilitiesReady } = useCapabilities();
+    const openfdaStatus = capabilities.externalServices?.openfda;
+    const deviceUnavailable = !capabilitiesReady || openfdaStatus?.status === 'unavailable'
+        || (capabilities.isRapid && openfdaStatus?.status !== 'available');
+    const deviceUnavailableReason = !capabilitiesReady || !openfdaStatus || openfdaStatus.status === 'checking'
+        ? 'Checking this server’s access to openFDA. Device MAUDE Search is temporarily disabled.'
+        : `Device MAUDE Search is disabled because this server’s access to openFDA could not be confirmed. ${openfdaStatus.message}`;
     const searchParams = useSearchParams();
     const { session } = useUser();
     const urlQuery = searchParams.get('q');
@@ -87,6 +92,7 @@ const LocalQueryContent = () => {
     const [rldResults, setRldResults] = useState<RLDResult[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+    const [searchError, setSearchError] = useState<string | null>(null);
     const [humanRxOnly, setHumanRxOnly] = useState(false);
     const [rldOnly, setRldOnly] = useState(false);
     const [rsOnly, setRsOnly] = useState(false);
@@ -141,6 +147,7 @@ const LocalQueryContent = () => {
         if (!finalQuery.trim()) return;
 
         setQuery(finalQuery);
+        setSearchError(null);
         setShowSuggestions(false);
         setUserWantsSuggestions(false); // Disable suggestions after a search is triggered
         setIsLoading(true);
@@ -195,6 +202,10 @@ const LocalQueryContent = () => {
 
     const handleRandom = async () => {
         if (searchMode === 'device' && deviceUnavailable) return;
+        setSearchError(null);
+        setResults([]);
+        setRldResults([]);
+        setDeviceResults([]);
         setIsLoading(true);
         setHasSearched(true);
         setQuery('');
@@ -203,24 +214,28 @@ const LocalQueryContent = () => {
             if (searchMode === 'device') {
                 const response = await fetch(`/api/device/random`);
                 const data = await response.json();
+                if (!response.ok || data.error) throw new Error(data.error || 'Unable to load Quick Access results.');
                 if (data.results) {
                     setDeviceResults(data.results);
                 }
             } else if (searchMode === 'rld') {
                 const response = await fetch(`/api/localquery/rld_random?rld_only=${rldOnly}&rs_only=${rsOnly}`);
                 const data = await response.json();
+                if (!response.ok || data.error) throw new Error(data.error || 'Unable to load Quick Access results.');
                 if (data.results) {
                     setRldResults(data.results);
                 }
             } else {
                 const response = await fetch(`/api/localquery/random?human_rx_only=${humanRxOnly}`);
                 const data = await response.json();
+                if (!response.ok || data.error) throw new Error(data.error || 'Unable to load Quick Access results.');
                 if (data.results) {
                     setResults(data.results);
                 }
             }
         } catch (error) {
             console.error("Random fetch error:", error);
+            setSearchError(error instanceof Error ? error.message : 'Unable to load Quick Access results.');
         } finally {
             setIsLoading(false);
         }
@@ -338,7 +353,7 @@ const LocalQueryContent = () => {
                                 role="tab"
                                 aria-selected={searchMode === 'device'}
                                 disabled={deviceUnavailable}
-                                title={deviceUnavailable ? 'This server cannot reach OpenFDA. Device queries are temporarily disabled.' : undefined}
+                                title={deviceUnavailable ? deviceUnavailableReason : undefined}
                                 className="lq-mode-tab"
                                 onClick={() => { setSearchMode('device'); setHasSearched(false); setDeviceResults([]); setSelectedDevices([]); }}
                             >
@@ -346,6 +361,11 @@ const LocalQueryContent = () => {
                             </button>
                         </div>
                     </div>
+                    {deviceUnavailable && (
+                        <p role="status" style={{ color: 'var(--fdl-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                            {deviceUnavailableReason}
+                        </p>
+                    )}
                     <form onSubmit={(e) => handleSearch(e)} className="lq-search-form">
                         <div className="lq-search-field">
                             <Input
@@ -687,8 +707,8 @@ const LocalQueryContent = () => {
                         ) : (
                             <EmptyState
                                 style={{ padding: 'var(--fdl-space-6)' }}
-                                title="No results found"
-                                description="Try adjusting your search query."
+                                title={searchError ? 'Quick Access failed' : 'No results found'}
+                                description={searchError || 'Try adjusting your search query.'}
                             />
                         )}
                     </div>

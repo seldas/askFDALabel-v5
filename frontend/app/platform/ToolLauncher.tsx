@@ -32,6 +32,8 @@ import { ServiceWarning, toolServiceState } from './ServiceWarning';
 
 function meetsRequirement(req: Requirement, caps: Capabilities): boolean {
   switch (req) {
+    case 'nonRapid':
+      return caps.isRapid === false;
     case 'internal':
       return caps.isInternal;
     case 'fdaAccessible':

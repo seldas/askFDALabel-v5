@@ -14,8 +14,15 @@ from dashboard.services.task_service import TaskService
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from dashboard.routes.guards import feature_before_request
+from dashboard.services.deployment import is_rapid
 
 webtest_bp = Blueprint('webtest', __name__)
+
+
+@webtest_bp.before_request
+def guard_deployment():
+    if is_rapid():
+        return jsonify({'error': 'Web-test Tool is disabled in RAPID deployments.'}), 403
 
 # Gated on the blueprint rather than per route, so any route added later is
 # covered by default. The required role is admin-configurable at runtime --
