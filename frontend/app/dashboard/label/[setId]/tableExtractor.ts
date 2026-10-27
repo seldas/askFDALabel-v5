@@ -12,14 +12,17 @@ function isNestedDataTable(table: HTMLTableElement): boolean {
 }
 
 function findTableTitle(table: HTMLTableElement): string {
-  let prev = table.previousElementSibling;
+  const caption = table.caption?.textContent?.trim();
+  if (caption) return caption;
+  const wrapper = table.closest('.spl-table-wrapper, .table-wrapper');
+  let prev = (wrapper || table).previousElementSibling;
   for (let i = 0; i < 3 && prev; i++) {
     const validTag = ['H1', 'H2', 'H3', 'H4', 'P'].includes(prev.tagName);
     const text = prev.textContent?.trim() || '';
-    if (validTag && text.length > 2) return text;
+    if (validTag && text.length > 2 && text.length <= 240) return text;
     prev = prev.previousElementSibling;
   }
-  return 'Table Data';
+  return 'Table';
 }
 
 function sanitizeTableClone(table: HTMLTableElement): HTMLTableElement {
@@ -58,8 +61,8 @@ export function initTableExtractor(root: HTMLElement | null): void {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'btn-extract-table';
-      btn.innerHTML = '<span>&#128229;</span> Extract';
-      btn.title = 'Open in Excel-style viewer';
+      btn.innerHTML = '<span aria-hidden="true">&#128229;</span> View table';
+      btn.title = 'View table and copy cells';
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();

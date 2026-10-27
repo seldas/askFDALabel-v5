@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
+import { buildTableGrid, expandTableRange, tableRangeTSV, type TableRange } from './tableGrid';
 
 interface TableExtractorModalProps {
   isOpen: boolean;
@@ -20,120 +21,111 @@ export default function TableExtractorModal({
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   const [hasSelection, setHasSelection] = useState(false);
 
-  // Cell selection state
-  const isDraggingRef = useRef(false);
-  const startCellRef = useRef<HTMLTableCellElement | null>(null);
+  useEffect(() => {
+    if (copyState === 'idle') return;
+    const timer = window.setTimeout(() => setCopyState('idle'), 2000);
+    return () => window.clearTimeout(timer);
+  }, [copyState]);
 
-  // Keyboard navigation & ESC
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const selectionRef = useRef<TableRange | null>(null);
+
   useEffect(() => {
     if (!isOpen) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialogRef.current?.focus();
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
+      if (e.key === 'Escape') { e.preventDefault(); onClose(); }
+      if (e.key === 'Tab') {
+        const elements = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], [tabindex="0"]') || []);
+        const first = elements[0];
+        const last = elements[elements.length - 1];
+        if (e.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) {
+          e.preventDefault(); last?.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first?.focus();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus?.isConnected) previousFocus.focus();
+    };
   }, [isOpen, onClose]);
 
-  // Wire cell selection logic on table mount/update
   useEffect(() => {
-    if (!isOpen || !containerRef.current) return;
-
-    const table = containerRef.current.querySelector('table');
+    selectionRef.current = null;
+    setHasSelection(false);
+    setCopyState('idle');
+    if (!isOpen) return;
+    const table = containerRef.current?.querySelector('table');
     if (!table) return;
-
-    table.classList.add('excel-style-table');
-    table.removeAttribute('style');
-
-    const getCoords = (cell: HTMLTableCellElement) => ({
-      row: (cell.parentElement as HTMLTableRowElement).rowIndex,
-      col: cell.cellIndex,
-    });
-
-    const clearSelection = () => {
-      table.querySelectorAll('.selected-cell').forEach((c) => c.classList.remove('selected-cell'));
-      setHasSelection(false);
-    };
-
-    const selectRange = (endCell: HTMLTableCellElement) => {
-      if (!startCellRef.current) return;
-      const start = getCoords(startCellRef.current);
-      const end = getCoords(endCell);
-
-      const minRow = Math.min(start.row, end.row);
-      const maxRow = Math.max(start.row, end.row);
-      const minCol = Math.min(start.col, end.col);
-      const maxCol = Math.max(start.col, end.col);
-
-      table.querySelectorAll<HTMLTableCellElement>('td, th').forEach((cell) => {
-        const c = getCoords(cell);
-        const inRange = c.row >= minRow && c.row <= maxRow && c.col >= minCol && c.col <= maxCol;
-        cell.classList.toggle('selected-cell', inRange);
+    const { cells } = buildTableGrid(table);
+    const byElement = new Map(cells.map(cell => [cell.element, cell]));
+    let start: typeof cells[number] | undefined;
+    let pointerId: number | null = null;
+    const select = (end: typeof cells[number]) => {
+      if (!start) return;
+      const range = expandTableRange(cells, {
+        row: Math.min(start.row, end.row), col: Math.min(start.col, end.col),
+        bottom: Math.max(start.bottom, end.bottom), right: Math.max(start.right, end.right),
       });
+      selectionRef.current = range;
+      for (const cell of cells) cell.element.classList.toggle('selected-cell',
+        cell.row >= range.row && cell.bottom <= range.bottom && cell.col >= range.col && cell.right <= range.right);
       setHasSelection(true);
+      setCopyState('idle');
     };
-
-    const onMouseDown = (e: MouseEvent) => {
-      const cell = (e.target as HTMLElement).closest('td, th') as HTMLTableCellElement | null;
-      if (!cell) return;
-
-      isDraggingRef.current = true;
-      startCellRef.current = cell;
-      clearSelection();
-      cell.classList.add('selected-cell');
-      setHasSelection(true);
-      e.preventDefault();
+    const cellAt = (target: EventTarget | null) => {
+      const element = target instanceof Element ? target.closest('td, th') as HTMLTableCellElement | null : null;
+      // Nested table clicks select the containing outer cell.
+      let candidate = element;
+      while (candidate && !byElement.has(candidate)) candidate = candidate.parentElement?.closest('td, th') as HTMLTableCellElement | null;
+      return candidate ? byElement.get(candidate) : undefined;
     };
-
-    const onMouseOver = (e: MouseEvent) => {
-      if (!isDraggingRef.current) return;
-      const cell = (e.target as HTMLElement).closest('td, th') as HTMLTableCellElement | null;
-      if (cell) selectRange(cell);
+    const down = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      start = cellAt(e.target);
+      if (!start) return;
+      pointerId = e.pointerId;
+      select(start);
+      // Preserve normal touch scrolling; tapping still selects one cell.
+      if (e.pointerType === 'mouse') e.preventDefault();
     };
-
-    const onMouseUp = () => {
-      isDraggingRef.current = false;
+    const over = (e: PointerEvent) => {
+      if (pointerId !== e.pointerId || e.pointerType !== 'mouse') return;
+      const cell = cellAt(e.target);
+      if (cell) select(cell);
     };
-
-    table.addEventListener('mousedown', onMouseDown);
-    table.addEventListener('mouseover', onMouseOver);
-    window.addEventListener('mouseup', onMouseUp);
-
+    const up = () => { start = undefined; pointerId = null; };
+    table.addEventListener('pointerdown', down);
+    table.addEventListener('pointerover', over);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
     return () => {
-      table.removeEventListener('mousedown', onMouseDown);
-      table.removeEventListener('mouseover', onMouseOver);
-      window.removeEventListener('mouseup', onMouseUp);
+      table.removeEventListener('pointerdown', down);
+      table.removeEventListener('pointerover', over);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
     };
   }, [isOpen, tableHtml]);
 
-  const getSelectedTSV = () => {
-    if (!containerRef.current) return '';
-    const table = containerRef.current.querySelector('table');
+  const getCopyTSV = () => {
+    const table = containerRef.current?.querySelector('table');
     if (!table) return '';
-
-    const selected = Array.from(table.querySelectorAll<HTMLTableCellElement>('.selected-cell'));
-    if (!selected.length) return '';
-
-    const rows: Record<number, string[]> = {};
-    selected.forEach((cell) => {
-      const row = (cell.parentElement as HTMLTableRowElement).rowIndex;
-      if (!rows[row]) rows[row] = [];
-      let text = cell.innerText.trim();
-      if (/[\n\t"]/.test(text)) {
-        text = `"${text.replace(/"/g, '""')}"`;
-      }
-      rows[row].push(text);
+    const { grid } = buildTableGrid(table);
+    if (!grid.length) return '';
+    return tableRangeTSV(grid, selectionRef.current || {
+      row: 0, col: 0, bottom: grid.length - 1, right: Math.max(...grid.map(row => row.length)) - 1,
     });
-
-    return Object.keys(rows)
-      .sort((a, b) => Number(a) - Number(b))
-      .map((row) => rows[Number(row)].join('\t'))
-      .join('\n');
   };
 
   const handleCopySelection = async () => {
-    const tsv = getSelectedTSV();
+    const tsv = getCopyTSV();
     if (!tsv) return;
 
     try {
@@ -144,17 +136,17 @@ export default function TableExtractorModal({
         textarea.value = tsv;
         textarea.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
         document.body.appendChild(textarea);
+        const previousFocus = document.activeElement as HTMLElement | null;
         textarea.focus();
         textarea.select();
-        document.execCommand('copy');
-        textarea.remove();
+        let copied = false;
+        try { copied = document.execCommand('copy'); } finally { textarea.remove(); previousFocus?.focus(); }
+        if (!copied) throw new Error('Clipboard copy was rejected.');
       }
       setCopyState('copied');
-      setTimeout(() => setCopyState('idle'), 2000);
     } catch (err) {
       console.error('Failed to copy TSV:', err);
       setCopyState('failed');
-      setTimeout(() => setCopyState('idle'), 2000);
     }
   };
 
@@ -164,7 +156,7 @@ export default function TableExtractorModal({
     if (!table) return;
 
     try {
-      const wb = XLSX.utils.table_to_book(table, { sheet: 'ExtractedTable' });
+      const wb = XLSX.utils.table_to_book(table, { sheet: 'ExtractedTable', raw: true });
       const safeTitle = (title || 'Extracted_Table').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 30);
       XLSX.writeFile(wb, `${safeTitle}.xlsx`);
     } catch (err) {
@@ -191,6 +183,18 @@ export default function TableExtractorModal({
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="table-viewer-title"
+        tabIndex={-1}
+        onCopy={(e) => {
+          const tsv = getCopyTSV();
+          if (!tsv) return;
+          e.preventDefault();
+          e.clipboardData.setData('text/plain', tsv);
+          setCopyState('copied');
+        }}
         onClick={(e) => e.stopPropagation()}
         className="custom-modal-content table-extract-modal__content"
         style={{
@@ -219,7 +223,7 @@ export default function TableExtractorModal({
           }}
         >
           <div>
-            <h3
+            <h3 id="table-viewer-title"
               style={{
                 margin: 0,
                 fontSize: '1.15rem',
@@ -230,12 +234,11 @@ export default function TableExtractorModal({
               {title || 'Table Viewer'}
             </h3>
             <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--fdl-muted, #5e6e7c)' }}>
-              Click and drag cells to select a range. Copy as TSV or export directly to Excel.
+              Copy the whole table, or drag to select cells. Use Copy or Ctrl/Cmd+C.
             </p>
           </div>
 
           <div className="table-extract-modal__actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {hasSelection && (
               <button
                 type="button"
                 onClick={handleCopySelection}
@@ -247,10 +250,16 @@ export default function TableExtractorModal({
                 ) : copyState === 'failed' ? (
                   <><span>&#10060;</span> Copy Failed</>
                 ) : (
-                  <><span>&#128203;</span> Copy Selection</>
+                  <><span>&#128203;</span> {hasSelection ? 'Copy Selection' : 'Copy Table'}</>
                 )}
               </button>
-            )}
+            {hasSelection && <button type="button" onClick={() => {
+              selectionRef.current = null;
+              containerRef.current?.querySelectorAll('.selected-cell').forEach(cell => cell.classList.remove('selected-cell'));
+              setHasSelection(false);
+              setCopyState('idle');
+            }}>Clear selection</button>}
+            <span role="status" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)' }}>{copyState === 'copied' ? 'Copied to clipboard.' : copyState === 'failed' ? 'Copy failed. Please try again.' : ''}</span>
 
             <button
               type="button"
@@ -269,7 +278,7 @@ export default function TableExtractorModal({
                 fontSize: '0.85rem',
               }}
             >
-              <span>📊</span> Export Excel (.xlsx)
+              <span>📊</span> Export whole table (.xlsx)
             </button>
 
             <button
