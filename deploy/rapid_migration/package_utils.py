@@ -5,6 +5,14 @@ import zipfile
 from pathlib import Path, PureWindowsPath
 
 
+def unlink_if_exists(path):
+    """Remove a file without requiring Python 3.8's missing_ok argument."""
+    try:
+        Path(path).unlink()
+    except FileNotFoundError:
+        pass
+
+
 def sha256(path):
     digest = hashlib.sha256()
     with Path(path).open('rb') as stream:

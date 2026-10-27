@@ -93,7 +93,7 @@ def check_container_running(container: str) -> bool:
         ["docker", "inspect", "--format", "{{.State.Running}}", container],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True,
+        universal_newlines=True,
     )
     return result.returncode == 0 and result.stdout.strip().lower() == "true"
 

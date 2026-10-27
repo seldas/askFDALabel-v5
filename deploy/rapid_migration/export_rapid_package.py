@@ -20,7 +20,7 @@ import shutil
 import json
 import tempfile
 from datetime import datetime, timezone
-from package_utils import sha256
+from package_utils import sha256, unlink_if_exists
 from pathlib import Path
 
 # Base paths
@@ -137,7 +137,7 @@ def export_images(target_dir, images_to_export):
                     raise RuntimeError(f"Failed to export {img}: {errors.read().decode(errors='replace')}")
             partial_path.replace(targz_path)
         finally:
-            partial_path.unlink(missing_ok=True)
+            unlink_if_exists(partial_path)
 
         size_mb = targz_path.stat().st_size / (1024 * 1024)
         print(f"  + Exported: {targz_path.name} ({size_mb:.1f} MB)")
@@ -308,7 +308,7 @@ def main():
 
     records = []
     for image in images_to_process:
-        result = subprocess.run(["docker", "image", "inspect", image], check=True, capture_output=True, text=True)
+        result = subprocess.run(["docker", "image", "inspect", image], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         info = json.loads(result.stdout)[0]
         records.append({"tag": image, "id": info["Id"], "os": info["Os"], "architecture": info["Architecture"],
                         "archive": "image_" + image.split(":")[0].replace("fdalabel-v3-", "") + ".tar.gz"})

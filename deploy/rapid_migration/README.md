@@ -2,6 +2,23 @@
 
 This directory contains automated Python utilities to build, package, export, and import RAPID deployment bundles for `fdalabel-v3`.
 
+The RAPID host importer and its shared helper support Python 3.6. Host startup
+in Docker mode is also checked on Python 3.6; application code runs with the
+Python version provided by the backend image. Keep `import_rapid_package.py`
+and `package_utils.py` updated together. Re-export migration packages after
+updating the tools so extraction does not restore older copies of these scripts.
+
+Run the compatibility checks from the repository root on a Linux host:
+
+```bash
+python3.6 -B deploy/rapid_migration/check_python36_compat.py
+# Or use an isolated Python 3.6 runtime; no Docker socket is mounted.
+docker run --rm -v "$PWD:/workspace:ro" -w /workspace python:3.6.15-slim-buster python -B deploy/rapid_migration/check_python36_compat.py
+```
+
+The checks use temporary directories and mock Docker operations, including image
+loading. They also execute the extracted startup script in Docker dry-run mode.
+
 ## Overview
 
 The RAPID migration suite simplifies air-gapped or target server deployments by packaging Docker images and mounted configuration files into zip/tar archives.

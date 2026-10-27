@@ -16,7 +16,7 @@ import subprocess
 import zipfile
 import json
 import shutil
-from package_utils import sha256, safe_target, validate_zip
+from package_utils import sha256, safe_target, validate_zip, unlink_if_exists
 from pathlib import Path
 
 # Base paths
@@ -43,7 +43,7 @@ def load_docker_images(source_dir, manifest):
         run_cmd(["docker", "load", "-i", str(archive_path)])
     for item in manifest["images"]:
         result = subprocess.run(["docker", "image", "inspect", item["tag"], "--format", "{{.Id}}"],
-                                check=True, capture_output=True, text=True)
+                                check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         if result.stdout.strip() != item["id"]:
             raise ValueError(f"Loaded image ID does not match manifest: {item['tag']}")
     print("[SUCCESS] All Docker images loaded and verified successfully.")
@@ -72,7 +72,7 @@ def fix_directory_ownership(dest_dir):
                 test_file = check_path / f".perm_test_{os.getpid()}"
                 try:
                     test_file.touch()
-                    test_file.unlink(missing_ok=True)
+                    unlink_if_exists(test_file)
                 except (PermissionError, OSError):
                     needs_fix = True
                     break
@@ -138,14 +138,14 @@ def unzip_archive(zip_path, dest_dir, exclude_filenames=None):
                 except PermissionError:
                     # Attempt unlink or Docker permission repair and retry once
                     try:
-                        target_path.unlink(missing_ok=True)
+                        unlink_if_exists(target_path)
                         with zf.open(member) as source, open(target_path, "wb") as target:
                             shutil.copyfileobj(source, target, length=1024 * 1024)
                     except PermissionError:
                         fix_directory_ownership(dest_dir)
                         if target_path.exists():
                             try:
-                                target_path.unlink(missing_ok=True)
+                                unlink_if_exists(target_path)
                             except Exception:
                                 pass
                         with zf.open(member) as source, open(target_path, "wb") as target:

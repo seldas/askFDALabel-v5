@@ -41,8 +41,8 @@ def _apptainer_instance_exists(name):
     result = subprocess.run(
         ['apptainer', 'instance', 'list'],
         check=False,
-        capture_output=True,
-        text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        universal_newlines=True,
     )
     return result.returncode == 0 and re.search(rf'(?<![\w-]){re.escape(name)}(?![\w-])', result.stdout) is not None
 
@@ -98,7 +98,7 @@ def run_apptainer(args, env_vars, local_db):
         # that are actually running — avoids noisy "instance not found" errors.
         result = subprocess.run(
             ['apptainer', 'instance', 'list'],
-            check=False, capture_output=True, text=True,
+            check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True,
         )
         running = result.stdout if result.returncode == 0 else ''
         for service in services:
