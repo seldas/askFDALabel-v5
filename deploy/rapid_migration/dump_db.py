@@ -150,7 +150,7 @@ def run_pg_dump(
     print(f"[INFO] Database  : {db}  (user: {user})")
     print(f"[INFO] Format    : {'plain SQL' if plain else 'custom (-Fc)'}")
     print(f"[INFO] Output    : {output}")
-    print(f"[RUN]  {' '.join(docker_cmd)}")
+    print(f"[INFO] Running pg_dump in {container} (credentials hidden).")
 
     output.parent.mkdir(parents=True, exist_ok=True)
 

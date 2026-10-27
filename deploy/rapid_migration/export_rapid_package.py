@@ -17,6 +17,10 @@ import subprocess
 import zipfile
 import gzip
 import shutil
+import json
+import tempfile
+from datetime import datetime, timezone
+from package_utils import sha256
 from pathlib import Path
 
 # Base paths
@@ -42,6 +46,7 @@ RAPID_SSO_FILES = [
     "deploy/sso_config.py",
     "deploy/nginx_config.py",
     "deploy/SSO_config/sso2.xml",
+    "deploy/SSO_config/sso3-metadata.xml",
     "deploy/SSO_config/rapid_saml_acs.conf",
 ]
 
@@ -114,20 +119,34 @@ def export_images(target_dir, images_to_export):
         targz_path = target_dir / targz_name
         print(f"[SAVE] Exporting and compressing '{img}' -> {targz_name}...")
         
-        proc = subprocess.Popen(["docker", "save", img], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        with gzip.open(targz_path, "wb", compresslevel=6) as gz_out:
-            shutil.copyfileobj(proc.stdout, gz_out)
-        proc.wait()
-        
-        if proc.returncode != 0:
-            err = proc.stderr.read().decode(errors="replace")
-            print(f"[ERROR] Failed to export '{img}': {err}")
-            sys.exit(proc.returncode)
-            
+        partial_path = targz_path.with_suffix(targz_path.suffix + ".part")
+        try:
+            with tempfile.TemporaryFile() as errors:
+                proc = subprocess.Popen(["docker", "save", img], stdout=subprocess.PIPE, stderr=errors)
+                try:
+                    with gzip.open(partial_path, "wb", compresslevel=6) as gz_out:
+                        shutil.copyfileobj(proc.stdout, gz_out)
+                except BaseException:
+                    proc.kill()
+                    proc.wait()
+                    raise
+                finally:
+                    proc.stdout.close()
+                if proc.wait() != 0:
+                    errors.seek(0)
+                    raise RuntimeError(f"Failed to export {img}: {errors.read().decode(errors='replace')}")
+            partial_path.replace(targz_path)
+        finally:
+            partial_path.unlink(missing_ok=True)
+
         size_mb = targz_path.stat().st_size / (1024 * 1024)
         print(f"  + Exported: {targz_path.name} ({size_mb:.1f} MB)")
 
 DATA_EXCLUDE_PATTERNS = [
+    ".env",
+    "*.env",
+    "data/config",
+    "data/config/*",
     "data/keycloak",
     "data/keycloak/*",
     "*.tmp",
@@ -212,6 +231,7 @@ def export_mounted_files(target_dir):
         "README.md",
         "data/sync_schema.py",
         "deploy/rapid_migration/restore_db.py",
+        "deploy/rapid_migration/package_utils.py",
         "deploy/rapid_migration/dump_db.py",
         "deploy/rapid_migration/import_rapid_package.py",
         "deploy/rapid_migration/export_rapid_package.py",
@@ -249,12 +269,15 @@ def main():
     parser.add_argument("--skip-build", action="store_true", default=False,
                         help="Skip docker build step and use existing local images.")
     parser.add_argument("--all-images", action="store_true", default=False,
-                        help="Export all images including Nginx and Local DB (default: False, exports only backend, frontend, redis for RAPID).")
-    parser.add_argument("--output-dir", default=str(SCRIPT_DIR),
-                        help="Destination directory for output archives (default: deploy/rapid_migration).")
+                        help="Export all images including Nginx and Local DB (default: False, exports backend, frontend, redis and nginx for RAPID).")
+    parser.add_argument("--output-dir", default=None,
+                        help="Fresh output directory (default: deploy/rapid_migration/releases/<UTC release ID>).")
 
     args = parser.parse_args()
-    target_dir = Path(args.output_dir).resolve()
+    release_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    target_dir = Path(args.output_dir).resolve() if args.output_dir else SCRIPT_DIR / "releases" / release_id
+    if target_dir.exists() and any(target_dir.iterdir()):
+        parser.error("Output directory must be empty; use a fresh directory for each release.")
     target_dir.mkdir(parents=True, exist_ok=True)
 
     images_to_process = ALL_IMAGES if args.all_images else DEFAULT_RAPID_IMAGES
@@ -282,6 +305,23 @@ def main():
         export_data_folder(target_dir)
     else:
         print("\n[INFO] Data folder packaging skipped (use --include-data to enable).")
+
+    records = []
+    for image in images_to_process:
+        result = subprocess.run(["docker", "image", "inspect", image], check=True, capture_output=True, text=True)
+        info = json.loads(result.stdout)[0]
+        records.append({"tag": image, "id": info["Id"], "os": info["Os"], "architecture": info["Architecture"],
+                        "archive": "image_" + image.split(":")[0].replace("fdalabel-v3-", "") + ".tar.gz"})
+    artifacts = [record["archive"] for record in records] + ["rapid_files.zip"]
+    if args.include_data:
+        artifacts.append("data.zip")
+    manifest = {"format_version": 1, "release_id": release_id, "images": records,
+                "files": {name: {"sha256": sha256(target_dir / name), "size": (target_dir / name).stat().st_size}
+                          for name in artifacts}}
+    manifest_path = target_dir / "manifest.json"
+    temporary = manifest_path.with_suffix(".json.part")
+    temporary.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(manifest_path)
 
     print("\n==================================================")
     print("[COMPLETE] Export finished successfully!")

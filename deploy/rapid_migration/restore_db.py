@@ -22,6 +22,7 @@ import os
 import shutil
 import subprocess
 import sys
+from urllib.parse import urlsplit, unquote, parse_qs
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -104,14 +105,14 @@ def restore_via_local_cli(input_path: Path, host: str, port: str, db: str, user:
     env["PGPASSWORD"] = password
 
     if is_custom:
-        cmd = ["pg_restore", "-h", host, "-p", str(port), "-U", user, "-d", db, "--no-owner", "--no-privileges"]
+        cmd = ["pg_restore", "-h", host, "-p", str(port), "-U", user, "-d", db, "--no-owner", "--no-privileges", "--exit-on-error"]
         if clean:
             cmd.extend(["--clean", "--if-exists"])
         cmd.append(str(input_path))
         print(f"[RUN] {' '.join(cmd[:-1])} {input_path.name}")
         res = subprocess.run(cmd, env=env)
     else:
-        cmd = ["psql", "-h", host, "-p", str(port), "-U", user, "-d", db]
+        cmd = ["psql", "-v", "ON_ERROR_STOP=1", "-h", host, "-p", str(port), "-U", user, "-d", db]
         print(f"[RUN] {' '.join(cmd)} < {input_path.name}")
         with input_path.open("r") as f:
             res = subprocess.run(cmd, stdin=f, env=env)
@@ -126,11 +127,11 @@ def restore_via_docker_exec(input_path: Path, container: str, db: str, user: str
     is_custom = input_path.suffix != ".sql"
 
     if is_custom:
-        pg_cmd = ["pg_restore", "-U", user, "-d", db, "--no-owner", "--no-privileges"]
+        pg_cmd = ["pg_restore", "-U", user, "-d", db, "--no-owner", "--no-privileges", "--exit-on-error"]
         if clean:
             pg_cmd.extend(["--clean", "--if-exists"])
     else:
-        pg_cmd = ["psql", "-U", user, "-d", db]
+        pg_cmd = ["psql", "-v", "ON_ERROR_STOP=1", "-U", user, "-d", db]
 
     docker_cmd = [
         "docker", "exec",
@@ -141,7 +142,7 @@ def restore_via_docker_exec(input_path: Path, container: str, db: str, user: str
     ]
 
     print(f"[INFO] Restoring via container: {container}")
-    print(f"[RUN]  {' '.join(docker_cmd)} < {input_path.name}")
+    print(f"[INFO] Streaming {input_path.name} into {container} (credentials hidden).")
 
     with input_path.open("rb") as in_fh:
         proc = subprocess.Popen(
@@ -153,7 +154,8 @@ def restore_via_docker_exec(input_path: Path, container: str, db: str, user: str
 
     if proc.returncode != 0:
         err_msg = stderr.decode(errors="replace").strip()
-        print(f"[WARNING] Restore finished with exit code {proc.returncode}:\n{err_msg}", file=sys.stderr)
+        print(f"[ERROR] Restore failed with exit code {proc.returncode}:\n{err_msg}", file=sys.stderr)
+        sys.exit(proc.returncode)
     else:
         print("[OK]   Restore completed successfully.")
 
@@ -203,6 +205,20 @@ def main() -> None:
     pg_db   = env.get("PG_DATABASE") or os.environ.get("PG_DATABASE", "askfdalabel")
     pg_user = env.get("PG_USERNAME") or os.environ.get("PG_USERNAME", "afd_user")
     pg_pass = env.get("PG_PASSWORD") or os.environ.get("PG_PASSWORD", "afd_password")
+    database_url = env.get("DATABASE_URL") or os.environ.get("DATABASE_URL")
+    if database_url:
+        parsed = urlsplit(database_url)
+        if parsed.scheme not in ("postgresql", "postgres", "postgresql+psycopg2") or not parsed.hostname:
+            parser.error("DATABASE_URL must be a PostgreSQL URL with a host.")
+        pg_host = parsed.hostname
+        pg_port = str(parsed.port or 5432)
+        pg_db = unquote(parsed.path.lstrip("/")) or pg_db
+        pg_user = unquote(parsed.username or pg_user)
+        pg_pass = unquote(parsed.password) if parsed.password is not None else pg_pass
+        # libpq supports these options through environment variables in both strategies.
+        for option, values in parse_qs(parsed.query).items():
+            if option in ("sslmode", "sslrootcert", "sslcert", "sslkey"):
+                os.environ["PG" + option.upper()] = values[-1]
     local_pg = (env.get("LOCAL-PG") or env.get("LOCAL_PG", "false")).lower() in ("true", "1", "yes")
 
     print(f"==================================================")
@@ -213,7 +229,7 @@ def main() -> None:
     print(f"==================================================")
 
     # Determine execution strategy
-    has_local_pg_restore = shutil.which("pg_restore") is not None
+    has_local_pg_restore = shutil.which("psql" if input_path.suffix == ".sql" else "pg_restore") is not None
     is_container_target = pg_host == "db" or (local_pg and check_container_running(args.container))
 
     if is_container_target:
@@ -239,8 +255,10 @@ def main() -> None:
         # Fallback: run pg_restore via a temporary postgres docker container pointing to remote host
         print("[INFO] pg_restore not found on host. Running via temporary Docker container...")
         is_custom = input_path.suffix != ".sql"
-        pg_cmd = ["pg_restore", "-h", pg_host, "-p", str(pg_port), "-U", pg_user, "-d", pg_db, "--no-owner", "--no-privileges"]
-        if args.clean:
+        pg_cmd = (["pg_restore", "-h", pg_host, "-p", str(pg_port), "-U", pg_user, "-d", pg_db,
+                   "--no-owner", "--no-privileges", "--exit-on-error"] if is_custom else
+                  ["psql", "-v", "ON_ERROR_STOP=1", "-h", pg_host, "-p", str(pg_port), "-U", pg_user, "-d", pg_db, "-f"])
+        if args.clean and is_custom:
             pg_cmd.extend(["--clean", "--if-exists"])
         pg_cmd.append(f"/dump/{input_path.name}")
 
@@ -248,11 +266,14 @@ def main() -> None:
             "docker", "run", "--rm",
             "-v", f"{input_path.parent.resolve()}:/dump",
             "-e", f"PGPASSWORD={pg_pass}",
+            *[arg for key in ("PGSSLMODE", "PGSSLROOTCERT", "PGSSLCERT", "PGSSLKEY")
+              if key in os.environ for arg in ("-e", key)],
             "--network", "host",
-            "ankane/pgvector:latest",
+            "--pull=never",
+            "fdalabel-v3-db:latest",
             *pg_cmd
         ]
-        print(f"[RUN] {' '.join(docker_cmd[:-1])} ...")
+        print("[INFO] Using packaged fdalabel-v3-db:latest; export with --all-images for offline restore.")
         res = subprocess.run(docker_cmd)
         if res.returncode != 0:
             print(f"[ERROR] Restore via container failed with code {res.returncode}", file=sys.stderr)

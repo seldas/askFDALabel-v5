@@ -14,6 +14,9 @@ import sys
 import argparse
 import subprocess
 import zipfile
+import json
+import shutil
+from package_utils import sha256, safe_target, validate_zip
 from pathlib import Path
 
 # Base paths
@@ -30,32 +33,20 @@ def run_cmd(cmd, cwd=REPO_ROOT, check=True):
         sys.exit(res.returncode)
     return res.returncode == 0
 
-def load_docker_images(source_dir):
+def load_docker_images(source_dir, manifest):
     """Loads docker images from individual tar.gz or tar archives in source_dir."""
     print("\n--- Loading Docker Images ---")
-    image_archives = sorted(
-        list(source_dir.glob("image_*.tar.gz")) +
-        list(source_dir.glob("image_*.tgz")) +
-        list(source_dir.glob("image_*.tar")) +
-        list(source_dir.glob("images.tar.gz")) +
-        list(source_dir.glob("images.tar"))
-    )
-    # Deduplicate in case multiple patterns match
-    seen = set()
-    unique_archives = []
-    for arc in image_archives:
-        if arc.resolve() not in seen:
-            seen.add(arc.resolve())
-            unique_archives.append(arc)
-
-    if not unique_archives:
-        print(f"[ERROR] No image tar/tar.gz archives found in: {source_dir}")
-        sys.exit(1)
+    unique_archives = [safe_target(source_dir, item["archive"]) for item in manifest["images"]]
 
     for archive_path in unique_archives:
         print(f"[LOAD] Loading Docker image from: {archive_path.name}...")
         run_cmd(["docker", "load", "-i", str(archive_path)])
-    print("[SUCCESS] All Docker images loaded successfully.")
+    for item in manifest["images"]:
+        result = subprocess.run(["docker", "image", "inspect", item["tag"], "--format", "{{.Id}}"],
+                                check=True, capture_output=True, text=True)
+        if result.stdout.strip() != item["id"]:
+            raise ValueError(f"Loaded image ID does not match manifest: {item['tag']}")
+    print("[SUCCESS] All Docker images loaded and verified successfully.")
 
 def fix_directory_ownership(dest_dir):
     """
@@ -106,6 +97,7 @@ def unzip_archive(zip_path, dest_dir, exclude_filenames=None):
         print(f"[ERROR] Zip archive not found: {zip_path}")
         sys.exit(1)
 
+    validate_zip(zip_path, dest_dir)
     fix_directory_ownership(dest_dir)
 
     exclude_set = set(exclude_filenames or [".env"])
@@ -115,14 +107,17 @@ def unzip_archive(zip_path, dest_dir, exclude_filenames=None):
     
     with zipfile.ZipFile(zip_path, "r") as zf:
         for member in zf.infolist():
-            member_name = Path(member.filename).name
+            member_name = Path(member.filename.replace("\\", "/")).name
+            if member.filename.replace("\\", "/").startswith("data/config/"):
+                print(f"  - Skipped target runtime configuration: {member.filename}")
+                continue
             # Skip excluded files (such as .env to protect environment settings)
             if member.filename in exclude_set or member_name in exclude_set or member_name == ".env":
                 print(f"  - Skipped protected file: {member.filename}")
                 continue
 
             # Extra safeguard: never overwrite an existing .env file
-            target_path = dest_dir / member.filename
+            target_path = safe_target(dest_dir, member.filename)
             if target_path.name == ".env" and target_path.exists():
                 print(f"  - Preserved existing file from overwrite: {target_path}")
                 continue
@@ -139,13 +134,13 @@ def unzip_archive(zip_path, dest_dir, exclude_filenames=None):
                         pass
                 try:
                     with zf.open(member) as source, open(target_path, "wb") as target:
-                        target.write(source.read())
+                        shutil.copyfileobj(source, target, length=1024 * 1024)
                 except PermissionError:
                     # Attempt unlink or Docker permission repair and retry once
                     try:
                         target_path.unlink(missing_ok=True)
                         with zf.open(member) as source, open(target_path, "wb") as target:
-                            target.write(source.read())
+                            shutil.copyfileobj(source, target, length=1024 * 1024)
                     except PermissionError:
                         fix_directory_ownership(dest_dir)
                         if target_path.exists():
@@ -154,7 +149,7 @@ def unzip_archive(zip_path, dest_dir, exclude_filenames=None):
                             except Exception:
                                 pass
                         with zf.open(member) as source, open(target_path, "wb") as target:
-                            target.write(source.read())
+                            shutil.copyfileobj(source, target, length=1024 * 1024)
 
                 print(f"  + Extracted: {member.filename}")
 
@@ -164,6 +159,7 @@ def report_sso_setup(target_dir):
         "deploy/sso_config.py",
         "deploy/nginx_config.py",
         "deploy/SSO_config/sso2.xml",
+        "deploy/SSO_config/sso3-metadata.xml",
         "deploy/SSO_config/rapid_saml_acs.conf",
     ]
     missing_files = [name for name in required_files if not (target_dir / name).is_file()]
@@ -202,6 +198,8 @@ def main():
                         help="Source directory containing archives (default: deploy/rapid_migration).")
     parser.add_argument("--target-dir", default=str(REPO_ROOT),
                         help="Destination directory to extract files into (default: project root).")
+    parser.add_argument("--verify-only", action="store_true",
+                        help="Validate release files without loading images or writing target files.")
     parser.add_argument("--skip-images", action="store_true", default=False,
                         help="Skip loading Docker images.")
 
@@ -217,9 +215,46 @@ def main():
     print(f"  Skip Images:  {args.skip_images}")
     print(f"==================================================")
 
+    # Validate the complete release before loading images or overwriting files.
+    manifest_path = source_dir / "manifest.json"
+    if not manifest_path.is_file():
+        parser.error("manifest.json is required. Re-export this release with the updated exporter.")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("format_version") != 1:
+        parser.error("Unsupported migration manifest version.")
+    required_tags = {f"fdalabel-v3-{name}:latest" for name in ("backend", "frontend", "redis", "nginx")}
+    images = manifest.get("images", [])
+    if not required_tags.issubset({item["tag"] for item in images}):
+        parser.error("Release is missing required RAPID images.")
+    if len({item["tag"] for item in images}) != len(images):
+        parser.error("Duplicate image tags in manifest.")
+    files = manifest.get("files", {})
+    required_files = {item["archive"] for item in images} | {"rapid_files.zip"}
+    if args.include_data:
+        required_files.add("data.zip")
+    if not required_files.issubset(files):
+        parser.error("Manifest is missing required artifacts.")
+    for name, info in files.items():
+        path = safe_target(source_dir, name)
+        if not path.is_file() or path.stat().st_size != info["size"] or sha256(path) != info["sha256"]:
+            parser.error(f"Missing or damaged release artifact: {name}")
+    validate_zip(source_dir / "rapid_files.zip", target_dir)
+    with zipfile.ZipFile(source_dir / "rapid_files.zip") as archive:
+        required_runtime = {"start_server.py", "deploy/sso_config.py", "deploy/nginx_config.py",
+                            "deploy/SSO_config/sso2.xml", "deploy/SSO_config/sso3-metadata.xml",
+                            "deploy/rapid_migration/package_utils.py"}
+        if not required_runtime.issubset(archive.namelist()):
+            parser.error("Configuration archive is missing required runtime files.")
+    if args.include_data:
+        validate_zip(source_dir / "data.zip", target_dir)
+    print(f"[OK] Release {manifest['release_id']} passed preflight validation.")
+
+    if args.verify_only:
+        return
+
     # 1. Load Docker Images
     if not args.skip_images:
-        load_docker_images(source_dir)
+        load_docker_images(source_dir, manifest)
     else:
         print("[INFO] Skipping Docker image load (--skip-images flag set).")
 
@@ -234,7 +269,7 @@ def main():
     if args.include_data:
         data_zip = source_dir / "data.zip"
         if data_zip.exists():
-            unzip_archive(data_zip, target_dir)
+            unzip_archive(data_zip, target_dir, exclude_filenames=[".env", "env_settings.json"])
         else:
             print(f"[ERROR] {data_zip.name} not found in {source_dir}.")
             sys.exit(1)
@@ -264,7 +299,7 @@ def main():
     print("  1. Configure .env: copy .env.rapid.template only for a new deployment; otherwise merge missing settings.")
     print("  2. (If new DB) Restore DB:    python deploy/rapid_migration/restore_db.py")
     print("  3. Configure RAPID nginx TLS paths, or upstream TLS termination.")
-    print("  4. Launch RAPID Server:       python start_server.py --rapid")
+    print("  4. Launch RAPID Server:       python start_server.py --runtime docker --rapid")
     print("==================================================")
 
 if __name__ == "__main__":

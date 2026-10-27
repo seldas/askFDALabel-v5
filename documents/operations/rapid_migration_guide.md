@@ -64,7 +64,7 @@ Transfer the exported archives to `deploy/rapid_migration/` on the target machin
 
 ```bash
 # 1. Import images and extract configuration
-python deploy/rapid_migration/import_rapid_package.py
+python deploy/rapid_migration/import_rapid_package.py --source-dir /transfer/release
 
 # 2. For a NEW deployment only, create the environment file
 cp .env.rapid.template .env
@@ -77,7 +77,7 @@ python deploy/rapid_migration/restore_db.py
 # 4. Configure nginx TLS certificates or upstream TLS termination (see below)
 
 # 5. Launch server in RAPID mode
-python start_server.py --rapid
+python start_server.py --runtime docker --rapid
 ```
 
 ### Safety Features of `import_rapid_package.py`:
@@ -122,3 +122,55 @@ For a new target database, restore the full database dump to preserve users and
 their SSO identity associations. The updated backend creates the SSO identity
 table on startup for existing databases. After startup, test a fresh SSO login
 from the pre-prod URL. See `documents/operations/saml_sso.md` for troubleshooting.
+
+
+## Validated releases (current workflow)
+
+Export defaults to a new `deploy/rapid_migration/releases/<UTC release ID>/`
+directory. An explicit `--output-dir` must be empty. Transfer the entire release
+folder, including `manifest.json`, without mixing files from other releases.
+The manifest records SHA256, size, image IDs, OS and architecture. A manifest is
+written only after all artifacts have been produced successfully. These hashes
+check integrity, not publisher authenticity; transfer packages through trusted channels.
+
+```bash
+python deploy/rapid_migration/export_rapid_package.py --all-images --include-data
+# Substitute the actual exported release directory below.
+python deploy/rapid_migration/import_rapid_package.py --source-dir /transfer/release --include-data --verify-only
+python deploy/rapid_migration/import_rapid_package.py --source-dir /transfer/release --include-data
+python deploy/rapid_migration/restore_db.py --input /transfer/fdalabel_db.dump
+python start_server.py --runtime docker --rapid
+```
+
+On first deployment or when upgrading an older importer, copy the current
+`import_rapid_package.py` **and** `package_utils.py` into the target
+`deploy/rapid_migration/` directory before running them. A new importer requires
+a manifest; old bundles must be re-exported. `--skip-images` still validates
+all release artifacts. `--verify-only` performs no Docker calls or target writes.
+Only image archives named in the manifest are loaded; unrelated archives are ignored.
+Loaded image IDs are verified before project files are extracted.
+
+The importer preflights required files, hashes, ZIP CRCs and extraction paths
+before loading any image or overwriting any project file. It rejects path traversal
+and ZIP symlinks, and streams extraction in bounded chunks. Existing `.env` and
+`data/config/` are protected. Data export omits `data/config/`; configure the
+target runtime settings separately. Data import merges files and does not remove
+old files. Database dumps are separate artifacts and are not created by image export.
+Pause writers when taking a database/data snapshot if cross-store consistency is required.
+
+Backend images now include database scripts required by RAPID management tasks;
+rebuild them once instead of using `--skip-build` for this upgrade. FDA SSO metadata
+includes both `sso2.xml` and `sso3-metadata.xml`. TLS keys remain separately provisioned.
+
+For offline database restore, either install compatible PostgreSQL client tools
+or export `--all-images`. The fallback uses the loaded `fdalabel-v3-db:latest`
+with `--pull=never`. The PostgreSQL client version must support the source dump
+and target server. Restore prefers `DATABASE_URL` over individual `PG_*` fields.
+SQL and custom-format restore failures stop with a nonzero exit status; restore
+is not transactional and a failure may leave partially restored objects.
+Client certificate paths must also be available inside a restore container.
+
+Import does not restart running containers, perform a health check, or provide
+transactional rollback. Use a maintenance window, retain the previous release
+and database backup, then start the stack and verify its health. Failures during
+Docker load or file writes can still leave a partially applied release.

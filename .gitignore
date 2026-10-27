@@ -73,3 +73,6 @@ deploy/**/*.sif
 
 #FDA SSO
 #deploy/SSO_config/sso2.xml
+
+# Versioned offline migration bundles
+deploy/rapid_migration/releases/

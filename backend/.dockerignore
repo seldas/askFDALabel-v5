@@ -6,4 +6,3 @@ venv/
 .git/
 .gitignore
 .dockerignore
-database/scripts/
