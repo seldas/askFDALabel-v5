@@ -83,15 +83,6 @@ function ChevronUpIcon({ size = 12 }: { size?: number }) {
   );
 }
 
-function CloseIcon({ size = 14 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  );
-}
-
 const EXAMPLES = [
   {
     category: 'Single-ingredient name expansion',
@@ -155,7 +146,7 @@ export function AiIntentPanel({
   exactMatch?: boolean;
 }) {
   const [intent, setIntent] = useState('');
-  const [quickSearch, setQuickSearch] = useState(false);
+  const [reviewBeforeSearch, setReviewBeforeSearch] = useState(false);
   const [busy, setBusy] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [refining, setRefining] = useState(false);
@@ -164,7 +155,6 @@ export function AiIntentPanel({
   const [warnings, setWarnings] = useState<string[]>([]);
   const [isFolded, setIsFolded] = useState(false);
   const [activePrompt, setActivePrompt] = useState<string>('');
-  const [completionToast, setCompletionToast] = useState<{ duration: string; timestamp: number } | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -173,14 +163,6 @@ export function AiIntentPanel({
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
-
-  useEffect(() => {
-    if (!completionToast) return;
-    const t = setTimeout(() => {
-      setCompletionToast(null);
-    }, 3000);
-    return () => clearTimeout(t);
-  }, [completionToast]);
 
   useEffect(() => {
     if (exactMatch) {
@@ -197,7 +179,6 @@ export function AiIntentPanel({
     setElapsedSeconds(0);
     setError(null);
     setNotes([]);
-    setCompletionToast(null);
     onPrefiltersChange([]);
 
     if (timerRef.current) clearInterval(timerRef.current);
@@ -208,7 +189,7 @@ export function AiIntentPanel({
     try {
       if (trimmed.includes(EXTERNAL_QUERY_START)) {
         const saved = parseExternalQuery(trimmed);
-        onImportQuery(saved, quickSearch && saved.unsupported.length === 0);
+        onImportQuery(saved, !reviewBeforeSearch && saved.unsupported.length === 0);
         setActivePrompt('Imported from external AI');
         setIsFolded(true);
         setNotes([
@@ -220,7 +201,7 @@ export function AiIntentPanel({
       }
       if (trimmed.startsWith('FDALABEL-')) {
         const saved = await decodeQueryCode(trimmed);
-        onImportQuery(saved, quickSearch);
+        onImportQuery(saved, !reviewBeforeSearch);
         setActivePrompt('Restored from query code');
         setIsFolded(true);
         setNotes(['Query conditions and filters restored from the saved code.']);
@@ -244,9 +225,7 @@ export function AiIntentPanel({
       setActivePrompt(trimmed);
       setIsFolded(true);
 
-      const totalSec = ((Date.now() - startTime) / 1000).toFixed(1);
-      setCompletionToast({ duration: `${totalSec}s`, timestamp: Date.now() });
-      if (quickSearch) onQuickSearch(translatedQuery, translatedPrefilters);
+      if (!reviewBeforeSearch) onQuickSearch(translatedQuery, translatedPrefilters);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -292,7 +271,7 @@ export function AiIntentPanel({
           </div>
           {!isFolded && (
             <p className="fdl-ai__lede">
-              Enter clinical intent, active ingredients, application categories, or MedDRA adverse events in plain English. {quickSearch
+              Enter clinical intent, active ingredients, application categories, or MedDRA adverse events in plain English. {!reviewBeforeSearch
                 ? 'The query assistant maps terminology, builds criteria, and searches automatically.'
                 : 'The query assistant maps terminology and translates your input into structured criteria below for verification before execution.'}
             </p>
@@ -344,7 +323,7 @@ export function AiIntentPanel({
               ) : (
                 <>
                   <AssistantIcon size={16} />
-                  <span>{quickSearch ? 'Search' : (intent.trim().startsWith(QUERY_CODE_PREFIX) || intent.includes(EXTERNAL_QUERY_START)) ? 'Restore Query' : 'Build Criteria'}</span>
+                  <span>{!reviewBeforeSearch ? 'Search' : (intent.trim().startsWith(QUERY_CODE_PREFIX) || intent.includes(EXTERNAL_QUERY_START)) ? 'Restore Query' : 'Build Criteria'}</span>
                 </>
               )}
             </button>
@@ -386,16 +365,16 @@ export function AiIntentPanel({
             >
               <input
                 type="checkbox"
-                checked={quickSearch}
+                checked={reviewBeforeSearch}
                 disabled={disabled || busy || refining}
-                onChange={(event) => setQuickSearch(event.target.checked)}
-                aria-describedby="quick-search-tooltip"
+                onChange={(event) => setReviewBeforeSearch(event.target.checked)}
+                aria-describedby="review-before-search-tooltip"
               />
-              <span>Quick search</span>
+              <span>Review before search</span>
               <span className="fdl-ai__quick-search-info" tabIndex={0}>
                 <InfoIcon />
-                <span id="quick-search-tooltip" role="tooltip" className="fdl-ai__quick-search-tooltip">
-                  Generate query conditions from your input and search automatically, skipping criteria confirmation.
+                <span id="review-before-search-tooltip" role="tooltip" className="fdl-ai__quick-search-tooltip">
+                  Build query conditions for you to review and edit before searching.
                 </span>
               </span>
             </label>
@@ -510,76 +489,11 @@ export function AiIntentPanel({
           </div>
 
           <p className="fdl-ai-response-card__hint">
-            {quickSearch ? 'Search runs automatically using the generated criteria.' : <>Review the populated criteria in the cards below before clicking <strong>Search Labels »</strong>.</>}
+            {!reviewBeforeSearch ? 'Search runs automatically using the generated criteria.' : <>Review the populated criteria in the cards below before clicking <strong>Search Labels »</strong>.</>}
           </p>
         </div>
       )}
 
-      {/* Restrained completion toast popup */}
-      {completionToast && (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            zIndex: 10000,
-            background: '#0f172a',
-            color: '#ffffff',
-            borderRadius: 'var(--fdl-radius-sm, 2px)',
-            padding: '10px 14px',
-            boxShadow: 'var(--fdl-elevation-2, 0 4px 16px rgba(7, 31, 61, 0.12))',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            fontSize: '0.82rem',
-            animation: 'fdl-toast-slide-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-            maxWidth: '380px',
-            border: '1px solid #334155',
-          }}
-        >
-          <div
-            style={{
-              color: '#10b981',
-              display: 'flex',
-              alignItems: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <CheckIcon size={16} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>Criteria Configured</span>
-              <span style={{ fontSize: '0.72rem', fontWeight: 600, background: '#1e293b', color: '#94a3b8', padding: '1px 6px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid #334155' }}>
-                {completionToast.duration}
-              </span>
-            </div>
-            <div style={{ fontSize: '0.76rem', color: '#94a3b8', marginTop: '1px' }}>
-              Search criteria populated in panel below.
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setCompletionToast(null)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#94a3b8',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              padding: '2px 4px',
-              lineHeight: 1,
-              display: 'flex',
-              alignItems: 'center',
-            }}
-            aria-label="Close notification"
-          >
-            <CloseIcon size={13} />
-          </button>
-        </div>
-      )}
     </section>
   );
 }

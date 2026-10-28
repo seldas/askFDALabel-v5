@@ -12,8 +12,8 @@
  * all still reachable from the header.
  *
  * The AI panel on top is an accelerator, not a second search: it writes into
- * the same criteria tree. Queries are reviewed before execution by default;
- * Quick search lets the user opt into immediate execution.
+ * the same criteria tree. Searches run immediately by default; users can opt
+ * to review the generated criteria before execution.
  */
 
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
@@ -284,8 +284,8 @@ function HomePage() {
   const hasHigherMeddra = hasInvalidMeddraLevel(query);
   const hasBlockers = hasUnverified || hasCommonFullText || hasHigherMeddra;
 
-  const actionBar = (position: 'top' | 'bottom') => (
-    <div className={position === 'top' ? 'fdl-actions' : 'fdl-actions fdl-actions--bottom'}>
+  const statusBar = (
+    <div className="fdl-actions">
       <div className="fdl-actions__summary">
         {filled > 0 ? (
           <span className="fdl-active-tag fdl-active-tag--highlight">
@@ -321,9 +321,6 @@ function HomePage() {
         )}
       </div>
 
-      <button type="button" className="fdl-link" onClick={restoreLast} disabled={!hasSaved}>
-        Restore Last Query
-      </button>
       <button type="button" className="fdl-link" onClick={clearAll}>
         Clear All
       </button>
@@ -352,6 +349,14 @@ function HomePage() {
         </select>
       </label>
 
+    </div>
+  );
+
+  const searchActions = (
+    <>
+      <button type="button" className="fdl-link" onClick={restoreLast} disabled={!hasSaved}>
+        Restore Last Query
+      </button>
       <button
         type="button"
         className="fdl-btn fdl-btn--search"
@@ -370,7 +375,7 @@ function HomePage() {
       >
         Search Labels »
       </button>
-    </div>
+    </>
   );
 
   return (
@@ -378,6 +383,8 @@ function HomePage() {
       <Header />
 
       <main className="fdl-shell">
+        {statusBar}
+
         <AiIntentPanel
           onQuery={setQuery}
           onQuickSearch={runSearch}
@@ -391,7 +398,7 @@ function HomePage() {
           exactMatch={query.exactMatch}
         />
 
-        {actionBar('top')}
+        <div className="fdl-actions fdl-actions--search">{searchActions}</div>
 
         <QueryPanel
           query={query}
@@ -408,12 +415,12 @@ function HomePage() {
           onSetAll={(checked) => setPrefilters((prev) => setAllPrefilters(prev, checked))}
         />
 
-        {actionBar('bottom')}
+        <div className="fdl-actions fdl-actions--bottom fdl-actions--search">{searchActions}</div>
 
         {error ? <p className="fdl-error">{error}</p> : null}
       </main>
 
-      {/* Outside actionBar on purpose — that helper is mounted twice. */}
+      {/* Keep the database switch dialog outside the status bar. */}
       {pendingDb ? (
         <div
           role="dialog"

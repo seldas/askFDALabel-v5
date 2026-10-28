@@ -122,9 +122,9 @@ const CONTENT: WikiArticle[] = [
       { heading: 'Build your query', table: {
         columns: ['Start with', 'What to do'], rows: [
           ['Names or known conditions', 'Enter them directly in the Query Builder.'],
-          ['A question in plain language', 'Use AI Query Builder, then review the generated conditions.'],
+          ['A question in plain language', 'Use AI Query Builder to search, or select Review before search to inspect the generated conditions.'],
         ],
-      }, paragraphs: ['Both routes use the same editable criteria. Leave Quick search unchecked to review an AI draft before searching.'] },
+      }, paragraphs: ['Both routes use the same editable criteria. Select Review before search to review an AI draft before searching.'] },
       { heading: 'Check the scope', paragraphs: ['Search uses the database scope shown in the workspace—not necessarily Local. Available records and conditions depend on that scope.'] },
     ],
   },
@@ -151,12 +151,12 @@ const CONTENT: WikiArticle[] = [
   {
     id: 'ai-query', path: 'guides', group: 'Search labeling',
     title: 'Use AI to draft search criteria', summary: 'Describe the search, inspect the draft, then run it.',
-    tags: ['AI Query Builder', 'Quick search', 'Build Criteria', 'external AI'], action: home,
+    tags: ['AI Query Builder', 'Review before search', 'Build Criteria', 'external AI'], action: home,
     related: ['manual-query', 'match-expansion', 'query-codes'],
     sections: [
-      { heading: 'Build and review', steps: ['Enter your request in AI Query Builder. Leave Quick search unchecked.', 'Click Build Criteria. Check names, terms, sections, AND/OR groups, and selected chips.', 'Correct the draft, then click Search Labels.'] },
+      { heading: 'Build and review', steps: ['Enter your request in AI Query Builder. Select Review before search.', 'Click Build Criteria. Check names, terms, sections, AND/OR groups, and selected chips.', 'Correct the draft, then click Search Labels.'] },
       { heading: 'Other starting points', table: { columns: ['Option', 'What changes'], rows: [
-        ['Quick search', 'Runs a successful translation immediately, without criteria confirmation.'],
+        ['Review before search', 'Builds criteria for review; when unchecked, a successful translation searches immediately.'],
         ['Restore Query', 'Loads saved conditions from a query code.'],
         ['External AI', 'Use the provided query instructions, then import and check the generated conditions.'],
       ] } },

@@ -114,6 +114,7 @@
   border-bottom: 1px solid var(--fdl-line);
   flex-wrap: wrap;
 }
+.fdl-actions--search { justify-content: flex-end; }
 .fdl-actions__summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-right: auto; }
 .fdl-actions--bottom { border-top: 1px solid var(--fdl-line); border-bottom: 0; margin-top: 16px; }
 .fdl-btn {
