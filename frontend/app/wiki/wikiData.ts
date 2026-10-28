@@ -115,14 +115,14 @@ const CONTENT: WikiArticle[] = [
     id: 'query-guide', path: 'guides', group: 'Search labeling',
     title: 'Search labeling',
     summary: 'Find labeling, check the matches, and choose documents to review.',
-    tags: ['search', 'core workspace', 'query builder', 'AI Query Builder', 'review set'], action: home,
+    tags: ['search', 'core workspace', 'query builder', 'AI Search Assistant', 'review set'], action: home,
     related: ['find-labeling', 'search-scope', 'manual-query', 'ai-query', 'match-expansion', 'search-results', 'query-codes'],
     sections: [
       { heading: 'The workflow', illustration: 'search-workflow' },
       { heading: 'Build your query', table: {
         columns: ['Start with', 'What to do'], rows: [
           ['Names or known conditions', 'Enter them directly in the Query Builder.'],
-          ['A question in plain language', 'Use AI Query Builder to search, or select Review before search to inspect the generated conditions.'],
+          ['A question in plain language', 'Use AI Search Assistant to search, or select Review before search to inspect the generated conditions.'],
         ],
       }, paragraphs: ['Both routes use the same editable criteria. Select Review before search to review an AI draft before searching.'] },
       { heading: 'Check the scope', paragraphs: ['Search uses the database scope shown in the workspace—not necessarily Local. Available records and conditions depend on that scope.'] },
@@ -151,10 +151,10 @@ const CONTENT: WikiArticle[] = [
   {
     id: 'ai-query', path: 'guides', group: 'Search labeling',
     title: 'Use AI to draft search criteria', summary: 'Describe the search, inspect the draft, then run it.',
-    tags: ['AI Query Builder', 'Review before search', 'Build Criteria', 'external AI'], action: home,
+    tags: ['AI Search Assistant', 'Review before search', 'Build Criteria', 'external AI'], action: home,
     related: ['manual-query', 'match-expansion', 'query-codes'],
     sections: [
-      { heading: 'Build and review', steps: ['Enter your request in AI Query Builder. Select Review before search.', 'Click Build Criteria. Check names, terms, sections, AND/OR groups, and selected chips.', 'Correct the draft, then click Search Labels.'] },
+      { heading: 'Build and review', steps: ['Enter your request in AI Search Assistant. Select Review before search.', 'Click Build Criteria. Check names, terms, sections, AND/OR groups, and selected chips.', 'Correct the draft, then click Search Labels.'] },
       { heading: 'Other starting points', table: { columns: ['Option', 'What changes'], rows: [
         ['Review before search', 'Builds criteria for review; when unchecked, a successful translation searches immediately.'],
         ['Restore Query', 'Loads saved conditions from a query code.'],
@@ -182,7 +182,7 @@ const CONTENT: WikiArticle[] = [
     tags: ['query code', 'FDALABEL-Q1', 'Copy Query Code', 'Restore Query'], action: home,
     related: ['search-results', 'search-scope', 'review-record'],
     sections: [
-      { heading: 'Save → restore → check', steps: ['From the results export menu, choose Copy Query Code. Copy the complete FDALABEL-Q1 code.', 'Paste it into AI Query Builder and choose Restore Query.', 'Check scope, conditions, Exact match, and filters before searching again.'] },
+      { heading: 'Save → restore → check', steps: ['From the results export menu, choose Copy Query Code. Copy the complete FDALABEL-Q1 code.', 'Paste it into AI Search Assistant and choose Restore Query.', 'Check scope, conditions, Exact match, and filters before searching again.'] },
       { heading: 'Keep the evidence separately', paragraphs: ['Save the reviewed document versions and exports alongside the code. Data can change between searches; restoring a code does not grant additional access.', 'Shared codes contain readable search information. Do not include confidential content.'] },
     ],
   },

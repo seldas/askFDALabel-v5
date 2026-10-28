@@ -724,7 +724,7 @@ function ResultsPage() {
                       type="button"
                       onClick={() => { setExportOpen(false); copyQueryCode(); }}
                       disabled={!activeWireQuery}
-                      title="Copy a query code to paste into the AI Query Builder and restore this search"
+                      title="Copy a query code to paste into the AI Search Assistant and restore this search"
                       style={{
                         width: '100%',
                         display: 'flex',

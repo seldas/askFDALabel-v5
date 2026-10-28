@@ -94,6 +94,6 @@ ${EXTERNAL_QUERY_START}
 ${JSON.stringify({version:1,targetDb,query:{exactMatch,groups:[{criteria:[{type:'productName',value:{field:'any',op:'equals',text:'metformin',verified:false}}]}]},notes:[],unsupported:[]},null,2)}
 ${EXTERNAL_QUERY_END}
 
-The user will paste your complete output into the AI Query Builder. The application parses it as data and restores the criteria; it does not execute your text as code.
+The user will paste your complete output into the AI Search Assistant. The application parses it as data and restores the criteria; it does not execute your text as code.
 `;
 }

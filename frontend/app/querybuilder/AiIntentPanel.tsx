@@ -294,7 +294,7 @@ export function AiIntentPanel({
             <div className="fdl-ai__icon">
               <AssistantIcon size={16} />
             </div>
-            <h2 className="fdl-ai__title">AI Query Builder</h2>
+            <h2 className="fdl-ai__title">AI Search Assistant</h2>
           </div>
           {!isFolded && (
             <p className="fdl-ai__lede">

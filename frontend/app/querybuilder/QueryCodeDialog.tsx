@@ -34,7 +34,7 @@ export function QueryCodeDialog({ code, initialCopied, onClose }: {
   return (
     <dialog ref={dialogRef} className="fdl-query-code-dialog" aria-labelledby="query-code-title" aria-describedby="query-code-help" onCancel={onClose} onClose={onClose}>
       <h2 id="query-code-title">{initialCopied ? 'Query Code Copied' : 'Query Code Ready'}</h2>
-      <p id="query-code-help">Paste this code into the AI Query Builder to restore the query conditions and filters.</p>
+      <p id="query-code-help">Paste this code into the AI Search Assistant to restore the query conditions and filters.</p>
       <p role="status" aria-live="polite">{status}</p>
       <label htmlFor="query-code-value">Query code</label>
       <textarea id="query-code-value" readOnly value={code} rows={6} autoFocus onFocus={event => event.currentTarget.select()} />
