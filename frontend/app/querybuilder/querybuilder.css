@@ -386,5 +386,5 @@
 .fdl-confirm-dialog p { margin: 10px 0 0; color: var(--fdl-muted, #5e6e7c); font-size: .88rem; line-height: 1.5; }
 .fdl-confirm-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
 .fdl-review-highlight .fdl-step-section { animation: fdl-review-highlight 4s ease-out; }
-@keyframes fdl-review-highlight { 0%, 35% { border-color: #82a9c9; box-shadow: 0 0 0 3px rgba(89, 148, 194, .14); } 100% { border-color: var(--fdl-line); box-shadow: none; } }
-@media (prefers-reduced-motion: reduce) { .fdl-review-highlight .fdl-step-section { animation: none; } }
+@keyframes fdl-review-highlight { 0%, 40% { border-color: #e6a23c; background-color: #fff4db; box-shadow: 0 0 0 3px rgba(224, 151, 37, .24); } 100% { border-color: var(--fdl-line); box-shadow: none; } }
+@media (prefers-reduced-motion: reduce) { .fdl-review-highlight .fdl-step-section { animation: none; border-color: #e6a23c; background-color: #fff4db; } }

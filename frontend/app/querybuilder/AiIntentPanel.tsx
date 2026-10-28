@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { LabelQuery, PreFilter, TargetDb } from './types';
-import { fromWire, fromWirePrefilters } from './types';
+import { fromWire, fromWirePrefilters, hasUnverifiedCriteria } from './types';
 import { EXTERNAL_QUERY_START, externalAiInstructions, parseExternalQuery } from './externalAiQuery';
 import type { OptionLists } from './CriterionCard';
 import { QUERY_CODE_PREFIX, decodeQueryCode, type SavedQuery } from './queryCode';
@@ -210,8 +210,11 @@ export function AiIntentPanel({
     try {
       if (trimmed.includes(EXTERNAL_QUERY_START)) {
         const saved = parseExternalQuery(trimmed);
-        onImportQuery(saved, !reviewBeforeSearch && saved.unsupported.length === 0);
-        if (reviewBeforeSearch || saved.unsupported.length > 0) onReviewReady();
+        const needsConfirmation = hasUnverifiedCriteria(fromWire(saved.query));
+        const review = reviewBeforeSearch || needsConfirmation || saved.unsupported.length > 0;
+        if (needsConfirmation) setReviewBeforeSearch(true);
+        onImportQuery(saved, !review);
+        if (review) onReviewReady();
         setProcessedIntent(trimmed);
         setActivePrompt('Imported from external AI');
         setIsFolded(true);
@@ -224,8 +227,11 @@ export function AiIntentPanel({
       }
       if (trimmed.startsWith('FDALABEL-')) {
         const saved = await decodeQueryCode(trimmed);
-        onImportQuery(saved, !reviewBeforeSearch);
-        if (reviewBeforeSearch) onReviewReady();
+        const needsConfirmation = hasUnverifiedCriteria(fromWire(saved.query));
+        const review = reviewBeforeSearch || needsConfirmation;
+        if (needsConfirmation) setReviewBeforeSearch(true);
+        onImportQuery(saved, !review);
+        if (review) onReviewReady();
         setProcessedIntent(trimmed);
         setActivePrompt('Restored from query code');
         setIsFolded(true);
@@ -246,13 +252,18 @@ export function AiIntentPanel({
       const translatedPrefilters = fromWirePrefilters(json.prefilters);
       onQuery(translatedQuery);
       onPrefiltersChange(translatedPrefilters);
-      setNotes(json.notes || []);
-      if (reviewBeforeSearch || translatedQuery.groups.some(g => g.criteria.some(c => c.type === 'pharmClass' && Array.isArray(c.value.unverifiedTerms) && c.value.unverifiedTerms.length > 0))) onReviewReady();
+      const needsConfirmation = hasUnverifiedCriteria(translatedQuery);
+      const review = reviewBeforeSearch || needsConfirmation;
+      if (needsConfirmation) setReviewBeforeSearch(true);
+      setNotes(needsConfirmation
+        ? ['Please confirm the suggested terms before searching.', ...(json.notes || [])]
+        : json.notes || []);
+      if (review) onReviewReady();
       setProcessedIntent(trimmed);
       setActivePrompt(trimmed);
       setIsFolded(true);
 
-      if (!reviewBeforeSearch) onQuickSearch(translatedQuery, translatedPrefilters);
+      if (!review) onQuickSearch(translatedQuery, translatedPrefilters);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
