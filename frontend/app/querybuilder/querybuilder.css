@@ -396,3 +396,8 @@
 .fdl-class-confirm__suggestions button { background: #fff; color: #92400e; border: 1px solid #d97706; border-radius: 2px; padding: 4px 10px; font: 700 .82rem var(--fdl-font-sans); cursor: pointer; }
 .fdl-class-confirm__suggestions button:hover { background: #fef3c7; }
 .fdl-class-confirm__remove { margin-top: 8px; min-height: 28px; padding: 4px 9px; font-size: .78rem; }
+
+.fdl-class-dialog__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.fdl-class-dialog__list { display: flex; flex-direction: column; gap: 4px; }
+.fdl-class-dialog__list button { text-align: left; padding: 9px 10px; border: 1px solid var(--fdl-line); background: #fff; color: var(--fdl-ink); font: .85rem var(--fdl-font-sans); cursor: pointer; }
+.fdl-class-dialog__list button:hover, .fdl-class-dialog__list button:focus-visible { background: var(--fdl-blue-050); border-color: var(--fdl-blue-600); }

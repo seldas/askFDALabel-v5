@@ -9,7 +9,7 @@
  * sync, so what the card shows is what the query contains.
  */
 
-import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { AutoCompleteInput, Chips, isPickSelected, ListAdder, type Option, QuickPicks, Select, TokenInput } from './controls';
 import {
   CRITERION_DEFS,
@@ -1680,6 +1680,8 @@ function UnverifiedClassPicker({ term, fetchSuggestions, onConfirm }: {
 }) {
   const [items, setItems] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     let cancelled = false;
@@ -1698,12 +1700,23 @@ function UnverifiedClassPicker({ term, fetchSuggestions, onConfirm }: {
     <>
       {loading ? <p>Searching matching classes…</p> : items.length > 0 ? (
         <div className="fdl-class-confirm__suggestions">
-          {items.slice(0, 10).map((item) => (
+          {items.slice(0, 5).map((item) => (
             <button key={item} type="button" onClick={() => onConfirm(item)}>✓ {item}</button>
           ))}
+          {items.length > 5 && <button type="button" onClick={() => dialogRef.current?.showModal()}>More… ({items.length})</button>}
         </div>
       ) : <p>No matching classes found. Try another search below.</p>}
       <TokenInput placeholder="Search for another class" fetchSuggestions={fetchSuggestions} requireSuggestion onCommit={onConfirm} />
+      <dialog ref={dialogRef} className="fdl-query-code-dialog fdl-class-dialog" aria-labelledby={titleId}>
+        <div className="fdl-class-dialog__header">
+          <h2 id={titleId}>Matching pharmacologic classes</h2>
+          <button type="button" className="fdl-candidate-dialog__close" onClick={() => dialogRef.current?.close()} aria-label="Close">×</button>
+        </div>
+        <p>Select a standard class for “{term}”.</p>
+        <div className="fdl-class-dialog__list">
+          {items.map((item) => <button key={item} type="button" onClick={() => { dialogRef.current?.close(); onConfirm(item); }}>{item}</button>)}
+        </div>
+      </dialog>
     </>
   );
 }

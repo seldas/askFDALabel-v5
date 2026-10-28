@@ -1942,7 +1942,7 @@ Rules:
 1. Put drug names/identifiers and text/clinical section matches in "groups", and
    every categorical constraint in "prefilters". Emit a prefilter only when the
    request actually calls for it -- never pad the list with defaults.
-2. Pharmacologic class: emit a pharmClass criterion in groups when requested. Use the requested class name and type; use any when unspecified. Terms require confirmation against the application vocabulary. Do not substitute ingredients for the class.
+2. Pharmacologic class: emit a pharmClass criterion in groups when requested. Use the requested class name. Always set classType to "any" unless the user explicitly specifies EPC, MoA, PE, or CS; never infer a type from a class name such as beta blocker or kinase inhibitor. Terms require confirmation against the application vocabulary. Do not substitute ingredients for the class.
 3. Adverse events and medical concepts: prefer "meddra" over free text. Only Preferred Term ("pt") or Lowest Level Term ("llt") levels are allowed. Higher MedDRA levels (SOC, HLGT, HLT) are disabled to avoid query timeouts. If a high-level category is requested, map it to the most relevant PT(s) or add a warning note in "notes".
 4. Free text is the fallback for wording MedDRA does not cover. Do NOT generate "fullText" or "labelingSection" for generic common words or stopwords (e.g. "drug", "patient", "dose", "tablet", "treatment", "effects", etc.) that match almost all labels. If the user asks for a generic common word in full text, omit the criterion and add an explanatory warning note in "notes".
 5. Target Sections: When specific sections are named (e.g. "Boxed Warning", "Warnings and Precautions", "Adverse Reactions"), use "labelingSection" or attach "sections" to "meddra".
