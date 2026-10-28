@@ -99,6 +99,8 @@ function HomePage() {
   const [hasSaved, setHasSaved] = useState(false);
   const [hasPendingAiInput, setHasPendingAiInput] = useState(false);
   const [aiResetVersion, setAiResetVersion] = useState(0);
+  const [pendingInputDialog, setPendingInputDialog] = useState(false);
+  const [reviewHighlight, setReviewHighlight] = useState(0);
   // The target the user clicked, held until they confirm losing the query.
   const [pendingDb, setPendingDb] = useState<TargetDb | null>(null);
 
@@ -358,7 +360,7 @@ function HomePage() {
         type="button"
         className="fdl-btn fdl-btn--search"
         onClick={() => {
-          if (hasPendingAiInput && !window.confirm('The text in AI Query Builder has not been applied. Search using only the configured criteria and filters?')) return;
+          if (hasPendingAiInput) { setPendingInputDialog(true); return; }
           runSearch();
         }}
         disabled={hasBlockers}
@@ -390,6 +392,7 @@ function HomePage() {
           onQuickSearch={runSearch}
           onPendingInputChange={setHasPendingAiInput}
           resetVersion={aiResetVersion}
+          onReviewReady={() => setReviewHighlight((version) => version + 1)}
           onImportQuery={importQueryCode}
           options={options}
           prefilters={prefilters}
@@ -400,6 +403,7 @@ function HomePage() {
           exactMatch={query.exactMatch}
         />
 
+        <div key={reviewHighlight} className={reviewHighlight ? "fdl-review-highlight" : undefined}>
         <QueryPanel
           query={query}
           onChange={setQuery}
@@ -407,6 +411,7 @@ function HomePage() {
           targetDb={targetDb}
           visibleSections={['identifiers', 'textMatch']}
         />
+        </div>
 
         {/* Last thing read before Search, and the same list the AI panel shows. */}
         <PreFilterChips
@@ -419,6 +424,19 @@ function HomePage() {
 
         {error ? <p className="fdl-error">{error}</p> : null}
       </main>
+
+      {pendingInputDialog && (
+        <div className="fdl-confirm-backdrop" onClick={() => setPendingInputDialog(false)}>
+          <div className="fdl-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="pending-input-title" aria-describedby="pending-input-description" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === 'Escape') setPendingInputDialog(false); }}>
+            <h2 id="pending-input-title">AI input not yet applied</h2>
+            <p id="pending-input-description">The text in AI Query Builder has not been applied. Continue with the currently configured criteria and filters?</p>
+            <div className="fdl-confirm-actions">
+              <button type="button" className="fdl-btn fdl-btn--quiet" autoFocus onClick={() => setPendingInputDialog(false)}>Return to AI Query Builder</button>
+              <button type="button" className="fdl-btn fdl-btn--search" onClick={() => { setPendingInputDialog(false); runSearch(); }}>Search current criteria</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Keep the database switch dialog outside the status bar. */}
       {pendingDb ? (

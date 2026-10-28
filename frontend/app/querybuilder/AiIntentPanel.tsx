@@ -119,6 +119,7 @@ export function AiIntentPanel({
   onQuery,
   onQuickSearch,
   onPendingInputChange,
+  onReviewReady,
   resetVersion,
   onImportQuery,
   options,
@@ -133,6 +134,7 @@ export function AiIntentPanel({
   onQuery: (query: LabelQuery) => void;
   onQuickSearch: (query: LabelQuery, prefilters: PreFilter[]) => void;
   onPendingInputChange: (pending: boolean) => void;
+  onReviewReady: () => void;
   resetVersion: number;
   onImportQuery: (saved: SavedQuery, searchImmediately: boolean) => void;
   options: OptionLists;
@@ -209,6 +211,7 @@ export function AiIntentPanel({
       if (trimmed.includes(EXTERNAL_QUERY_START)) {
         const saved = parseExternalQuery(trimmed);
         onImportQuery(saved, !reviewBeforeSearch && saved.unsupported.length === 0);
+        if (reviewBeforeSearch || saved.unsupported.length > 0) onReviewReady();
         setProcessedIntent(trimmed);
         setActivePrompt('Imported from external AI');
         setIsFolded(true);
@@ -222,6 +225,7 @@ export function AiIntentPanel({
       if (trimmed.startsWith('FDALABEL-')) {
         const saved = await decodeQueryCode(trimmed);
         onImportQuery(saved, !reviewBeforeSearch);
+        if (reviewBeforeSearch) onReviewReady();
         setProcessedIntent(trimmed);
         setActivePrompt('Restored from query code');
         setIsFolded(true);
@@ -243,6 +247,7 @@ export function AiIntentPanel({
       onQuery(translatedQuery);
       onPrefiltersChange(translatedPrefilters);
       setNotes(json.notes || []);
+      if (reviewBeforeSearch) onReviewReady();
       setProcessedIntent(trimmed);
       setActivePrompt(trimmed);
       setIsFolded(true);

@@ -379,3 +379,12 @@
 .fdl-ai__external-instructions { display: flex; align-items: center; gap: 7px; color: var(--fdl-muted); }
 
 .fdl-ai__input-pending { margin: 6px 0; color: var(--fdl-muted); font-size: .78rem; }
+
+.fdl-confirm-backdrop { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(7, 31, 61, .58); }
+.fdl-confirm-dialog { width: 100%; max-width: 480px; padding: 20px 24px; background: var(--fdl-paper, #fff); border: 1px solid var(--fdl-line, #b8c8d7); border-top: 3px solid var(--fdl-navy-800, #12375b); border-radius: var(--fdl-radius-sm, 2px); box-shadow: 0 16px 36px rgba(7, 31, 61, .24); }
+.fdl-confirm-dialog h2 { margin: 0; color: var(--fdl-navy-950, #071f3d); font-size: 1.05rem; }
+.fdl-confirm-dialog p { margin: 10px 0 0; color: var(--fdl-muted, #5e6e7c); font-size: .88rem; line-height: 1.5; }
+.fdl-confirm-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.fdl-review-highlight .fdl-step-section { animation: fdl-review-highlight 4s ease-out; }
+@keyframes fdl-review-highlight { 0%, 35% { border-color: #82a9c9; box-shadow: 0 0 0 3px rgba(89, 148, 194, .14); } 100% { border-color: var(--fdl-line); box-shadow: none; } }
+@media (prefers-reduced-motion: reduce) { .fdl-review-highlight .fdl-step-section { animation: none; } }
