@@ -97,6 +97,8 @@ function HomePage() {
   const [options, setOptions] = useState<OptionLists>(EMPTY_OPTIONS);
   const [error, setError] = useState<string | null>(null);
   const [hasSaved, setHasSaved] = useState(false);
+  const [hasPendingAiInput, setHasPendingAiInput] = useState(false);
+  const [aiResetVersion, setAiResetVersion] = useState(0);
   // The target the user clicked, held until they confirm losing the query.
   const [pendingDb, setPendingDb] = useState<TargetDb | null>(null);
 
@@ -238,6 +240,7 @@ function HomePage() {
   }, []);
 
   const clearAll = useCallback(() => {
+    setAiResetVersion((version) => version + 1);
     setQuery(makeEmptyQuery());
     setPrefilters([]);
     setError(null);
@@ -284,21 +287,21 @@ function HomePage() {
   const hasHigherMeddra = hasInvalidMeddraLevel(query);
   const hasBlockers = hasUnverified || hasCommonFullText || hasHigherMeddra;
 
-  const statusBar = (
-    <div className="fdl-actions">
+  const actionBar = (position: 'top' | 'bottom') => (
+    <div className={position === 'top' ? 'fdl-actions' : 'fdl-actions fdl-actions--bottom'}>
       <div className="fdl-actions__summary">
         {filled > 0 ? (
           <span className="fdl-active-tag fdl-active-tag--highlight">
-            {filled} active {filled === 1 ? 'criterion' : 'criteria'} configured
+            {filled} {filled === 1 ? 'criterion' : 'criteria'} applied
           </span>
         ) : (
           <span className="fdl-active-tag fdl-active-tag--none">
-            {checkedPrefilters > 0 ? 'All Labels (before selected filters)' : 'All Labels (No filters applied)'}
+            {checkedPrefilters > 0 ? 'No criteria applied' : 'Searching all labels'}
           </span>
         )}
         {checkedPrefilters > 0 ? (
           <span className="fdl-active-tag fdl-active-tag--prefilter">
-            + {checkedPrefilters} pre-{checkedPrefilters === 1 ? 'filter' : 'filters'}
+            {checkedPrefilters} {checkedPrefilters === 1 ? 'filter' : 'filters'} applied
           </span>
         ) : null}
         {hasUnverified && (
@@ -348,19 +351,16 @@ function HomePage() {
           {canSelectDb && <option value="oracle_all" disabled={!oracleAvailable}>{TARGET_DB_LABELS.oracle_all}</option>}
         </select>
       </label>
-
-    </div>
-  );
-
-  const searchActions = (
-    <>
       <button type="button" className="fdl-link" onClick={restoreLast} disabled={!hasSaved}>
         Restore Last Query
       </button>
       <button
         type="button"
         className="fdl-btn fdl-btn--search"
-        onClick={() => runSearch()}
+        onClick={() => {
+          if (hasPendingAiInput && !window.confirm('The text in AI Query Builder has not been applied. Search using only the configured criteria and filters?')) return;
+          runSearch();
+        }}
         disabled={hasBlockers}
         style={hasBlockers ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
         title={
@@ -375,7 +375,7 @@ function HomePage() {
       >
         Search Labels »
       </button>
-    </>
+    </div>
   );
 
   return (
@@ -383,11 +383,13 @@ function HomePage() {
       <Header />
 
       <main className="fdl-shell">
-        {statusBar}
+        {actionBar('top')}
 
         <AiIntentPanel
           onQuery={setQuery}
           onQuickSearch={runSearch}
+          onPendingInputChange={setHasPendingAiInput}
+          resetVersion={aiResetVersion}
           onImportQuery={importQueryCode}
           options={options}
           prefilters={prefilters}
@@ -397,8 +399,6 @@ function HomePage() {
           targetDb={targetDb}
           exactMatch={query.exactMatch}
         />
-
-        <div className="fdl-actions fdl-actions--search">{searchActions}</div>
 
         <QueryPanel
           query={query}
@@ -415,7 +415,7 @@ function HomePage() {
           onSetAll={(checked) => setPrefilters((prev) => setAllPrefilters(prev, checked))}
         />
 
-        <div className="fdl-actions fdl-actions--bottom fdl-actions--search">{searchActions}</div>
+        {actionBar('bottom')}
 
         {error ? <p className="fdl-error">{error}</p> : null}
       </main>
@@ -469,7 +469,7 @@ function HomePage() {
                 lineHeight: 1.5,
               }}
             >
-              You have {filled} active {filled === 1 ? 'criterion' : 'criteria'} configured.
+              You have {filled} {filled === 1 ? 'criterion' : 'criteria'} applied.
               Switching from <strong>{TARGET_DB_LABELS[targetDb]}</strong> to{' '}
               <strong>{TARGET_DB_LABELS[pendingDb]}</strong> will clear the current query — the
               two databases do not offer the same fields or value lists, so the criteria cannot

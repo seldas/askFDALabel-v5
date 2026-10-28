@@ -118,6 +118,8 @@ function getLiveStatusText(sec: number): string {
 export function AiIntentPanel({
   onQuery,
   onQuickSearch,
+  onPendingInputChange,
+  resetVersion,
   onImportQuery,
   options,
   prefilters,
@@ -130,6 +132,8 @@ export function AiIntentPanel({
 }: {
   onQuery: (query: LabelQuery) => void;
   onQuickSearch: (query: LabelQuery, prefilters: PreFilter[]) => void;
+  onPendingInputChange: (pending: boolean) => void;
+  resetVersion: number;
   onImportQuery: (saved: SavedQuery, searchImmediately: boolean) => void;
   options: OptionLists;
   /* Categorical picks the model read out of the description. They are held by
@@ -146,6 +150,7 @@ export function AiIntentPanel({
   exactMatch?: boolean;
 }) {
   const [intent, setIntent] = useState('');
+  const [processedIntent, setProcessedIntent] = useState('');
   const [reviewBeforeSearch, setReviewBeforeSearch] = useState(false);
   const [busy, setBusy] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -163,6 +168,20 @@ export function AiIntentPanel({
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!resetVersion) return;
+    setIntent('');
+    setProcessedIntent('');
+    setActivePrompt('');
+    setNotes([]);
+    setWarnings([]);
+    setError(null);
+  }, [resetVersion]);
+
+  useEffect(() => {
+    onPendingInputChange(busy || Boolean(intent.trim() && intent.trim() !== processedIntent));
+  }, [intent, processedIntent, busy, onPendingInputChange]);
 
   useEffect(() => {
     if (exactMatch) {
@@ -190,6 +209,7 @@ export function AiIntentPanel({
       if (trimmed.includes(EXTERNAL_QUERY_START)) {
         const saved = parseExternalQuery(trimmed);
         onImportQuery(saved, !reviewBeforeSearch && saved.unsupported.length === 0);
+        setProcessedIntent(trimmed);
         setActivePrompt('Imported from external AI');
         setIsFolded(true);
         setNotes([
@@ -202,6 +222,7 @@ export function AiIntentPanel({
       if (trimmed.startsWith('FDALABEL-')) {
         const saved = await decodeQueryCode(trimmed);
         onImportQuery(saved, !reviewBeforeSearch);
+        setProcessedIntent(trimmed);
         setActivePrompt('Restored from query code');
         setIsFolded(true);
         setNotes(['Query conditions and filters restored from the saved code.']);
@@ -222,6 +243,7 @@ export function AiIntentPanel({
       onQuery(translatedQuery);
       onPrefiltersChange(translatedPrefilters);
       setNotes(json.notes || []);
+      setProcessedIntent(trimmed);
       setActivePrompt(trimmed);
       setIsFolded(true);
 
@@ -291,6 +313,7 @@ export function AiIntentPanel({
       {!isFolded && (
         <>
           <div className="fdl-ai__field">
+            <div className="fdl-ai__input-wrap">
             <textarea
               className="fdl-ai__input"
               rows={2}
@@ -305,6 +328,10 @@ export function AiIntentPanel({
                 }
               }}
             />
+            {intent && !disabled && !busy && !refining && (
+              <button type="button" className="fdl-ai__clear" onClick={() => setIntent('')} title="Clear input" aria-label="Clear input">×</button>
+            )}
+            </div>
             <div className="fdl-ai__input-actions">
             <button
               type="button"
@@ -327,17 +354,12 @@ export function AiIntentPanel({
                 </>
               )}
             </button>
-            <button
-              type="button"
-              className="fdl-link fdl-ai__clear"
-              disabled={disabled || busy || refining || !intent}
-              onClick={() => setIntent('')}
-              title="Clear all text in the query input"
-            >
-              Clear all
-            </button>
             </div>
           </div>
+
+          {intent.trim() && intent.trim() !== processedIntent && (
+            <p className="fdl-ai__input-pending" role="status">Not yet applied to search criteria</p>
+          )}
 
           <div className="fdl-ai__examples">
             <span className="fdl-ai__examples-label">
