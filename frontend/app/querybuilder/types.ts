@@ -297,12 +297,11 @@ export const SEARCH_SECTIONS: SearchSectionDef[] = [
     id: 'filters',
     stepNumber: 1,
     title: 'Market & Categorical Filters',
-    subtitle: 'Filter by marketing categories, status, and administration route',
+    subtitle: 'Filter by marketing categories and status',
     criterionTypes: [
       'labelingType',
       'applicationType',
       'marketStatus',
-      'route',
       'deaSchedule',
       'activeMoiety',
     ],
@@ -317,9 +316,9 @@ export const SEARCH_SECTIONS: SearchSectionDef[] = [
   {
     id: 'pharmClass',
     stepNumber: 3,
-    title: 'Pharmacologic Class & Dosage Form',
-    subtitle: 'Filter by pharmacologic class or dosage form',
-    criterionTypes: ['pharmClass', 'dosageForm'],
+    title: 'Pharmacologic Class & Product Form',
+    subtitle: 'Filter by pharmacologic class, dosage form, or route of administration',
+    criterionTypes: ['pharmClass', 'dosageForm', 'route'],
   },
   {
     id: 'textMatch',
