@@ -242,13 +242,13 @@ export function CriterionCard({
   const fetchPharmClass = useCallback(
     async (q: string) => {
       const res = await fetch(
-        `/api/labelquery/suggest/pharm_class?q=${encodeURIComponent(q)}&type=${v.classType || 'any'}`,
+        `/api/labelquery/suggest/pharm_class?q=${encodeURIComponent(q)}&type=${v.classType || 'any'}&target_db=${encodeURIComponent(targetDb)}`,
       );
       if (!res.ok) return [];
       const json = await res.json();
       return (json.suggestions || []).map((s: { name: string }) => s.name);
     },
-    [v.classType],
+    [v.classType, targetDb],
   );
 
   const fetchMeddra = useCallback(
@@ -1185,6 +1185,14 @@ export function CriterionCard({
       case 'pharmClass':
         return (
           <>
+            {(v.unverifiedTerms || []).map((term: string) => (
+              <div key={term} className="fdl-note" style={{ background: '#fffbeb', padding: '10px', marginBottom: '8px' }}>
+                <strong>Confirm pharmacologic class: {term}</strong>
+                <TokenInput placeholder="Search and select a standard class" fetchSuggestions={fetchPharmClass} requireSuggestion
+                  onCommit={(canonical) => set({ terms: [...new Set([...(v.terms || []), canonical])], unverifiedTerms: v.unverifiedTerms.filter((t: string) => t !== term) })} />
+                <button type="button" onClick={() => set({ unverifiedTerms: v.unverifiedTerms.filter((t: string) => t !== term) })}>Remove unconfirmed class</button>
+              </div>
+            ))}
             <div className="fdl-row">
               <div className="fdl-row__grow">
                 <TokenInput
@@ -1199,7 +1207,7 @@ export function CriterionCard({
               <Select
                 ariaLabel="Class type"
                 value={v.classType || 'any'}
-                onChange={(classType) => set({ classType })}
+                onChange={(classType) => set({ classType, terms: [] })}
                 options={[
                   { value: 'any', label: 'Any' },
                   { value: 'epc', label: 'Established Pharmacologic Class (EPC)' },
@@ -1211,7 +1219,7 @@ export function CriterionCard({
             </div>
             <p className="fdl-note">
               Select one or more standardized pharmacologic classes from the suggestions.
-              Exact-match indexing will be applied.
+              Exact-match indexing will be applied. Changing the class type clears selected classes.
             </p>
           </>
         );

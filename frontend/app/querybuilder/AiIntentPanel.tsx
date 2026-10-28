@@ -216,7 +216,7 @@ export function AiIntentPanel({
         setActivePrompt('Imported from external AI');
         setIsFolded(true);
         setNotes([
-          'External AI query imported. Drug names and MedDRA terms still require vocabulary confirmation.',
+          'External AI query imported. Drug names, MedDRA terms, and pharmacologic classes still require vocabulary confirmation.',
           ...saved.notes,
           ...saved.unsupported.map(item => `Warning: unsupported condition — ${item}. Review before searching.`),
         ]);
@@ -247,7 +247,7 @@ export function AiIntentPanel({
       onQuery(translatedQuery);
       onPrefiltersChange(translatedPrefilters);
       setNotes(json.notes || []);
-      if (reviewBeforeSearch) onReviewReady();
+      if (reviewBeforeSearch || translatedQuery.groups.some(g => g.criteria.some(c => c.type === 'pharmClass' && Array.isArray(c.value.unverifiedTerms) && c.value.unverifiedTerms.length > 0))) onReviewReady();
       setProcessedIntent(trimmed);
       setActivePrompt(trimmed);
       setIsFolded(true);

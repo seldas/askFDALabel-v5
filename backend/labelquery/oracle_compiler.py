@@ -704,28 +704,22 @@ def _compile_pharm_class(value, bag, alias='s'):
 
     class_type = (value.get('classType') or 'any').lower()
 
-    # Exact discrete match on auto-completed standard terms against SUM_SPL_EPC
+    clauses = []
     if class_type in ('any', 'epc'):
         placeholders = [bag.add(t) for t in terms]
-        p_list = ', '.join(placeholders)
-        return f'{alias}.SPL_ID IN (SELECT e.SPL_ID FROM druglabel.SUM_SPL_EPC e WHERE e.EPC IN ({p_list}))'
-
-    cat_token = {'moa': 'MOA', 'pe': 'PE', 'cs': 'CHEMICAL'}.get(class_type)
-    if not cat_token:
-        return None
-    p_cat = bag.add(f'%{cat_token}%')
-
-    clauses = []
-    for t in terms:
-        p = bag.add(f'%{t.upper()}%')
-        clauses.append(
-            'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_ACT_INGR_UNII ai '
-            'JOIN druglabel.INGR_NDFRT_CONCEPT inc ON inc.INGR_UNII = ai.UNII '
-            'JOIN druglabel.NDFRT_CONCEPT nc ON nc.NUI = inc.NDFRT_NUI '
-            f'WHERE ai.SPL_ID = {alias}.SPL_ID AND UPPER(nc.NAME) LIKE {p} '
-            f'AND UPPER(nc.CAT) LIKE {p_cat})'
-        )
-    return '(' + ' OR '.join(clauses) + ')'
+        clauses.append(f"{alias}.SPL_ID IN (SELECT e.SPL_ID FROM druglabel.SUM_SPL_EPC e WHERE e.EPC IN ({', '.join(placeholders)}))")
+    if class_type in ('any', 'moa', 'pe', 'cs'):
+        cat_token = {'moa': 'MOA', 'pe': 'PE', 'cs': 'CHEMICAL'}.get(class_type)
+        cat_clause = f' AND UPPER(nc.CAT) LIKE {bag.add(f"%{cat_token}%")}' if cat_token else ''
+        for t in terms:
+            p = bag.add(t.upper())
+            clauses.append(
+                'EXISTS (SELECT 1 FROM druglabel.SUM_SPL_ACT_INGR_UNII ai '
+                'JOIN druglabel.INGR_NDFRT_CONCEPT inc ON inc.INGR_UNII = ai.UNII '
+                'JOIN druglabel.NDFRT_CONCEPT nc ON nc.NUI = inc.NDFRT_NUI '
+                f'WHERE ai.SPL_ID = {alias}.SPL_ID AND UPPER(nc.NAME) = {p}{cat_clause})'
+            )
+    return '(' + ' OR '.join(clauses) + ')' if clauses else None
 
 
 def _compile_identifier(value, bag):

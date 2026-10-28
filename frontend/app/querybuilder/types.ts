@@ -514,6 +514,7 @@ export function isCriterionEmpty(c: Criterion): boolean {
     case 'productName':
       return v.entityNamesResolved ? false : !String(v.text || '').trim();
     case 'pharmClass':
+      return !(v.terms?.length > 0 || v.unverifiedTerms?.length > 0);
     case 'activeMoiety':
       return !(v.terms?.length > 0);
     case 'labelingSection':
@@ -687,6 +688,10 @@ export function hasUnverifiedCriteria(query: LabelQuery): boolean {
         }
         return false;
       }
+      if (c.type === 'pharmClass') {
+        const v = c.value as Record<string, any>;
+        return Array.isArray(v?.unverifiedTerms) && v.unverifiedTerms.length > 0;
+      }
       if (c.type === 'meddra') {
         const v = c.value as Record<string, any>;
         const unverified = Array.isArray(v?.unverifiedTerms) && v.unverifiedTerms.length > 0;
@@ -753,6 +758,10 @@ export function hasInvalidCommonFullText(query: LabelQuery): boolean {
 export function hasInvalidMeddraLevel(query: LabelQuery): boolean {
   return query.groups.some((g) =>
     g.criteria.some((c) => {
+      if (c.type === 'pharmClass') {
+        const v = c.value as Record<string, any>;
+        return Array.isArray(v?.unverifiedTerms) && v.unverifiedTerms.length > 0;
+      }
       if (c.type === 'meddra') {
         const v = c.value as Record<string, any>;
         const lvl = String(v?.level || '').toLowerCase();

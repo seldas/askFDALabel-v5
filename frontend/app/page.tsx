@@ -201,6 +201,10 @@ function HomePage() {
 
   const runSearch = useCallback((searchQuery: LabelQuery = query, searchPrefilters: PreFilter[] = prefilters, searchTargetDb: TargetDb = targetDb) => {
     setError(null);
+    if (hasUnverifiedProductNames(searchQuery)) {
+      setError('Confirm all product names, MedDRA terms, and pharmacologic classes before searching.');
+      return;
+    }
     try {
       /* Ticked pre-filters are folded in only here, on the way out. They land
        * as ordinary categorical criteria, so the results sidebar shows them
@@ -309,7 +313,7 @@ function HomePage() {
         {hasUnverified && (
           <span className="fdl-warning-tag">
             <AlertIcon size={13} />
-            <span>Please confirm name(s) / MedDRA term(s)</span>
+            <span>Please confirm name(s) / MedDRA term(s) / pharmacologic class(es)</span>
           </span>
         )}
         {hasCommonFullText && (
@@ -367,7 +371,7 @@ function HomePage() {
         style={hasBlockers ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
         title={
           hasUnverified
-            ? 'Please confirm all product names and MedDRA terms by selecting from standard suggestions'
+            ? 'Please confirm all product names, MedDRA terms, and pharmacologic classes by selecting from standard suggestions'
             : hasCommonFullText
             ? 'Full-text search for common/generic words is restricted to prevent slow queries'
             : hasHigherMeddra

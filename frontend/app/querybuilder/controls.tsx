@@ -255,9 +255,8 @@ export function TokenInput({
         if (exact) {
           if (onCommit) onCommit(exact);
           else if (onChange && !chips.includes(exact)) onChange([...chips, exact]);
-        } else if (suggestions.length > 0) {
-          if (onCommit) onCommit(suggestions[0]);
-          else if (onChange && !chips.includes(suggestions[0])) onChange([...chips, suggestions[0]]);
+        } else {
+          return;
         }
       } else {
         if (onCommit) onCommit(v);

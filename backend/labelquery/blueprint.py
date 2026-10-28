@@ -67,6 +67,8 @@ def validate_request_shape():
                 for criterion in group.get('criteria') or []:
                     if not isinstance(criterion['value'], dict):
                         raise QueryShapeError('Search criterion value must be an object.')
+                    if criterion.get('type') == 'pharmClass' and criterion['value'].get('unverifiedTerms'):
+                        raise QueryShapeError('Confirm all pharmacologic classes before searching.')
         except QueryShapeError as exc:
             return jsonify({'error': str(exc)}), 400
 
@@ -1004,6 +1006,25 @@ def suggest_pharm_class():
     if len(q) < 2:
         return jsonify({'suggestions': []})
     try:
+        target_db = _resolve_target_db(request.args.get('target_db'))
+        if _use_oracle(target_db):
+            from dashboard.services.fdalabel_db import FDALabelDBService
+            rows = []
+            if class_type in ('any', 'epc'):
+                rows += FDALabelDBService.execute_oracle_query(
+                    "SELECT DISTINCT EPC AS NAME FROM druglabel.SUM_SPL_EPC WHERE UPPER(EPC) LIKE :q FETCH NEXT 25 ROWS ONLY",
+                    {'q': f'%{q.upper()}%'}) or []
+            if class_type in ('any', 'moa', 'pe', 'cs'):
+                token = {'moa': 'MOA', 'pe': 'PE', 'cs': 'CHEMICAL'}.get(class_type)
+                params = {'q': f'%{q.upper()}%'}
+                cat = ''
+                if token:
+                    cat = ' AND UPPER(CAT) LIKE :cat'
+                    params['cat'] = f'%{token}%'
+                rows += FDALabelDBService.execute_oracle_query(
+                    f"SELECT DISTINCT NAME FROM druglabel.NDFRT_CONCEPT WHERE UPPER(NAME) LIKE :q{cat} FETCH NEXT 25 ROWS ONLY", params) or []
+            names = sorted({r.get('NAME') for r in rows if r.get('NAME')})
+            return jsonify({'suggestions': [{'name': name} for name in names[:40]]})
         params = {'q': f'%{q}%'}
         type_clause = ''
         if class_type in CLASS_TYPE_FILTERS:
@@ -1873,7 +1894,7 @@ initial search criteria for the AskFDALabel search panel.
 
 IMPORTANT FOCUS:
 "groups" is the backbone search and holds ONLY product names/identifiers and
-text/keywords/clinical sections.
+text/keywords/clinical sections and pharmacologic classes.
 
 Categorical constraints the request also mentions -- NDA, Human Rx, Oral,
 Tablet, OTC, Schedule II and the like -- do NOT go in "groups". They go in
@@ -1903,6 +1924,7 @@ Allowed "type" values and the exact shape of their "value":
 - "fullText"          {"mode": "simple"|"advanced", "text": "hepatic failure"}
 - "labelingSection"   {"sections": ["BOXED WARNING", "WARNINGS AND PRECAUTIONS"], "text": "lactic acidosis"}
 - "meddra"            {"level": "pt"|"llt", "terms": ["Hepatic failure"], "sections": ["ADVERSE REACTIONS"]}
+- "pharmClass"        {"classType": "any"|"epc"|"moa"|"pe"|"cs", "terms": ["class name"]}
 
 Allowed "prefilters" -- one entry per single value, never a list:
 
@@ -1918,12 +1940,7 @@ Rules:
 1. Put drug names/identifiers and text/clinical section matches in "groups", and
    every categorical constraint in "prefilters". Emit a prefilter only when the
    request actually calls for it -- never pad the list with defaults.
-2. Pharmacologic Class (EPC/Pharm Class): Do NOT emit "pharmClass" in "groups".
-   If the user query specifies or mentions a pharmacologic class (e.g. "Kinase Inhibitor",
-   "ACE inhibitor", "Beta blocker", "SGLT2 inhibitor", etc.), omit it from "groups" and add
-   this exact note to "notes":
-   "Note: Pharmacologic class filter ('[Class Name]') was omitted from the initial query. You can apply this class filter directly from the Results sidebar."
-   (replace [Class Name] with the pharmacologic class name mentioned in the query).
+2. Pharmacologic class: emit a pharmClass criterion in groups when requested. Use the requested class name and type; use any when unspecified. Terms require confirmation against the application vocabulary. Do not substitute ingredients for the class.
 3. Adverse events and medical concepts: prefer "meddra" over free text. Only Preferred Term ("pt") or Lowest Level Term ("llt") levels are allowed. Higher MedDRA levels (SOC, HLGT, HLT) are disabled to avoid query timeouts. If a high-level category is requested, map it to the most relevant PT(s) or add a warning note in "notes".
 4. Free text is the fallback for wording MedDRA does not cover. Do NOT generate "fullText" or "labelingSection" for generic common words or stopwords (e.g. "drug", "patient", "dose", "tablet", "treatment", "effects", etc.) that match almost all labels. If the user asks for a generic common word in full text, omit the criterion and add an explanatory warning note in "notes".
 5. Target Sections: When specific sections are named (e.g. "Boxed Warning", "Warnings and Precautions", "Adverse Reactions"), use "labelingSection" or attach "sections" to "meddra".
@@ -2277,20 +2294,6 @@ def _sanitize_translation(parsed, target_db, intent=''):
             if ctype not in _ALLOWED_TYPES:
                 dropped.append(str(ctype))
                 continue
-            if ctype == 'pharmClass':
-                # Convert any LLM-emitted pharmClass into sidebar guidance note
-                terms = []
-                if isinstance(value, str):
-                    terms = [value]
-                elif isinstance(value, list):
-                    terms = value
-                elif isinstance(value, dict):
-                    terms = value.get('terms') or ([value.get('text')] if value.get('text') else [])
-                class_name = ', '.join([str(t) for t in terms if t]) or 'selected'
-                notice = f"Note: Pharmacologic class filter ('{class_name}') was omitted from the initial query. You can apply this class filter directly from the Results sidebar."
-                if not any('Pharmacologic class filter' in n for n in (parsed.get('notes') or [])):
-                    notes_from_pharm.append(notice)
-                continue
             if ctype in PREFILTER_FIELDS:
                 harvested.extend(_criterion_to_prefilters(ctype, value))
                 continue
@@ -2338,6 +2341,15 @@ def _sanitize_translation(parsed, target_db, intent=''):
                         f"Warning: Full-text search for generic common word(s) ('{f_text}') was omitted to prevent slow query performance. Please specify a more specific clinical term or condition."
                     )
                     continue
+            elif ctype == 'pharmClass':
+                raw = value if isinstance(value, dict) else {'terms': value if isinstance(value, list) else [value]}
+                terms = raw.get('terms') or ([raw.get('text')] if raw.get('text') else [])
+                if isinstance(terms, str):
+                    terms = [terms]
+                terms = [str(t).strip() for t in terms if t and str(t).strip()]
+                class_type = str(raw.get('classType') or 'any').lower()
+                value = {'classType': class_type if class_type in ('any', 'epc', 'moa', 'pe', 'cs') else 'any',
+                         'terms': [], 'unverifiedTerms': terms, 'verified': not terms}
             elif ctype == 'meddra':
                 terms = []
                 if isinstance(value, str):

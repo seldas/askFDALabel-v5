@@ -52,6 +52,11 @@ export function parseExternalQuery(text: string): ExternalQuery {
       }
       if (isCriterionEmpty({ uid: '', type, value: { ...defaults, ...value } })) throw new Error(`The ${type} criterion is empty. Ask the external model to supply the missing condition.`);
       if (type === 'productName') value.verified = false;
+      if (type === 'pharmClass') {
+        value.unverifiedTerms = value.terms || [];
+        value.terms = [];
+        value.verified = false;
+      }
       if (type === 'meddra') {
         value.verified = false;
         // Keep vocabulary confirmation in the existing criterion card.
