@@ -1186,11 +1186,12 @@ export function CriterionCard({
         return (
           <>
             {(v.unverifiedTerms || []).map((term: string) => (
-              <div key={term} className="fdl-note" style={{ background: '#fffbeb', padding: '10px', marginBottom: '8px' }}>
-                <strong>Confirm pharmacologic class: {term}</strong>
-                <TokenInput placeholder="Search and select a standard class" fetchSuggestions={fetchPharmClass} requireSuggestion
-                  onCommit={(canonical) => set({ terms: [...new Set([...(v.terms || []), canonical])], unverifiedTerms: v.unverifiedTerms.filter((t: string) => t !== term) })} />
-                <button type="button" onClick={() => set({ unverifiedTerms: v.unverifiedTerms.filter((t: string) => t !== term) })}>Remove unconfirmed class</button>
+              <div key={term} className="fdl-class-confirm">
+                <div className="fdl-class-confirm__heading"><AlertIcon size={14} /> Verification required: {term}</div>
+                <p>Select a matching standard class or search for another term.</p>
+                <UnverifiedClassPicker term={term} fetchSuggestions={fetchPharmClass}
+                  onConfirm={(canonical) => set({ terms: [...new Set([...(v.terms || []), canonical])], unverifiedTerms: v.unverifiedTerms.filter((t: string) => t !== term) })} />
+                <button type="button" className="fdl-btn fdl-class-confirm__remove" onClick={() => set({ unverifiedTerms: v.unverifiedTerms.filter((t: string) => t !== term) })}>Remove unconfirmed class</button>
               </div>
             ))}
             <div className="fdl-row">
@@ -1669,6 +1670,41 @@ function UnverifiedProductPicker({
         </button>
       ))}
     </div>
+  );
+}
+
+function UnverifiedClassPicker({ term, fetchSuggestions, onConfirm }: {
+  term: string;
+  fetchSuggestions: (query: string) => Promise<string[]>;
+  onConfirm: (term: string) => void;
+}) {
+  const [items, setItems] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetchSuggestions(term).then((results) => {
+      if (!cancelled) setItems(results);
+    }).catch(() => {
+      if (!cancelled) setItems([]);
+    }).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [term, fetchSuggestions]);
+
+  return (
+    <>
+      {loading ? <p>Searching matching classes…</p> : items.length > 0 ? (
+        <div className="fdl-class-confirm__suggestions">
+          {items.slice(0, 10).map((item) => (
+            <button key={item} type="button" onClick={() => onConfirm(item)}>✓ {item}</button>
+          ))}
+        </div>
+      ) : <p>No matching classes found. Try another search below.</p>}
+      <TokenInput placeholder="Search for another class" fetchSuggestions={fetchSuggestions} requireSuggestion onCommit={onConfirm} />
+    </>
   );
 }
 

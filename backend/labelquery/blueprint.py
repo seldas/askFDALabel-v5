@@ -796,7 +796,7 @@ _ORACLE_OPTION_QUERIES = {
 #: is served without counts rather than aggregating SUM_SPL_DOSAGEFORM per
 #: request. Same list for both scopes: it is a code list, not a label rollup.
 _ORACLE_DOSAGE_FORM_QUERY = """
-    SELECT SPL_ACCEPTABLE_TERM AS name, 0 AS n
+    SELECT SPL_ACCEPTABLE_TERM AS name
     FROM druglabel.DOSAGE_FORM
     WHERE SPL_ACCEPTABLE_TERM IS NOT NULL
     ORDER BY SPL_ACCEPTABLE_TERM
@@ -823,7 +823,9 @@ def _oracle_options(target_db):
             # empty dictionary -- these tables are never unpopulated.
             return None
         out[key] = [
-            {'value': r.get('NAME') or r.get('name'), 'count': int(r.get('N') or r.get('n') or 0)}
+            {'value': r.get('NAME') or r.get('name'),
+             **({'count': int(r.get('N') if r.get('N') is not None else r.get('n'))}
+                if r.get('N') is not None or r.get('n') is not None else {})}
             for r in rows
             if (r.get('NAME') or r.get('name'))
         ]
