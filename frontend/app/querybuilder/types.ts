@@ -282,7 +282,7 @@ export const ADD_MORE_ORDER: CriterionType[] = [
   'identifier',
 ];
 
-export type SearchSectionId = 'filters' | 'identifiers' | 'textMatch';
+export type SearchSectionId = 'filters' | 'identifiers' | 'pharmClass' | 'textMatch';
 
 export interface SearchSectionDef {
   id: SearchSectionId;
@@ -297,14 +297,13 @@ export const SEARCH_SECTIONS: SearchSectionDef[] = [
     id: 'filters',
     stepNumber: 1,
     title: 'Market & Categorical Filters',
-    subtitle: 'Filter by marketing categories, status, dosage form, administration route, and pharm class',
+    subtitle: 'Filter by marketing categories, status, dosage form, and administration route',
     criterionTypes: [
       'labelingType',
       'applicationType',
       'marketStatus',
       'route',
       'dosageForm',
-      'pharmClass',
       'deaSchedule',
       'activeMoiety',
     ],
@@ -317,8 +316,15 @@ export const SEARCH_SECTIONS: SearchSectionDef[] = [
     criterionTypes: ['productName', 'identifier'],
   },
   {
-    id: 'textMatch',
+    id: 'pharmClass',
     stepNumber: 3,
+    title: 'Pharmacologic Class',
+    subtitle: 'Select standardized EPC, mechanism of action, physiologic effect, or chemical structure terms',
+    criterionTypes: ['pharmClass'],
+  },
+  {
+    id: 'textMatch',
+    stepNumber: 4,
     title: 'Labeling Text & Clinical Match',
     subtitle: 'Search labeling full text, specific sections (e.g. Boxed Warning), or MedDRA safety terms',
     criterionTypes: ['labelingSection', 'meddra'],

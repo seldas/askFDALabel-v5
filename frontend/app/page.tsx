@@ -413,7 +413,7 @@ function HomePage() {
           onChange={setQuery}
           options={options}
           targetDb={targetDb}
-          visibleSections={['identifiers', 'textMatch']}
+          visibleSections={['identifiers', 'pharmClass', 'textMatch']}
         />
         </div>
 
