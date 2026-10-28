@@ -58,12 +58,18 @@ def execute_review(task_id, user_id, job_id, mode, confirmed=None):
         key_data = {'version': PROMPT_VERSION, 'mode': mode, 'model': str(model), 'provider': provider,
                     'user': user_id, 'sides': [side['metadata'] for side in sides]}
         if mode == 'confusion':
-            key_data.update(version=CARTON_VERSION, confirmed=confirmed)
+            # Identification task IDs change on every run; they are audit metadata,
+            # not part of the comparison's content.
+            stable_confirmed = {side: {k: v for k, v in data.items() if k != 'extraction_task_id'}
+                                for side, data in (confirmed or {}).items()}
+            key_data.update(version=CARTON_VERSION, confirmed=stable_confirmed)
         cache_key = hashlib.sha256(json.dumps(key_data, sort_keys=True).encode()).hexdigest()
         cached = ImageAnalysisCache.query.filter_by(cache_key=cache_key).first()
         if cached and json.loads(cached.result_json).get('detail_status') != 'failed':
             result = json.loads(cached.result_json)
             result['cached'] = True
+            if mode == 'confusion':
+                result['carton_inputs'] = confirmed
         else:
             if mode == 'confusion':
                 if not confirmed:
@@ -141,6 +147,7 @@ def execute_review(task_id, user_id, job_id, mode, confirmed=None):
                 # Another task may have saved this exact comparison while AI was running.
                 if not ImageAnalysisCache.query.filter_by(cache_key=cache_key).first():
                     raise
+        result['_cache_key'] = cache_key
         TaskService.update_task(task_id, progress=100, status='completed', message='Visual review ready.', result_data=result)
     except Exception as exc:
         db.session.rollback()

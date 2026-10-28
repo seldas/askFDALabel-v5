@@ -196,3 +196,27 @@ def clean_job(job_id):
         (directory / filename).unlink(missing_ok=True)
     if directory.exists():
         directory.rmdir()
+
+
+def history_directory(user_id, task_id):
+    # These IDs are database integers, never paths supplied by a client.
+    return (Path(current_app.config['DATA_DIR']) / 'image_review' / str(int(user_id)) / str(int(task_id)))
+
+
+def save_history_images(user_id, task_id, sides):
+    directory = history_directory(user_id, task_id)
+    directory.mkdir(parents=True, exist_ok=False)
+    try:
+        for side, value in zip(('left', 'right'), sides):
+            (directory / f'{side}.png').write_bytes(value['image'])
+    except Exception:
+        remove_history_images(user_id, task_id)
+        raise
+
+
+def remove_history_images(user_id, task_id):
+    directory = history_directory(user_id, task_id)
+    for side in ('left', 'right'):
+        (directory / f'{side}.png').unlink(missing_ok=True)
+    if directory.exists():
+        directory.rmdir()

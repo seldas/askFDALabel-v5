@@ -9,11 +9,11 @@ from flask_login import current_user
 from werkzeug.exceptions import BadRequest, HTTPException
 
 from database import db
-from database.models import SystemTask, ImageReviewComment, utc_now
+from database.models import SystemTask, ImageReviewComment, ImageAnalysisCache, utc_now
 from dashboard.routes.guards import feature_before_request
 from dashboard.services.task_service import TaskService
 from .assets import (FILE_LIMIT, label_inventory, read_local_artwork, normalized_image,
-                     prepare_side, save_job, clean_job)
+                     prepare_side, save_job, clean_job, history_directory, save_history_images, remove_history_images)
 from .review import MODES
 from .tasks import execute_review, execute_carton_extraction
 from .carton import FIELDS, IMAGE_TYPES
@@ -83,9 +83,11 @@ def start_review():
     task = None
     try:
         task = TaskService.create_task('image_review', user_id=current_user.id, message='Preparing visual review...')
+        save_history_images(current_user.id, task.id, sides)
+        initial = {'mode': mode, 'sources': {name: side['metadata'] for name, side in zip(('left', 'right'), sides)}}
         if mode == 'confusion':
-            # Preserve the confirmed input audit even if dispatch or comparison fails.
-            TaskService.update_task(task.id, result_data={'stage': 'carton_comparison', 'carton_inputs': confirmed})
+            initial.update(stage='carton_comparison', carton_inputs=confirmed)
+        TaskService.update_task(task.id, result_data=initial)
         TaskService.start_background_task(current_app._get_current_object(), task.id, execute_review, current_user.id, job_id, mode, confirmed)
         if task.status == 'failed':
             clean_job(job_id)
@@ -100,12 +102,77 @@ def start_review():
         raise
 
 
+@image_review_bp.get('/history')
+def review_history():
+    if getattr(current_user, 'is_guest', False):
+        return jsonify(error='Sign in with a personal account.'), 403
+    tasks = SystemTask.query.filter_by(user_id=current_user.id, task_type='image_review').order_by(SystemTask.created_at.desc(), SystemTask.id.desc()).all()
+    reviews = []
+    for task in tasks:
+        try:
+            result = json.loads(task.result_data or '{}')
+        except (TypeError, ValueError):
+            result = {}
+        reviews.append({'task_id': task.id, 'status': task.status, 'created_at': task.created_at.isoformat() + 'Z' if task.created_at else None,
+                        'mode': result.get('mode'), 'sources': result.get('sources', {}), 'summary': result.get('summary', ''),
+                        'cached': result.get('cached', False)})
+    return jsonify(reviews=reviews)
+
+
+@image_review_bp.get('/reviews/<int:task_id>/images/<side>')
+def history_image(task_id, side):
+    task = db.session.get(SystemTask, task_id)
+    if (not task or task.task_type != 'image_review' or task.user_id != current_user.id
+            or getattr(current_user, 'is_guest', False) or side not in ('left', 'right')):
+        return jsonify(error='Review not found.'), 404
+    path = history_directory(current_user.id, task_id) / f'{side}.png'
+    if not path.is_file():
+        return jsonify(error='Image not available for this review.'), 404
+    response = send_file(path, mimetype='image/png')
+    response.headers['Cache-Control'] = 'private, no-store'
+    return response
+
+
+@image_review_bp.delete('/reviews/<int:task_id>')
+def delete_review(task_id):
+    task = db.session.get(SystemTask, task_id)
+    if not task or task.task_type != 'image_review' or task.user_id != current_user.id or getattr(current_user, 'is_guest', False):
+        return jsonify(error='Review not found.'), 404
+    if task.status not in ('completed', 'failed'):
+        return jsonify(error='Wait for the review to finish before deleting it.'), 409
+    result = json.loads(task.result_data or '{}')
+    cache_key = result.get('_cache_key')
+    if cache_key:
+        ImageAnalysisCache.query.filter_by(cache_key=cache_key).delete()
+    # Identification records are retained only when another review still uses them.
+    extraction_ids = {v.get('extraction_task_id') for v in (result.get('carton_inputs') or {}).values()
+                      if isinstance(v, dict) and isinstance(v.get('extraction_task_id'), int)}
+    if extraction_ids:
+        others = SystemTask.query.filter(SystemTask.user_id == current_user.id, SystemTask.task_type == 'image_review', SystemTask.id != task_id).all()
+        for other in others:
+            try:
+                other_result = json.loads(other.result_data or '{}')
+                referenced = {v.get('extraction_task_id') for v in (other_result.get('carton_inputs') or {}).values() if isinstance(v, dict)}
+                extraction_ids.difference_update(referenced)
+            except (TypeError, ValueError, AttributeError):
+                # Keep records when a malformed historical review cannot be checked.
+                extraction_ids.clear()
+                break
+        if extraction_ids:
+            SystemTask.query.filter(SystemTask.id.in_(extraction_ids), SystemTask.user_id == current_user.id,
+                                    SystemTask.task_type == 'image_review_extract', SystemTask.status.in_(['completed', 'failed'])).delete(synchronize_session=False)
+    remove_history_images(current_user.id, task_id)
+    db.session.delete(task)
+    db.session.commit()
+    return jsonify(success=True)
+
+
 @image_review_bp.get('/reviews/<int:task_id>')
 def review_status(task_id):
     task = db.session.get(SystemTask, task_id)
     if not task or task.task_type not in ('image_review', 'image_review_extract'):
         return jsonify(error='Review not found.'), 404
-    if task.user_id != current_user.id and (task.status != 'completed' or task.task_type == 'image_review_extract'):
+    if task.user_id != current_user.id or getattr(current_user, 'is_guest', False):
         return jsonify(error='Review not found.'), 404
     return jsonify(task_id=task.id, status=task.status, progress=task.progress, message=task.message,
                    error=task.error_details if task.status == 'failed' else None,
@@ -198,17 +265,11 @@ def start_carton_extraction():
 @image_review_bp.get('/reviews/<int:task_id>/comments')
 def get_review_comments(task_id):
     task = db.session.get(SystemTask, task_id)
-    if not task or task.task_type != 'image_review':
+    if not task or task.task_type != 'image_review' or task.user_id != current_user.id or getattr(current_user, 'is_guest', False):
         return jsonify(error='Review not found.'), 404
 
-    is_guest = getattr(current_user, 'is_guest', False)
-    current_uid = None if is_guest else getattr(current_user, 'id', None)
-
-    filters = [ImageReviewComment.task_id == task_id]
-    if current_uid:
-        filters.append(db.or_(ImageReviewComment.is_public.is_(True), ImageReviewComment.user_id == current_uid))
-    else:
-        filters.append(ImageReviewComment.is_public.is_(True))
+    current_uid = current_user.id
+    filters = [ImageReviewComment.task_id == task_id, ImageReviewComment.user_id == current_uid]
 
     comments = ImageReviewComment.query.filter(*filters).order_by(
         ImageReviewComment.finding_id.asc(),
@@ -226,7 +287,7 @@ def save_review_comment(task_id, finding_id=None):
     if not getattr(current_user, 'can_comment', True):
         return jsonify(error='Commenting and clinical justifications have been disabled for your account by an administrator.'), 403
     task = db.session.get(SystemTask, task_id)
-    if not task or task.task_type != 'image_review':
+    if not task or task.task_type != 'image_review' or task.user_id != current_user.id or getattr(current_user, 'is_guest', False):
         return jsonify(error='Review not found.'), 404
 
     data = request.get_json(silent=True) or {}
@@ -239,7 +300,7 @@ def save_review_comment(task_id, finding_id=None):
         decision = 'unreviewed'
 
     comment_text = data.get('comment', '').strip()
-    is_public = bool(data.get('is_public', False))
+    is_public = False
     regions = data.get('regions')
     regions_str = json.dumps(regions) if regions else None
     set_id = data.get('set_id') or None

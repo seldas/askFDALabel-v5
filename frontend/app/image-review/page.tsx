@@ -13,6 +13,7 @@ import { downloadReviewHtml, downloadReviewJson } from './exportReview';
 import { labelcompRoute } from '../platform/context';
 import { useUser } from '../context/UserContext';
 import './image-review.css';
+import ReviewHistory from './ReviewHistory';
 
 const EMPTY: Selection = { descriptor: {}, file: null, url: '', ready: false };
 
@@ -21,6 +22,7 @@ function Workbench() {
   const canComment = session?.can_comment !== false;
   const params = useSearchParams();
   const [mode, setMode] = useState<ReviewMode>('consistency');
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [left, setLeft] = useState<Selection>(EMPTY);
   const [right, setRight] = useState<Selection>(EMPTY);
   const [review, setReview] = useState<Review | null>(null);
@@ -411,6 +413,12 @@ function Workbench() {
       ? left.ready && !!left.descriptor.set_id
       : left.ready && right.ready);
 
+  if (historyOpen) return (
+    <div className="ivr-page"><Header /><main className="ivr-main">
+      <ReviewHistory onClose={() => setHistoryOpen(false)} />
+    </main><Footer /></div>
+  );
+
   return (
     <div className="ivr-page">
       <Header />
@@ -427,6 +435,7 @@ function Workbench() {
           </div>
           <div className="ivr-heading-actions">
             <ServiceWarning toolId="label-image-review" compact />
+            <button type="button" className="ivr-button" onClick={() => setHistoryOpen(true)}>Review history</button>
             <button
               type="button"
               className="ivr-button"
@@ -923,45 +932,7 @@ function FindingDetails({
         </button>
       </div>
 
-      <div className="ivr-comment-visibility">
-        <label className="ivr-visibility-option" title="Private comments are visible only to your personal account">
-          <input
-            type="radio"
-            name={`visibility-${finding.id}`}
-            checked={!decision.is_public}
-            disabled={!canComment}
-            onChange={() => {
-              if (!canComment) return;
-              onDecision({ is_public: false, saved: false });
-              if (lastTaskId) {
-                void onSaveToDb({ is_public: false });
-              }
-            }}
-          />
-          <span>🔒 Private (Only me)</span>
-        </label>
-        <label className="ivr-visibility-option" title="Public comments are visible to all users, showing your name">
-          <input
-            type="radio"
-            name={`visibility-${finding.id}`}
-            checked={!!decision.is_public}
-            disabled={!canComment}
-            onChange={() => {
-              if (!canComment) return;
-              onDecision({ is_public: true, saved: false });
-              if (lastTaskId) {
-                void onSaveToDb({ is_public: true });
-              }
-            }}
-          />
-          <span>🌐 Public (Visible to all)</span>
-        </label>
-      </div>
-      <p className="ivr-comment-visibility-hint">
-        {decision.is_public
-          ? '🌐 Public: Visible to all reviewers and colleagues with your name.'
-          : '🔒 Private (Default): Saved to database, visible only to your personal account.'}
-      </p>
+      <p className="ivr-comment-visibility-hint">🔒 This review and its comments are private to your account.</p>
 
       <label>
         Reviewer comment / justification note

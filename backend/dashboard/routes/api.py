@@ -3215,7 +3215,7 @@ def api_pgx_assess(set_id):
 @login_required
 def get_task_status(task_id):
     task = SystemTask.query.get_or_404(task_id)
-    if not current_user.is_admin and task.user_id != current_user.id:
+    if task.user_id != current_user.id and (task.task_type in ('image_review', 'image_review_extract') or not current_user.is_admin):
         return jsonify({'success': False, 'error': 'Unauthorized'}), 403
     return jsonify({
         'success': True,
@@ -3234,7 +3234,7 @@ def get_task_status(task_id):
 @login_required
 def cancel_task(task_id):
     task = SystemTask.query.get_or_404(task_id)
-    if not current_user.is_admin and task.user_id != current_user.id:
+    if task.user_id != current_user.id and (task.task_type in ('image_review', 'image_review_extract') or not current_user.is_admin):
         return jsonify({'success': False, 'error': 'Unauthorized'}), 403
     if task.status in ['pending', 'processing']:
         task.status = 'cancelled'

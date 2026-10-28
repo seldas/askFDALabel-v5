@@ -46,6 +46,9 @@ backend/webtest/history/
 
 data/*
 !data/sync_schema.py
+!data/image_review/
+data/image_review/*
+!data/image_review/.gitkeep
 backend/data/uploads/
 *.db
 
