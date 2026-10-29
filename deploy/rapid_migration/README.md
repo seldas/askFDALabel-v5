@@ -29,7 +29,7 @@ Generated archives:
   - `image_frontend.tar.gz`: `fdalabel-v3-frontend:latest`
   - `image_redis.tar.gz`: `fdalabel-v3-redis:latest`
   - `image_nginx.tar.gz`: `fdalabel-v3-nginx:latest` (included by default)
-- `rapid_files.zip`: Configuration scripts (`start_server.py`, `deploy/sso_config.py`, `deploy/nginx_config.py`, `.env.template`, `.env.rapid.template`, `restore_db.py`, `dump_db.py`), FDA SSO metadata (`deploy/SSO_config/sso2.xml`), external nginx ACS snippet (`deploy/SSO_config/rapid_saml_acs.conf`), migration/SSO documentation, database scripts, Nginx configurations, webtest folders, and public assets. `.env` is deliberately excluded to protect target environment configuration.
+- `rapid_files.zip`: Configuration scripts (`start_server.py`, `deploy/sso_config.py`, `deploy/nginx_config.py`, `.env.template`, `.env.rapid.template`, `restore_db.py`, `dump_db.py`), FDA SSO metadata (`deploy/SSO_config/sso2.xml`), external nginx ACS snippet (`deploy/SSO_config/rapid_saml_acs.conf`), migration/SSO documentation, database scripts, Nginx configurations, and public assets. `.env` is deliberately excluded to protect target environment configuration.
 - `data.zip`: (Optional) Contents of the `data/` directory, excluding temporary caches and local/HPC Keycloak test profiles.
 
 ---

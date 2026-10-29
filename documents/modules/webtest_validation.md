@@ -1,49 +1,24 @@
-# WebTest: Automated Regression & Validation Suite (`/webtest`)
+# WebTest: Query Monitoring (`/webtest`)
 
-## 1. Overview
+WebTest runs configured FDALabel queries against their target servers and records
+response counts, timing and status. The WebTest page shows the latest results
+and historical trends. Availability is controlled by the `webtest` feature gate;
+RAPID deployments disable the tool.
 
-The **WebTest** validation module (`/webtest`) ensures fidelity between AskFDALabel's query engine and the official public FDA web application (`nctr-crs.fda.gov/fdalabel`).
+## Data and execution
 
-It provides an automated test execution harness that runs benchmark regulatory query suites, compares returned label sets, and flags data discrepancies.
+- `WebtestTask` and `WebtestHistory` in PostgreSQL store query definitions and
+  run history. The runner replaces a task's existing result for the same date.
+- `backend/webtest/blueprint.py` exposes tasks, history and report endpoints.
+- `backend/admin/tasks/run_webtest.py` executes the interactive run as a
+  subprocess; its operational log is written under `data/logs/tasks/`.
+- `backend/cron_webtest.py` provides a scheduled runner.
+- Excel history and report downloads are generated in memory from database
+  records when requested. They are not persisted to WebTest folders.
 
----
-
-## 2. Architecture & Testing Flow
-
-```
-                      Upload / Select Test Suite (Excel Template)
-                                          │
-                                          ▼
-                         Celery Task: `run_webtest.py`
-                                          │
-                  ┌───────────────────────┴───────────────────────┐
-                  ▼                                               ▼
-         Execute Query against                          Execute Query against
-        Local AskFDALabel Engine                        Official Web FDALabel
-                  │                                               │
-                  └───────────────────────┬───────────────────────┘
-                                          ▼
-                            Record Comparison & Diff Analysis
-                            • Matching Count (Precision / Recall)
-                            • Missing Set IDs
-                            • Extra Set IDs
-                                          │
-                                          ▼
-                                Output History & Reports
-                           • `backend/webtest/history/`
-                           • `backend/webtest/results/` (Excel Diff)
-```
-
-- **Backend Blueprint**: `backend/webtest/blueprint.py`
-- **Execution Task**: `backend/admin/tasks/run_webtest.py`
-- **Cron / Headless Runner**: `backend/cron_webtest.py`
-
----
-
-## 3. Test Suites & Metrics
-
-- **Excel Template Structure**: Test spreadsheets specify query criteria rows (e.g. *Human Rx + Oral + "Cardiovascular" in Indications*).
-- **Automated Scorecards**:
-  - **Pass**: Result set from local engine matches official web service 100%.
-  - **Divergence**: Shows whether discrepancies stem from un-updated DailyMed monthly archives, differing version eff_times, or discontinued label filtering.
-- **History Retention**: Historical test run logs and Excel diff sheets are persisted to `backend/webtest/results/` for regulatory auditability.
+The application and deployment no longer depend on the legacy
+`backend/webtest/history/` or `backend/webtest/results/` directories. Existing
+files are not removed by this change. `backend/migrate_webtest_to_pg.py` is a
+one-time utility for importing legacy spreadsheets; it reads the old location
+and **deletes existing WebTest tasks and history before import**. Do not run it
+on a populated database without a backup and a deliberate migration plan.

@@ -539,8 +539,6 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
     if not rapid:
         backend_volumes.extend([
             "./backend/database/scripts:/app/database/scripts",
-            "./backend/webtest/results:/app/webtest/results",
-            "./backend/webtest/history:/app/webtest/history"
         ])
 
 
