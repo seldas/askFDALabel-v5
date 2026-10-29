@@ -191,6 +191,12 @@ export function AiIntentPanel({
     }
   }, [exactMatch]);
 
+  const isLocalDb = !targetDb || targetDb === 'local';
+  const hasSafetyTerms = Boolean(
+    intent &&
+    /\b(dili|liver|hepat|adverse|reaction|warning|boxed\s+warning|contraindicat|toxicity|death|fatal)\b/i.test(intent)
+  );
+
   const translate = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || disabled || busy || refining) return;
@@ -372,6 +378,15 @@ export function AiIntentPanel({
             </button>
             </div>
           </div>
+
+          {isLocalDb && hasSafetyTerms && (
+            <div className="fdl-ai__scope-tip" role="note">
+              <InfoIcon size={14} />
+              <span>
+                <strong>Tip:</strong> Adverse event criteria (MedDRA) and section text searches are supported on <strong>CDER-CBER (Oracle)</strong> database scope. On Local DB, searches are scoped to drug names, classes, and product attributes.
+              </span>
+            </div>
+          )}
 
           {intent.trim() && intent.trim() !== processedIntent && (
             <p className="fdl-ai__input-pending" role="status">Not yet applied to search criteria</p>

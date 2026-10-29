@@ -22,7 +22,7 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify, send_file, current_app
 from flask_login import current_user
 from werkzeug.exceptions import HTTPException
-from .validation import QueryShapeError, validate_query_shape
+from .validation import QueryShapeError, validate_query_shape, heal_raw_query
 
 from dashboard.services.fdalabel_db import FDALabelDBService
 from dashboard.services import feature_gates
@@ -1947,10 +1947,11 @@ Rules:
 4. Free text is the fallback for wording MedDRA does not cover. Do NOT generate "fullText" or "labelingSection" for generic common words or stopwords (e.g. "drug", "patient", "dose", "tablet", "treatment", "effects", etc.) that match almost all labels. If the user asks for a generic common word in full text, omit the criterion and add an explanatory warning note in "notes".
 5. Target Sections: When specific sections are named (e.g. "Boxed Warning", "Warnings and Precautions", "Adverse Reactions"), use "labelingSection" or attach "sections" to "meddra".
 6. A drug name goes in "productName", never "identifier". "identifier" is for codes: application number, Set ID, SPL ID, UNII, NDC. If the request provides one or more Set IDs / SPL GUIDs (UUID format), emit them in "identifier" under "setSplGuids" as an array.
-7. Never return an empty "groups" array when medical concepts, drug names, or labeling sections are requested.
+7. Never return an empty "groups" array when medical concepts, drug names, or labeling sections are requested (unless the target database explicitly notes that the requested concept is unavailable, e.g. MedDRA on Local DB).
 8. When the user explicitly asks for combination/fixed-dose combination products containing multiple ingredients joined by "and" or "with", emit one "productName" criterion per ingredient in the SAME group, with op="contains" for each. These criteria are ANDed by the query builder. Never put the whole conjunction into one productName text value, and do not use equals for these ingredient fragments.
 9. For a plain request to find labels for a named drug or ingredient, prefer op="equals" so the application can resolve it to standardized names and expand the product list. Use op="contains" or "startsWith" only when the user explicitly asks for a partial, substring, or prefix match. The application also attempts entity expansion when you choose "contains" for an ordinary drug-name request, then falls back to that operator if the name cannot be resolved.
-10. Empty "groups" means all labels in the selected database scope. For requests such as "all oral drugs", emit "groups": [] and the ORAL route prefilter. For "all labels", emit empty groups and empty prefilters. Never invent a drug-name or text criterion just to fill groups.
+10. Empty "groups" means all labels in the selected database scope. For requests such as "all oral drugs", emit "groups": [] and the ORAL route prefilter. For "all labels", emit empty groups and empty prefilters. Never invent a drug-name or text criterion just to fill groups, and NEVER emit a productName criterion with null or empty text when no specific drug is named.
+11. For requests combining routes/dosage forms and adverse events without a specific drug name (e.g. "oral drug that may cause dili"): emit the route in "prefilters" (route: "ORAL"), and emit the adverse event in "groups" (e.g. type: "meddra", value: {"level": "pt", "terms": ["Drug-induced liver injury"]}). All "terms", "sections", and "values" MUST be JSON arrays of strings (e.g. ["Drug-induced liver injury"]), never a single string or null.
 """
 
 
@@ -2464,6 +2465,8 @@ def translate():
     parsed = _parse_json_object(raw)
     if not isinstance(parsed, dict):
         return jsonify({'error': 'The model did not return a usable query.'}), 502
+
+    parsed = heal_raw_query(parsed)
 
     try:
         validate_query_shape(parsed)
