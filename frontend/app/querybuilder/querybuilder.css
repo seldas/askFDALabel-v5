@@ -37,6 +37,37 @@
 .fdl-ai__field { display: flex; align-items: stretch; gap: 10px; margin-top: 15px; }
 .fdl-ai__input-actions { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
 .fdl-ai__input-actions .fdl-btn--ai { flex: 1; }
+.fdl-btn--refine {
+  appearance: none;
+  background: var(--fdl-paper, #ffffff);
+  color: var(--fdl-navy-800, #12375b);
+  border: 1px solid var(--fdl-line, #b8c8d7);
+  border-radius: var(--fdl-radius-sm, 2px);
+  padding: 3px 8px;
+  font: 600 .76rem/1.3 var(--fdl-font-sans, system-ui, sans-serif);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.fdl-btn--refine:hover:not(:disabled) {
+  background: var(--fdl-blue-050, #f0f7ff);
+  border-color: var(--fdl-blue-600, #005ea2);
+  color: var(--fdl-blue-700, #005087);
+}
+.fdl-btn--refine:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: var(--fdl-line-soft, #e2e8f0);
+  background: #f8fafc;
+}
+.fdl-ai__refine-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
 .fdl-ai__scope-tip {
   display: flex;
   align-items: center;

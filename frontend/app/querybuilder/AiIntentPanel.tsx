@@ -83,6 +83,15 @@ function ChevronUpIcon({ size = 12 }: { size?: number }) {
   );
 }
 
+function EditPromptIcon({ size = 13 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+    </svg>
+  );
+}
+
 const EXAMPLES = [
   {
     category: 'Single-ingredient name expansion',
@@ -413,6 +422,35 @@ export function AiIntentPanel({
             ))}
           </div>
           <div className="fdl-ai__query-options">
+            <div className="fdl-ai__refine-wrap">
+              <button
+                type="button"
+                className="fdl-btn--refine"
+                disabled={disabled || busy || refining || !intent.trim()}
+                onClick={() => refine(intent)}
+                aria-describedby="refine-prompt-tooltip"
+                title="Standardize natural language into formal clinical query terminology before searching."
+              >
+                {refining ? (
+                  <>
+                    <SpinnerIcon size={12} />
+                    <span>Refining…</span>
+                  </>
+                ) : (
+                  <>
+                    <EditPromptIcon size={13} />
+                    <span>Refine Prompt</span>
+                  </>
+                )}
+              </button>
+              <span className="fdl-ai__quick-search-info" tabIndex={0} aria-describedby="refine-prompt-tooltip">
+                <InfoIcon />
+                <span id="refine-prompt-tooltip" role="tooltip" className="fdl-ai__quick-search-tooltip">
+                  Standardize informal or conversational input into formal clinical query terminology (drug names, MedDRA adverse events, or section constraints) before building criteria.
+                </span>
+              </span>
+            </div>
+
             <label
               className="fdl-ai__quick-search"
             >
@@ -457,6 +495,17 @@ export function AiIntentPanel({
               </span>
             </div>
           </div>
+
+          {warnings.length > 0 && (
+            <div className="fdl-ai__notes" style={{ marginTop: '10px' }}>
+              <strong>Clinical Terminology Guidance:</strong>
+              <ul style={{ margin: '4px 0 0', paddingLeft: '18px' }}>
+                {warnings.map((w, idx) => (
+                  <li key={idx}>{w}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </>
       )}
 
