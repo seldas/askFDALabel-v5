@@ -25,7 +25,7 @@ only speaks for the Oracle path.
 """
 
 import re
-from dashboard.services.name_matching import name_match_sql
+from dashboard.services.name_matching import name_match_sql, separator_variants
 from .compiler import TITLE_TO_LOINCS, COMMON_FULLTEXT_WORDS, is_common_fulltext_query
 from .facets import CATEGORY_CRITERION
 
@@ -512,6 +512,20 @@ def _meddra_selection(value):
     return level, pts, llts, excluded, other
 
 
+def _oracle_chunked_in(column_sql, items, bag, chunk_size=999):
+    """
+    Renders an IN predicate safely chunked to <= 999 elements to avoid
+    Oracle ORA-01795: maximum number of expressions in a list is 1000.
+    """
+    if not items:
+        return '1 = 0'
+    params = [bag.add(x) for x in items]
+    if len(params) <= chunk_size:
+        return f"{column_sql} IN ({', '.join(params)})"
+    chunks = [params[i:i + chunk_size] for i in range(0, len(params), chunk_size)]
+    return f"({' OR '.join(f'{column_sql} IN ({chr(44).join(c)})' for c in chunks)})"
+
+
 def _meddra_exclusion_clause(excluded, bag):
     """
     `AND UPPER(llt.LLT_NAME) NOT IN (...)`, for the widening branches only.
@@ -590,7 +604,7 @@ def _compile_meddra(value, bag, expand_meddra=None, alias='s', warnings=None):
                 f"MedDRA search above Preferred Term (PT) level (requested level '{level.upper()}') is disabled to prevent query timeouts. Please specify a Preferred Term (PT) or Lowest Level Term (LLT)."
             )
         other = []
-    if not (pts or llts or other):
+    if not (pts or llts or other or value.get('resolvedLltCodesReady')):
         return None
 
     sections = _as_list(value.get('sections'))
@@ -640,10 +654,10 @@ def _compile_meddra(value, bag, expand_meddra=None, alias='s', warnings=None):
                     'No selected MedDRA term could be resolved in the local MedDRA dictionary; the MedDRA criterion matched no labels.'
                 )
             return '1 = 0'
-        code_params = [bag.add(code) for code in codes]
+        in_clause = _oracle_chunked_in("occ.LLT_CODE", codes, bag)
         return (
             f"{alias}.SET_ID IN (SELECT occ.SET_ID FROM druglabel.SPL_SEC_MEDDRA_LLT_OCC occ "
-            f"WHERE 1=1{sec_clause} AND occ.LLT_CODE IN ({', '.join(code_params)}))"
+            f"WHERE 1=1{sec_clause} AND {in_clause})"
         )
 
     exclude_sql = _meddra_exclusion_clause(excluded, bag)
@@ -658,11 +672,106 @@ def _compile_meddra(value, bag, expand_meddra=None, alias='s', warnings=None):
         + [(term, level, exclude_sql) for term in other]
     )
 
-    llt_subqueries = []
+    # High-performance batching: group exact terms and codes into set-based queries
+    # instead of creating N separate subqueries joined with costly UNIONS.
+    pt_codes_numeric = []
+    pt_exact_names = []
+    pt_wildcards = []
+
+    llt_codes_numeric = []
+    llt_exact_names = []
+    llt_wildcards = []
+
     for term, term_level, term_exclude in plans:
-        llt_subquery = _meddra_llt_codes_sql(term_level, term, bag, term_exclude)
-        if llt_subquery:
-            llt_subqueries.append(llt_subquery)
+        t_clean = str(term).strip()
+        if not t_clean:
+            continue
+        if term_level == 'pt':
+            if t_clean.isdigit():
+                pt_codes_numeric.append(int(t_clean))
+            elif '%' in t_clean:
+                pt_wildcards.append((t_clean, term_exclude))
+            else:
+                pt_exact_names.append(t_clean)
+        elif term_level == 'llt':
+            if t_clean.isdigit():
+                llt_codes_numeric.append(int(t_clean))
+            elif '%' in t_clean:
+                llt_wildcards.append(t_clean)
+            else:
+                llt_exact_names.append(t_clean)
+
+    llt_subqueries = []
+
+    # 1. Batched exact PT names (all 100+ terms evaluated in a single indexed join)
+    if pt_exact_names:
+        pt_variants = []
+        for name in pt_exact_names:
+            vars_ = separator_variants(name)
+            if vars_:
+                pt_variants.extend(v.upper() for v in vars_)
+            else:
+                pt_variants.append(name.upper())
+        pt_variants = list(dict.fromkeys(pt_variants))
+        pt_in = _oracle_chunked_in("UPPER(pt.PT_NAME)", pt_variants, bag)
+        llt_subqueries.append(
+            f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+            f"JOIN meddra.preferred_term pt ON pt.PT_CODE = llt.PT_CODE "
+            f"WHERE {pt_in}{exclude_sql}"
+        )
+
+    # 2. Batched numeric PT codes
+    if pt_codes_numeric:
+        pt_codes_numeric = list(dict.fromkeys(pt_codes_numeric))
+        pt_code_in = _oracle_chunked_in("llt.PT_CODE", pt_codes_numeric, bag)
+        llt_subqueries.append(
+            f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+            f"WHERE {pt_code_in}{exclude_sql}"
+        )
+
+    # 3. Batched exact LLT names
+    if llt_exact_names:
+        llt_variants = []
+        for name in llt_exact_names:
+            vars_ = separator_variants(name)
+            if vars_:
+                llt_variants.extend(v.upper() for v in vars_)
+            else:
+                llt_variants.append(name.upper())
+        llt_variants = list(dict.fromkeys(llt_variants))
+        llt_in = _oracle_chunked_in("UPPER(llt.LLT_NAME)", llt_variants, bag)
+        llt_subqueries.append(
+            f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+            f"WHERE {llt_in}"
+        )
+
+    # 4. Batched numeric LLT codes
+    if llt_codes_numeric:
+        llt_codes_numeric = list(dict.fromkeys(llt_codes_numeric))
+        llt_code_in = _oracle_chunked_in("llt.LLT_CODE", llt_codes_numeric, bag)
+        llt_subqueries.append(
+            f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+            f"WHERE {llt_code_in}"
+        )
+
+    # 5. Wildcard PT terms
+    for pattern_raw, term_exclude in pt_wildcards:
+        pat = f"%{pattern_raw.strip('%').upper()}%"
+        p_bind = bag.add(pat)
+        llt_subqueries.append(
+            f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+            f"JOIN meddra.preferred_term pt ON pt.PT_CODE = llt.PT_CODE "
+            f"WHERE UPPER(pt.PT_NAME) LIKE {p_bind}{term_exclude}"
+        )
+
+    # 6. Wildcard LLT terms
+    for pattern_raw in llt_wildcards:
+        pat = f"%{pattern_raw.strip('%').upper()}%"
+        p_bind = bag.add(pat)
+        llt_subqueries.append(
+            f"SELECT llt.LLT_CODE FROM meddra.low_level_term llt "
+            f"WHERE UPPER(llt.LLT_NAME) LIKE {p_bind}"
+        )
 
     if not llt_subqueries:
         return None

@@ -124,12 +124,12 @@ export function CriterionCard({
 
   useEffect(() => {
     if (criterion.type !== 'meddra') return;
-    // Each row asks about its own level: a PT's path stops at the PT, an LLT's
-    // runs one step further down.
+    // Limit eager background lookups to avoid flooding the browser connection pool
+    // when queries contain large vocabulary lists (e.g. 50-100+ terms).
     const wanted: Array<[string, string]> = [
       ...meddraPts.map((t) => ['pt', t] as [string, string]),
       ...meddraLlts.map((t) => ['llt', t] as [string, string]),
-    ];
+    ].slice(0, 35);
     wanted.forEach(async ([level, t]) => {
       const key = `${level}:${t}`;
       if (key in hierarchies || hierarchyLoading[key]) return;
@@ -155,7 +155,7 @@ export function CriterionCard({
   useEffect(() => {
     // Only a PT has LLTs below it; at LLT level the term is already the leaf.
     if (criterion.type !== 'meddra' || meddraPts.length === 0) return;
-    meddraPts.forEach(async (t: string) => {
+    meddraPts.slice(0, 35).forEach(async (t: string) => {
       const key = `pt:${t}`;
       // `in`, not truthiness: an empty array is truthy, so `if (llts[key])`
       // would treat "no LLTs found" as "not fetched yet" and refetch forever.
@@ -177,7 +177,7 @@ export function CriterionCard({
 
   useEffect(() => {
     if (criterion.type !== 'meddra' || meddraLlts.length === 0) return;
-    meddraLlts.forEach(async (t: string) => {
+    meddraLlts.slice(0, 35).forEach(async (t: string) => {
       const key = t;
       if (key in parentPts || parentPtLoading[key]) return;
       setParentPtLoading((prev) => ({ ...prev, [key]: true }));

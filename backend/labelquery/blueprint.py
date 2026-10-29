@@ -174,11 +174,17 @@ def _resolve_meddra_locally(value, exact_match, expand_candidates=True):
 
     pt_rows = []
     if pt_names:
-        search = NameSearchParams()
-        matches = ' OR '.join(search.match('pt_name', name, equals=True, exact=exact_match) for name in pt_names)
-        pt_rows.extend(_rows(
-            f"SELECT pt_code, pt_name FROM public.meddra_pt WHERE {matches}", search.params,
-        ))
+        if exact_match:
+            pt_rows.extend(_rows(
+                "SELECT pt_code, pt_name FROM public.meddra_pt WHERE UPPER(pt_name) = ANY(%(names)s)",
+                {'names': pt_names},
+            ))
+        else:
+            search = NameSearchParams()
+            matches = ' OR '.join(search.match('pt_name', name, equals=True, exact=False) for name in pt_names)
+            pt_rows.extend(_rows(
+                f"SELECT pt_code, pt_name FROM public.meddra_pt WHERE {matches}", search.params,
+            ))
     if pt_codes:
         pt_rows.extend(_rows(
             "SELECT pt_code, pt_name FROM public.meddra_pt WHERE pt_code = ANY(%(codes)s)",
@@ -193,9 +199,15 @@ def _resolve_meddra_locally(value, exact_match, expand_candidates=True):
         JOIN public.meddra_pt p ON p.pt_code = l.pt_code
     """
     if llt_names:
-        search = NameSearchParams()
-        matches = ' OR '.join(search.match('l.llt_name', name, equals=True, exact=exact_match) for name in llt_names)
-        llt_rows.extend(_rows(llt_select + f" WHERE {matches}", search.params))
+        if exact_match:
+            llt_rows.extend(_rows(
+                llt_select + " WHERE UPPER(l.llt_name) = ANY(%(names)s)",
+                {'names': llt_names},
+            ))
+        else:
+            search = NameSearchParams()
+            matches = ' OR '.join(search.match('l.llt_name', name, equals=True, exact=False) for name in llt_names)
+            llt_rows.extend(_rows(llt_select + f" WHERE {matches}", search.params))
     if llt_codes:
         llt_rows.extend(_rows(
             llt_select + " WHERE l.llt_code = ANY(%(codes)s)",
