@@ -286,7 +286,7 @@ const CONTENT: WikiArticle[] = [
     'Locate an exact passage: start with Label View. For structured AE annotations use LabelingAE; for a generated safety profile use PV-Profile and its QC review.',
     'Compare label text: use Compare. Trace available versions with Archived Version Track or FDA Application Profile. Deep Dive provides peer context rather than a substitute for version comparison.',
     'Inspect postmarket report patterns: use FAERS. For organ-focused or pharmacogenomic questions, choose the relevant DILI, DICT, DIRI, or PGx agent.',
-    'Review a specific clinical question: use Examine where available. For selected packaging images use Image Analysis or Labeling Visual Review according to the intended task.',
+    'Review a specific clinical question: use Examine where available. For selected packaging images use Visual Analysis and choose Read Image, Labeling Consistency, Artwork Comparison, or Product Confusion.',
     'Find structurally related products: use Chemical Structure Search; then inspect the resulting labeling and product context.',
   ], ['Check whether an output is original evidence, an annotation, an aggregate, or an AI interpretation.', 'Open label-specific tools from a selected labeling; this handbook does not create a substitute product context.'], ['pv-guide', 'faers-guide', 'compare-guide', 'visual-guide', 'agent-guide']),
   guide('pv-guide', 'Organize safety evidence', 'Generate a PV Profile and review QC findings', 'Use a structured safety profile as an index back to labeling evidence.', [
@@ -341,11 +341,11 @@ const CONTENT: WikiArticle[] = [
     'Confirm each document and date before using it in a review or comparison.',
   ], ['Application-linked records do not by themselves establish a complete regulatory history.'], ['versions', 'source-availability', 'compare-guide']),
   guide('visual-guide', 'Compare and track changes', 'Review packaging artwork, confusion, and consistency', 'Choose the right visual-review purpose and inspect the evidence behind findings.', [
-    'Open Labeling Visual Review. Choose labeling and a specific image on each required side, or upload artwork and confirm its labeling association.',
+    'Open Visual Analysis. Choose labeling and a specific image on each required side, or upload artwork and confirm its labeling association.',
     'Use Artwork Comparison for visible changes, Product Confusion for distinguishing features, or Labeling Consistency to compare an image with its own labeling reference.',
     'For product-confusion workflows, check and confirm the identified packaging information before comparison. Other visual-review modes may provide a quick overview before detailed findings.',
     'Inspect numbered findings and their evidence regions. Confirm or dismiss findings, add reviewer notes, and correct inaccurate localization where supported.',
-  ], ['Confirm product, strength, route, selected image, and reference version; an upload does not prove its own provenance.', 'Missing carton text alone does not establish a contradiction with labeling. A partial overview does not replace a completed detailed review.'], ['visual-method', 'waiting-results', 'review-record'], { href: '/image-review', label: 'Open Labeling Visual Review' }),
+  ], ['Confirm product, strength, route, selected image, and reference version; an upload does not prove its own provenance.', 'Missing carton text alone does not establish a contradiction with labeling. A partial overview does not replace a completed detailed review.'], ['visual-method', 'waiting-results', 'review-record'], { href: '/image-review', label: 'Open Visual Analysis' }),
   ...[
     ['agent-guide', 'DILI Agent', 'liver'],
     ['dict-guide', 'DICT Agent', 'cardiac'],

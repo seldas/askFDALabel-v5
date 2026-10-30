@@ -48,7 +48,7 @@ def _vision_images(directory, edge):
 def execute_review(task_id, user_id, job_id, mode, confirmed=None):
     try:
         user = db.session.get(User, user_id)
-        if not user or not feature_gates.is_allowed(user, 'tool_image_review'):
+        if not user or not feature_gates.is_allowed(user, 'tool_visual_analysis'):
             raise ValueError('Your account no longer has access to visual review.')
         directory = job_directory(job_id)
         sides = json.loads((directory / 'references.json').read_text(encoding='utf-8'))
@@ -178,7 +178,7 @@ def execute_carton_extraction(task_id, user_id, job_id, side_names):
             with app.app_context():
                 try:
                     user = db.session.get(User, user_id)
-                    if not user or not feature_gates.is_allowed(user, 'tool_image_review'):
+                    if not user or not feature_gates.is_allowed(user, 'tool_visual_analysis'):
                         raise ValueError('Your account no longer has access to visual review.')
                     provider, _, model = AIClientFactory.get_client(user)
                     if provider not in ('llama', 'elsa'):

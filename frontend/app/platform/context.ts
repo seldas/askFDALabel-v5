@@ -110,6 +110,11 @@ export function labelRoute(
   );
 }
 
+/** Open image analysis with a specific image and optional label version. */
+export function imageAnalysisRoute(setId: string, filename: string, splId?: string): string {
+  return imageReviewRoute({ setIds: [setId], splIds: [splId || ''] }, { mode: 'read', image: filename });
+}
+
 /** Label comparison, which takes up to four labels. */
 export function labelcompRoute(ctx: LaunchContext): string {
   const params = new URLSearchParams();
@@ -119,12 +124,16 @@ export function labelcompRoute(ctx: LaunchContext): string {
 }
 
 /** Two independent artwork sources, with optional label-version pins. */
-export function imageReviewRoute(ctx: LaunchContext = {}): string {
+export function imageReviewRoute(ctx: LaunchContext = {}, opts?: { mode?: string; image?: string; imageIds?: string[]; taskId?: number }): string {
   const params = new URLSearchParams();
   ctx.setIds?.slice(0, 2).forEach((id, index) => {
     params.append('set_ids', id);
     params.append('spl_ids', ctx.splIds?.[index] || '');
   });
+  if (opts?.mode) params.set('mode', opts.mode);
+  if (opts?.image) params.set('image', opts.image);
+  opts?.imageIds?.forEach(id => params.append('image_ids', id));
+  if (opts?.taskId) params.set('task_id', String(opts.taskId));
   return withQuery('/image-review', params);
 }
 

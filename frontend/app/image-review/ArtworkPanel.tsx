@@ -1,13 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Finding, ReviewMode, Selection, Side } from './types';
+import type { Finding, VisualTask, Selection, Side } from './types';
 import SelectLabelModal, { type SelectedLabel } from './SelectLabelModal';
 
 type Asset = { id: string; title: string; filename: string; category: string };
 type Props = {
   side: Side;
-  mode?: ReviewMode;
+  mode?: VisualTask;
+  initialImage?: string;
+  initialImageId?: string;
   labelTitle?: string;
   initialSetId: string;
   initialSplId: string;
@@ -27,6 +29,8 @@ export default function ArtworkPanel({
   labelTitle,
   initialSetId,
   initialSplId,
+  initialImage,
+  initialImageId,
   busy,
   findings,
   selected,
@@ -51,7 +55,7 @@ export default function ArtworkPanel({
   const [natural, setNatural] = useState({ width: 1, height: 1 });
   const [frame, setFrame] = useState({ width: 0, height: 0 });
   const [showLabelModal, setShowLabelModal] = useState(false);
-  const [showManualInput, setShowManualInput] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(true);
 
   const sequence = useRef(0);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -60,9 +64,13 @@ export default function ArtworkPanel({
   useEffect(() => {
     const element = viewport.current;
     if (!element) return;
-    const observer = new ResizeObserver(() =>
-      setFrame({ width: Math.max(1, element.clientWidth - 24), height: Math.max(1, element.clientHeight - 24) })
-    );
+    const observer = new ResizeObserver(() => {
+      const style = getComputedStyle(element);
+      setFrame({
+        width: Math.max(1, element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)),
+        height: Math.max(1, element.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)),
+      });
+    });
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
@@ -73,32 +81,36 @@ export default function ArtworkPanel({
       const targetSetId = (overrideSetId ?? setId).trim();
       const targetSplId = (overrideSplId ?? splId).trim();
       if (!targetSetId) return;
+      const retainUpload = mode === 'consistency' && Boolean(upload);
       const current = ++sequence.current;
       setLoading(true);
       setError('');
       setAssets([]);
       setAssetId('');
-      setUpload(null);
+      if (!retainUpload) setUpload(null);
       setLoaded(null);
       setImageReady(false);
-      if (fileInput.current) fileInput.current.value = '';
+      if (fileInput.current && !retainUpload) fileInput.current.value = '';
       try {
         const query = targetSplId ? `?spl_id=${encodeURIComponent(targetSplId)}` : '';
-        const response = await fetch(`/api/image-review/labels/${encodeURIComponent(targetSetId)}/images${query}`);
+        const base = `/api/image-review/labels/${encodeURIComponent(targetSetId)}`;
+        const response = await fetch(`${base}/images${query}`);
         const data = await response.json();
         if (current !== sequence.current) return;
         if (!response.ok) throw new Error(data.error || 'Could not load labeling images.');
         setLoaded({ set_id: targetSetId, spl_id: data.source.spl_id, origin: data.source.origin });
         setAssets(data.images);
-        setAssetId(data.images[0]?.id || '');
-        if (!data.images.length) setError('No artwork images extracted from this SPL. Upload a package image to verify against this labeling.');
+        const requested = targetSetId === initialSetId && targetSplId === initialSplId
+          ? data.images.find((asset: Asset) => asset.id === initialImageId || asset.filename.toLowerCase() === initialImage?.toLowerCase()) : null;
+        setAssetId(requested?.id || data.images[0]?.id || '');
+        if (!data.images.length && !retainUpload) setError('No artwork images extracted from this SPL. Upload a package image to verify against this labeling.');
       } catch (e) {
         if (current === sequence.current) setError(e instanceof Error ? e.message : String(e));
       } finally {
         if (current === sequence.current) setLoading(false);
       }
     },
-    [setId, splId]
+    [setId, splId, initialSetId, initialSplId, initialImage, initialImageId, mode, upload]
   );
 
   const initialized = useRef(false);
@@ -121,7 +133,8 @@ export default function ArtworkPanel({
       setUrl(objectUrl);
     } else if (assetId && loaded) {
       const query = loaded.spl_id ? `?spl_id=${encodeURIComponent(loaded.spl_id)}` : '';
-      fetch(`/api/image-review/labels/${encodeURIComponent(loaded.set_id)}/images/${assetId}${query}`, { signal: controller.signal })
+      const base = `/api/image-review/labels/${encodeURIComponent(loaded.set_id)}`;
+      fetch(`${base}/images/${assetId}${query}`, { signal: controller.signal })
         .then(async response => {
           if (!response.ok) {
             const body = await response.json().catch(() => ({}));
@@ -202,7 +215,8 @@ export default function ArtworkPanel({
     void loadLabel(label.set_id, label.spl_id);
   };
 
-  const defaultTitle = mode === 'consistency' ? 'Artwork & Labeling Reference' : `Product ${side === 'left' ? 'A' : 'B'}`;
+  const defaultTitle = mode === 'read' || mode === 'consistency' ? 'Your image' : `Image ${side === 'left' ? 'A' : 'B'}`;
+  const filename = upload?.name || assets.find(asset => asset.id === assetId)?.filename;
 
   return (
     <section className="ivr-panel" aria-label={`${side} artwork`}>
@@ -210,140 +224,60 @@ export default function ArtworkPanel({
         <strong>{labelTitle || defaultTitle}</strong>
         <span>{upload ? 'Uploaded artwork' : 'Label artwork'}</span>
       </header>
-      <div className="ivr-source-controls">
-        {loaded ? (
-          <div className="ivr-loaded-badge">
-            <div className="ivr-loaded-badge-icon">💊</div>
-            <div className="ivr-loaded-badge-info">
-              <strong>{labelMeta?.brand_name || loaded.set_id}</strong>
-              {labelMeta?.manufacturer_name && <span>{labelMeta.manufacturer_name}</span>}
-              <small>Set-ID: {loaded.set_id}{loaded.spl_id ? ` · SPL: ${loaded.spl_id.slice(0, 8)}…` : ''}</small>
-            </div>
-            <button
-              type="button"
-              className="ivr-button"
-              onClick={() => setShowLabelModal(true)}
-              disabled={busy || loading}
-            >
-              Change Label
-            </button>
-          </div>
-        ) : (
+      <details className="ivr-image-source" open={sourcesOpen} onToggle={e => setSourcesOpen(e.currentTarget.open)}>
+        <summary><span>{filename || 'Choose an image'}</span><span className="ivr-source-change">{filename ? 'Change image' : 'Select or upload'}</span></summary>
+        <div className="ivr-source-controls">
           <div className="ivr-source-select-bar">
-            <button
-              type="button"
-              className="ivr-button ivr-primary-subtle"
-              onClick={() => setShowLabelModal(true)}
-              disabled={busy || loading}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 7h6l2 2h10v11H3z" />
-                <path d="M3 7V4h7l2 3" />
-              </svg>
-              Choose Label (Task / Project)
+            <button type="button" className="ivr-button" onClick={() => setShowLabelModal(true)} disabled={busy || loading}>
+              {mode === 'consistency' && upload ? (loaded ? 'Change reference labeling' : 'Choose reference labeling') : loaded ? 'Change labeling' : 'Choose from labeling'}
             </button>
-            <button
-              type="button"
-              className="ivr-button"
-              onClick={() => setShowManualInput(!showManualInput)}
-              title="Enter Set-ID directly"
-            >
-              Direct Set-ID {showManualInput ? '▲' : '▼'}
-            </button>
-          </div>
-        )}
-
-        {(!loaded || showManualInput) && (
-          <div className="ivr-manual-setid-box">
-            <div className="ivr-source-row">
-              <label>
-                Set-ID
-                <input
-                  value={setId}
-                  placeholder="Paste SPL Set-ID UUID"
-                  disabled={busy || loading}
-                  onChange={e => {
-                    setSetId(e.target.value);
-                    clearLabel();
-                  }}
-                />
-              </label>
-              <button
-                className="ivr-button"
-                disabled={busy || loading || !setId.trim()}
-                onClick={() => void loadLabel()}
-              >
-                {loading ? 'Loading…' : 'Load label'}
-              </button>
-            </div>
-            <label>
-              Version pin (optional SPL-ID)
-              <input
-                value={splId}
-                placeholder="Latest available labeling if empty"
-                disabled={busy || loading}
+            <label className="ivr-upload">
+              Upload image
+              <input ref={fileInput} type="file" aria-label={`Upload image ${side === 'left' ? 'A' : 'B'}`}
+                accept="image/png,image/jpeg,image/webp,image/gif,image/tiff" disabled={busy || loading}
                 onChange={e => {
-                  setSplId(e.target.value);
-                  clearLabel();
-                }}
-              />
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 12 * 1024 * 1024) {
+                    setError('Each image must be at most 12 MiB.'); e.target.value = ''; return;
+                  }
+                  setUpload(file); setError('');
+                }} />
             </label>
           </div>
-        )}
-
-        <div className="ivr-source-row">
-          <label>
-            Artwork
-            <select
-              value={upload ? '' : assetId}
-              disabled={busy || loading || !assets.length}
-              onChange={e => {
-                setAssetId(e.target.value);
-                setUpload(null);
-                setError('');
-                if (fileInput.current) fileInput.current.value = '';
-              }}
-            >
+          {assets.length > 0 && <label>Image in this labeling
+            <select value={upload ? '' : assetId} disabled={busy || loading} onChange={e => {
+              setAssetId(e.target.value); setUpload(null); setError('');
+              if (fileInput.current) fileInput.current.value = '';
+            }}>
               <option value="">Choose an image</option>
-              {assets.map(asset => (
-                <option key={asset.id} value={asset.id}>
-                  {asset.category} · {asset.title}
-                </option>
-              ))}
+              {assets.map(asset => <option key={asset.id} value={asset.id}>{asset.category} · {asset.title}</option>)}
             </select>
-          </label>
-          <label className="ivr-upload">
-            Upload image
-            <input
-              ref={fileInput}
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif,image/tiff"
-              disabled={busy || loading}
-              onChange={e => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                if (file.size > 12 * 1024 * 1024) {
-                  setError('Each image must be at most 12 MiB.');
-                  e.target.value = '';
-                  return;
-                }
-                setUpload(file);
-                setError('');
-              }}
-            />
-          </label>
+          </label>}
+          <details className="ivr-source-metadata">
+            <summary>Labeling reference & version</summary>
+            {loaded && <p>{labelMeta?.brand_name || 'Selected labeling'}{labelMeta?.manufacturer_name ? ` · ${labelMeta.manufacturer_name}` : ''}</p>}
+            <div className="ivr-manual-setid-box">
+              <label>Set-ID<input value={setId} placeholder="Paste SPL Set-ID" disabled={busy || loading}
+                onChange={e => { setSetId(e.target.value); clearLabel(); }} /></label>
+              <label>SPL-ID (optional version)<input value={splId} placeholder="Latest available version" disabled={busy || loading}
+                onChange={e => { setSplId(e.target.value); clearLabel(); }} /></label>
+              <button className="ivr-button" disabled={busy || loading || !setId.trim()} onClick={() => void loadLabel()}>
+                {loading ? 'Loading…' : 'Load labeling'}
+              </button>
+            </div>
+          </details>
+          {loading && <p role="status">Loading labeling images…</p>}
+          <p className="ivr-source-note">PNG, JPEG, WebP, GIF or TIFF · up to 12 MiB</p>
         </div>
-        {loaded && upload && (
-          <p className="ivr-source-note">
-            Uploaded artwork: will be verified against labeling {loaded.set_id}.
-          </p>
-        )}
-        {error && (
-          <p role="alert" className="ivr-error">
-            {error}
-          </p>
-        )}
-      </div>
+      </details>
+      {loaded && <div className="ivr-reference-caption">
+        <span>{mode === 'consistency' ? 'Official labeling reference' : 'Labeling source'}{upload ? ' · uploaded image association unverified' : ''}</span>
+        <small title={`Set-ID: ${loaded.set_id} · SPL-ID: ${loaded.spl_id || 'unverified'}`}>
+          {labelMeta?.brand_name || 'Selected labeling'} · version {loaded.spl_id?.slice(0, 8) || 'unverified'}
+        </small>
+      </div>}
+      {error && <p role="alert" className="ivr-error ivr-image-error">{error}</p>}
 
       <div className="ivr-viewport" ref={viewport}>
         {url ? (
@@ -354,9 +288,11 @@ export default function ArtworkPanel({
               onLoad={e => {
                 setNatural({ width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight });
                 setImageReady(true);
+                setSourcesOpen(false);
               }}
               onError={() => {
                 setImageReady(false);
+                setSourcesOpen(true);
                 setError('This image cannot be displayed. Use a PNG, JPEG, or WebP copy.');
               }}
             />
@@ -433,9 +369,9 @@ export default function ArtworkPanel({
               <circle cx="17" cy="18" r="4" />
               <path d="m8 36 12-12 9 9 6-7 7 10" />
             </svg>
-            <strong>Select carton, container, or package artwork</strong>
+            <strong>Choose an image to begin</strong>
             <span>
-              Load a drug labeling from your tasks or upload an image.
+              Select a labeling image or upload your own.
               <br />
               PNG, JPEG, WebP, GIF, TIFF · up to 12 MiB
             </span>
@@ -443,7 +379,7 @@ export default function ArtworkPanel({
         )}
       </div>
 
-      <footer className="ivr-viewer-controls">
+      <footer className="ivr-viewer-controls" hidden={!url}>
         <span>Zoom</span>
         <button className="ivr-button" onClick={() => onZoom(Math.max(1, zoom - 0.25))} disabled={zoom <= 1}>
           −

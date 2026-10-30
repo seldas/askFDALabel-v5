@@ -196,22 +196,13 @@ FEATURE_CATALOG = [
         default_allow_guest=False,
     ),
     FeatureSpec(
-        key='tool_image_analysis',
-        name='Image Analysis',
-        blurb='Review and compare pharmaceutical label and package artwork with AI.',
+        key='tool_visual_analysis',
+        name='Visual Analysis',
+        blurb='Read images, compare artwork, review product confusion, and check labeling consistency.',
         category='Product Toolbox',
-        enforced_at='Product Toolbox and /api/image-analysis/*',
+        enforced_at='Tool registry, /image-review and both image APIs',
         default_min_role=ROLE_USER,
         default_allow_guest=True,
-    ),
-    FeatureSpec(
-        key='tool_image_review',
-        name='Labeling Visual Review',
-        blurb='Compare artwork, review product confusion, and check image–labeling consistency.',
-        category='Product Toolbox',
-        enforced_at='Tool registry, /image-review and /api/image-review/*',
-        default_min_role=ROLE_USER,
-        default_allow_guest=False,
     ),
     FeatureSpec(
         key='tool_deepdive',
@@ -264,8 +255,26 @@ FEATURE_KEYS = tuple(spec.key for spec in FEATURE_CATALOG)
 _CATALOG_BY_KEY = {spec.key: spec for spec in FEATURE_CATALOG}
 
 
+# Old rows are retained for the one-time union migration and older clients.
+_VISUAL_ALIASES = {'tool_image_analysis': 'tool_visual_analysis', 'tool_image_review': 'tool_visual_analysis'}
+_LEGACY_VISUAL_DEFAULTS = {
+    'tool_image_analysis': {'min_role': ROLE_USER, 'allow_guest': True},
+    'tool_image_review': {'min_role': ROLE_USER, 'allow_guest': False},
+}
+
+
+def _merged_visual_gate(gates):
+    old = [gates.get(key, default) for key, default in _LEGACY_VISUAL_DEFAULTS.items()]
+    return {
+        'min_role': min((gate['min_role'] for gate in old), key=lambda role: _ROLE_RANK.get(role, 0)),
+        # Guests hold the user role. A legacy guest flag on an admin-only gate
+        # never granted guest access and must not widen the merged permission.
+        'allow_guest': any(gate['allow_guest'] and gate['min_role'] == ROLE_USER for gate in old),
+    }
+
+
 def get_spec(key):
-    return _CATALOG_BY_KEY.get(key)
+    return _CATALOG_BY_KEY.get(_VISUAL_ALIASES.get(key, key))
 
 
 def seed_feature_gates():
@@ -286,8 +295,14 @@ def seed_feature_gates():
             from sqlalchemy.dialects.sqlite import insert
         else:
             raise RuntimeError(f'Unsupported feature-gate database: {dialect}')
+        legacy = {row.key: {'min_role': row.min_role, 'allow_guest': bool(row.allow_guest)}
+                  for row in FeatureGate.query.filter(FeatureGate.key.in_(tuple(_VISUAL_ALIASES))).all()}
+        visual = _merged_visual_gate(legacy)
         rows = [dict(key=spec.key, min_role=spec.default_min_role,
                      allow_guest=spec.default_allow_guest) for spec in FEATURE_CATALOG]
+        for row in rows:
+            if row['key'] == 'tool_visual_analysis':
+                row.update(visual)
         statement = insert(FeatureGate).values(rows).on_conflict_do_nothing(index_elements=['key'])
         added = db.session.execute(statement).rowcount
         updated = 0
@@ -332,6 +347,8 @@ def _load_gates():
         print(f"[WARN] Could not read feature gates ({e}); using defaults.")
         gates = {}
 
+    gates.setdefault('tool_visual_analysis', _merged_visual_gate(gates))
+
     for spec in FEATURE_CATALOG:
         gates.setdefault(spec.key, {
             'min_role': spec.default_min_role,
@@ -345,7 +362,7 @@ def _load_gates():
 
 def gate_for(key):
     """The effective ``{'min_role', 'allow_guest'}`` for one feature."""
-    return _load_gates().get(key)
+    return _load_gates().get(_VISUAL_ALIASES.get(key, key))
 
 
 def is_allowed(user, key):
@@ -378,7 +395,10 @@ def permissions_for(user):
     Sent with the session so the frontend hides what the backend would refuse,
     from the same source of truth.
     """
-    return {key: is_allowed(user, key) for key in FEATURE_KEYS}
+    permissions = {key: is_allowed(user, key) for key in FEATURE_KEYS}
+    # Existing open tabs may still use the former keys until they refresh.
+    permissions.update({old: permissions[new] for old, new in _VISUAL_ALIASES.items()})
+    return permissions
 
 
 def admin_view():
@@ -397,6 +417,7 @@ def set_gate(key, min_role=None, allow_guest=None, updated_by_id=None):
     Raises ValueError for an unknown feature or role, so the caller can answer
     400 rather than silently writing a value nothing will honour.
     """
+    key = _VISUAL_ALIASES.get(key, key)
     spec = get_spec(key)
     if spec is None:
         raise ValueError(f'Unknown feature: {key}')

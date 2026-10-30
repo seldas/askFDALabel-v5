@@ -32,7 +32,7 @@ const SEGMENT_TO_TOOL: Record<string, string> = {
   faers: 'label-faers',
   tox: 'label-tox',
   examine: 'label-examine',
-  'image-analysis': 'label-image-analysis',
+  'image-analysis': 'label-image-review',
   deepdive: 'label-deepdive',
   ro2: 'label-ro2',
   'pv-profile': 'label-pv-profile',
@@ -134,7 +134,6 @@ export default function LabelLayout({
       <Header activeApp="dashboard" />
 
       <div className="afl-label-shell__scroll">
-        {activeToolId === 'label-image-analysis' && <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 20px' }}><ServiceWarning toolId={activeToolId} /></div>}
         <div className="afl-label-shell__inner">
           {!hideCrumbsAndTools && !headerCollapsed && (
             <nav className="afl-label-crumbs">
@@ -171,7 +170,7 @@ export default function LabelLayout({
 
           {data ? (
             <section
-              className={`afl-label-identity${isStale ? ' afl-label-identity--stale' : ''}${headerCollapsed ? ' afl-label-identity--collapsed' : ''}${activeToolId === 'label-image-analysis' ? ' afl-label-identity--compact' : ''}`}
+              className={`afl-label-identity${isStale ? ' afl-label-identity--stale' : ''}${headerCollapsed ? ' afl-label-identity--collapsed' : ''}`}
               aria-label="Label identity"
               style={{
                 background: (data?.openfda_status === 'Archived' || data?.is_latest === false) ? '#fdfbf7' : '#ffffff',

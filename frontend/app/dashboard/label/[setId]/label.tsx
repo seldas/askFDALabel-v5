@@ -5,6 +5,9 @@ import { Section, LabelData, TOCItem } from './types';
 import Link from 'next/link';
 import SectionTitle, { isUnclassifiedTitle } from './SectionTitle';
 import { initTableExtractor } from './tableExtractor';
+import { initImageLauncher } from './imageLauncher';
+import { useLabel } from './LabelContext';
+import { useUser } from '../../../context/UserContext';
 import {
   scanAndHighlightMeddraTerms,
   applySocHighlight,
@@ -107,6 +110,9 @@ export default function LabelView({
   pvProfileData?: any;
   onProgressChange?: (percent: number) => void;
 }) {
+  const { setId, splId } = useLabel();
+  const { session } = useUser();
+  const canAnalyzeImages = Boolean(session?.permissions?.tool_visual_analysis);
   const [currentIndex, setCurrentIndex] = useState(0); // 0-based index of sections
   const [navTab, setNavTab] = useState<'toc' | 'soc'>('toc');
   const [activeSoc, setActiveSoc] = useState<string | null>(null);
@@ -286,6 +292,11 @@ export default function LabelView({
     }
   }, [activeTab, sections]);
 
+
+  useEffect(() => {
+    if (activeTab !== 'label-view' || !labelViewRef.current || !canAnalyzeImages) return;
+    return initImageLauncher(labelViewRef.current, setId, splId || undefined);
+  }, [activeTab, sections, setId, splId, canAnalyzeImages]);
 
   // Delegated click handler on label viewport for MedDRA terms
   useEffect(() => {

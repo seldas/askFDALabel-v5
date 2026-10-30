@@ -8,20 +8,39 @@ import Footer from '../components/Footer';
 import RequireFeature from '../components/RequireFeature';
 import ArtworkPanel from './ArtworkPanel';
 import CartonConfirmation from './CartonConfirmation';
-import { CARTON_FIELDS, MODES, type CartonField, type CartonInputs, type Decision, type Finding, type Region, type Review, type ReviewComment, type ReviewMode, type Selection, type Side } from './types';
+import { CARTON_FIELDS, VISUAL_TASKS, type VisualTask, type CartonField, type CartonInputs, type Decision, type Finding, type Region, type Review, type ReviewComment, type ReviewMode, type Selection, type Side } from './types';
 import { downloadReviewHtml, downloadReviewJson } from './exportReview';
-import { labelcompRoute } from '../platform/context';
+import { labelcompRoute, imageReviewRoute } from '../platform/context';
 import { useUser } from '../context/UserContext';
 import './image-review.css';
 import ReviewHistory from './ReviewHistory';
+import ReadResult, { type ImageReading } from './ReadResult';
 
 const EMPTY: Selection = { descriptor: {}, file: null, url: '', ready: false };
 
+type ReviewDraft = { review: Review | null; selected: number | null; decisions: Record<number, Decision>;
+  comments: ReviewComment[]; taskId: number | null; stage: 'prepare' | 'results' };
+
 function Workbench() {
   const { session } = useUser();
-  const canComment = session?.can_comment !== false;
+  const canComment = session?.can_comment !== false && !session?.is_guest;
   const params = useSearchParams();
-  const [mode, setMode] = useState<ReviewMode>('consistency');
+  const initialSources = useRef({ setIds: params.getAll('set_ids'), splIds: params.getAll('spl_ids'), imageIds: params.getAll('image_ids'), image: params.get('image') }).current;
+  const canUseVisual = Boolean(session?.permissions?.tool_visual_analysis);
+  const availableTasks = canUseVisual ? VISUAL_TASKS : [];
+  const [mode, setMode] = useState<VisualTask>(() => {
+    const requested = params.get('mode') || (initialSources.setIds.filter(Boolean).length > 1 ? 'artwork' : 'read');
+    return availableTasks.find(task => task.id === requested)?.id || availableTasks[0]?.id || 'read';
+  });
+  const [taskPickerOpen, setTaskPickerOpen] = useState(!params.get('mode') && !params.has('set_ids'));
+  const taskPickerVisible = taskPickerOpen && availableTasks.length > 1;
+  const [stage, setStage] = useState<'prepare' | 'results'>('prepare');
+  const [reading, setReading] = useState<ImageReading | null>(null);
+  const [readingBusy, setReadingBusy] = useState(false);
+  const readingRevision = useRef(0);
+  const drafts = useRef<Partial<Record<ReviewMode, ReviewDraft>>>({});
+  const singleImage = mode === 'read' || mode === 'consistency';
+  const activeTask = VISUAL_TASKS.find(task => task.id === mode)!;
   const [historyOpen, setHistoryOpen] = useState(false);
   const [left, setLeft] = useState<Selection>(EMPTY);
   const [right, setRight] = useState<Selection>(EMPTY);
@@ -46,7 +65,7 @@ function Workbench() {
   const cartonInputsRef = useRef<CartonInputs | null>(null);
 
   const comparisonBusy = submitting || taskId !== null;
-  const busy = comparisonBusy || extracting;
+  const busy = comparisonBusy || extracting || readingBusy || savingComment !== null;
 
   useEffect(() => {
     if (!busy) return;
@@ -65,14 +84,16 @@ function Workbench() {
     setAllComments([]);
     setLastTaskId(null);
     setError('');
+    setStage('prepare');
   }, []);
 
   const onCartonChange = useCallback((value: CartonInputs | null) => {
     if (JSON.stringify(cartonInputsRef.current) === JSON.stringify(value)) return;
     cartonInputsRef.current = value;
     setCartonInputs(value);
-    invalidate();
-  }, [invalidate]);
+    if (mode === 'confusion') invalidate();
+    delete drafts.current.confusion;
+  }, [invalidate, mode]);
 
   const fetchComments = useCallback(async (tid: number) => {
     try {
@@ -110,7 +131,7 @@ function Workbench() {
     }
   }, []);
 
-  const paramTaskId = params.get('task_id');
+  const paramTaskId = useRef(params.get('task_id')).current;
   useEffect(() => {
     if (paramTaskId) {
       const tid = parseInt(paramTaskId, 10);
@@ -131,6 +152,8 @@ function Workbench() {
     const key = JSON.stringify(value.descriptor) + value.url;
     if (currentSources.current.left !== key) {
       currentSources.current.left = key;
+      drafts.current = {};
+      setReading(null);
       invalidate();
     }
     setLeft(value);
@@ -140,10 +163,12 @@ function Workbench() {
     const key = JSON.stringify(value.descriptor) + value.url;
     if (currentSources.current.right !== key) {
       currentSources.current.right = key;
-      invalidate();
+      delete drafts.current.artwork;
+      delete drafts.current.confusion;
+      if (mode === 'artwork' || mode === 'confusion') invalidate();
     }
     setRight(value);
-  }, [invalidate]);
+  }, [invalidate, mode]);
 
   useEffect(() => {
     if (taskId === null) return;
@@ -164,7 +189,8 @@ function Workbench() {
         if (data.result && Array.isArray(data.result.findings)) {
           if (data.result.mode) setMode(data.result.mode);
           setReview(data.result);
-          setSelected(current => current ?? data.result.findings[0]?.id ?? null);
+          setStage('results');
+          setSelected(current => data.result.findings.some((finding: Finding) => finding.id === current) ? current : null);
           void fetchComments(taskId);
         }
         if (data.status === 'completed') {
@@ -200,7 +226,71 @@ function Workbench() {
     };
   }, [taskId, fetchComments]);
 
+  const readImage = async () => {
+    if (!canUseVisual || !left.ready || busy) return;
+    readingRevision.current++;
+    setReadingBusy(true); setError('');
+    try {
+      let response: Response;
+      if (left.file) {
+        const form = new FormData(); form.set('image', left.file);
+        form.set('force', reading ? 'true' : 'false');
+        response = await fetch('/api/image-analysis/read', { method: 'POST', body: form });
+      } else {
+        response = await fetch(`/api/image-analysis/${encodeURIComponent(left.descriptor.set_id!)}/process`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_id: left.descriptor.image_id, spl_id: left.descriptor.spl_id, force: !!reading }),
+        });
+      }
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || 'Could not read this image.');
+      setReading(body); setStage('results'); updateWorkspaceUrl('read');
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    finally { setReadingBusy(false); }
+  };
+
+  // Reuse existing saved readings without starting an AI call.
+  useEffect(() => {
+    if (!canUseVisual || left.file || !left.descriptor.set_id || !left.descriptor.image_id) return;
+    const controller = new AbortController();
+    const revision = readingRevision.current;
+    const query = new URLSearchParams();
+    if (left.descriptor.spl_id) query.set('spl_id', left.descriptor.spl_id);
+    fetch(`/api/image-analysis/${encodeURIComponent(left.descriptor.set_id)}/process/${encodeURIComponent(left.descriptor.image_id)}?${query}`, { signal: controller.signal })
+      .then(response => response.ok ? response.json() : null)
+      .then(body => { if (!controller.signal.aborted && revision === readingRevision.current && body?.cached && body.result) setReading(body); })
+      .catch(() => { /* Saved readings are optional. */ });
+    return () => controller.abort();
+  }, [canUseVisual, left.file, left.descriptor.set_id, left.descriptor.spl_id, left.descriptor.image_id]);
+
+  const updateWorkspaceUrl = (nextMode: VisualTask, nextTaskId?: number) => {
+    const selections = right.file || right.descriptor.set_id || right.descriptor.image_id ? [left, right] : [left];
+    const route = imageReviewRoute({
+      setIds: selections.map(value => value.descriptor.set_id || ''),
+      splIds: selections.map(value => value.descriptor.spl_id || ''),
+    }, { mode: nextMode, imageIds: selections.map(value => value.file ? '' : value.descriptor.image_id || ''), taskId: nextTaskId });
+    const url = new URL(window.location.href);
+    url.search = route.split('?')[1] || '';
+    window.history.replaceState(null, '', url);
+  };
+
+  const chooseTask = (next: VisualTask) => {
+    if (busy || !availableTasks.some(task => task.id === next)) return;
+    if (mode !== 'read') drafts.current[mode] = {
+      review, selected, decisions, comments: allComments, taskId: lastTaskId, stage,
+    };
+    const draft = next === 'read' ? undefined : drafts.current[next];
+    setMode(next); setTaskPickerOpen(false); setError('');
+    setReview(draft?.review || null); setSelected(draft?.selected ?? null);
+    setDecisions(draft?.decisions || {}); setAllComments(draft?.comments || []);
+    setLastTaskId(draft?.taskId || null);
+    setStage(next === 'read' ? (reading ? 'results' : 'prepare') : draft?.stage || 'prepare');
+    updateWorkspaceUrl(next, draft?.taskId || undefined);
+  };
+
   const run = async () => {
+    if (mode === 'read') { await readImage(); return; }
+    if (!canUseVisual) return;
     if (mode === 'confusion' && !cartonInputs) return;
     if (mode === 'consistency') {
       if (!left.ready || !left.descriptor.set_id || busy) return;
@@ -210,6 +300,7 @@ function Workbench() {
 
     setSubmitting(true);
     setError('');
+    setProgress({ value: 0, message: session?.is_guest ? 'Analyzing your images…' : 'Preparing your analysis…' });
     setReview(null);
     setDecisions({});
     setSelected(null);
@@ -231,14 +322,16 @@ function Workbench() {
       const response = await fetch('/api/image-review/reviews', { method: 'POST', body: form });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Could not start visual review.');
-      setProgress({ value: 0, message: 'Review queued. A running Celery worker is required.' });
+      if (data.synchronous && data.result) {
+        setReview(data.result); setSelected(null); setLastTaskId(null); setAllComments([]);
+        setStage('results'); updateWorkspaceUrl(mode);
+        return;
+      }
+      setProgress({ value: 0, message: 'Your analysis is queued.' });
+      setStage('results');
       setLastTaskId(data.task_id);
       setTaskId(data.task_id);
-      if (typeof window !== 'undefined') {
-        const u = new URL(window.location.href);
-        u.searchParams.set('task_id', String(data.task_id));
-        window.history.replaceState(null, '', u.toString());
-      }
+      updateWorkspaceUrl(mode, data.task_id);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -372,28 +465,28 @@ function Workbench() {
     if (left.descriptor?.set_id) {
       list.push(left.descriptor.set_id);
     }
-    if (mode !== 'consistency' && right.descriptor?.set_id) {
+    if (!singleImage && right.descriptor?.set_id) {
       list.push(right.descriptor.set_id);
     }
     if (list.length === 0) {
       return params.getAll('set_ids');
     }
     return list;
-  }, [left.descriptor?.set_id, right.descriptor?.set_id, mode, params]);
+  }, [left.descriptor?.set_id, right.descriptor?.set_id, singleImage, params]);
 
   const activeSplIds = useMemo(() => {
     const list: string[] = [];
     if (left.descriptor?.spl_id) {
       list.push(left.descriptor.spl_id);
     }
-    if (mode !== 'consistency' && right.descriptor?.spl_id) {
+    if (!singleImage && right.descriptor?.spl_id) {
       list.push(right.descriptor.spl_id);
     }
     if (list.length === 0) {
       return params.getAll('spl_ids');
     }
     return list;
-  }, [left.descriptor?.spl_id, right.descriptor?.spl_id, mode, params]);
+  }, [left.descriptor?.spl_id, right.descriptor?.spl_id, singleImage, params]);
 
   const handleOpenLabelcomp = () => {
     const url = labelcompRoute({
@@ -406,111 +499,59 @@ function Workbench() {
     }
   };
 
-  const canRun =
-    !busy &&
-    (mode !== 'confusion' || cartonInputs !== null) &&
-    (mode === 'consistency'
-      ? left.ready && !!left.descriptor.set_id
-      : left.ready && right.ready);
-
-  if (historyOpen) return (
-    <div className="ivr-page"><Header /><main className="ivr-main">
-      <ReviewHistory onClose={() => setHistoryOpen(false)} />
-    </main><Footer /></div>
-  );
+  const canRun = !busy && (mode === 'read' ? canUseVisual && left.ready
+    : canUseVisual && (mode !== 'confusion' || cartonInputs !== null)
+      && (mode === 'consistency' ? left.ready && !!left.descriptor.set_id : left.ready && right.ready));
+  const hasResult = mode === 'read' ? !!reading : !!review;
+  const runLabel = mode === 'read' ? (reading ? 'Read image again' : 'Read image')
+    : mode === 'consistency' ? 'Check labeling consistency'
+      : mode === 'confusion' ? 'Compare confusion factors' : 'Compare artwork';
+  const nextStep = mode === 'read' ? 'Choose one image to read.'
+    : mode === 'consistency' ? (!left.descriptor.set_id ? 'Choose the official labeling to use as the reference.' : 'Select or upload the image to check.')
+      : !left.ready || !right.ready ? 'Choose image A and image B.'
+        : mode === 'confusion' && !cartonInputs ? 'Identify and confirm both products below.' : 'Your images are ready.';
 
   return (
     <div className="ivr-page">
       <Header />
       <main className="ivr-main">
         <header className="ivr-page-heading">
-          <div>
-            <span className="ivr-eyebrow">ARTWORK & SAFETY AUDIT</span>
-            <h1>Labeling Visual Review</h1>
-            <p>
-              {mode === 'consistency'
-                ? 'Audit package artwork against official FDA SPL drug labeling text.'
-                : 'Compare artwork versions or identify look-alike product confusion risks.'}
-            </p>
-          </div>
+          <div><span className="ivr-eyebrow">IMAGE WORKSPACE</span><h1>Visual Analysis</h1>
+            <p>Start with an image. Choose what you want to learn.</p></div>
           <div className="ivr-heading-actions">
             <ServiceWarning toolId="label-image-review" compact />
-            <button type="button" className="ivr-button" onClick={() => setHistoryOpen(true)}>Review history</button>
-            <button
-              type="button"
-              className="ivr-button"
-              onClick={handleOpenLabelcomp}
-              title={
-                activeSetIds.length > 0
-                  ? `Compare ${activeSetIds.length === 1 ? 'this label' : 'these 2 labels'} in LabelComp`
-                  : 'Open Label Comparison (LabelComp)'
-              }
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
-                <path d="M16 3h5v5" />
-                <path d="M4 20L21 3" />
-                <path d="M21 16v5h-5" />
-                <path d="M15 15l6 6" />
-                <path d="M4 4l5 5" />
-              </svg>
-              Compare in LabelComp
-            </button>
-            <button className="ivr-button ivr-primary" disabled={!canRun} onClick={() => void run()}>
-              {busy
-                ? 'Audit in progress…'
-                : mode === 'confusion'
-                ? 'Confirm and compare'
-                : review
-                ? 'Run audit again'
-                : mode === 'consistency'
-                ? 'Check Labeling Consistency'
-                : 'Run visual review'}
-            </button>
+            {canUseVisual && !session?.is_guest && <button type="button" className="ivr-button" disabled={busy} onClick={() => setHistoryOpen(value => !value)}>
+              {historyOpen ? 'Back to workspace' : 'History'}
+            </button>}
           </div>
         </header>
-
-        <nav className="ivr-tabs" aria-label="Review mode">
-          {MODES.map(value => (
-            <button
-              key={value.id}
-              aria-pressed={mode === value.id}
-              disabled={busy}
-              onClick={() => {
-                if (mode !== value.id) {
-                  setMode(value.id);
-                  setCartonInputs(null);
-                  cartonInputsRef.current = null;
-                  invalidate();
-                }
-              }}
-            >
-              {value.label}
-            </button>
-          ))}
-        </nav>
-
-        <div className="ivr-workspace-tools">
-          <p>{MODES.find(value => value.id === mode)?.description}</p>
-          <div>
-            {mode !== 'consistency' && (
-              <label>
-                <input
-                  type="checkbox"
-                  checked={sync}
-                  onChange={e => {
-                    setSync(e.target.checked);
-                    if (e.target.checked) setZooms({ left: zooms.left, right: zooms.left });
-                  }}
-                />
-                Sync zoom
-              </label>
-            )}
-            <label>
-              <input type="checkbox" checked={highlights} onChange={e => setHighlights(e.target.checked)} />
-              Show highlights
-            </label>
+        {historyOpen && <ReviewHistory onClose={() => setHistoryOpen(false)} />}
+        <div hidden={historyOpen} className="va-workbench">
+        <section className="va-task-section" aria-label="Analysis task">
+          <div className="va-task-current"><div><span className="va-step-number">1</span><strong>{activeTask.label}</strong><span className="va-task-needs">{activeTask.needs}</span></div>
+            {availableTasks.length > 1 && <button className="ivr-button" disabled={busy} onClick={() => setTaskPickerOpen(value => !value)} aria-expanded={taskPickerVisible} aria-controls="va-task-picker">
+              {taskPickerVisible ? 'Close task chooser' : 'Change task'}
+            </button>}</div>
+          <div id="va-task-picker" className="va-task-picker" hidden={!taskPickerVisible}>
+            {availableTasks.map(task => <button key={task.id} className={`va-task-card ${mode === task.id ? 'is-active' : ''}`}
+              aria-pressed={mode === task.id} disabled={busy} onClick={() => chooseTask(task.id)}>
+              <span>{task.needs}</span><strong>{task.label}</strong><p>{task.description}</p>
+            </button>)}
+          </div>
+          {!taskPickerVisible && <p className="va-task-description">{activeTask.description}</p>}
+        </section>
+        <div className="va-stage-bar">
+          <nav aria-label="Workspace step"><button aria-current={stage === 'prepare' ? 'step' : undefined} onClick={() => setStage('prepare')}><span className="va-step-number">2</span>Prepare images</button>
+            <button aria-current={stage === 'results' ? 'step' : undefined} disabled={!hasResult && !comparisonBusy} onClick={() => setStage('results')}><span className="va-step-number">3</span>Results</button></nav>
+          <div className="va-stage-actions"><details className="va-view-options"><summary>View options</summary><div>
+            {!singleImage && <label><input type="checkbox" checked={sync} onChange={e => { setSync(e.target.checked); if (e.target.checked) setZooms({ left: zooms.left, right: zooms.left }); }} /> Sync zoom</label>}
+            {mode !== 'read' && <label><input type="checkbox" checked={highlights} onChange={e => setHighlights(e.target.checked)} /> Show finding markers</label>}
+            <button className="ivr-button" onClick={handleOpenLabelcomp}>Open Label Comparison ↗</button>
+          </div></details>
+            <button className="ivr-button ivr-primary" disabled={!canRun} onClick={() => void run()}>{busy ? 'Analyzing…' : runLabel}</button>
           </div>
         </div>
+        {stage === 'prepare' && <p className="va-next-step" role="status">{busy ? 'Analysis in progress. Your images remain available.' : canRun ? 'Your images are ready.' : nextStep}</p>}
 
         {error && (
           <div className="ivr-error ivr-status" role="alert">
@@ -523,75 +564,37 @@ function Workbench() {
           </div>
         )}
 
-        {mode === 'confusion' && <CartonConfirmation left={left} right={right} disabled={comparisonBusy}
-          comparing={comparisonBusy} hasResult={!!review} canCompare={canRun} onCompare={() => void run()}
-          onChange={onCartonChange} onBusy={setExtracting} />}
+
 
         {comparisonBusy && (
           <div className="ivr-status" role="status">
             {mode === 'confusion' ? <progress aria-label="Comparing packaging images" /> : <progress max="100" value={progress.value} />}
             <span>
               {progress.message || 'Analyzing artwork…'} · {elapsed}s elapsed
-              {elapsed >= 15 && progress.value === 0
+              {elapsed >= 15 && progress.value === 0 && !session?.is_guest
                 ? ' · Waiting for the review worker to pick up this task.'
                 : ''}
             </span>
           </div>
         )}
 
-        <div className={`ivr-workspace ${mode === 'consistency' ? 'is-consistency' : ''}`}>
-          {mode === 'consistency' ? (
-            <div className="ivr-single-artwork">
-              <ArtworkPanel
-                side="left"
-                mode="consistency"
-                labelTitle="Packaging Artwork & Official Labeling Reference"
-                initialSetId={params.getAll('set_ids')[0] || ''}
-                initialSplId={params.getAll('spl_ids')[0] || ''}
-                busy={busy}
-                findings={drawn}
-                selected={selected}
-                highlights={highlights}
-                zoom={zooms.left}
-                onZoom={zoom => changeZoom('left', zoom)}
-                onSelect={handleSelectFinding}
-                onChange={onLeft}
-              />
+        <div className={`ivr-workspace va-workspace ${singleImage ? 'va-single' : 'va-double'} ${stage === 'results' ? 'va-has-results' : 'va-preparing'}`}>
+          <div className={`va-images ${singleImage ? 'va-single' : 'va-double'}`}>
+            <ArtworkPanel side="left" mode={mode}
+              initialSetId={initialSources.setIds[0] || ''} initialSplId={initialSources.splIds[0] || ''}
+              initialImage={initialSources.image || undefined} initialImageId={initialSources.imageIds[0]}
+              busy={busy} findings={mode === 'read' ? [] : drawn} selected={selected} highlights={highlights}
+              zoom={zooms.left} onZoom={zoom => changeZoom('left', zoom)} onSelect={handleSelectFinding} onChange={onLeft} />
+            <div hidden={singleImage} className="va-second-image">
+              <ArtworkPanel side="right" mode={mode}
+                initialSetId={initialSources.setIds[1] || ''} initialSplId={initialSources.splIds[1] || ''} initialImageId={initialSources.imageIds[1]}
+                busy={busy} findings={drawn} selected={selected} highlights={highlights}
+                zoom={zooms.right} onZoom={zoom => changeZoom('right', zoom)} onSelect={handleSelectFinding} onChange={onRight} />
             </div>
-          ) : (
-            <div className="ivr-pair">
-              <ArtworkPanel
-                side="left"
-                mode={mode}
-                initialSetId={params.getAll('set_ids')[0] || ''}
-                initialSplId={params.getAll('spl_ids')[0] || ''}
-                busy={busy}
-                findings={drawn}
-                selected={selected}
-                highlights={highlights}
-                zoom={zooms.left}
-                onZoom={zoom => changeZoom('left', zoom)}
-                onSelect={handleSelectFinding}
-                onChange={onLeft}
-              />
-              <ArtworkPanel
-                side="right"
-                mode={mode}
-                initialSetId={params.getAll('set_ids')[1] || ''}
-                initialSplId={params.getAll('spl_ids')[1] || ''}
-                busy={busy}
-                findings={drawn}
-                selected={selected}
-                highlights={highlights}
-                zoom={zooms.right}
-                onZoom={zoom => changeZoom('right', zoom)}
-                onSelect={handleSelectFinding}
-                onChange={onRight}
-              />
-            </div>
-          )}
+          </div>
+          <aside className="ivr-findings va-results" hidden={stage !== 'results'} aria-label="Analysis results" aria-live="polite">
+          {mode === 'read' ? (reading && <ReadResult reading={reading} />) : <>
 
-          <aside className={`ivr-findings ${mode === 'consistency' ? 'is-consistency' : ''}`}>
             <header>
               <h2>{mode === 'consistency' ? 'Consistency Audit Findings' : 'Review Findings'}</h2>
               {review && (
@@ -604,39 +607,8 @@ function Workbench() {
             </header>
 
             {!review ? (
-              <div className="ivr-findings-empty">
-                {mode === 'consistency' ? (
-                  <>
-                    <strong>Packaging & Labeling Consistency Audit</strong>
-                    <p>Load a drug labeling from your dashboard tasks / projects and select or upload its artwork.</p>
-                    <ul>
-                      <li>Product name & active ingredient quantitative alignment</li>
-                      <li>Strength, concentration, and container volume consistency</li>
-                      <li>Dosage form & route of administration match</li>
-                      <li>Required container warnings & storage conditions (e.g. refrigeration, light protection)</li>
-                      <li>Reconstitution, dilution, and administration instructions</li>
-                    </ul>
-                    <p>Uses official FDA SPL Prescribing Information as the single source of truth.</p>
-                  </>
-                ) : mode === 'confusion' ? (
-                  <>
-                    <strong>Packaging product confusion review</strong>
-                    <p>Select matching packaging image types, identify A and B, and confirm the extracted information above. The comparison will explain visual similarities, overlooked distinctions and protective design factors.</p>
-                  </>
-                ) : (
-                  <>
-                    <strong>Evidence first</strong>
-                    <p>Choose an image on each side, select a review mode, then run the analysis.</p>
-                    <ul>
-                      <li>Localized content and design differences</li>
-                      <li>Potential medication-error mechanisms</li>
-                      <li>Look-alike product distinctions</li>
-                      <li>Verifiable labeling references</li>
-                    </ul>
-                    <p>Exact-version local artwork or explicit uploads. A vision-capable model is required.</p>
-                  </>
-                )}
-              </div>
+              <div className="ivr-findings-empty"><strong>{comparisonBusy ? 'Your analysis is in progress' : 'No results yet'}</strong>
+                <p>{comparisonBusy ? 'You can inspect the images while the results are prepared.' : 'Prepare your images and run the selected analysis.'}</p></div>
             ) : (
               <>
                 <p className="ivr-summary">{review.summary}</p>
@@ -656,8 +628,8 @@ function Workbench() {
 
                 {review.findings.length === 0 && review.mode !== 'confusion' && (
                   <div className="ivr-clean-banner" role="status">
-                    <strong>✓ Fully Consistent with Labeling</strong>
-                    <p>No discrepancies, contradictions, or critical omissions were detected between this package artwork and the reviewed official labeling sections.</p>
+                    <strong>{mode === 'consistency' ? 'No discrepancies identified' : 'No differences identified'}</strong>
+                    <p>{mode === 'consistency' ? 'No supported discrepancies were identified in the reviewed image and labeling reference.' : 'No supported differences were identified in these images.'}</p>
                   </div>
                 )}
 
@@ -685,6 +657,7 @@ function Workbench() {
                       </select>
                     </label>
 
+                    <p className="ivr-source-note">Select a finding to review its evidence.</p>
                     <div className="ivr-finding-list">
                       {visible.map(f => (
                         <button
@@ -699,12 +672,11 @@ function Workbench() {
                           <span className="ivr-number">{f.id}</span>
                           <div>
                             <strong>{f.title}</strong>
-                            <p>{f.observation}</p>
-                            <span className="ivr-tag">{f.kind}</span>
+
                             <span className="ivr-tag ivr-priority-tag" data-priority={f.priority}>
                               {f.priority}
                             </span>
-                            <span className="ivr-tag">{decisions[f.id]?.status || 'unreviewed'}</span>
+                            {decisions[f.id]?.status && decisions[f.id]?.status !== 'unreviewed' && <span className="ivr-tag">{decisions[f.id].status}</span>}
                           </div>
                         </button>
                       ))}
@@ -718,13 +690,15 @@ function Workbench() {
                 {current && (
                   <fieldset className="ivr-review-editors" disabled={busy}>
                     <FindingDetails
-                      mode={mode}
+                      key={current.id}
+                      mode={mode as ReviewMode}
                       finding={current}
                       decision={decisions[current.id] || { status: 'unreviewed', note: '', is_public: false }}
                       teamComments={allComments.filter(c => c.finding_id === current.id && !c.is_mine && c.is_public)}
                       lastTaskId={lastTaskId}
                       saving={savingComment === current.id}
                       canComment={canComment}
+                      guest={Boolean(session?.is_guest)}
                       onDecision={value => changeDecision(current.id, value)}
                       onSaveToDb={change => saveDecisionToDb(current.id, change)}
                       onDeleteFromDb={() => deleteCommentFromDb(current.id)}
@@ -760,7 +734,7 @@ function Workbench() {
                   ))}
                 </details>
 
-                <footer className="ivr-export">
+                <details className="va-export"><summary>Export results</summary><footer className="ivr-export">
                   <button className="ivr-button" onClick={() => downloadReviewJson(review, decisions, lastTaskId)}>
                     Export JSON
                   </button>
@@ -780,15 +754,22 @@ function Workbench() {
                   >
                     {exporting ? 'Exporting…' : 'Export annotated report'}
                   </button>
-                  <p>Decisions and comments are saved to the database. Export anytime to download full audit reports.</p>
-                </footer>
+                  <p>{session?.is_guest ? 'This analysis stays in this window. Export a report to keep a copy.' : 'Export a report with your findings and saved decisions.'}</p>
+                </footer></details>
               </>
             )}
+          </>}
           </aside>
         </div>
+        {canUseVisual && <div hidden={mode !== 'confusion' || !left.ready || !right.ready} className="va-confirmation">
+          <CartonConfirmation left={left} right={right} disabled={comparisonBusy}
+            comparing={comparisonBusy} hasResult={mode === 'confusion' && !!review}
+            onChange={onCartonChange} onBusy={setExtracting} />
+        </div>}
         <p className="ivr-footnote">
           Review signals require human confirmation. Highlight locations are AI estimates; missing information does not guarantee absence of conflict.
         </p>
+        </div>
       </main>
       <Footer />
     </div>
@@ -803,6 +784,7 @@ function FindingDetails({
   lastTaskId,
   saving,
   canComment = true,
+  guest = false,
   onDecision,
   onSaveToDb,
   onDeleteFromDb,
@@ -815,6 +797,7 @@ function FindingDetails({
   lastTaskId: number | null;
   saving: boolean;
   canComment?: boolean;
+  guest?: boolean;
   onDecision: (value: Partial<Decision>) => void;
   onSaveToDb: (change?: Partial<Decision>) => Promise<void>;
   onDeleteFromDb: () => Promise<void>;
@@ -836,7 +819,7 @@ function FindingDetails({
         <span className="ivr-confidence">Confidence: {finding.confidence}</span>
       </header>
 
-      {!canComment && (
+      {!canComment && !guest && (
         <div className="ivr-comment-disabled-banner" role="alert">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="10" />
@@ -895,6 +878,7 @@ function FindingDetails({
         </>
       )}
 
+      {!guest && <details className="va-review-actions"><summary>Review decision & comment</summary>
       <div className="ivr-decision">
         <button
           type="button"
@@ -1030,6 +1014,7 @@ function FindingDetails({
         </div>
       )}
 
+      </details>}
       <details>
         <summary>Adjust highlight region coordinates</summary>
         <p>Coordinates are normalized (0–100%) on the package artwork.</p>
@@ -1082,8 +1067,8 @@ function FindingDetails({
 
 export default function ImageReviewPage() {
   return (
-    <RequireFeature feature="Labeling Visual Review" featureKey="tool_image_review">
-      <Suspense fallback={<p>Loading visual review…</p>}>
+    <RequireFeature feature="Visual Analysis" featureKey="tool_visual_analysis">
+      <Suspense fallback={<p>Loading Visual Analysis…</p>}>
         <Workbench />
       </Suspense>
     </RequireFeature>

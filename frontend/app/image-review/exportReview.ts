@@ -1,7 +1,7 @@
 import { CARTON_FIELDS, type CartonField, type Decision, type Review, type Side } from './types';
 
 export function downloadReviewJson(review: Review, decisions: Record<number, Decision>, taskId: number | null) {
-  download(new Blob([JSON.stringify({ ...review, decisions, task_id: taskId, exported_at: new Date().toISOString() }, null, 2)], { type: 'application/json' }), 'labeling-visual-review.json');
+  download(new Blob([JSON.stringify({ ...review, decisions, task_id: taskId, exported_at: new Date().toISOString() }, null, 2)], { type: 'application/json' }), 'visual-analysis.json');
 }
 
 function download(blob: Blob, name: string) {
@@ -22,12 +22,12 @@ async function imageData(url: string): Promise<string> {
 
 /** A standalone report with embedded artwork and editable-review evidence. No model HTML is evaluated. */
 export async function downloadReviewHtml(review: Review, decisions: Record<number, Decision>, urls: Record<Side, string>) {
-  const doc = document.implementation.createHTMLDocument('Labeling Visual Review');
+  const doc = document.implementation.createHTMLDocument('Visual Analysis');
   const style = doc.createElement('style');
   style.textContent = 'body{font:15px/1.5 Arial,sans-serif;color:#172d45;max-width:1400px;margin:24px auto;padding:20px}section{margin:20px 0}article{border:1px solid #cbd5e1;padding:16px;margin:12px 0}h1,h2,h3{margin:0 0 12px}.images{display:flex;gap:20px}.images>div{width:50%}svg{width:100%;height:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}p{white-space:pre-wrap}@media print{article{break-inside:avoid}}';
   doc.head.appendChild(style);
   const append = (parent: HTMLElement, tag: string, text: string) => { const element = doc.createElement(tag); element.textContent = text; parent.appendChild(element); return element; };
-  append(doc.body, 'h1', 'Labeling Visual Review');
+  append(doc.body, 'h1', 'Visual Analysis');
   append(doc.body, 'p', `${review.mode} · ${new Date().toISOString()} · ${review.model}`);
   append(doc.body, 'p', review.summary);
   if (review.mode === 'confusion') {
@@ -76,5 +76,5 @@ export async function downloadReviewHtml(review: Review, decisions: Record<numbe
     for (const text of [finding.observation, finding.risk, `A: ${finding.left_text || 'No transcribed evidence'}`, `B: ${finding.right_text || 'No transcribed evidence'}`, ...finding.label_evidence.map(e => `${e.side} labeling: ${e.quote}`), decisions[finding.id]?.note]) if (text) append(article, 'p', text);
   }
   append(doc.body, 'h2', 'Limitations'); review.limitations.forEach(text => append(doc.body, 'p', text));
-  download(new Blob(['<!doctype html>', doc.documentElement.outerHTML], { type: 'text/html;charset=utf-8' }), 'labeling-visual-review.html');
+  download(new Blob(['<!doctype html>', doc.documentElement.outerHTML], { type: 'text/html;charset=utf-8' }), 'visual-analysis.html');
 }

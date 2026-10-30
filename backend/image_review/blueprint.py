@@ -19,12 +19,22 @@ from .tasks import execute_review, execute_carton_extraction
 from .carton import FIELDS, IMAGE_TYPES
 
 image_review_bp = Blueprint('image_review', __name__)
-image_review_bp.before_request(feature_before_request('tool_image_review'))
+image_review_bp.before_request(feature_before_request('tool_visual_analysis'))
 
 
 @image_review_bp.errorhandler(HTTPException)
 def http_error(exc):
     return jsonify(error=exc.description), exc.code
+
+
+def _ephemeral_response(action, *args):
+    try:
+        return jsonify(action(*args))
+    except HTTPException:
+        raise
+    except Exception:
+        current_app.logger.exception('Temporary visual analysis failed')
+        return jsonify(error='The image analysis could not be completed. Please retry with a vision-capable model.'), 502
 
 
 @image_review_bp.get('/labels/<set_id>/images')
@@ -45,12 +55,12 @@ def artwork(set_id, asset_id):
 
 @image_review_bp.post('/reviews')
 def start_review():
-    if getattr(current_user, 'is_guest', False):
-        return jsonify(error='Sign in with a personal account to create a visual review.'), 403
-    active = SystemTask.query.filter(SystemTask.user_id == current_user.id, SystemTask.task_type.in_(['image_review', 'image_review_extract']),
-                                     SystemTask.status.in_(['pending', 'processing'])).first()
-    if active:
-        return jsonify(error='A visual review is already running for your account.', task_id=active.id), 409
+    guest = getattr(current_user, 'is_guest', False)
+    if not guest:
+        active = SystemTask.query.filter(SystemTask.user_id == current_user.id, SystemTask.task_type.in_(['image_review', 'image_review_extract']),
+                                         SystemTask.status.in_(['pending', 'processing'])).first()
+        if active:
+            return jsonify(error='A visual review is already running for your account.', task_id=active.id), 409
     if request.content_length and request.content_length > 2 * FILE_LIMIT + 512 * 1024:
         return jsonify(error='Request exceeds the two-image upload limit.'), 413
     mode = request.form.get('mode', 'consistency')
@@ -78,6 +88,9 @@ def start_review():
     confirmed = None
     if mode == 'confusion':
         confirmed = validate_carton_confirmation(sides)
+    if guest:
+        from .ephemeral import analyze_images
+        return _ephemeral_response(analyze_images, current_user, sides, mode, confirmed)
     job_id = str(uuid4())
     save_job(job_id, sides)
     task = None
@@ -189,12 +202,19 @@ def validate_carton_confirmation(sides):
     confirmed = {}
     for name, image in zip(('left', 'right'), sides):
         entry = submitted.get(name)
-        if not isinstance(entry, dict) or type(entry.get('task_id')) is not int:
+        if not isinstance(entry, dict):
             raise BadRequest('Identify and confirm both images before comparing.')
-        task = db.session.get(SystemTask, entry['task_id'])
-        if not task or task.user_id != current_user.id or task.task_type != 'image_review_extract' or task.status != 'completed':
-            raise BadRequest('Image identification is unavailable or still running.')
-        record = json.loads(task.result_data or '{}').get('cartons', {}).get(name, {})
+        task = None
+        if getattr(current_user, 'is_guest', False):
+            from .ephemeral import verified_extraction
+            record = verified_extraction(entry.get('confirmation_token'), current_user.id, name, image['metadata']['image_hash'])
+        else:
+            if type(entry.get('task_id')) is not int:
+                raise BadRequest('Identify and confirm both images before comparing.')
+            task = db.session.get(SystemTask, entry['task_id'])
+            if not task or task.user_id != current_user.id or task.task_type != 'image_review_extract' or task.status != 'completed':
+                raise BadRequest('Image identification is unavailable or still running.')
+            record = json.loads(task.result_data or '{}').get('cartons', {}).get(name, {})
         if record.get('status') != 'completed' or record.get('source', {}).get('image_hash') != image['metadata']['image_hash']:
             raise BadRequest('An image changed. Identify the replacement image before comparing.')
         extraction = record['extraction']
@@ -213,7 +233,7 @@ def validate_carton_confirmation(sides):
             raise BadRequest('Invalid confirmed packaging fields.')
         fields = {key: {'value': edits[key].strip(),
                         'source': 'user_provided' if edits[key].strip() != extraction['fields'][key]['value'] else 'image_extraction'} for key in FIELDS}
-        confirmed[name] = dict(extraction=extraction, confirmed_fields=fields, extraction_task_id=task.id,
+        confirmed[name] = dict(extraction=extraction, confirmed_fields=fields, extraction_task_id=task.id if task else None,
                                model=record.get('model'), image_type=image_type, acknowledged=True)
     if confirmed['left']['image_type'] != confirmed['right']['image_type']:
         raise BadRequest('Select the same image type for both products. Cross-type comparison is not supported.')
@@ -222,15 +242,15 @@ def validate_carton_confirmation(sides):
 
 @image_review_bp.post('/cartons/extractions')
 def start_carton_extraction():
-    if getattr(current_user, 'is_guest', False):
-        return jsonify(error='Sign in with a personal account to identify packaging images.'), 403
+    guest = getattr(current_user, 'is_guest', False)
     if request.content_length and request.content_length > 2 * FILE_LIMIT + 512 * 1024:
         return jsonify(error='Request exceeds the two-image upload limit.'), 413
-    active = SystemTask.query.filter(SystemTask.user_id == current_user.id,
-                                    SystemTask.task_type.in_(['image_review', 'image_review_extract']),
-                                    SystemTask.status.in_(['pending', 'processing'])).first()
-    if active:
-        return jsonify(error='A visual review is already running for your account.'), 409
+    if not guest:
+        active = SystemTask.query.filter(SystemTask.user_id == current_user.id,
+                                        SystemTask.task_type.in_(['image_review', 'image_review_extract']),
+                                        SystemTask.status.in_(['pending', 'processing'])).first()
+        if active:
+            return jsonify(error='A visual review is already running for your account.'), 409
     names = [side for side in ('left', 'right') if request.form.get(side)]
     if not names:
         raise BadRequest('Select at least one packaging image.')
@@ -244,6 +264,9 @@ def start_carton_extraction():
         if image_type not in ('auto', *IMAGE_TYPES):
             raise BadRequest('Unsupported image type.')
         side['metadata']['requested_image_type'] = image_type
+    if guest:
+        from .ephemeral import identify_images
+        return _ephemeral_response(identify_images, current_user, sides, names)
     job_id = str(uuid4())
     save_job(job_id, sides)
     task = None

@@ -55,7 +55,7 @@ export default function ReviewHistory({ onClose }: { onClose: () => void }) {
   const result = detail?.result;
   return <section className="ivr-history">
     <div className="ivr-history__heading"><div><h1>{detail ? 'Review details' : 'Review history'}</h1><p>Private to your account.</p></div>
-      <button type="button" className="ivr-button" onClick={detail ? () => setDetail(null) : onClose}>{detail ? 'Back to history' : 'Back to visual review'}</button></div>
+      <button type="button" className="ivr-button" onClick={detail ? () => setDetail(null) : onClose}>{detail ? 'Back to history' : 'Back to workspace'}</button></div>
     {error && <p role="alert" className="ivr-history__error">{error}</p>}
     {!detail ? <>
       {loading ? <p>Loading history…</p> : items.length === 0 ? <p>No saved visual reviews yet.</p> : <div className="ivr-history__list">

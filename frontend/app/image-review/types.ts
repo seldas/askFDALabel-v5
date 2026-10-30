@@ -11,7 +11,7 @@ export type CartonExtraction = {
   limitations: string[]; visual_features: string;
   fields: Record<CartonField, { value: string; status: 'readable' | 'uncertain' | 'not_visible'; region: Region | null }>;
 };
-export type CartonConfirmation = { task_id: number; image_type: PackagingImageType; acknowledged: boolean; fields: Record<CartonField, string> };
+export type CartonConfirmation = { task_id: number; confirmation_token?: string; image_type: PackagingImageType; acknowledged: boolean; fields: Record<CartonField, string> };
 export type CartonInputs = Record<Side, CartonConfirmation>;
 export type SavedCarton = { extraction: CartonExtraction; image_type?: PackagingImageType; confirmed_fields: Record<CartonField, { value: string; source: 'user_provided' | 'image_extraction' }>; extraction_task_id: number; acknowledged: boolean };
 export type Finding = {
@@ -38,8 +38,10 @@ export type ReviewComment = {
   created_at?: string;
   updated_at?: string;
 };
-export const MODES: { id: ReviewMode; label: string; description: string }[] = [
-  { id: 'consistency', label: 'Labeling Consistency', description: 'Audit one packaging artwork against its official FDA SPL labeling content to detect discrepancies, omissions, and errors.' },
-  { id: 'artwork', label: 'Artwork Comparison', description: 'Compare content and design changes between two artworks, with repeated color changes grouped into one finding.' },
-  { id: 'confusion', label: 'Product Confusion', description: 'Compare two package cartons or two container labels: identify images, confirm product information, then assess confusion factors. Matching image types are required.' },
+export type VisualTask = ReviewMode | 'read';
+export const VISUAL_TASKS: { id: VisualTask; label: string; description: string; needs: string }[] = [
+  { id: 'read', label: 'Read image', description: 'Extract visible text and organize the information.', needs: '1 image' },
+  { id: 'consistency', label: 'Labeling consistency', description: 'Check an image against its official labeling.', needs: '1 image + labeling' },
+  { id: 'artwork', label: 'Artwork comparison', description: 'Find content and design changes between images.', needs: '2 images' },
+  { id: 'confusion', label: 'Product confusion', description: 'Review similarities that could cause product confusion.', needs: '2 packaging images' },
 ];

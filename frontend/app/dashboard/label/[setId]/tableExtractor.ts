@@ -27,7 +27,7 @@ function findTableTitle(table: HTMLTableElement): string {
 
 function sanitizeTableClone(table: HTMLTableElement): HTMLTableElement {
   const clone = table.cloneNode(true) as HTMLTableElement;
-  clone.querySelectorAll('.btn-extract-table').forEach((btn) => btn.remove());
+  clone.querySelectorAll('.btn-extract-table, .btn-analyze-image').forEach((btn) => btn.remove());
   clone.className = 'excel-style-table';
   clone.removeAttribute('style');
   clone.querySelectorAll('*').forEach((el) => {

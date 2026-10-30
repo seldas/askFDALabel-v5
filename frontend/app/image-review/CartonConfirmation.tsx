@@ -3,14 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { CARTON_FIELDS, type CartonExtraction, type CartonField, type CartonInputs, type PackagingImageType, type Selection, type Side } from './types';
 
-type Identified = { key: string; task_id: number; extraction?: CartonExtraction; error?: string; fields: Record<CartonField, string>; acknowledged: boolean };
+type Identified = { key: string; task_id: number; confirmation_token?: string; extraction?: CartonExtraction; error?: string; fields: Record<CartonField, string>; acknowledged: boolean };
 const SIDES: Side[] = ['left', 'right'];
 const keys = Object.keys(CARTON_FIELDS) as CartonField[];
 const sourceKey = (value: Selection) => JSON.stringify(value.descriptor) + value.url;
 
-export default function CartonConfirmation({ left, right, disabled, comparing, hasResult, canCompare, onCompare, onChange, onBusy }: {
+export default function CartonConfirmation({ left, right, disabled, comparing, hasResult, onChange, onBusy }: {
   left: Selection; right: Selection; disabled: boolean; comparing: boolean; hasResult: boolean;
-  canCompare: boolean; onCompare: () => void;
   onChange: (value: CartonInputs | null) => void; onBusy: (value: boolean) => void;
 }) {
   const [records, setRecords] = useState<Partial<Record<Side, Identified>>>({});
@@ -61,8 +60,8 @@ export default function CartonConfirmation({ left, right, disabled, comparing, h
       && aType && bType && !mismatch
       && a.acknowledged && b.acknowledged && left.ready && right.ready && !task;
     callbacks.current.onChange(ready ? {
-      left: { task_id: a.task_id, image_type: aType!, fields: a.fields, acknowledged: true },
-      right: { task_id: b.task_id, image_type: bType!, fields: b.fields, acknowledged: true },
+      left: { task_id: a.task_id, confirmation_token: a.confirmation_token, image_type: aType!, fields: a.fields, acknowledged: true },
+      right: { task_id: b.task_id, confirmation_token: b.confirmation_token, image_type: bType!, fields: b.fields, acknowledged: true },
     } : null);
   }, [records, leftKey, rightKey, left.ready, right.ready, task, aType, bType, mismatch]);
 
@@ -126,7 +125,19 @@ export default function CartonConfirmation({ left, right, disabled, comparing, h
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Could not identify images.');
       setRecords(prev => { const next = { ...prev }; sides.forEach(side => delete next[side]); return next; });
-      setTask({ id: data.task_id, sides, keys: submittedKeys });
+      if (data.synchronous && data.cartons) {
+        setRecords(prev => {
+          const next = { ...prev };
+          for (const side of sides) {
+            const record = data.cartons[side];
+            const extraction = record?.extraction as CartonExtraction | undefined;
+            next[side] = { key: submittedKeys[side]!, task_id: 0, confirmation_token: record?.confirmation_token,
+              extraction, error: record?.error, acknowledged: false,
+              fields: Object.fromEntries(keys.map(key => [key, extraction?.fields[key]?.value || ''])) as Record<CartonField, string> };
+          }
+          return next;
+        });
+      } else setTask({ id: data.task_id, sides, keys: submittedKeys });
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setSubmitting(false); }
   };
@@ -142,12 +153,12 @@ export default function CartonConfirmation({ left, right, disabled, comparing, h
     </ol>
     <details open={!comparing && !hasResult}>
     <summary>Image identification & confirmation</summary>
-    <p>Select one image per product and choose its image type, or use automatic detection. Compare carton with carton or container label with container label, preferably corresponding views. IFU, chemical structures and clinical figures are excluded.</p>
-    <p>We first identify A and B in parallel. Each result appears when ready. Review or correct the information, then confirm and compare. Each AI stage can take some time; your completed identification results are retained if comparison fails.</p>
+    <p>Identify both images, review the extracted product information, then confirm each product. Compare matching cartons or matching container labels with corresponding views.</p>
+    <details className="ivr-source-metadata"><summary>Supported images</summary><p>This task supports packaging cartons and container labels. For IFU, chemical structures, or clinical figures, choose Read Image or Artwork Comparison.</p></details>
     <button className="ivr-button ivr-primary" disabled={locked || !left.ready || !right.ready} onClick={() => void identify(missing.length ? missing : SIDES)}>
       {active ? 'Identifying images…' : 'Identify selected images'}
     </button>
-    {active && <p role="status">Identification in progress · {elapsed}s elapsed. Waiting for the worker or image analysis; completed products appear below.</p>}
+    {active && <p role="status">Identification in progress · {elapsed}s elapsed. Completed products appear below.</p>}
     {error && <p className="ivr-error" role="alert">{error}</p>}
     {paused && <button className="ivr-button" onClick={() => { setError(''); setPaused(false); }}>Resume status check</button>}
     <div className="ivr-carton-cards">
@@ -189,8 +200,7 @@ export default function CartonConfirmation({ left, right, disabled, comparing, h
       })}
     </div>
     {mismatch && <p className="ivr-error" role="alert">The images have different types ({typeLabel(aType)} / {typeLabel(bType)}). Select matching image types and corresponding images. Cross-type comparison is not supported.</p>}
-    <p>Different faces or unfolded views limit comparison to corresponding visible areas. Confirm each product above, then use <strong>Confirm and compare</strong>. You can inspect and zoom both images throughout the analysis.</p>
-    <button className="ivr-button ivr-primary" disabled={!canCompare} onClick={onCompare}>Confirm and compare</button>
+    <p>Different faces or unfolded views limit comparison to corresponding visible areas. Confirm each product above, then select <strong>Compare confusion factors</strong> in the workspace toolbar. You can inspect and zoom both images throughout the analysis.</p>
     </details>
   </section>;
 }

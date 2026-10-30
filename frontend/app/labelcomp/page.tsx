@@ -190,22 +190,23 @@ function LabelCompContent() {
     return searchParams.getAll('spl_ids');
   }, [searchParams]);
 
+  const canUseVisual = Boolean(session?.permissions?.tool_visual_analysis);
   const visualReviewCount = activeSetIds.length;
   const isVisualReviewDisabled = visualReviewCount === 0 || visualReviewCount > 2;
 
   const visualReviewTooltip = useMemo(() => {
     if (visualReviewCount === 0) {
-      return 'Select 1 or 2 labels to open in Visual Review.';
+      return 'Select 1 or 2 labels to open in Visual Analysis.';
     }
     if (visualReviewCount > 2) {
-      return `Visual Review supports at most 2 labelings (currently ${visualReviewCount} selected). Please select 1 or 2 labels to launch visual review.`;
+      return `Visual Analysis supports at most 2 labelings (currently ${visualReviewCount} selected). Please select 1 or 2 labels to launch Visual Analysis.`;
     }
-    return `Open ${visualReviewCount === 1 ? 'this label' : 'these 2 labels'} in Visual Review (/image-review)`;
+    return `Open ${visualReviewCount === 1 ? 'this label' : 'these 2 labels'} in Visual Analysis (/image-review)`;
   }, [visualReviewCount]);
 
   const handleOpenVisualReview = () => {
-    if (isVisualReviewDisabled) return;
-    const url = imageReviewRoute({ setIds: activeSetIds.slice(0, 2), splIds: activeSplIds.slice(0, 2) });
+    if (isVisualReviewDisabled || !canUseVisual) return;
+    const url = imageReviewRoute({ setIds: activeSetIds.slice(0, 2), splIds: activeSplIds.slice(0, 2) }, { mode: visualReviewCount > 1 ? 'artwork' : 'read' });
     const target = window.open(url, 'fdalabel_image_review');
     if (target) {
       target.focus();
@@ -710,7 +711,7 @@ function LabelCompContent() {
           <p className="hero-subtitle-animated" style={{ fontSize: 'clamp(1rem, 2vw, 1.15rem)', color: 'var(--fdl-muted, #5e6e7c)', fontWeight: '500', maxWidth: '700px', margin: '0 auto' }}>
             Synchronize and compare clinical data across multiple FDA drug labels.
           </p>
-          {session?.permissions?.tool_image_review && <Link href={imageReviewRoute({ setIds: searchParams.getAll('set_ids'), splIds: searchParams.getAll('spl_ids') })} style={{ display: 'inline-block', marginTop: '12px', color: 'var(--fdl-blue-700)', fontSize: '0.85rem' }}>Compare carton, container, or IFU artwork →</Link>}
+          {session?.permissions?.tool_visual_analysis && <Link href={imageReviewRoute({ setIds: searchParams.getAll('set_ids'), splIds: searchParams.getAll('spl_ids') })} style={{ display: 'inline-block', marginTop: '12px', color: 'var(--fdl-blue-700)', fontSize: '0.85rem' }}>Compare carton, container, or IFU artwork →</Link>}
         </div>
 
         {/* Comparison Setup Panel */}
@@ -723,7 +724,7 @@ function LabelCompContent() {
               </p>
             </div>
             <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-              <Button
+              {canUseVisual && <Button
                 variant="secondary"
                 size="sm"
                 disabled={isVisualReviewDisabled}
@@ -736,8 +737,8 @@ function LabelCompContent() {
                   <circle cx="8.5" cy="8.5" r="1.5" />
                   <path d="m21 15-5-5L5 21" />
                 </svg>
-                Visual Review
-              </Button>
+                Visual Analysis
+              </Button>}
               {filledSlotsCount > 0 && (
                 <Button
                   variant="ghost"
@@ -820,7 +821,7 @@ function LabelCompContent() {
             </div>
 
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <Button
+              {canUseVisual && <Button
                 variant="ghost"
                 disabled={isVisualReviewDisabled}
                 title={visualReviewTooltip}
@@ -832,8 +833,8 @@ function LabelCompContent() {
                   <circle cx="8.5" cy="8.5" r="1.5" />
                   <path d="m21 15-5-5L5 21" />
                 </svg>
-                Visual Review
-              </Button>
+                Visual Analysis
+              </Button>}
               <Button variant="info" onClick={handleExportDiffs}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 Export

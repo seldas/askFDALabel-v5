@@ -2429,3 +2429,34 @@ html {
   opacity: 1;
 }
 
+
+/* Image actions in the SPL reader */
+.spl-image-action {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+.btn-analyze-image {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  display: inline-flex;
+  padding: 5px 12px;
+  border-radius: var(--fdl-radius-sm, 2px);
+  background: var(--fdl-navy-950);
+  color: var(--fdl-paper) !important;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none !important;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 15%);
+}
+.btn-analyze-image:hover,
+.btn-analyze-image:focus-visible {
+  background: var(--fdl-navy-800, var(--fdl-navy-950));
+  outline: 2px solid var(--fdl-navy-950);
+  outline-offset: 2px;
+}
+@media print {
+  .btn-analyze-image { display: none; }
+}
