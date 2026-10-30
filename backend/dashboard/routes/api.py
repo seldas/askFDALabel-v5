@@ -10,6 +10,8 @@ except ImportError:
 from datetime import datetime, timedelta, timezone
 import logging
 import hashlib
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 def utc_now():
     """Return naive datetime in UTC for compatibility with Postgres TIMESTAMP columns."""
@@ -41,6 +43,7 @@ from dashboard.services.meddra_matcher import scan_label_for_meddra
 
 logger = logging.getLogger(__name__)
 api_bp = Blueprint('api', __name__)
+_faers_request_slots = threading.BoundedSemaphore(4)
 
 @api_bp.route('/history/<set_id>')
 def get_label_history(set_id):
@@ -2642,8 +2645,8 @@ def api_faers_trends():
                     return f'{value.year:04d}{value.month:02d}{value.day:02d}'
 
                 params = {
-                    'search': f'{term_search} AND receiptdate:[{date_string(start)} TO {date_string(end)}]',
-                    'count': 'receiptdate', 'limit': 1000,
+                    'search': f'{term_search} AND receivedate:[{date_string(start)} TO {date_string(end)}]',
+                    'count': 'receivedate', 'limit': 1000,
                 }
                 if Config.OPENFDA_API_KEY:
                     params['api_key'] = Config.OPENFDA_API_KEY
@@ -2673,8 +2676,8 @@ def api_faers_trends():
 @api_bp.route('/faers/emerging', methods=['POST'])
 def api_faers_emerging():
     """
-    Returns all-time AEs and emerging AEs (recent five years, absent in the preceding five).
-    Scans the current label (set_id) for exact matches across both cohorts.
+    Returns the top 200 AEs in each of the all-time and recent five-year periods,
+    with both period counts and exact label matches for the combined list.
     """
     data = request.get_json()
     drug_name = data.get('drug_name')
@@ -2688,18 +2691,22 @@ def api_faers_emerging():
     # We use openfda.brand_name OR openfda.generic_name for precision
     search_term = f'(patient.drug.openfda.brand_name:"{clean_name}" OR patient.drug.openfda.generic_name:"{clean_name}")'
 
-    # Calculate date ranges: Recent (5y) and Previous (6-10y ago)
+    # Recent five years, using calendar years rather than an approximation.
     now = datetime.now()
     p1_end = now.strftime('%Y%m%d')
-    p1_start = (now - timedelta(days=5*365)).strftime('%Y%m%d')
-    p2_end = (now - timedelta(days=5*365 + 1)).strftime('%Y%m%d')
-    p2_start = (now - timedelta(days=10*365)).strftime('%Y%m%d')
+    try:
+        p1_start = now.replace(year=now.year - 5).strftime('%Y%m%d')
+    except ValueError:
+        p1_start = now.replace(year=now.year - 5, day=28).strftime('%Y%m%d')
 
     try:
-        def fetch_counts(start=None, end=None):
+        def fetch_counts(start=None, end=None, terms=None):
             query = search_term
             if start and end:
                 query += f' AND receivedate:[{start} TO {end}]'
+            if terms:
+                escaped = [term.replace('\\', '\\\\').replace('"', '\\"') for term in terms]
+                query += ' AND (' + ' OR '.join(f'patient.reaction.reactionmeddrapt.exact:"{term}"' for term in escaped) + ')'
             params = {
                 'search': query,
                 'count': 'patient.reaction.reactionmeddrapt.exact',
@@ -2708,7 +2715,8 @@ def api_faers_emerging():
             if Config.OPENFDA_API_KEY:
                 params['api_key'] = Config.OPENFDA_API_KEY
             
-            resp = requests.get(base_url, params=params, timeout=15)
+            with _faers_request_slots:
+                resp = requests.get(base_url, params=params, timeout=(3, 15))
             if resp.status_code == 200:
                 return {r['term']: r['count'] for r in resp.json().get('results', [])}
             elif resp.status_code == 404:
@@ -2716,35 +2724,45 @@ def api_faers_emerging():
             else:
                 resp.raise_for_status()
 
-        capped_days = []
+        def fetch_term_count(term, start=None, end=None):
+            escaped = term.replace('\\', '\\\\').replace('"', '\\"')
+            query = f'{search_term} AND patient.reaction.reactionmeddrapt.exact:"{escaped}"'
+            if start and end:
+                query += f' AND receivedate:[{start} TO {end}]'
+            params = {'search': query, 'limit': 1}
+            if Config.OPENFDA_API_KEY:
+                params['api_key'] = Config.OPENFDA_API_KEY
+            with _faers_request_slots:
+                resp = requests.get(base_url, params=params, timeout=(3, 15))
+            if resp.status_code == 404:
+                return 0
+            resp.raise_for_status()
+            return resp.json()['meta']['results']['total']
 
-        def fetch_complete_counts(start, end):
-            counts = fetch_counts(start.strftime('%Y%m%d'), end.strftime('%Y%m%d'))
-            if len(counts) < 1000:
-                return counts
-            if start >= end:
-                capped_days.append(start.strftime('%Y-%m-%d'))
-                return counts
-            middle = start + timedelta(days=(end - start).days // 2)
-            left = fetch_complete_counts(start, middle)
-            right = fetch_complete_counts(middle + timedelta(days=1), end)
-            for term, count in right.items():
-                left[term] = left.get(term, 0) + count
-            return left
-
-        counts_recent = fetch_complete_counts(datetime.strptime(p1_start, '%Y%m%d'), datetime.strptime(p1_end, '%Y%m%d'))
-        counts_prev = fetch_complete_counts(datetime.strptime(p2_start, '%Y%m%d'), datetime.strptime(p2_end, '%Y%m%d'))
-
-        counts_all = fetch_counts()
-        emerging_terms = set(counts_recent) - set(counts_prev)
-        all_terms = set(list(counts_all)[:200])
-        emerging_top = set(sorted(emerging_terms, key=lambda term: (-counts_recent[term], term))[:100])
-        # Include recent terms even if they fall outside the all-time top 1000.
+        query_started = time.monotonic()
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            all_future = executor.submit(fetch_counts)
+            recent_future = executor.submit(fetch_counts, p1_start, p1_end)
+            counts_all, counts_recent = all_future.result(), recent_future.result()
+            all_terms = set(list(counts_all)[:200])
+            recent_terms = set(list(counts_recent)[:200])
+            # A term outside the other period's top 1000 needs a targeted count;
+            # missing from an aggregation is not evidence of zero reports.
+            jobs = []
+            for missing, start, end, target in [
+                (sorted(recent_terms - counts_all.keys()), None, None, counts_all),
+                (sorted(all_terms - counts_recent.keys()), p1_start, p1_end, counts_recent),
+            ]:
+                for term in missing:
+                    jobs.append((executor.submit(fetch_term_count, term, start, end), target, term))
+            for future, target, term in jobs:
+                target[term] = future.result()
+        logger.info('FAERS aggregation completed in %.2fs', time.monotonic() - query_started)
+        emerging_top = recent_terms
         emerging = [
-            {'term': term, 'count': counts_all.get(term, count),
+            {'term': term, 'count': counts_all.get(term, 0),
              'recent_count': counts_recent.get(term, 0),
-             'prev_count': counts_prev.get(term, 0),
-             'is_emerging': term in emerging_terms, 'in_all_time': term in all_terms,
+             'in_all_time': term in all_terms,
              'in_emerging': term in emerging_top, 'label_matches': []}
             for term, count in (counts_all | counts_recent).items() if term in all_terms or term in emerging_top
         ]
@@ -2808,11 +2826,7 @@ def api_faers_emerging():
             'metadata': {
                 'drug': clean_name,
                 'term_limit_per_period': 1000,
-                'recent_results_truncated': False,
-                'previous_results_truncated': False,
-                'capped_days': capped_days,
                 'recent_period': [p1_start, p1_end],
-                'previous_period': [p2_start, p2_end]
             }
         })
 

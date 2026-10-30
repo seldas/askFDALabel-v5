@@ -35,9 +35,7 @@ interface AiMatch {
 interface EmergingAe {
   term: string;
   count: number;
-  prev_count: number;
   recent_count: number;
-  is_emerging: boolean;
   in_all_time: boolean;
   in_emerging: boolean;
   soc: string;
@@ -67,9 +65,8 @@ function EmergingAeAnalysis({
   const [aiLoading, setAiLoading] = useState(false);
   const [data, setData] = useState<EmergingAe[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [coverageWarning, setCoverageWarning] = useState<string | null>(null);
   const [aiMinCount, setAiMinCount] = useState(10);
-  const [scope, setScope] = useState<'all' | 'emerging'>('emerging');
+  const [scope, setScope] = useState<'all' | 'recent'>('recent');
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [useCountThreshold, setUseCountThreshold] = useState(true);
   const [emergingOnly, setEmergingOnly] = useState(true);
@@ -87,8 +84,6 @@ function EmergingAeAnalysis({
   const [selectedAe, setSelectedAe] = useState<EmergingAe | null>(null);
   const [trendData, setTrendData] = useState<TrendPoint[]>([]);
   const [trendLoading, setTrendLoading] = useState(false);
-  const [trendPeriod, setTrendPeriod] = useState<'5y' | '10y' | 'all'>('5y');
-  const [trendMetric, setTrendMetric] = useState<'annual' | 'cumulative'>('annual');
   const [trendError, setTrendError] = useState<string | null>(null);
 
   const toggleFilter = (filter: 'exact' | 'semantic' | 'none') => {
@@ -119,7 +114,7 @@ function EmergingAeAnalysis({
     if (selectedAe) {
         fetchTrend(selectedAe.term);
     }
-  }, [selectedAe, trendPeriod]);
+  }, [selectedAe]);
 
   const fetchTrend = async (term: string) => {
     setTrendLoading(true);
@@ -128,7 +123,7 @@ function EmergingAeAnalysis({
         const resp = await fetch('/api/dashboard/faers/trends', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ drug_name: drugName, terms: [term], period: trendPeriod })
+            body: JSON.stringify({ drug_name: drugName, terms: [term], period: 'all' })
         });
         const json = await resp.json();
         if (!resp.ok) throw new Error(json.message || json.error || 'FAERS trend retrieval failed.');
@@ -141,7 +136,7 @@ function EmergingAeAnalysis({
         });
         if (!years.size) { setTrendData([]); return; }
         const currentYear = new Date().getFullYear();
-        const firstYear = trendPeriod === 'all' ? Math.min(...years.keys()) : currentYear - (trendPeriod === '5y' ? 5 : 10);
+        const firstYear = Math.min(...years.keys());
         let cumulative = 0;
         const formatted: TrendPoint[] = [];
         for (let year = firstYear; year <= currentYear; year++) {
@@ -183,11 +178,6 @@ function EmergingAeAnalysis({
         throw new Error(errJson.message || errJson.error || 'Failed to fetch analysis');
       }
       const json = await resp.json();
-      const warnings: string[] = [];
-      if (json.metadata?.recent_results_truncated) warnings.push('The recent-period results reached the 1,000-term limit; some emerging AEs may be missing.');
-      if (json.metadata?.previous_results_truncated) warnings.push('The previous-period results reached the 1,000-term limit; some AEs may be incorrectly classified as emerging.');
-      if (json.metadata?.capped_days?.length) warnings.push('One or more days reached the 1,000-term cap; emerging results may be incomplete or misclassified.');
-      setCoverageWarning(warnings.length ? warnings.join(' ') : null);
       
       const aiResp = await fetch(`/api/dashboard/faers/ai_results?set_id=${setId}&drug_name=${encodeURIComponent(drugName || '')}`);
       const aiJson = aiResp.ok ? await aiResp.json() : {};
@@ -242,7 +232,7 @@ function EmergingAeAnalysis({
 
   // Pagination & Filtering Logic
   const filteredData = data ? data.filter(ae => {
-    if (scope === 'emerging' ? !ae.in_emerging : !ae.in_all_time) return false;
+    if (scope === 'recent' ? !ae.in_emerging : !ae.in_all_time) return false;
     const isExact = ae.label_matches && ae.label_matches.length > 0;
     const isSemantic = ae.ai_match?.found === true;
     const isNone = !isExact && !isSemantic;
@@ -251,7 +241,7 @@ function EmergingAeAnalysis({
     if (activeFilters.has('semantic') && isSemantic) return true;
     if (activeFilters.has('none') && isNone) return true;
     return false;
-  }).sort((a, b) => scope === 'emerging' ? b.recent_count - a.recent_count : b.count - a.count) : [];
+  }).sort((a, b) => scope === 'recent' ? b.recent_count - a.recent_count : b.count - a.count) : [];
 
   const totalItems = filteredData.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -262,7 +252,7 @@ function EmergingAeAnalysis({
     <div className="chart-card full-width faers-analysis" style={{ marginTop: '0', borderTop: 'none', paddingTop: '0' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--fdl-canvas)', padding: '14px 20px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--fdl-navy-950)' }}>{scope === 'emerging' ? 'Emerging Adverse Events' : 'All-time Adverse Events'}</h3>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--fdl-navy-950)' }}>Adverse Event Reports</h3>
         </div>
         {loading && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -274,24 +264,23 @@ function EmergingAeAnalysis({
 
       <div className="faers-toolbar">
         <div className="faers-toggle" role="group" aria-label="Adverse event reporting period">
-          <button aria-pressed={scope === 'all'} onClick={() => { setScope('all'); setTrendPeriod('all'); setSelectedAe(null); setTrendData([]); }}>All-time AE</button>
-          <button aria-pressed={scope === 'emerging'} onClick={() => { setScope('emerging'); setTrendPeriod('5y'); setSelectedAe(null); setTrendData([]); }}>Emerging AE</button>
+          <button aria-pressed={scope === 'all'} onClick={() => { setScope('all'); setSelectedAe(null); setTrendData([]); }}>All-time Top 200</button>
+          <button aria-pressed={scope === 'recent'} onClick={() => { setScope('recent'); setSelectedAe(null); setTrendData([]); }}>Recent 5 Years Top 200</button>
         </div>
-        <button className="faers-button faers-button-primary" onClick={() => { setEmergingOnly(scope === 'emerging'); setAiModalOpen(true); }} disabled={aiLoading || loading || !data || !setId}>
+        <button className="faers-button faers-button-primary" onClick={() => { setEmergingOnly(scope === 'recent'); setAiModalOpen(true); }} disabled={aiLoading || loading || !data || !setId}>
           {aiLoading ? 'Analyzing AEs…' : 'Run Semantic Analysis'}
         </button>
       </div>
       <p className="faers-description">
-        {scope === 'emerging' ? 'Up to 100 reactions reported in the recent five years but absent in the preceding five years. Counts reflect the recent period.' : 'Top 200 reactions across available FAERS reporting years. Counts reflect all-time reports.'}
-        {' '}Exact matching checks label text; semantic AI checks synonyms and clinical context. Period counts are combined across date ranges when needed.
+        {scope === 'recent' ? 'Top 200 reactions by reports received in the last five years.' : 'Top 200 reactions by reports received across all available years.'}
+        {' '}Both counts are shown for each reaction. Exact matching checks label text; semantic AI checks synonyms and clinical context.
       </p>
-      {scope === 'emerging' && coverageWarning && <div role="alert" className="faers-ai-warning">{coverageWarning}</div>}
       <Modal isOpen={aiModalOpen} onClose={() => setAiModalOpen(false)} title="Configure AI Semantic Analysis">
         <div className="faers-ai-options">
           <label><input type="checkbox" checked={useCountThreshold} onChange={e => setUseCountThreshold(e.target.checked)} /> Occurrence &gt;
             <input aria-label="Occurrence threshold" type="number" min="0" step="1" disabled={!useCountThreshold} value={aiMinCount} onChange={e => setAiMinCount(Math.max(0, Math.floor(Number(e.target.value) || 0)))} />
           </label>
-          <label><input type="checkbox" checked={emergingOnly} onChange={e => setEmergingOnly(e.target.checked)} /> Emerging AE only</label>
+          <label><input type="checkbox" checked={emergingOnly} onChange={e => setEmergingOnly(e.target.checked)} /> Use recent five-year Top 200</label>
           <label><input type="checkbox" checked={excludeExact} onChange={e => setExcludeExact(e.target.checked)} /> Exclude exact label matches</label>
           <label><input type="checkbox" checked={skipAnalyzed} onChange={e => setSkipAnalyzed(e.target.checked)} /> Skip previously analyzed AEs</label>
         </div>
@@ -374,7 +363,8 @@ function EmergingAeAnalysis({
             <thead>
               <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--fdl-line)', background: 'var(--fdl-line-soft)' }}>
                 <th style={{ padding: '10px 12px', width: '22%' }}>AE (MedDRA PT)</th>
-                <th style={{ padding: '10px 12px', width: '8%' }}>Reports</th>
+                <th style={{ padding: '10px 12px' }}>All-time reports</th>
+                <th style={{ padding: '10px 12px' }}>Recent 5 years</th>
                 <th style={{ padding: '10px 12px', width: '18%' }}>SOC Hierarchy</th>
                 <th style={{ padding: '10px 12px', width: '26%' }}>Direct Match Context</th>
                 <th style={{ padding: '10px 12px', width: '26%' }}>AI Semantic Validation</th>
@@ -403,9 +393,10 @@ function EmergingAeAnalysis({
                   </td>
                   <td style={{ padding: '12px' }}>
                     <span style={{ background: 'var(--fdl-line-soft)', padding: '2px 8px', borderRadius: '2px', fontWeight: 800, color: 'var(--fdl-ink-soft)', fontSize: '0.75rem' }}>
-                        {scope === 'emerging' ? ae.recent_count : ae.count}
+                        {ae.count.toLocaleString()}
                     </span>
                   </td>
+                  <td style={{ padding: '12px', fontWeight: 700 }}>{ae.recent_count.toLocaleString()}</td>
                   <td style={{ padding: '12px' }}>
                     <div style={{ fontSize: '0.7rem', color: 'var(--fdl-ink-soft)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>{ae.soc}</div>
                     <div style={{ fontSize: '0.7rem', color: 'var(--fdl-muted)', fontWeight: 500, marginTop: '2px' }}>{ae.hlt}</div>
@@ -462,7 +453,7 @@ function EmergingAeAnalysis({
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--fdl-muted)', fontStyle: 'italic' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--fdl-muted)', fontStyle: 'italic' }}>
                     No AE terms match the selected reporting period and match filters.
                   </td>
                 </tr>
@@ -550,15 +541,6 @@ function EmergingAeAnalysis({
                 )}
             </div>
 
-            <div className="faers-trend-controls">
-                <div className="faers-toggle" role="group" aria-label="Trend time range">
-                    {([['5y', '5 years + current'], ['10y', '10 years + current'], ['all', 'All available']] as const).map(([value, label]) => <button key={value} aria-pressed={trendPeriod === value} onClick={() => setTrendPeriod(value)}>{label}</button>)}
-                </div>
-                <div className="faers-toggle" role="group" aria-label="Trend measure">
-                    <button aria-pressed={trendMetric === 'annual'} onClick={() => setTrendMetric('annual')}>Annual reports</button>
-                    <button aria-pressed={trendMetric === 'cumulative'} onClick={() => setTrendMetric('cumulative')}>Cumulative</button>
-                </div>
-            </div>
 
             <div style={{ height: '300px', width: '100%', position: 'relative' }}>
                 {trendLoading ? (
@@ -593,7 +575,7 @@ function EmergingAeAnalysis({
                                 contentStyle={{ borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line, #e2e8f0)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)' }}
                                 itemStyle={{ fontWeight: 700, fontSize: '0.85rem' }}
                             />
-                            <Bar dataKey={trendMetric === 'annual' ? 'count' : 'cumulative'} fill="var(--fdl-blue-600)" name={trendMetric === 'annual' ? 'Reports' : 'Cumulative reports in selected period'} maxBarSize={38} />
+                            <Bar dataKey="count" fill="var(--fdl-blue-600)" name="Annual reports" maxBarSize={38} />
                         </BarChart>
                     </ResponsiveContainer>
                 ) : (
@@ -605,7 +587,7 @@ function EmergingAeAnalysis({
                     </div>
                 )}
             </div>
-            <p className="faers-description">Reports by receipt year; the current year is incomplete. Cumulative counts start at the selected period. AE aggregation has a hard cap of 1,000 terms per day. FAERS reports do not establish incidence or causality.</p>
+            <p className="faers-description">Reports by receipt year; the current year is incomplete. FAERS reports do not establish incidence or causality.</p>
           </div>
         </div>
       )}
