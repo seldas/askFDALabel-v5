@@ -2651,6 +2651,11 @@ def api_faers_trends():
                 if Config.OPENFDA_API_KEY:
                     params['api_key'] = Config.OPENFDA_API_KEY
                 resp = requests.get(base_url, params=params, timeout=(3, 10))
+                if resp.status_code in (400, 404) and '^' in term:
+                    fallback_term = term.replace('^', "'")
+                    fallback_search = f'{search_term} AND patient.reaction.reactionmeddrapt.exact:"{fallback_term}"'
+                    params['search'] = f'{fallback_search} AND receivedate:[{date_string(start)} TO {date_string(end)}]'
+                    resp = requests.get(base_url, params=params, timeout=(3, 10))
                 if resp.status_code == 404:
                     return []
                 resp.raise_for_status()
