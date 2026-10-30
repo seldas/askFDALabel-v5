@@ -653,98 +653,98 @@ def _distinct_list_column(column, limit=300):
 
 SECTION_TAXONOMY = [
     # Group 1: Additional Fields
-    ("Additional Fields", "Product Title", "SPLTITLE", 133436),
-    ("Additional Fields", "Initial U.S. Approval [4 Digit Year]", "43683-2", 24907),
-    ("Additional Fields", "Highlights [Excluding Product Title]", "34066-1", 24934),
+    ("Additional Fields", "Product Title", "SPLTITLE"),
+    ("Additional Fields", "Initial U.S. Approval [4 Digit Year]", "43683-2"),
+    ("Additional Fields", "Highlights [Excluding Product Title]", "34066-1"),
 
     # Group 2: Full Prescribing Information (PLR & Non-PLR)
-    ("Full Prescribing Information (PLR & Non-PLR)", "BOXED WARNING", "34066-1", 18032),
-    ("Full Prescribing Information (PLR & Non-PLR)", "1 INDICATIONS AND USAGE", "34067-9", 152093),
-    ("Full Prescribing Information (PLR & Non-PLR)", "2 DOSAGE AND ADMINISTRATION", "34068-7", 152412),
-    ("Full Prescribing Information (PLR & Non-PLR)", "3 DOSAGE FORMS AND STRENGTHS", "43678-2", 27561),
-    ("Full Prescribing Information (PLR & Non-PLR)", "4 CONTRAINDICATIONS", "34070-3", 50459),
-    ("Full Prescribing Information (PLR & Non-PLR)", "5 WARNINGS AND PRECAUTIONS", "43685-7", 29069),
-    ("Full Prescribing Information (PLR & Non-PLR)", "6 ADVERSE REACTIONS", "34084-4", 51770),
-    ("Full Prescribing Information (PLR & Non-PLR)", "7 DRUG INTERACTIONS", "34073-7", 38378),
-    ("Full Prescribing Information (PLR & Non-PLR)", "8 USE IN SPECIFIC POPULATIONS", "43684-0", 26630),
-    ("Full Prescribing Information (PLR & Non-PLR)", "8.1 Pregnancy", "42228-7", 38488),
-    ("Full Prescribing Information (PLR & Non-PLR)", "8.2 Lactation", "77290-5", 9878),
-    ("Full Prescribing Information (PLR & Non-PLR)", "8.2 Labor and Delivery", "34079-4", 9969),
-    ("Full Prescribing Information (PLR & Non-PLR)", "8.3 Females and Males of Reproductive Potential", "77291-3", 3053),
-    ("Full Prescribing Information (PLR & Non-PLR)", "8.3 Nursing Mothers", "34080-2", 23069),
-    ("Full Prescribing Information (PLR & Non-PLR)", "8.4 Pediatric Use", "34081-0", 38303),
-    ("Full Prescribing Information (PLR & Non-PLR)", "8.5 Geriatric Use", "34082-8", 32880),
-    ("Full Prescribing Information (PLR & Non-PLR)", "9 DRUG ABUSE AND DEPENDENCE", "42227-9", 10363),
-    ("Full Prescribing Information (PLR & Non-PLR)", "9.1 Controlled Substance", "34085-1", 4581),
-    ("Full Prescribing Information (PLR & Non-PLR)", "9.2 Abuse", "34086-9", 4525),
-    ("Full Prescribing Information (PLR & Non-PLR)", "9.3 Dependence", "34087-7", 4217),
-    ("Full Prescribing Information (PLR & Non-PLR)", "10 OVERDOSAGE", "34088-5", 46721),
-    ("Full Prescribing Information (PLR & Non-PLR)", "11 DESCRIPTION", "34089-3", 54436),
-    ("Full Prescribing Information (PLR & Non-PLR)", "12 CLINICAL PHARMACOLOGY", "34090-1", 49604),
-    ("Full Prescribing Information (PLR & Non-PLR)", "12.1 Mechanism of Action", "43679-0", 26003),
-    ("Full Prescribing Information (PLR & Non-PLR)", "12.2 Pharmacodynamics", "43681-6", 19351),
-    ("Full Prescribing Information (PLR & Non-PLR)", "12.3 Pharmacokinetics", "43682-4", 29239),
-    ("Full Prescribing Information (PLR & Non-PLR)", "12.4 Microbiology", "49489-8", 2862),
-    ("Full Prescribing Information (PLR & Non-PLR)", "12.5 Pharmacogenomics", "74348-4", 346),
-    ("Full Prescribing Information (PLR & Non-PLR)", "13 NONCLINICAL TOXICOLOGY", "34091-9", 25813),
-    ("Full Prescribing Information (PLR & Non-PLR)", "13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility", "34083-6", 34769),
-    ("Full Prescribing Information (PLR & Non-PLR)", "13.2 Animal Toxicology and/or Pharmacology", "43680-8", 6374),
-    ("Full Prescribing Information (PLR & Non-PLR)", "14 CLINICAL STUDIES", "34092-7", 27322),
-    ("Full Prescribing Information (PLR & Non-PLR)", "15 REFERENCES", "34093-5", 7992),
-    ("Full Prescribing Information (PLR & Non-PLR)", "16 HOW SUPPLIED/STORAGE AND HANDLING", "34069-5", 86703),
-    ("Full Prescribing Information (PLR & Non-PLR)", "17 PATIENT COUNSELING INFORMATION/INFORMATION FOR PATIENTS", "34076-0", 39098),
-    ("Full Prescribing Information (PLR & Non-PLR)", "WARNINGS", "34071-1", 124714),
-    ("Full Prescribing Information (PLR & Non-PLR)", "PRECAUTIONS", "42232-9", 25229),
-    ("Full Prescribing Information (PLR & Non-PLR)", "GENERAL", "34072-9", 12628),
-    ("Full Prescribing Information (PLR & Non-PLR)", "LABORATORY TESTS", "34075-2", 7439),
-    ("Full Prescribing Information (PLR & Non-PLR)", "DRUG/LABORATORY TEST INTERACTIONS", "34074-5", 3966),
-    ("Full Prescribing Information (PLR & Non-PLR)", "TERATOGENIC EFFECTS", "34077-8", 5786),
-    ("Full Prescribing Information (PLR & Non-PLR)", "NONTERATOGENIC EFFECTS", "34078-6", 2265),
+    ("Full Prescribing Information (PLR & Non-PLR)", "BOXED WARNING", "34066-1"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "1 INDICATIONS AND USAGE", "34067-9"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "2 DOSAGE AND ADMINISTRATION", "34068-7"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "3 DOSAGE FORMS AND STRENGTHS", "43678-2"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "4 CONTRAINDICATIONS", "34070-3"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "5 WARNINGS AND PRECAUTIONS", "43685-7"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "6 ADVERSE REACTIONS", "34084-4"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "7 DRUG INTERACTIONS", "34073-7"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "8 USE IN SPECIFIC POPULATIONS", "43684-0"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "8.1 Pregnancy", "42228-7"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "8.2 Lactation", "77290-5"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "8.2 Labor and Delivery", "34079-4"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "8.3 Females and Males of Reproductive Potential", "77291-3"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "8.3 Nursing Mothers", "34080-2"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "8.4 Pediatric Use", "34081-0"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "8.5 Geriatric Use", "34082-8"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "9 DRUG ABUSE AND DEPENDENCE", "42227-9"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "9.1 Controlled Substance", "34085-1"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "9.2 Abuse", "34086-9"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "9.3 Dependence", "34087-7"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "10 OVERDOSAGE", "34088-5"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "11 DESCRIPTION", "34089-3"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "12 CLINICAL PHARMACOLOGY", "34090-1"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "12.1 Mechanism of Action", "43679-0"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "12.2 Pharmacodynamics", "43681-6"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "12.3 Pharmacokinetics", "43682-4"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "12.4 Microbiology", "49489-8"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "12.5 Pharmacogenomics", "74348-4"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "13 NONCLINICAL TOXICOLOGY", "34091-9"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility", "34083-6"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "13.2 Animal Toxicology and/or Pharmacology", "43680-8"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "14 CLINICAL STUDIES", "34092-7"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "15 REFERENCES", "34093-5"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "16 HOW SUPPLIED/STORAGE AND HANDLING", "34069-5"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "17 PATIENT COUNSELING INFORMATION/INFORMATION FOR PATIENTS", "34076-0"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "WARNINGS", "34071-1"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "PRECAUTIONS", "42232-9"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "GENERAL", "34072-9"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "LABORATORY TESTS", "34075-2"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "DRUG/LABORATORY TEST INTERACTIONS", "34074-5"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "TERATOGENIC EFFECTS", "34077-8"),
+    ("Full Prescribing Information (PLR & Non-PLR)", "NONTERATOGENIC EFFECTS", "34078-6"),
 
     # Group 3: HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)
-    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "WARNINGS", "50566-9", 124714),
-    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "PURPOSE(S)", "50565-1", 100953),
-    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "ACTIVE INGREDIENT", "50564-4", 98072),
-    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "WHEN USING", "50567-7", 48055),
-    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "ASK DOCTOR", "50569-3", 24262),
-    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "ASK DOCTOR/PHARMACIST", "50570-1", 11430),
-    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "DO NOT USE", "50568-5", 45224),
-    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "STOP USE", "50571-9", 57490),
-    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "QUESTIONS", "50563-6", 44122),
-    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "PREGNANCY OR BREAST FEEDING", "50572-7", 24443),
-    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "KEEP OUT OF REACH OF CHILDREN", "50573-5", 100761),
+    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "WARNINGS", "50566-9"),
+    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "PURPOSE(S)", "50565-1"),
+    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "ACTIVE INGREDIENT", "50564-4"),
+    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "WHEN USING", "50567-7"),
+    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "ASK DOCTOR", "50569-3"),
+    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "ASK DOCTOR/PHARMACIST", "50570-1"),
+    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "DO NOT USE", "50568-5"),
+    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "STOP USE", "50571-9"),
+    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "QUESTIONS", "50563-6"),
+    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "PREGNANCY OR BREAST FEEDING", "50572-7"),
+    ("HUMAN OVER-THE-COUNTER (OTC) DRUG PRODUCTS (DRUG FACTS)", "KEEP OUT OF REACH OF CHILDREN", "50573-5"),
 
     # Group 4: Other Sections
-    ("Other Sections", "ACCESSORIES", "ACCESSORIES", 23),
-    ("Other Sections", "ALARMS", "ALARMS", 23),
-    ("Other Sections", "ASSEMBLY OR INSTALLATION INSTRUCTIONS", "ASSEMBLY OR INSTALLATION INSTRUCTIONS", 3),
-    ("Other Sections", "CALIBRATION INSTRUCTIONS", "CALIBRATION INSTRUCTIONS", 1),
-    ("Other Sections", "CLEANING, DISINFECTING, AND STERILIZATION INSTRUCTIONS", "CLEANING, DISINFECTING, AND STERILIZATION INSTRUCTIONS", 181),
-    ("Other Sections", "COMPATIBLE ACCESSORIES", "COMPATIBLE ACCESSORIES", 8),
-    ("Other Sections", "COMPONENTS", "COMPONENTS", 4634),
-    ("Other Sections", "DIAGRAM OF DEVICE", "DIAGRAM OF DEVICE", 13),
-    ("Other Sections", "DISPOSAL AND WASTE HANDLING", "DISPOSAL AND WASTE HANDLING", 100),
-    ("Other Sections", "ENVIRONMENTAL WARNING", "ENVIRONMENTAL WARNING", 97),
-    ("Other Sections", "INFORMATION FOR OWNERS/CAREGIVERS", "INFORMATION FOR OWNERS/CAREGIVERS", 466),
-    ("Other Sections", "INSTRUCTIONS FOR USE", "INSTRUCTIONS FOR USE", 5005),
-    ("Other Sections", "INTENDED USE OF THE DEVICE", "INTENDED USE OF THE DEVICE", 130),
-    ("Other Sections", "OTHER SAFETY INFORMATION", "OTHER SAFETY INFORMATION", 16484),
-    ("Other Sections", "PACKAGE LABEL.PRINCIPAL DISPLAY PANEL", "PACKAGE LABEL.PRINCIPAL DISPLAY PANEL", 159693),
-    ("Other Sections", "RESIDUE WARNING", "RESIDUE WARNING", 216),
-    ("Other Sections", "RISKS", "RISKS", 620),
-    ("Other Sections", "ROUTE, METHOD AND FREQUENCY OF ADMINISTRATION", "ROUTE, METHOD AND FREQUENCY OF ADMINISTRATION", 898),
-    ("Other Sections", "SAFE HANDLING WARNING", "SAFE HANDLING WARNING", 1427),
-    ("Other Sections", "SPL INDEXING DATA ELEMENTS", "SPL INDEXING DATA ELEMENTS", 134),
-    ("Other Sections", "SPL PRODUCT DATA ELEMENTS", "SPL PRODUCT DATA ELEMENTS", 159725),
-    ("Other Sections", "SPL MEDGUIDE", "SPL MEDGUIDE", 12985),
-    ("Other Sections", "SPL PATIENT PACKAGE INSERT", "SPL PATIENT PACKAGE INSERT", 7482),
-    ("Other Sections", "SPL UNCLASSIFIED SECTION", "SPL UNCLASSIFIED SECTION", 83329),
-    ("Other Sections", "STATEMENT OF IDENTITY", "STATEMENT OF IDENTITY", 833),
-    ("Other Sections", "STORAGE AND HANDLING", "STORAGE AND HANDLING", 46415),
-    ("Other Sections", "SUMMARY OF SAFETY AND EFFECTIVENESS", "SUMMARY OF SAFETY AND EFFECTIVENESS", 153),
-    ("Other Sections", "TROUBLESHOOTING", "TROUBLESHOOTING", 22),
-    ("Other Sections", "USER SAFETY WARNINGS", "USER SAFETY WARNINGS", 520),
-    ("Other Sections", "VETERINARY INDICATIONS", "VETERINARY INDICATIONS", 699),
+    ("Other Sections", "ACCESSORIES", "ACCESSORIES"),
+    ("Other Sections", "ALARMS", "ALARMS"),
+    ("Other Sections", "ASSEMBLY OR INSTALLATION INSTRUCTIONS", "ASSEMBLY OR INSTALLATION INSTRUCTIONS"),
+    ("Other Sections", "CALIBRATION INSTRUCTIONS", "CALIBRATION INSTRUCTIONS"),
+    ("Other Sections", "CLEANING, DISINFECTING, AND STERILIZATION INSTRUCTIONS", "CLEANING, DISINFECTING, AND STERILIZATION INSTRUCTIONS"),
+    ("Other Sections", "COMPATIBLE ACCESSORIES", "COMPATIBLE ACCESSORIES"),
+    ("Other Sections", "COMPONENTS", "COMPONENTS"),
+    ("Other Sections", "DIAGRAM OF DEVICE", "DIAGRAM OF DEVICE"),
+    ("Other Sections", "DISPOSAL AND WASTE HANDLING", "DISPOSAL AND WASTE HANDLING"),
+    ("Other Sections", "ENVIRONMENTAL WARNING", "ENVIRONMENTAL WARNING"),
+    ("Other Sections", "INFORMATION FOR OWNERS/CAREGIVERS", "INFORMATION FOR OWNERS/CAREGIVERS"),
+    ("Other Sections", "INSTRUCTIONS FOR USE", "INSTRUCTIONS FOR USE"),
+    ("Other Sections", "INTENDED USE OF THE DEVICE", "INTENDED USE OF THE DEVICE"),
+    ("Other Sections", "OTHER SAFETY INFORMATION", "OTHER SAFETY INFORMATION"),
+    ("Other Sections", "PACKAGE LABEL.PRINCIPAL DISPLAY PANEL", "PACKAGE LABEL.PRINCIPAL DISPLAY PANEL"),
+    ("Other Sections", "RESIDUE WARNING", "RESIDUE WARNING"),
+    ("Other Sections", "RISKS", "RISKS"),
+    ("Other Sections", "ROUTE, METHOD AND FREQUENCY OF ADMINISTRATION", "ROUTE, METHOD AND FREQUENCY OF ADMINISTRATION"),
+    ("Other Sections", "SAFE HANDLING WARNING", "SAFE HANDLING WARNING"),
+    ("Other Sections", "SPL INDEXING DATA ELEMENTS", "SPL INDEXING DATA ELEMENTS"),
+    ("Other Sections", "SPL PRODUCT DATA ELEMENTS", "SPL PRODUCT DATA ELEMENTS"),
+    ("Other Sections", "SPL MEDGUIDE", "SPL MEDGUIDE"),
+    ("Other Sections", "SPL PATIENT PACKAGE INSERT", "SPL PATIENT PACKAGE INSERT"),
+    ("Other Sections", "SPL UNCLASSIFIED SECTION", "SPL UNCLASSIFIED SECTION"),
+    ("Other Sections", "STATEMENT OF IDENTITY", "STATEMENT OF IDENTITY"),
+    ("Other Sections", "STORAGE AND HANDLING", "STORAGE AND HANDLING"),
+    ("Other Sections", "SUMMARY OF SAFETY AND EFFECTIVENESS", "SUMMARY OF SAFETY AND EFFECTIVENESS"),
+    ("Other Sections", "TROUBLESHOOTING", "TROUBLESHOOTING"),
+    ("Other Sections", "USER SAFETY WARNINGS", "USER SAFETY WARNINGS"),
+    ("Other Sections", "VETERINARY INDICATIONS", "VETERINARY INDICATIONS"),
 ]
 
 
@@ -861,8 +861,8 @@ def options():
                 return jsonify({
                     **oracle,
                     'sections': [
-                        {'value': code_or_val, 'label': label, 'group': group, 'count': default_count}
-                        for group, label, code_or_val, default_count in SECTION_TAXONOMY
+                        {'value': code_or_val, 'label': label, 'group': group}
+                        for group, label, code_or_val in SECTION_TAXONOMY
                     ],
                     'source': target_db,
                 })
@@ -885,23 +885,18 @@ def options():
 
         # Group cached items by category
         grouped = {}
-        db_counts = {}
         for r in cache_rows:
             cat = r['category']
             if cat not in grouped:
                 grouped[cat] = []
             grouped[cat].append({'value': r['key_name'], 'count': r['item_count']})
-            if cat in ('db_counts', 'sections'):
-                db_counts[r['key_name']] = r['item_count']
 
         sections = []
-        for group, label, code_or_val, default_count in SECTION_TAXONOMY:
-            cnt = db_counts.get(code_or_val) or db_counts.get(label.upper()) or default_count
+        for group, label, code_or_val in SECTION_TAXONOMY:
             sections.append({
                 'value': code_or_val,
                 'label': label,
-                'group': group,
-                'count': cnt
+                'group': group
             })
 
         return jsonify({

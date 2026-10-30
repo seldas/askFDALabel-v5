@@ -684,8 +684,7 @@ export function CriterionCard({
                   <optgroup key={groupLabel} label={groupLabel}>
                     {opts.map((o) => (
                       <option key={`${groupLabel}-${o.value}`} value={o.value}>
-                        {(o.label || o.value) +
-                          (o.count !== undefined ? ` (${o.count} labeling)` : '')}
+                        {o.label || o.value}
                       </option>
                     ))}
                   </optgroup>
