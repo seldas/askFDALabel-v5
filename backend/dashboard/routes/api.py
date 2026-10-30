@@ -2716,14 +2716,26 @@ def api_faers_emerging():
             else:
                 resp.raise_for_status()
 
-        counts_recent = fetch_counts(p1_start, p1_end)
-        counts_prev = fetch_counts(p2_start, p2_end)
+        capped_days = []
+
+        def fetch_complete_counts(start, end):
+            counts = fetch_counts(start.strftime('%Y%m%d'), end.strftime('%Y%m%d'))
+            if len(counts) < 1000:
+                return counts
+            if start >= end:
+                capped_days.append(start.strftime('%Y-%m-%d'))
+                return counts
+            middle = start + timedelta(days=(end - start).days // 2)
+            left = fetch_complete_counts(start, middle)
+            right = fetch_complete_counts(middle + timedelta(days=1), end)
+            for term, count in right.items():
+                left[term] = left.get(term, 0) + count
+            return left
+
+        counts_recent = fetch_complete_counts(datetime.strptime(p1_start, '%Y%m%d'), datetime.strptime(p1_end, '%Y%m%d'))
+        counts_prev = fetch_complete_counts(datetime.strptime(p2_start, '%Y%m%d'), datetime.strptime(p2_end, '%Y%m%d'))
 
         counts_all = fetch_counts()
-        if len(counts_recent) >= 1000:
-            raise RuntimeError('Recent-period results reached the 1000-term limit; the emerging AE list may be incomplete.')
-        if len(counts_prev) >= 1000:
-            raise RuntimeError('Previous-period results reached the 1000-term limit; emerging status cannot be determined reliably.')
         emerging_terms = set(counts_recent) - set(counts_prev)
         all_terms = set(list(counts_all)[:200])
         emerging_top = set(sorted(emerging_terms, key=lambda term: (-counts_recent[term], term))[:100])
@@ -2796,7 +2808,9 @@ def api_faers_emerging():
             'metadata': {
                 'drug': clean_name,
                 'term_limit_per_period': 1000,
-                'recent_results_truncated': len(counts_recent) >= 1000,
+                'recent_results_truncated': False,
+                'previous_results_truncated': False,
+                'capped_days': capped_days,
                 'recent_period': [p1_start, p1_end],
                 'previous_period': [p2_start, p2_end]
             }

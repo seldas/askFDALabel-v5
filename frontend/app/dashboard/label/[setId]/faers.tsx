@@ -67,6 +67,7 @@ function EmergingAeAnalysis({
   const [aiLoading, setAiLoading] = useState(false);
   const [data, setData] = useState<EmergingAe[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [coverageWarning, setCoverageWarning] = useState<string | null>(null);
   const [aiMinCount, setAiMinCount] = useState(10);
   const [scope, setScope] = useState<'all' | 'emerging'>('emerging');
   const [aiModalOpen, setAiModalOpen] = useState(false);
@@ -182,6 +183,11 @@ function EmergingAeAnalysis({
         throw new Error(errJson.message || errJson.error || 'Failed to fetch analysis');
       }
       const json = await resp.json();
+      const warnings: string[] = [];
+      if (json.metadata?.recent_results_truncated) warnings.push('The recent-period results reached the 1,000-term limit; some emerging AEs may be missing.');
+      if (json.metadata?.previous_results_truncated) warnings.push('The previous-period results reached the 1,000-term limit; some AEs may be incorrectly classified as emerging.');
+      if (json.metadata?.capped_days?.length) warnings.push('One or more days reached the 1,000-term cap; emerging results may be incomplete or misclassified.');
+      setCoverageWarning(warnings.length ? warnings.join(' ') : null);
       
       const aiResp = await fetch(`/api/dashboard/faers/ai_results?set_id=${setId}&drug_name=${encodeURIComponent(drugName || '')}`);
       const aiJson = aiResp.ok ? await aiResp.json() : {};
@@ -277,8 +283,9 @@ function EmergingAeAnalysis({
       </div>
       <p className="faers-description">
         {scope === 'emerging' ? 'Up to 100 reactions reported in the recent five years but absent in the preceding five years. Counts reflect the recent period.' : 'Top 200 reactions across available FAERS reporting years. Counts reflect all-time reports.'}
-        {' '}Exact matching checks label text; semantic AI checks synonyms and clinical context. Each period retrieves up to 1,000 terms from openFDA.
+        {' '}Exact matching checks label text; semantic AI checks synonyms and clinical context. Period counts are combined across date ranges when needed.
       </p>
+      {scope === 'emerging' && coverageWarning && <div role="alert" className="faers-ai-warning">{coverageWarning}</div>}
       <Modal isOpen={aiModalOpen} onClose={() => setAiModalOpen(false)} title="Configure AI Semantic Analysis">
         <div className="faers-ai-options">
           <label><input type="checkbox" checked={useCountThreshold} onChange={e => setUseCountThreshold(e.target.checked)} /> Occurrence &gt;
@@ -598,7 +605,7 @@ function EmergingAeAnalysis({
                     </div>
                 )}
             </div>
-            <p className="faers-description">Reports by receipt year; the current year is incomplete. Cumulative counts start at the selected period. FAERS reports do not establish incidence or causality.</p>
+            <p className="faers-description">Reports by receipt year; the current year is incomplete. Cumulative counts start at the selected period. AE aggregation has a hard cap of 1,000 terms per day. FAERS reports do not establish incidence or causality.</p>
           </div>
         </div>
       )}
