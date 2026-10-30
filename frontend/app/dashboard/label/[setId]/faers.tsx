@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   LineChart, 
   Line, 
@@ -86,6 +86,8 @@ function EmergingAeAnalysis({
   const [trendData, setTrendData] = useState<TrendPoint[]>([]);
   const [trendLoading, setTrendLoading] = useState(false);
   const [trendError, setTrendError] = useState<string | null>(null);
+  const [trendSubstitution, setTrendSubstitution] = useState<{ term: string; substitute: string } | null>(null);
+  const trendRequest = useRef(0);
 
   const toggleFilter = (filter: 'exact' | 'semantic' | 'not_found' | 'not_analyzed') => {
     setActiveFilters(prev => {
@@ -115,11 +117,14 @@ function EmergingAeAnalysis({
     if (selectedAe) {
         fetchTrend(selectedAe.term);
     }
+    return () => { trendRequest.current += 1; };
   }, [selectedAe]);
 
   const fetchTrend = async (term: string) => {
+    const requestId = ++trendRequest.current;
     setTrendLoading(true);
     setTrendError(null);
+    setTrendSubstitution(null);
     try {
         const resp = await fetch('/api/dashboard/faers/trends', {
             method: 'POST',
@@ -127,7 +132,9 @@ function EmergingAeAnalysis({
             body: JSON.stringify({ drug_name: drugName, terms: [term], period: 'all' })
         });
         const json = await resp.json();
+        if (requestId !== trendRequest.current) return;
         if (!resp.ok) throw new Error(json.message || json.error || 'FAERS trend retrieval failed.');
+        if (json.substitutions?.[term]) setTrendSubstitution({ term, substitute: json.substitutions[term] });
         const rawPoints = json.trends[term] || [];
 
         const years = new Map<number, number>();
@@ -147,11 +154,12 @@ function EmergingAeAnalysis({
         }
         setTrendData(formatted);
     } catch (e) {
+        if (requestId !== trendRequest.current) return;
         console.error("Failed to fetch trend", e);
         setTrendData([]);
         setTrendError(e instanceof Error ? e.message : 'FAERS trend retrieval failed.');
     } finally {
-        setTrendLoading(false);
+        if (requestId === trendRequest.current) setTrendLoading(false);
     }
   };
 
@@ -518,6 +526,7 @@ function EmergingAeAnalysis({
                 )}
             </div>
             <p className="faers-description">Reports by receipt year; the current year is incomplete. FAERS reports do not establish incidence or causality.</p>
+            {selectedAe && trendSubstitution?.term === selectedAe.term && <p className="faers-description" role="status">OpenFDA was queried using the substitute term “{trendSubstitution.substitute}”. Results may not accurately represent “{trendSubstitution.term}”.</p>}
           </div>
         </div>
       )}

@@ -2635,6 +2635,7 @@ def api_faers_trends():
     range_end = datetime(current_year, 12, 31)
     
     trends = {}
+    substitutions = {}
 
     for term in terms:
         try:
@@ -2653,6 +2654,7 @@ def api_faers_trends():
                 resp = requests.get(base_url, params=params, timeout=(3, 10))
                 if resp.status_code in (400, 404) and '^' in term:
                     fallback_term = term.replace('^', "'")
+                    substitutions[term] = fallback_term
                     fallback_search = f'{search_term} AND patient.reaction.reactionmeddrapt.exact:"{fallback_term}"'
                     params['search'] = f'{fallback_search} AND receivedate:[{date_string(start)} TO {date_string(end)}]'
                     resp = requests.get(base_url, params=params, timeout=(3, 10))
@@ -2676,7 +2678,7 @@ def api_faers_trends():
             logger.error(f"Error fetching trend for {term}: {e}")
             return jsonify({'error': 'FAERS trend data could not be retrieved from OpenFDA. Please try again later.'}), 503
 
-    return jsonify({'trends': trends})
+    return jsonify({'trends': trends, 'substitutions': substitutions})
 
 @api_bp.route('/faers/emerging', methods=['POST'])
 def api_faers_emerging():
