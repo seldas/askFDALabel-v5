@@ -8,6 +8,12 @@
 .faers-button:focus-visible, .faers-toggle button:focus-visible, .faers-ai-options input:focus-visible { outline:2px solid var(--fdl-blue-600); outline-offset:2px; }
 .faers-toggle { display:flex; gap:4px; }
 .faers-description { font-size:.82rem; color:var(--fdl-muted); line-height:1.5; margin:12px 0 20px; }
+.faers-search-bar { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin:0 0 4px; font-size:.8rem; }
+.faers-search-bar label { font-weight:700; }
+.faers-search-bar input { flex:1 1 220px; max-width:400px; min-height:36px; padding:7px 10px; border:1px solid var(--fdl-line); border-radius:var(--fdl-radius-sm, 2px); background:var(--fdl-paper); color:var(--fdl-ink); font:inherit; }
+.faers-search-bar input:focus-visible { outline:2px solid var(--fdl-blue-600); outline-offset:2px; }
+.faers-search-bar span, .faers-search-hint { color:var(--fdl-muted); font-size:.75rem; }
+.faers-search-hint { margin:0 0 12px; }
 .faers-ai-options { display:grid; gap:12px; color:var(--fdl-ink); }
 .faers-ai-options label { display:flex; align-items:center; gap:8px; font-size:.85rem; }
 .faers-ai-options input { accent-color:var(--fdl-blue-700); }

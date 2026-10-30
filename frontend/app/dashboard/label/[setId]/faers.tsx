@@ -80,6 +80,7 @@ function EmergingAeAnalysis({
   // Pagination & Filtering Logic
   const [activeFilters, setActiveFilters] = useState<Set<'exact' | 'semantic' | 'not_found' | 'not_analyzed'>>(new Set(['exact', 'semantic', 'not_found', 'not_analyzed']));
   const [selectedSocs, setSelectedSocs] = useState<Set<string> | null>(null);
+  const [termSearch, setTermSearch] = useState('');
 
   // Trend State
   const [selectedAe, setSelectedAe] = useState<EmergingAe | null>(null);
@@ -111,7 +112,7 @@ function EmergingAeAnalysis({
   // Reset to first page when data or itemsPerPage changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [data, itemsPerPage, scope, activeFilters, selectedSocs]);
+  }, [data, itemsPerPage, scope, activeFilters, selectedSocs, termSearch]);
 
   useEffect(() => {
     if (selectedAe) {
@@ -243,6 +244,7 @@ function EmergingAeAnalysis({
   const socOptions = Array.from(new Set((data || []).map(ae => ae.soc && ae.soc !== 'N/A' ? ae.soc : 'Unmapped'))).sort((a, b) => a.localeCompare(b));
   const filteredData = data ? data.filter(ae => {
     if (scope === 'recent' ? !ae.in_emerging : !ae.in_all_time) return false;
+    if (!ae.term.toLocaleLowerCase().includes(termSearch.trim().toLocaleLowerCase())) return false;
     const soc = ae.soc && ae.soc !== 'N/A' ? ae.soc : 'Unmapped';
     if (selectedSocs !== null && !selectedSocs.has(soc)) return false;
     const status = ae.label_matches?.length ? 'exact' : !ae.ai_match ? 'not_analyzed' : ae.ai_match.found ? 'semantic' : 'not_found';
@@ -258,7 +260,7 @@ function EmergingAeAnalysis({
     <div className="chart-card full-width faers-analysis" style={{ marginTop: '0', borderTop: 'none', paddingTop: '0' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--fdl-canvas)', padding: '14px 20px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--fdl-navy-950)' }}>Adverse Event Reports</h3>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--fdl-navy-950)' }}>FAERS Adverse Events &amp; Label Evidence{drugName ? ` · ${drugName}` : ''}</h3>
         </div>
         {loading && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -311,6 +313,12 @@ function EmergingAeAnalysis({
 
       {data && (
         <div className="table-container" style={{ marginTop: '0', overflowX: 'auto' }}>
+          <div className="faers-search-bar">
+            <label htmlFor="faers-term-search">Filter AE terms</label>
+            <input id="faers-term-search" type="search" value={termSearch} onChange={event => setTermSearch(event.target.value)} placeholder="Search terms, e.g. Crohn" />
+            <span aria-live="polite">{totalItems} matching {totalItems === 1 ? 'term' : 'terms'}</span>
+          </div>
+          <p className="faers-search-hint">Search filters the selected Top 200 list.</p>
           <table className="coverage-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--fdl-line)', background: 'var(--fdl-line-soft)' }}>
@@ -392,7 +400,7 @@ function EmergingAeAnalysis({
               )) : (
                 <tr>
                   <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--fdl-muted)', fontStyle: 'italic' }}>
-                    No AE terms match the selected reporting period and match filters.
+                    No AE terms match the current search and filters.
                   </td>
                 </tr>
               )}
