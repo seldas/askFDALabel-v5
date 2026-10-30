@@ -227,21 +227,18 @@ def parse_product_section(sec_el):
 # --- 3. FORMAT-SPECIFIC HANDLERS ---
 
 def _process_plr_label(sections, highlights):
-    """PLR specific: Enforces 1-17 numbering and extracts highlights."""
+    """Keep canonical section metadata without adding numbers to titles."""
     processed_toc = []
     
     for s in sections:
-        # Enforce Canonical Numbering based on Code
+        # Canonical numbers are metadata; preserve numbering in the source title.
         if s.get('code') in PLR_MAP:
             s['numeric_id'] = PLR_MAP[s['code']]
             canonical_title = PLR_TITLE_MAP.get(s['numeric_id'], "")
             
             # Reconstruct title if missing or messy
             if not s['title'] or 'UNCLASSIFIED' in s['title'].upper():
-                s['title'] = f"{s['numeric_id']} {canonical_title}"
-            elif s['numeric_id'] not in s['title']:
-                # Ensure title has the number
-                s['title'] = f"{s['numeric_id']} {s['title']}"
+                s['title'] = canonical_title
         
         # Build TOC Item
         toc_title = "Boxed Warnings" if s.get('is_boxed_warning') else s['title']
@@ -257,29 +254,13 @@ def _process_plr_label(sections, highlights):
     return sections, processed_toc
 
 def _process_non_plr_label(sections):
-    """non-PLR specific: Sequential numbering without strict 1-17 rules."""
+    """Build the non-PLR contents using source titles and section numbers."""
     processed_toc = []
-    count = 1
-    
-    EXCLUDE_FROM_NUMBERING = ["RX ONLY", "PACKAGE LABEL", "PRINCIPAL DISPLAY PANEL", "RECENT MAJOR CHANGES", "DOCUMENT HISTORY", "REVISION HISTORY"]
 
     for s in sections:
-        title = s.get('title', "").strip()
-        is_excluded = any(ex in title.upper() for ex in EXCLUDE_FROM_NUMBERING)
         is_boxed = s.get('is_boxed_warning', False)
         
         num_id = s.get('numeric_id')
-        
-        if title and not num_id and not is_boxed and not is_excluded:
-            # Auto-number ONLY if it's not excluded
-            num_id = str(count)
-            # Update the section title in place for the view?
-            # User asked to HIDE non-official numbers.
-            # So maybe we just don't add it to the title text, but keep it for ID.
-            if not re.match(r'^\d', title):
-                s['title'] = f"{count}. {title}"
-                s['numeric_id'] = num_id
-            count += 1
         
         toc_title = "Boxed Warnings" if is_boxed else s['title']
         processed_toc.append({
