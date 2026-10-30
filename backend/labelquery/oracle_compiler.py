@@ -934,32 +934,27 @@ def compile_oracle_predicates(query, expand_meddra=None, capabilities=None,
                 text_query = _format_contains_query(raw_text, mode)
                 sections = _as_list(cval.get('sections'))
                 
+                sec_loincs_set = set()
+                for section in sections:
+                    if text_query and section in ('SPLTITLE', '43683-2'):
+                        continue
+                    if re.match(r'^[\d.\-]+$', section):
+                        sec_loincs_set.add(section)
+                    else:
+                        clean = re.sub(r'^[0-9]+(\.[0-9]+)*\s*', '', section).strip().upper()
+                        sec_loincs_set.update(TITLE_TO_LOINCS.get(clean, [section]))
+
+                clauses = []
+                if sec_loincs_set:
+                    # IN matches any selected section (union), even without text.
+                    loinc_params = ', '.join(bag.add(code) for code in sorted(sec_loincs_set))
+                    clauses.append(f'sec.LOINC_CODE IN ({loinc_params})')
                 if text_query:
                     p = bag.add(text_query)
                     contains_label += 1
-                    contains_expr = f'CONTAINS(sec.CONTENT_XML, {p}, {contains_label}) > 0'
-                    if sections:
-                        sec_loincs_set = set()
-                        for s in sections:
-                            if s in ('SPLTITLE', '43683-2'):
-                                continue
-                            if re.match(r'^[\d.\-]+$', s):
-                                sec_loincs_set.add(s)
-                            else:
-                                clean = re.sub(r'^[0-9]+(\.[0-9]+)*\s*', '', s).strip().upper()
-                                if clean in TITLE_TO_LOINCS:
-                                    for l in TITLE_TO_LOINCS[clean]:
-                                        sec_loincs_set.add(l)
-                                else:
-                                    sec_loincs_set.add(s)
-                        if sec_loincs_set:
-                            loinc_params = ', '.join([bag.add(l) for l in sec_loincs_set])
-                            clause = f'sec.LOINC_CODE IN ({loinc_params}) AND {contains_expr}'
-                        else:
-                            clause = contains_expr
-                    else:
-                        clause = contains_expr
-                    group_text.append(clause)
+                    clauses.append(f'CONTAINS(sec.CONTENT_XML, {p}, {contains_label}) > 0')
+                if clauses:
+                    group_text.append(' AND '.join(clauses))
             elif ctype == 'labelingType':
                 c = _compile_labeling_type(cval, bag, base_table=base_table, warnings=warnings)
                 if c: group_relational.append(c)

@@ -731,6 +731,11 @@ export function CriterionCard({
                 Scope: Searching full text of labeling (no section filter applied)
               </div>
             )}
+            {sections.length > 0 && !String(v.text || '').trim() && (
+              <div className="fdl-help-subtle" style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '4px' }}>
+                No text entered: matches labeling containing any selected section.
+              </div>
+            )}
             {SEARCH_HELP}
           </>
         );
