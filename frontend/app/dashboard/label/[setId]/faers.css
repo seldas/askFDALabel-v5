@@ -33,6 +33,13 @@
 .faers-soc-options label { display:flex; gap:8px; align-items:flex-start; cursor:pointer; }
 .faers-soc-options input { accent-color:var(--fdl-blue-700); }
 .faers-soc-menu small { display:block; margin-top:10px; color:var(--fdl-muted); }
+.faers-evidence { font-size:.76rem; line-height:1.45; color:var(--fdl-ink-soft); }
+.faers-evidence > strong { color:var(--fdl-blue-700); }
+.faers-evidence p { margin:4px 0 8px; }
+.faers-evidence-detail { margin-top:8px; padding-left:8px; border-left:2px solid var(--fdl-line); }
+.faers-evidence details { margin-top:8px; }
+.faers-evidence summary { cursor:pointer; color:var(--fdl-blue-700); }
+.faers-evidence-muted { font-size:.76rem; color:var(--fdl-muted); }
 .faers-analysis .coverage-table td > div { border-radius:var(--fdl-radius-sm, 2px) !important; }
 .faers-trend-controls {
   display: flex;

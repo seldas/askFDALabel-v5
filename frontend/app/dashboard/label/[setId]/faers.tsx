@@ -78,8 +78,8 @@ function EmergingAeAnalysis({
   const [itemsPerPage, setItemsPerPage] = useState(5);
 
   // Pagination & Filtering Logic
-  const [activeFilters, setActiveFilters] = useState<Set<'exact' | 'semantic' | 'none'>>(new Set(['exact', 'semantic', 'none']));
-  const [selectedSocs, setSelectedSocs] = useState<Set<string>>(new Set());
+  const [activeFilters, setActiveFilters] = useState<Set<'exact' | 'semantic' | 'not_found' | 'not_analyzed'>>(new Set(['exact', 'semantic', 'not_found', 'not_analyzed']));
+  const [selectedSocs, setSelectedSocs] = useState<Set<string> | null>(null);
 
   // Trend State
   const [selectedAe, setSelectedAe] = useState<EmergingAe | null>(null);
@@ -87,7 +87,7 @@ function EmergingAeAnalysis({
   const [trendLoading, setTrendLoading] = useState(false);
   const [trendError, setTrendError] = useState<string | null>(null);
 
-  const toggleFilter = (filter: 'exact' | 'semantic' | 'none') => {
+  const toggleFilter = (filter: 'exact' | 'semantic' | 'not_found' | 'not_analyzed') => {
     setActiveFilters(prev => {
         const next = new Set(prev);
         if (next.has(filter)) {
@@ -236,15 +236,9 @@ function EmergingAeAnalysis({
   const filteredData = data ? data.filter(ae => {
     if (scope === 'recent' ? !ae.in_emerging : !ae.in_all_time) return false;
     const soc = ae.soc && ae.soc !== 'N/A' ? ae.soc : 'Unmapped';
-    if (selectedSocs.size && !selectedSocs.has(soc)) return false;
-    const isExact = ae.label_matches && ae.label_matches.length > 0;
-    const isSemantic = ae.ai_match?.found === true;
-    const isNone = !isExact && !isSemantic;
-
-    if (activeFilters.has('exact') && isExact) return true;
-    if (activeFilters.has('semantic') && isSemantic) return true;
-    if (activeFilters.has('none') && isNone) return true;
-    return false;
+    if (selectedSocs !== null && !selectedSocs.has(soc)) return false;
+    const status = ae.label_matches?.length ? 'exact' : !ae.ai_match ? 'not_analyzed' : ae.ai_match.found ? 'semantic' : 'not_found';
+    return activeFilters.has(status);
   }).sort((a, b) => scope === 'recent' ? b.recent_count - a.recent_count : b.count - a.count) : [];
 
   const totalItems = filteredData.length;
@@ -309,60 +303,6 @@ function EmergingAeAnalysis({
 
       {data && (
         <div className="table-container" style={{ marginTop: '0', overflowX: 'auto' }}>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', padding: '0 4px' }}>
-              <button 
-                onClick={() => toggleFilter('exact')}
-                style={{
-                    padding: '5px 12px',
-                    borderRadius: 'var(--fdl-radius-sm, 2px)',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    border: '1px solid',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    backgroundColor: activeFilters.has('exact') ? 'var(--fdl-green-050)' : 'transparent',
-                    color: activeFilters.has('exact') ? 'var(--fdl-green)' : 'var(--fdl-muted)',
-                    borderColor: activeFilters.has('exact') ? 'var(--fdl-green)' : 'var(--fdl-line)',
-                }}
-              >
-                  {activeFilters.has('exact') ? '✓ ' : ''}Exact Match
-              </button>
-              <button 
-                onClick={() => toggleFilter('semantic')}
-                style={{
-                    padding: '5px 12px',
-                    borderRadius: 'var(--fdl-radius-sm, 2px)',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    border: '1px solid',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    backgroundColor: activeFilters.has('semantic') ? 'var(--fdl-green-050)' : 'transparent',
-                    color: activeFilters.has('semantic') ? 'var(--fdl-green)' : 'var(--fdl-muted)',
-                    borderColor: activeFilters.has('semantic') ? 'var(--fdl-green)' : 'var(--fdl-line)',
-                }}
-              >
-                  {activeFilters.has('semantic') ? '✓ ' : ''}Semantic Match
-              </button>
-              <button 
-                onClick={() => toggleFilter('none')}
-                style={{
-                    padding: '5px 12px',
-                    borderRadius: 'var(--fdl-radius-sm, 2px)',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    border: '1px solid',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    backgroundColor: activeFilters.has('none') ? 'var(--fdl-red-050)' : 'transparent',
-                    color: activeFilters.has('none') ? 'var(--fdl-red)' : 'var(--fdl-muted)',
-                    borderColor: activeFilters.has('none') ? 'var(--fdl-red)' : 'var(--fdl-line)',
-                }}
-              >
-                  {activeFilters.has('none') ? '✓ ' : ''}Not Matched
-              </button>
-          </div>
-
           <table className="coverage-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--fdl-line)', background: 'var(--fdl-line-soft)' }}>
@@ -371,18 +311,28 @@ function EmergingAeAnalysis({
                 <th style={{ padding: '10px 12px' }}>Recent 5 years</th>
                 <th style={{ padding: '10px 12px', width: '18%' }}>
                   <details className="faers-soc-filter">
-                    <summary>SOC Hierarchy{selectedSocs.size > 0 ? ` (${selectedSocs.size})` : ''}</summary>
+                    <summary>SOC Hierarchy{selectedSocs !== null ? ` (${selectedSocs.size})` : ''}</summary>
                     <div className="faers-soc-menu">
-                      <div className="faers-soc-menu-header"><strong>Filter by primary SOC</strong><button type="button" onClick={() => setSelectedSocs(new Set())}>Clear</button></div>
+                      <div className="faers-soc-menu-header"><strong>Filter by primary SOC</strong></div>
+                      <div className="faers-soc-menu-header"><button type="button" onClick={() => setSelectedSocs(null)}>Select all</button><button type="button" onClick={() => setSelectedSocs(new Set())}>Unselect all</button></div>
                       <div className="faers-soc-options">
-                        {socOptions.map(soc => <label key={soc}><input type="checkbox" checked={selectedSocs.has(soc)} onChange={() => setSelectedSocs(previous => { const next = new Set(previous); if (next.has(soc)) next.delete(soc); else next.add(soc); return next; })} /> <span>{soc}</span></label>)}
+                        {socOptions.map(soc => <label key={soc}><input type="checkbox" checked={selectedSocs === null || selectedSocs.has(soc)} onChange={() => setSelectedSocs(previous => { const next = new Set(previous === null ? socOptions : previous); if (next.has(soc)) next.delete(soc); else next.add(soc); return next; })} /> <span>{soc}</span></label>)}
                       </div>
-                      <small>No selections shows all categories.</small>
+                      <small>Select categories to filter the table.</small>
                     </div>
                   </details>
                 </th>
-                <th style={{ padding: '10px 12px', width: '26%' }}>Direct Match Context</th>
-                <th style={{ padding: '10px 12px', width: '26%' }}>AI Semantic Validation</th>
+                <th style={{ padding: '10px 12px', width: '26%' }}>
+                  <details className="faers-soc-filter">
+                    <summary>Label Evidence</summary>
+                    <div className="faers-soc-menu">
+                      <strong>Filter by match status</strong>
+                      <div className="faers-soc-options">
+                        {([['exact', 'Exact match'], ['semantic', 'AI match'], ['not_found', 'Not found'], ['not_analyzed', 'Not analyzed']] as const).map(([value, label]) => <label key={value}><input type="checkbox" checked={activeFilters.has(value)} onChange={() => toggleFilter(value)} /> <span>{label}</span></label>)}
+                      </div>
+                    </div>
+                  </details>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -417,58 +367,23 @@ function EmergingAeAnalysis({
                     {ae.hlt && ae.hlt !== 'N/A' && <div style={{ fontSize: '0.7rem', color: 'var(--fdl-muted)', fontWeight: 500, marginTop: '2px' }}>{ae.hlt}</div>}
                   </td>
                   <td style={{ padding: '12px' }}>
-                    {ae.label_matches && ae.label_matches.length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {ae.label_matches.map((match, mIdx) => (
-                          <div key={mIdx} style={{ background: 'var(--fdl-green-050)', padding: '8px', borderRadius: '2px', borderLeft: '3px solid var(--fdl-green)' }}>
-                            <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--fdl-green)', marginBottom: '4px', textTransform: 'uppercase' }}>
-                                Found in: {match.section}
-                            </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--fdl-ink-soft)', lineHeight: 1.4, fontStyle: 'italic' }}>
-                                "...{match.snippet}..."
-                            </div>
-                          </div>
-                        ))}
+                    {ae.label_matches?.length > 0 ? (
+                      <div className="faers-evidence">
+                        <strong>Exact match</strong>
+                        {ae.label_matches.map((match, index) => <div key={index} className="faers-evidence-detail"><strong>{match.section}</strong><p>{match.snippet}</p></div>)}
+                        {ae.ai_match && <details onClick={event => event.stopPropagation()}><summary>AI analysis</summary><p>{ae.ai_match.found ? `AI match${ae.ai_match.section ? ` · ${ae.ai_match.section}` : ''}` : 'Not found by AI'}: {ae.ai_match.explanation}</p></details>}
                       </div>
-                    ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--fdl-red)', background: 'var(--fdl-red-050)', padding: '6px 12px', borderRadius: '2px', width: 'fit-content', fontSize: '0.7rem', fontWeight: 800 }}>
-                        <span style={{ fontSize: '1rem' }}>⚠</span> NOT FOUND (EXACT)
+                    ) : ae.ai_match ? (
+                      <div className="faers-evidence">
+                        <strong>{ae.ai_match.found ? `AI match${ae.ai_match.section ? ` · ${ae.ai_match.section}` : ''}` : 'Not found'}</strong>
+                        <p>{ae.ai_match.explanation}</p>
                       </div>
-                    )}
-                  </td>
-                  <td style={{ padding: '12px' }}>
-                    {ae.ai_match ? (
-                        <div style={{ 
-                            background: ae.ai_match.found ? 'var(--fdl-green-050)' : 'var(--fdl-amber-050)', 
-                            padding: '10px', 
-                            borderRadius: '2px', 
-                            border: `1px solid ${ae.ai_match.found ? 'var(--fdl-green)' : 'var(--fdl-amber)'}` 
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                                <span style={{ fontSize: '0.9rem' }}>{ae.ai_match.found ? '✅' : '❓'}</span>
-                                <span style={{ 
-                                    fontSize: '0.7rem', 
-                                    fontWeight: 800, 
-                                    color: ae.ai_match.found ? 'var(--fdl-green)' : 'var(--fdl-amber)',
-                                    textTransform: 'uppercase'
-                                }}>
-                                    {ae.ai_match.found ? `Semantic Match: ${ae.ai_match.section || 'General'}` : 'Still Undocumented'}
-                                </span>
-                            </div>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--fdl-ink-soft)', lineHeight: 1.4 }}>
-                                {ae.ai_match.explanation}
-                            </div>
-                        </div>
-                    ) : (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--fdl-muted)', fontStyle: 'italic', padding: '10px', textAlign: 'center', border: '1px dashed var(--fdl-line)', borderRadius: '2px' }}>
-                            {ae.label_matches.length > 0 ? 'Verified by exact match' : 'Pending AI evaluation'}
-                        </div>
-                    )}
+                    ) : <span className="faers-evidence-muted">Not analyzed</span>}
                   </td>
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--fdl-muted)', fontStyle: 'italic' }}>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--fdl-muted)', fontStyle: 'italic' }}>
                     No AE terms match the selected reporting period and match filters.
                   </td>
                 </tr>
