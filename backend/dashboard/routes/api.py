@@ -2617,6 +2617,9 @@ def api_faers_trends():
     data = request.get_json()
     drug_name = data.get('drug_name')
     terms = data.get('terms', [])
+    period = data.get('period', '5y')
+    if period not in ('5y', '10y', 'all'):
+        return jsonify({'error': 'Invalid trend period'}), 400
 
     if not drug_name or not terms:
         return jsonify({'error': 'Missing drug_name or terms'}), 400
@@ -2625,30 +2628,42 @@ def api_faers_trends():
     search_term = f'(patient.drug.openfda.brand_name:"{drug_name}" OR patient.drug.openfda.generic_name:"{drug_name}")'
     
     current_year = datetime.now().year
-    start_date = f"{current_year - 5}0101"
-    end_date = f"{current_year}1231"
+    range_start = datetime(1, 1, 1) if period == 'all' else datetime(current_year - (5 if period == '5y' else 10), 1, 1)
+    range_end = datetime(current_year, 12, 31)
     
     trends = {}
 
     for term in terms:
         try:
-            term_search = f'{search_term} AND patient.reaction.reactionmeddrapt.exact:"{term}" AND receiptdate:[{start_date} TO {end_date}]'
-            params = {
-                'search': term_search,
-                'count': 'receiptdate'
-            }
-            if Config.OPENFDA_API_KEY:
-                params['api_key'] = Config.OPENFDA_API_KEY
-            
-            resp = requests.get(base_url, params=params, timeout=(3, 10))
-            if resp.status_code == 200:
-                raw_dates = resp.json().get('results', [])
-                raw_dates.sort(key=lambda x: x.get('time', ''))
-                trends[term] = raw_dates
-            elif resp.status_code == 404:
-                trends[term] = []
-            else:
+            term_search = f'{search_term} AND patient.reaction.reactionmeddrapt.exact:"{term}"'
+
+            def fetch_range(start, end):
+                def date_string(value):
+                    return f'{value.year:04d}{value.month:02d}{value.day:02d}'
+
+                params = {
+                    'search': f'{term_search} AND receiptdate:[{date_string(start)} TO {date_string(end)}]',
+                    'count': 'receiptdate', 'limit': 1000,
+                }
+                if Config.OPENFDA_API_KEY:
+                    params['api_key'] = Config.OPENFDA_API_KEY
+                resp = requests.get(base_url, params=params, timeout=(3, 10))
+                if resp.status_code == 404:
+                    return []
                 resp.raise_for_status()
+                results = resp.json().get('results', [])
+                if len(results) < 1000:
+                    return results
+                if start >= end:
+                    raise ValueError('Unable to retrieve a complete trend for this date.')
+                middle = start + (end - start) // 2
+                return fetch_range(start, middle) + fetch_range(middle + timedelta(days=1), end)
+
+            raw_dates = fetch_range(range_start, range_end)
+            raw_dates.sort(key=lambda x: x.get('time', ''))
+            trends[term] = raw_dates
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 503
         except Exception as e:
             logger.error(f"Error fetching trend for {term}: {e}")
             return jsonify({'error': 'FAERS trend data could not be retrieved from OpenFDA. Please try again later.'}), 503
@@ -2705,14 +2720,21 @@ def api_faers_emerging():
         counts_prev = fetch_counts(p2_start, p2_end)
 
         counts_all = fetch_counts()
+        if len(counts_recent) >= 1000:
+            raise RuntimeError('Recent-period results reached the 1000-term limit; the emerging AE list may be incomplete.')
+        if len(counts_prev) >= 1000:
+            raise RuntimeError('Previous-period results reached the 1000-term limit; emerging status cannot be determined reliably.')
         emerging_terms = set(counts_recent) - set(counts_prev)
+        all_terms = set(list(counts_all)[:200])
+        emerging_top = set(sorted(emerging_terms, key=lambda term: (-counts_recent[term], term))[:100])
         # Include recent terms even if they fall outside the all-time top 1000.
         emerging = [
             {'term': term, 'count': counts_all.get(term, count),
              'recent_count': counts_recent.get(term, 0),
              'prev_count': counts_prev.get(term, 0),
-             'is_emerging': term in emerging_terms, 'label_matches': []}
-            for term, count in (counts_all | counts_recent).items()
+             'is_emerging': term in emerging_terms, 'in_all_time': term in all_terms,
+             'in_emerging': term in emerging_top, 'label_matches': []}
+            for term, count in (counts_all | counts_recent).items() if term in all_terms or term in emerging_top
         ]
 
         # Sort by count desc
@@ -2769,11 +2791,12 @@ def api_faers_emerging():
                     logger.error(f"Error scanning XML for emerging AEs: {xml_err}")
 
         return jsonify({
-            'emerging': [dict(ae, count=ae['recent_count']) for ae in emerging if ae['is_emerging']],
+            'emerging': [dict(ae, count=ae['recent_count']) for ae in emerging if ae['in_emerging']],
             'all_time': emerging,
             'metadata': {
                 'drug': clean_name,
                 'term_limit_per_period': 1000,
+                'recent_results_truncated': len(counts_recent) >= 1000,
                 'recent_period': [p1_start, p1_end],
                 'previous_period': [p2_start, p2_end]
             }

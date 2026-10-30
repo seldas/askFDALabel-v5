@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area
+  , BarChart, Bar
 } from 'recharts';
 import './analysis.css';
 import Modal from '../../../components/Modal';
@@ -37,6 +38,8 @@ interface EmergingAe {
   prev_count: number;
   recent_count: number;
   is_emerging: boolean;
+  in_all_time: boolean;
+  in_emerging: boolean;
   soc: string;
   hlt: string;
   soc_abbrev: string;
@@ -48,6 +51,7 @@ interface TrendPoint {
   timestamp: number;
   cumulative: number;
   count?: number;
+  year?: number;
 }
 
 function EmergingAeAnalysis({ 
@@ -82,6 +86,9 @@ function EmergingAeAnalysis({
   const [selectedAe, setSelectedAe] = useState<EmergingAe | null>(null);
   const [trendData, setTrendData] = useState<TrendPoint[]>([]);
   const [trendLoading, setTrendLoading] = useState(false);
+  const [trendPeriod, setTrendPeriod] = useState<'5y' | '10y' | 'all'>('5y');
+  const [trendMetric, setTrendMetric] = useState<'annual' | 'cumulative'>('annual');
+  const [trendError, setTrendError] = useState<string | null>(null);
 
   const toggleFilter = (filter: 'exact' | 'semantic' | 'none') => {
     setActiveFilters(prev => {
@@ -111,63 +118,41 @@ function EmergingAeAnalysis({
     if (selectedAe) {
         fetchTrend(selectedAe.term);
     }
-  }, [selectedAe]);
+  }, [selectedAe, trendPeriod]);
 
   const fetchTrend = async (term: string) => {
     setTrendLoading(true);
+    setTrendError(null);
     try {
         const resp = await fetch('/api/dashboard/faers/trends', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ drug_name: drugName, terms: [term] })
+            body: JSON.stringify({ drug_name: drugName, terms: [term], period: trendPeriod })
         });
         const json = await resp.json();
         if (!resp.ok) throw new Error(json.message || json.error || 'FAERS trend retrieval failed.');
         const rawPoints = json.trends[term] || [];
 
-        // Transform to cumulative format with real timestamps
-        let cumulative = 0;
-        const formatted: TrendPoint[] = rawPoints.map((p: any) => {
-            cumulative += p.count;
-            
-            const year = parseInt(p.time.substring(0, 4));
-            const month = parseInt(p.time.substring(4, 6)) - 1; // 0-indexed
-            const day = parseInt(p.time.substring(6, 8) || "01");
-            const timestamp = new Date(year, month, day).getTime();
-
-            return {
-                timestamp,
-                count: p.count,
-                cumulative: cumulative
-            };
+        const years = new Map<number, number>();
+        rawPoints.forEach((p: { time: string; count: number }) => {
+            const year = Number(p.time.slice(0, 4));
+            years.set(year, (years.get(year) || 0) + p.count);
         });
-
-        // Ensure it starts from 0 exactly 5 years ago
-        const fiveYearsAgo = new Date();
-        fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
-        const startTimestamp = fiveYearsAgo.getTime();
-
-        if (formatted.length > 0) {
-            // Sort by timestamp just in case
-            formatted.sort((a: TrendPoint, b: TrendPoint) => a.timestamp - b.timestamp);
-            
-            // If the first data point is after our 5y window start, prepend a 0 point
-            if (formatted[0].timestamp > startTimestamp) {
-                setTrendData([{ timestamp: startTimestamp, cumulative: 0, count: 0 }, ...formatted]);
-            } else {
-                setTrendData(formatted);
-            }
-        } else {
-            // Even if no data, show a flat line from 0
-            setTrendData([
-                { timestamp: startTimestamp, cumulative: 0 },
-                { timestamp: new Date().getTime(), cumulative: 0 }
-            ]);
+        if (!years.size) { setTrendData([]); return; }
+        const currentYear = new Date().getFullYear();
+        const firstYear = trendPeriod === 'all' ? Math.min(...years.keys()) : currentYear - (trendPeriod === '5y' ? 5 : 10);
+        let cumulative = 0;
+        const formatted: TrendPoint[] = [];
+        for (let year = firstYear; year <= currentYear; year++) {
+            const count = years.get(year) || 0;
+            cumulative += count;
+            formatted.push({ year, timestamp: new Date(year, 0, 1).getTime(), count, cumulative });
         }
+        setTrendData(formatted);
     } catch (e) {
         console.error("Failed to fetch trend", e);
         setTrendData([]);
-        setError(e instanceof Error ? e.message : 'FAERS trend retrieval failed.');
+        setTrendError(e instanceof Error ? e.message : 'FAERS trend retrieval failed.');
     } finally {
         setTrendLoading(false);
     }
@@ -243,7 +228,7 @@ function EmergingAeAnalysis({
 
   const candidateCount = (ae: EmergingAe) => emergingOnly ? ae.recent_count : ae.count;
   const aiCandidates = (data || []).filter(ae =>
-    (!emergingOnly || ae.is_emerging) &&
+    (emergingOnly ? ae.in_emerging : ae.in_all_time) &&
     (!useCountThreshold || candidateCount(ae) > aiMinCount) &&
     (!excludeExact || ae.label_matches.length === 0) &&
     (!skipAnalyzed || !ae.ai_match)
@@ -251,7 +236,7 @@ function EmergingAeAnalysis({
 
   // Pagination & Filtering Logic
   const filteredData = data ? data.filter(ae => {
-    if (scope === 'emerging' && !ae.is_emerging) return false;
+    if (scope === 'emerging' ? !ae.in_emerging : !ae.in_all_time) return false;
     const isExact = ae.label_matches && ae.label_matches.length > 0;
     const isSemantic = ae.ai_match?.found === true;
     const isNone = !isExact && !isSemantic;
@@ -271,7 +256,6 @@ function EmergingAeAnalysis({
     <div className="chart-card full-width faers-analysis" style={{ marginTop: '0', borderTop: 'none', paddingTop: '0' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--fdl-canvas)', padding: '14px 20px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '1.3rem' }}>🆕</span>
             <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--fdl-navy-950)' }}>{scope === 'emerging' ? 'Emerging Adverse Events' : 'All-time Adverse Events'}</h3>
         </div>
         {loading && (
@@ -284,15 +268,15 @@ function EmergingAeAnalysis({
 
       <div className="faers-toolbar">
         <div className="faers-toggle" role="group" aria-label="Adverse event reporting period">
-          <button aria-pressed={scope === 'all'} onClick={() => { setScope('all'); setSelectedAe(null); setTrendData([]); }}>All-time AE</button>
-          <button aria-pressed={scope === 'emerging'} onClick={() => { setScope('emerging'); setSelectedAe(null); setTrendData([]); }}>Emerging AE</button>
+          <button aria-pressed={scope === 'all'} onClick={() => { setScope('all'); setTrendPeriod('all'); setSelectedAe(null); setTrendData([]); }}>All-time AE</button>
+          <button aria-pressed={scope === 'emerging'} onClick={() => { setScope('emerging'); setTrendPeriod('5y'); setSelectedAe(null); setTrendData([]); }}>Emerging AE</button>
         </div>
         <button className="faers-button faers-button-primary" onClick={() => { setEmergingOnly(scope === 'emerging'); setAiModalOpen(true); }} disabled={aiLoading || loading || !data || !setId}>
           {aiLoading ? 'Analyzing AEs…' : 'Run Semantic Analysis'}
         </button>
       </div>
       <p className="faers-description">
-        {scope === 'emerging' ? 'Reactions reported in the recent five years but absent in the preceding five years. Counts reflect the recent period.' : 'Reactions across all available FAERS reporting years. Counts reflect all-time reports.'}
+        {scope === 'emerging' ? 'Up to 100 reactions reported in the recent five years but absent in the preceding five years. Counts reflect the recent period.' : 'Top 200 reactions across available FAERS reporting years. Counts reflect all-time reports.'}
         {' '}Exact matching checks label text; semantic AI checks synonyms and clinical context. Each period retrieves up to 1,000 terms from openFDA.
       </p>
       <Modal isOpen={aiModalOpen} onClose={() => setAiModalOpen(false)} title="Configure AI Semantic Analysis">
@@ -550,7 +534,7 @@ function EmergingAeAnalysis({
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--fdl-ink)' }}>
-                    {selectedAe ? `Recent Five-year Reporting Trend: ${selectedAe.term}` : 'Select an AE term above to view reporting trend'}
+                    {selectedAe ? `Reporting history · ${selectedAe.term}` : 'Select an AE term above to view reporting history'}
                 </h4>
                 {selectedAe && (
                     <div style={{ fontSize: '0.75rem', color: 'var(--fdl-muted)', fontWeight: 600 }}>
@@ -559,14 +543,24 @@ function EmergingAeAnalysis({
                 )}
             </div>
 
+            <div className="faers-trend-controls">
+                <div className="faers-toggle" role="group" aria-label="Trend time range">
+                    {([['5y', '5 years + current'], ['10y', '10 years + current'], ['all', 'All available']] as const).map(([value, label]) => <button key={value} aria-pressed={trendPeriod === value} onClick={() => setTrendPeriod(value)}>{label}</button>)}
+                </div>
+                <div className="faers-toggle" role="group" aria-label="Trend measure">
+                    <button aria-pressed={trendMetric === 'annual'} onClick={() => setTrendMetric('annual')}>Annual reports</button>
+                    <button aria-pressed={trendMetric === 'cumulative'} onClick={() => setTrendMetric('cumulative')}>Cumulative</button>
+                </div>
+            </div>
+
             <div style={{ height: '300px', width: '100%', position: 'relative' }}>
                 {trendLoading ? (
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.8)', zIndex: 10 }}>
                         <div className="loader"></div>
                     </div>
-                ) : trendData.length > 0 ? (
+                ) : trendError ? <div className="faers-trend-empty" role="alert">{trendError}</div> : trendData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                        <BarChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="colorCumulative" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="var(--fdl-blue-600)" stopOpacity={0.1}/>
@@ -575,15 +569,12 @@ function EmergingAeAnalysis({
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fdl-line-soft)" />
                             <XAxis 
-                                dataKey="timestamp" 
-                                type="number"
-                                domain={['dataMin', 'dataMax']}
+                                dataKey="year"
                                 fontSize={11} 
                                 tickLine={false} 
                                 axisLine={false} 
                                 tick={{ fill: 'var(--fdl-muted)' }}
                                 minTickGap={30}
-                                tickFormatter={(ts) => new Date(ts).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}
                             />
                             <YAxis 
                                 fontSize={11} 
@@ -592,21 +583,11 @@ function EmergingAeAnalysis({
                                 tick={{ fill: 'var(--fdl-muted)' }}
                             />
                             <Tooltip 
-                                labelFormatter={(ts) => new Date(ts).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
                                 contentStyle={{ borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line, #e2e8f0)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)' }}
                                 itemStyle={{ fontWeight: 700, fontSize: '0.85rem' }}
                             />
-                            <Area 
-                                type="monotone" 
-                                dataKey="cumulative" 
-                                stroke="var(--fdl-blue-600)" 
-                                strokeWidth={3}
-                                fillOpacity={1} 
-                                fill="url(#colorCumulative)" 
-                                name="Cumulative Reports"
-                                animationDuration={1000}
-                            />
-                        </AreaChart>
+                            <Bar dataKey={trendMetric === 'annual' ? 'count' : 'cumulative'} fill="var(--fdl-blue-600)" name={trendMetric === 'annual' ? 'Reports' : 'Cumulative reports in selected period'} maxBarSize={38} />
+                        </BarChart>
                     </ResponsiveContainer>
                 ) : (
                     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--fdl-muted)', background: 'var(--fdl-canvas)', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px dashed var(--fdl-line)' }}>
@@ -617,6 +598,7 @@ function EmergingAeAnalysis({
                     </div>
                 )}
             </div>
+            <p className="faers-description">Reports by receipt year; the current year is incomplete. Cumulative counts start at the selected period. FAERS reports do not establish incidence or causality.</p>
           </div>
         </div>
       )}

@@ -24,3 +24,20 @@
 .faers-analysis .modal-header button { border-radius:2px !important; background:var(--fdl-canvas) !important; color:var(--fdl-muted) !important; }
 .faers-analysis .coverage-table { color:var(--fdl-ink); }
 .faers-analysis .coverage-table td > div { border-radius:var(--fdl-radius-sm, 2px) !important; }
+.faers-trend-controls {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.faers-trend-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  color: var(--fdl-muted);
+  text-align: center;
+  padding: 20px;
+}
