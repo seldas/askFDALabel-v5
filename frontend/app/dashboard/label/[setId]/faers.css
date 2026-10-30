@@ -23,6 +23,16 @@
 .faers-analysis .modal-header h3 { color:var(--fdl-ink) !important; }
 .faers-analysis .modal-header button { border-radius:2px !important; background:var(--fdl-canvas) !important; color:var(--fdl-muted) !important; }
 .faers-analysis .coverage-table { color:var(--fdl-ink); }
+.faers-soc-filter { position:relative; }
+.faers-soc-filter summary { cursor:pointer; white-space:nowrap; }
+.faers-soc-filter summary:focus-visible { outline:2px solid var(--fdl-blue-600); outline-offset:2px; }
+.faers-soc-menu { position:absolute; z-index:20; top:calc(100% + 8px); left:0; width:300px; max-width:70vw; padding:12px; background:var(--fdl-paper); border:1px solid var(--fdl-line); box-shadow:0 6px 20px rgba(0,0,0,.16); font-size:.78rem; font-weight:400; }
+.faers-soc-menu-header { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; }
+.faers-soc-menu-header button { border:0; background:transparent; color:var(--fdl-blue-700); cursor:pointer; }
+.faers-soc-options { display:grid; gap:6px; max-height:240px; overflow:auto; }
+.faers-soc-options label { display:flex; gap:8px; align-items:flex-start; cursor:pointer; }
+.faers-soc-options input { accent-color:var(--fdl-blue-700); }
+.faers-soc-menu small { display:block; margin-top:10px; color:var(--fdl-muted); }
 .faers-analysis .coverage-table td > div { border-radius:var(--fdl-radius-sm, 2px) !important; }
 .faers-trend-controls {
   display: flex;

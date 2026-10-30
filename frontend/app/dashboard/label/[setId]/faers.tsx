@@ -79,6 +79,7 @@ function EmergingAeAnalysis({
 
   // Pagination & Filtering Logic
   const [activeFilters, setActiveFilters] = useState<Set<'exact' | 'semantic' | 'none'>>(new Set(['exact', 'semantic', 'none']));
+  const [selectedSocs, setSelectedSocs] = useState<Set<string>>(new Set());
 
   // Trend State
   const [selectedAe, setSelectedAe] = useState<EmergingAe | null>(null);
@@ -108,7 +109,7 @@ function EmergingAeAnalysis({
   // Reset to first page when data or itemsPerPage changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [data, itemsPerPage, scope, activeFilters]);
+  }, [data, itemsPerPage, scope, activeFilters, selectedSocs]);
 
   useEffect(() => {
     if (selectedAe) {
@@ -231,8 +232,11 @@ function EmergingAeAnalysis({
   ).sort((a, b) => candidateCount(b) - candidateCount(a));
 
   // Pagination & Filtering Logic
+  const socOptions = Array.from(new Set((data || []).map(ae => ae.soc && ae.soc !== 'N/A' ? ae.soc : 'Unmapped'))).sort((a, b) => a.localeCompare(b));
   const filteredData = data ? data.filter(ae => {
     if (scope === 'recent' ? !ae.in_emerging : !ae.in_all_time) return false;
+    const soc = ae.soc && ae.soc !== 'N/A' ? ae.soc : 'Unmapped';
+    if (selectedSocs.size && !selectedSocs.has(soc)) return false;
     const isExact = ae.label_matches && ae.label_matches.length > 0;
     const isSemantic = ae.ai_match?.found === true;
     const isNone = !isExact && !isSemantic;
@@ -365,7 +369,18 @@ function EmergingAeAnalysis({
                 <th style={{ padding: '10px 12px', width: '22%' }}>AE (MedDRA PT)</th>
                 <th style={{ padding: '10px 12px' }}>All-time reports</th>
                 <th style={{ padding: '10px 12px' }}>Recent 5 years</th>
-                <th style={{ padding: '10px 12px', width: '18%' }}>SOC Hierarchy</th>
+                <th style={{ padding: '10px 12px', width: '18%' }}>
+                  <details className="faers-soc-filter">
+                    <summary>SOC Hierarchy{selectedSocs.size > 0 ? ` (${selectedSocs.size})` : ''}</summary>
+                    <div className="faers-soc-menu">
+                      <div className="faers-soc-menu-header"><strong>Filter by primary SOC</strong><button type="button" onClick={() => setSelectedSocs(new Set())}>Clear</button></div>
+                      <div className="faers-soc-options">
+                        {socOptions.map(soc => <label key={soc}><input type="checkbox" checked={selectedSocs.has(soc)} onChange={() => setSelectedSocs(previous => { const next = new Set(previous); if (next.has(soc)) next.delete(soc); else next.add(soc); return next; })} /> <span>{soc}</span></label>)}
+                      </div>
+                      <small>No selections shows all categories.</small>
+                    </div>
+                  </details>
+                </th>
                 <th style={{ padding: '10px 12px', width: '26%' }}>Direct Match Context</th>
                 <th style={{ padding: '10px 12px', width: '26%' }}>AI Semantic Validation</th>
               </tr>
@@ -398,8 +413,8 @@ function EmergingAeAnalysis({
                   </td>
                   <td style={{ padding: '12px', fontWeight: 700 }}>{ae.recent_count.toLocaleString()}</td>
                   <td style={{ padding: '12px' }}>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--fdl-ink-soft)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>{ae.soc}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--fdl-muted)', fontWeight: 500, marginTop: '2px' }}>{ae.hlt}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--fdl-ink-soft)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>{ae.soc && ae.soc !== 'N/A' ? ae.soc : 'Unmapped'}</div>
+                    {ae.hlt && ae.hlt !== 'N/A' && <div style={{ fontSize: '0.7rem', color: 'var(--fdl-muted)', fontWeight: 500, marginTop: '2px' }}>{ae.hlt}</div>}
                   </td>
                   <td style={{ padding: '12px' }}>
                     {ae.label_matches && ae.label_matches.length > 0 ? (
