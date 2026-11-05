@@ -7,6 +7,7 @@ import LabelChat from './LabelChat';
 import LabelAnnotations from './LabelAnnotations';
 import NotesModal from './NotesModal';
 import TableExtractorModal from './TableExtractorModal';
+import ImagePreviewModal from './ImagePreviewModal';
 import { TOOL_LABEL, useLabel } from './LabelContext';
 import { labelRoute } from '../../../platform/context';
 import { useUser } from '../../../context/UserContext';
@@ -198,6 +199,13 @@ function LabelContent() {
     html: '',
   });
   const [meddraModalOpen, setMeddraModalOpen] = useState(false);
+  const [imagePreviewModalOpen, setImagePreviewModalOpen] = useState(false);
+  const [imagePreviewData, setImagePreviewData] = useState<{
+    src: string;
+    filename: string;
+    setId?: string;
+    splId?: string;
+  }>({ src: '', filename: '' });
 
   // New Favorite/Project states
   const [isFavoriteAny, setIsFavoriteAny] = useState(false);
@@ -257,10 +265,24 @@ function LabelContent() {
     };
     const handleCloseMeddraModal = () => setMeddraModalOpen(false);
 
+    const handleOpenImagePreview = (e: any) => {
+      if (e?.detail) {
+        setImagePreviewData({
+          src: e.detail.src || '',
+          filename: e.detail.filename || '',
+          setId: e.detail.setId,
+          splId: e.detail.splId,
+        });
+        setImagePreviewModalOpen(true);
+      }
+    };
+
     window.addEventListener('open-table-extractor', handleOpenTableExtract);
+    window.addEventListener('open-image-preview', handleOpenImagePreview);
     window.addEventListener('meddra:close-modal', handleCloseMeddraModal);
     return () => {
       window.removeEventListener('open-table-extractor', handleOpenTableExtract);
+      window.removeEventListener('open-image-preview', handleOpenImagePreview);
       window.removeEventListener('meddra:close-modal', handleCloseMeddraModal);
     };
   }, []);
@@ -723,6 +745,15 @@ function LabelContent() {
         onClose={() => setTableExtractModalOpen(false)}
         title={tableExtractData.title}
         tableHtml={tableExtractData.html}
+      />
+
+      <ImagePreviewModal
+        isOpen={imagePreviewModalOpen}
+        onClose={() => setImagePreviewModalOpen(false)}
+        src={imagePreviewData.src}
+        filename={imagePreviewData.filename}
+        setId={imagePreviewData.setId || setId}
+        splId={imagePreviewData.splId || data?.metadata?.spl_id || undefined}
       />
 
       <div 

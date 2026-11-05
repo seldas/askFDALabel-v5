@@ -1,6 +1,4 @@
-import { imageAnalysisRoute } from '../../../platform/context';
-
-/** Add an image action to SPL HTML, which is rendered outside React. */
+/** Add an image inspect action (+) to SPL HTML, which is rendered outside React. */
 export function initImageLauncher(root: HTMLElement, setId: string, splId?: string): () => void {
   const wrappers: HTMLSpanElement[] = [];
   root.querySelectorAll<HTMLImageElement>('img').forEach((image) => {
@@ -16,14 +14,28 @@ export function initImageLauncher(root: HTMLElement, setId: string, splId?: stri
 
     const wrapper = document.createElement('span');
     wrapper.className = 'spl-image-action';
-    const action = document.createElement('a');
-    action.className = 'btn-analyze-image';
-    action.href = imageAnalysisRoute(setId, filename, splId);
-    action.target = '_blank';
-    action.rel = 'noopener noreferrer';
-    action.textContent = 'Analyze ↗';
-    action.title = 'Open this image in Visual Analysis (new window)';
-    action.setAttribute('aria-label', `Analyze ${filename} in a new window`);
+    const action = document.createElement('button');
+    action.type = 'button';
+    action.className = 'btn-analyze-image btn-image-inspect';
+    action.textContent = '+';
+    action.title = `Inspect image: ${filename} (Extract, Compare, Analyze)`;
+    action.setAttribute('aria-label', `Inspect image ${filename}`);
+
+    action.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      window.dispatchEvent(
+        new CustomEvent('open-image-preview', {
+          detail: {
+            src: image.src || source,
+            filename,
+            setId,
+            splId: splId || undefined,
+          },
+        })
+      );
+    });
+
     // An SPL image may itself be linked; keep the analysis action outside that link.
     const anchor = image.closest('a');
     const content = anchor && root.contains(anchor) ? anchor : image;
