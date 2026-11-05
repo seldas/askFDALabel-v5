@@ -21,7 +21,7 @@ export function initImageLauncher(root: HTMLElement, setId: string, splId?: stri
     action.href = imageAnalysisRoute(setId, filename, splId);
     action.target = '_blank';
     action.rel = 'noopener noreferrer';
-    action.textContent = 'Analyze image ↗';
+    action.textContent = 'Analyze ↗';
     action.title = 'Open this image in Visual Analysis (new window)';
     action.setAttribute('aria-label', `Analyze ${filename} in a new window`);
     // An SPL image may itself be linked; keep the analysis action outside that link.

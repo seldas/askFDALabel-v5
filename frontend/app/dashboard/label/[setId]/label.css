@@ -2438,24 +2438,33 @@ html {
 }
 .btn-analyze-image {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 6px;
+  right: 6px;
   z-index: 10;
   display: inline-flex;
-  padding: 5px 12px;
-  border-radius: var(--fdl-radius-sm, 2px);
-  background: var(--fdl-navy-950);
-  color: var(--fdl-paper) !important;
-  font-size: 0.8rem;
-  font-weight: 700;
+  align-items: center;
+  padding: 2.5px 8px;
+  border-radius: 9999px;
+  background: #0284c7;
+  color: #ffffff !important;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
   text-decoration: none !important;
-  box-shadow: 0 2px 6px rgb(0 0 0 / 15%);
+  box-shadow: 0 1px 4px rgba(2, 132, 199, 0.35);
+  opacity: 0.75;
+  transition: opacity 0.15s ease, background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  backdrop-filter: blur(2px);
 }
+.spl-image-action:hover .btn-analyze-image,
 .btn-analyze-image:hover,
 .btn-analyze-image:focus-visible {
-  background: var(--fdl-navy-800, var(--fdl-navy-950));
-  outline: 2px solid var(--fdl-navy-950);
-  outline-offset: 2px;
+  opacity: 1;
+  background: #0369a1;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(2, 132, 199, 0.45);
+  outline: 2px solid #38bdf8;
+  outline-offset: 1px;
 }
 @media print {
   .btn-analyze-image { display: none; }
