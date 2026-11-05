@@ -41,6 +41,13 @@ logs/
 GEMINI.md
 /database/
 
+# FDALabel web testing log, result files, and test templates (using PG storage)
+frontend/public/webtest/results/
+frontend/public/webtest/history/
+backend/webtest/results/
+backend/webtest/history/
+backend/webtest/*.xlsx
+
 
 data/*
 !data/image_review/

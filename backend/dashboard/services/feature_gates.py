@@ -85,6 +85,15 @@ FEATURE_CATALOG = [
         guest_relevant=False,
     ),
     FeatureSpec(
+        key='webtest',
+        name='Web-test Tool',
+        blurb='Automated regression testing of FDALabel web endpoints.',
+        category='Modules',
+        enforced_at='/api/webtest/* and the /webtest page',
+        default_min_role=ROLE_USER,
+        guest_relevant=False,
+    ),
+    FeatureSpec(
         key='db_selection',
         name='Database Selection',
         blurb='Choose which labeling database a query runs against. '
@@ -297,6 +306,14 @@ def seed_feature_gates():
         statement = insert(FeatureGate).values(rows).on_conflict_do_nothing(index_elements=['key'])
         added = db.session.execute(statement).rowcount
         updated = 0
+        # Preserve the existing webtest default transition; other stored
+        # account/guest rules are never replaced with catalog defaults.
+        for spec in FEATURE_CATALOG:
+            if spec.key == 'webtest':
+                from sqlalchemy import update
+                change = update(FeatureGate).where(FeatureGate.key == spec.key,
+                                                   FeatureGate.min_role == ROLE_DEVELOPER).values(min_role=spec.default_min_role)
+                updated += db.session.execute(change).rowcount
         db.session.commit()
         if added:
             print(f"[INFO] Seeded {added} feature gate(s).")

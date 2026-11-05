@@ -19,6 +19,7 @@ from labelcomp.blueprint import labelcomp_bp
 from device.blueprint import device_bp
 from localquery.blueprint import localquery_bp
 from labelquery.blueprint import labelquery_bp
+from webtest.blueprint import webtest_bp
 from chemsearch.blueprint import chemsearch_bp
 from api_service.blueprint import api_v1_bp
 from dashboard.routes.image_analysis import image_analysis_bp
@@ -46,6 +47,7 @@ def create_unified_app():
     app.register_blueprint(device_bp, url_prefix='/api/device')
     app.register_blueprint(localquery_bp, url_prefix='/api/localquery')
     app.register_blueprint(labelquery_bp, url_prefix='/api/labelquery')
+    app.register_blueprint(webtest_bp, url_prefix='/api/webtest')
     app.register_blueprint(chemsearch_bp, url_prefix='/api/chemsearch')
     app.register_blueprint(api_v1_bp, url_prefix='/api/v1')
     app.register_blueprint(image_analysis_bp, url_prefix='/api/image-analysis')

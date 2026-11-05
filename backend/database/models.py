@@ -36,7 +36,7 @@ import os
 #:
 #: 'developer' is 'user' plus the tooling a plain account has no business
 #: reaching: choosing which labeling database a query runs against, and the
-#: LabelChat and Local Database Search modules. Normal users are
+#: LabelChat, Web-test and Local Database Search modules. Normal users are
 #: pinned to the CDER-CBER scope and are not offered those three tools.
 ROLE_USER = 'user'
 ROLE_DEVELOPER = 'developer'
@@ -110,7 +110,8 @@ class User(UserMixin, db.Model):
         """
         Whether this account may reach developer-only modules.
 
-        Covers LabelChat (/api/search) and Local Database Search (/api/localquery),
+        Covers LabelChat (/api/search), the Web-test tool (/api/webtest) and
+        Local Database Search (/api/localquery),
         each gated at the blueprint
         level so every route inside is covered.
         """
@@ -715,6 +716,32 @@ class TokenUsage(db.Model):
     created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     user = db.relationship('User', backref=db.backref('token_usages', lazy='dynamic'))
+
+# --- Webtest Models ---
+
+class WebtestTask(db.Model):
+    __tablename__ = 'webtest_tasks'
+    id = db.Column(db.Integer, primary_key=True)
+    version = db.Column(db.String(50))
+    url = db.Column(db.Text, nullable=False, unique=True)
+    query_details = db.Column(db.Text)
+    
+    histories = db.relationship('WebtestHistory', backref='task', cascade="all, delete-orphan", lazy=True)
+
+class WebtestHistory(db.Model):
+    __tablename__ = 'webtest_histories'
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('webtest_tasks.id'), nullable=False)
+    server = db.Column(db.String(50))
+    version = db.Column(db.String(50))
+    url = db.Column(db.Text)
+    query_results = db.Column(db.Text)
+    delay = db.Column(db.Float)
+    query_date = db.Column(db.DateTime, default=utc_now)
+    query_details = db.Column(db.Text)
+    count = db.Column(db.String(50))
+    notes = db.Column(db.Text)
+
 
 # --- Examine Feature Models ---
 

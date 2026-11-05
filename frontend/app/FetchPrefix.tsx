@@ -12,6 +12,7 @@ const DASHBOARD_PREFIXES = [
   "/drugtox",
   "/localquery",
   "/search",
+  "/webtest",
   "/device",
   "/disclaimer",
   "/chemsearch",
