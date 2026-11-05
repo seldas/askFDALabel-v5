@@ -102,6 +102,7 @@ askFDALabel_v5/
 │   ├── labelquery/             # Advanced query builder compiler and criteria facets
 │   ├── localquery/             # Local database query execution blueprint
 │   ├── search/                 # Search decision tree and chat refinement blueprint
+│   └── webtest/                # Web test regression engine and verification runner
 ├── frontend/                   # Next.js 16 App Router frontend
 │   ├── app/                    # Pages, layouts, and route handlers
 │   │   ├── dashboard/          # Label viewer, deep dive, labeling-ae, pv-profile
@@ -111,6 +112,7 @@ askFDALabel_v5/
 │   │   ├── localquery/         # Criteria builder and export panel
 │   │   ├── management/         # User, task, and feature gate admin panel
 │   │   ├── search/             # Primary search and results workspace
+│   │   └── webtest/            # Automated web test validation UI
 │   └── public/                 # Static assets, logos, and legacy vanilla-JS libraries
 ├── data/                       # Local persistent state (mounted volume)
 │   ├── spl_storage/            # Primary unpacked SPL ZIP files

@@ -23,6 +23,7 @@ def create_unified_app():
     app.register_blueprint(labelcomp_bp, url_prefix='/api/labelcomp')
     app.register_blueprint(device_bp, url_prefix='/api/device')
     app.register_blueprint(localquery_bp, url_prefix='/api/localquery')
+    app.register_blueprint(webtest_bp, url_prefix='/api/webtest')
     app.register_blueprint(api_service_bp, url_prefix='/api/v1')
 
     return app
@@ -40,6 +41,7 @@ def create_unified_app():
 | `/api/labelcomp` | `backend/labelcomp/blueprint.py` | Two-way label comparison, section alignment, AI diff synthesis |
 | `/api/device` | `backend/device/blueprint.py` | openFDA medical device lookups, 510(k), PMA, recall events |
 | `/api/localquery` | `backend/localquery/blueprint.py` | Dynamic Boolean criteria compiler, raw SQL execution, Excel export |
+| `/api/webtest` | `backend/webtest/blueprint.py` | Automated test suite execution, Excel diff reporting, history logs |
 | `/api/v1` | `backend/api_service/blueprint.py` | Public external REST API with API-key authentication |
 
 ---
@@ -62,7 +64,7 @@ Any command running backend code must have `backend/` in `PYTHONPATH` or be exec
 
 ## 4. Asynchronous Task Orchestration (Celery + SystemTask)
 
-Long-running administrative operations (such as importing DailyMed labels, updating MedDRA datasets, or generating DrugTox reports) run asynchronously outside the HTTP request/response loop.
+Long-running administrative operations (such as importing DailyMed labels, updating MedDRA datasets, generating DrugTox reports, or executing WebTest suites) run asynchronously outside the HTTP request/response loop.
 
 ```
 Client -> HTTP POST /api/dashboard/admin/tasks/run
@@ -82,7 +84,7 @@ Client -> HTTP POST /api/dashboard/admin/tasks/run
 Client polls HTTP GET /api/dashboard/admin/tasks/<task_id>
 ```
 
-- **Task Definitions**: Stored in `backend/admin/tasks/` (`import_labels.py`, `import_meddra.py`, `import_orangebook.py`, `generate_drugtox.py`).
+- **Task Definitions**: Stored in `backend/admin/tasks/` (`import_labels.py`, `import_meddra.py`, `import_orangebook.py`, `generate_drugtox.py`, `run_webtest.py`).
 - **Worker Execution Command**:
   ```bash
   cd backend && celery -A celery_app.celery worker --loglevel=info

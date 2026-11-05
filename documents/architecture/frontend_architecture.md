@@ -29,6 +29,7 @@ frontend/
 │   ├── platform/               # Tool registry, context resolution, and capability checks
 │   ├── search/                 # Decision-routed search results & AI refinement
 │   ├── utils/                  # appPaths helpers, token storage, API client
+│   ├── webtest/                # Automated regression test management UI
 │   ├── FetchPrefix.tsx         # Global fetch & DOM prefix patcher
 │   ├── layout.tsx              # Root HTML shell & global providers
 │   └── page.tsx                # Application landing dashboard

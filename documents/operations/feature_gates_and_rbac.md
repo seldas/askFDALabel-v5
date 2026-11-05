@@ -22,7 +22,7 @@ Accounts are assigned one of three mutually exclusive roles (`backend/database/m
                                         ▼
                         ┌───────────────────────────────┐
                         │           developer           │
-                        │ Advanced query tools,│
+                        │ Advanced query tools, WebTest,│
                         │ DB selection, raw SQL builder │
                         └───────────────┬───────────────┘
                                         │
@@ -53,6 +53,7 @@ All system features are registered with default security baselines in `backend/d
 | `drugtox` | Toxicology profiles, DILI RO2, chemical structures | `user` | `true` |
 | `device` | openFDA medical device intelligence | `user` | `true` |
 | `localquery` | Local database Boolean query builder | `developer` | `false` |
+| `webtest` | Automated regression test validation suite | `developer` | `false` |
 | `query_history`| Personal search and query history | `user` | `false` |
 | `preferences` | Account preferences and custom AI credentials | `user` | `false` |
 | `management` | Administrative panel & Celery task management | `admin` | `false` |

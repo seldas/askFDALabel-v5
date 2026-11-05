@@ -40,6 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# webtest
+public/webtest/results/
+public/webtest/history/
 
 # python
 __pycache__/

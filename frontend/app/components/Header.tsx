@@ -21,7 +21,8 @@ export type ActiveApp =
   | 'dashboard'
   | 'labelcomp'
   | 'drugtox'
-  | 'localquery';
+  | 'localquery'
+  | 'webtest';
 
 // Empty launch context: every tool in this nav declares the 'global' context
 // kind, so {} is enough for isToolAvailable to evaluate capability gating.
@@ -38,6 +39,7 @@ function inferActiveApp(pathname: string): ActiveApp {
   if (pathname.startsWith('/labelcomp')) return 'labelcomp';
   if (pathname.startsWith('/drugtox')) return 'drugtox';
   if (pathname.startsWith('/localquery')) return 'localquery';
+  if (pathname.startsWith('/webtest')) return 'webtest';
   return 'home';
 }
 
@@ -430,6 +432,24 @@ export default function Header({
                 );
               })()}
 
+              {(() => {
+                const webtest = getTool('webtest')!;
+                return isToolAvailable(webtest, GLOBAL_CTX, capabilities, toolAccess) ? (
+                  <a
+                    href={webtest.href(GLOBAL_CTX)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cx('hp-dropdown-item', resolvedActiveApp === 'webtest' && 'is-active')}
+                    onClick={handleNavClick}
+                  >
+                    <ToolIcon id={webtest.iconId} size={16} />
+                    <div>
+                      <div className="dropdown-title">{webtest.name}</div>
+                      <div className="dropdown-subtitle">{webtest.blurb}</div>
+                    </div>
+                  </a>
+                ) : null;
+              })()}
             </div>
           )}
         </div>
