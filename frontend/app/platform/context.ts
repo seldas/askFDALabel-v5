@@ -162,3 +162,12 @@ export function queryRoute(base: string, ctx: LaunchContext = {}): string {
   if (ctx.query) params.set('q', ctx.query);
   return withQuery(base, params);
 }
+
+/** Chemical structure search, optionally scoped to a label or query structure. */
+export function chemSearchRoute(ctx: LaunchContext = {}, opts?: { smiles?: string }): string {
+  const params = new URLSearchParams();
+  if (ctx.setIds?.[0]) params.set('set_id', ctx.setIds[0]);
+  if (ctx.splIds?.[0]) params.set('spl_id', ctx.splIds[0]);
+  if (opts?.smiles) params.set('smiles', opts.smiles);
+  return withQuery('/chemsearch', params);
+}

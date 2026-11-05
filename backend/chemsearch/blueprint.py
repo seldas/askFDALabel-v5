@@ -782,3 +782,149 @@ def search():
             conn.close()
         except Exception:
             pass
+
+
+@chemsearch_bp.route('/label_structures', methods=['GET'])
+def get_label_structures():
+    """
+    Returns the active components (name, UNII, and SMILES) for a given labeling.
+    Used by the Toolbox Chemical Structure Search tool to pre-fill the structure.
+    Query parameters:
+      - set_id (required): SPL Set ID
+      - spl_id (optional): specific SPL ID / version
+    """
+    set_id = (request.args.get('set_id') or '').strip()
+    spl_id = (request.args.get('spl_id') or '').strip()
+
+    if not set_id:
+        return jsonify({'error': 'Missing required parameter: set_id'}), 400
+
+    from dashboard.services.fdalabel_db import FDALabelDBService
+
+    product_name = None
+    components = []
+
+    # 1. Try Oracle first if connected
+    conn = None
+    try:
+        conn = FDALabelDBService.get_oracle_connection()
+    except Exception:
+        conn = None
+
+    if conn:
+        try:
+            cursor = conn.cursor()
+            if spl_id:
+                sql = """
+                    SELECT s.ACT_INGR_NAMES, s.ACT_INGR_UNIIS, s.PRODUCT_NAMES, s.PRODUCT_NORMD_GENERIC_NAMES
+                    FROM druglabel.DGV_SUM_SPL s
+                    WHERE s.SPL_GUID = :sid
+                """
+                cursor.execute(sql, {'sid': spl_id})
+            else:
+                sql = """
+                    SELECT s.ACT_INGR_NAMES, s.ACT_INGR_UNIIS, s.PRODUCT_NAMES, s.PRODUCT_NORMD_GENERIC_NAMES
+                    FROM druglabel.DGV_SUM_SPL s
+                    WHERE s.SET_ID = :sid
+                    ORDER BY s.EFF_TIME DESC
+                """
+                cursor.execute(sql, {'sid': set_id})
+
+            row = cursor.fetchone()
+            if row:
+                act_names = [n.strip() for n in (row[0] or '').split(';') if n.strip()]
+                act_uniis = [u.strip() for u in (row[1] or '').split(';') if u.strip()]
+                p_names = row[2] or ''
+                g_names = row[3] or ''
+                product_name = p_names.replace(';', ', ') if p_names else g_names.replace(';', ', ')
+
+                pairs = []
+                max_len = max(len(act_names), len(act_uniis))
+                for i in range(max_len):
+                    n = act_names[i] if i < len(act_names) else ''
+                    u = act_uniis[i] if i < len(act_uniis) else ''
+                    if n or u:
+                        pairs.append((n or u, u))
+
+                # Batch lookup SMILES from druglabel.UNII_CHEM_STRUCT
+                valid_uniis = list(dict.fromkeys(p[1] for p in pairs if p[1]))
+                unii_to_smiles = {}
+                if valid_uniis:
+                    binds = {f'u{i}': u for i, u in enumerate(valid_uniis)}
+                    in_clause = ', '.join(f':u{i}' for i in range(len(valid_uniis)))
+                    struct_sql = f"SELECT UNII, SMILES FROM druglabel.UNII_CHEM_STRUCT WHERE UNII IN ({in_clause}) AND SMILES IS NOT NULL"
+                    cursor.execute(struct_sql, binds)
+                    for r in cursor.fetchall():
+                        if r[0] and r[1]:
+                            unii_to_smiles[r[0]] = r[1]
+
+                for name, unii in pairs:
+                    components.append({
+                        'name': name,
+                        'unii': unii or None,
+                        'smiles': unii_to_smiles.get(unii)
+                    })
+            cursor.close()
+        except Exception as e:
+            logger.warning('Failed to query label structures from Oracle: %s', e)
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    # 2. Fallback to PostgreSQL if no components found from Oracle
+    if not components:
+        pg_conn = None
+        try:
+            pg_conn = FDALabelDBService.get_postgres_connection()
+        except Exception:
+            pg_conn = None
+
+        if pg_conn:
+            try:
+                cursor = pg_conn.cursor()
+                target_spl_id = spl_id
+                if not target_spl_id:
+                    cursor.execute(
+                        "SELECT spl_id, product_names, generic_names FROM labeling.sum_spl WHERE set_id = %s ORDER BY revised_date DESC NULLS LAST LIMIT 1",
+                        (set_id,)
+                    )
+                    r = cursor.fetchone()
+                    if r:
+                        target_spl_id = r[0] if isinstance(r, tuple) else r.get('spl_id')
+                        if not product_name:
+                            pname = r[1] if isinstance(r, tuple) else r.get('product_names')
+                            gname = r[2] if isinstance(r, tuple) else r.get('generic_names')
+                            product_name = (pname or gname or '').replace(';', ', ')
+
+                if target_spl_id:
+                    cursor.execute(
+                        "SELECT substance_name, unii FROM labeling.active_ingredients_map WHERE spl_id = %s",
+                        (target_spl_id,)
+                    )
+                    rows = cursor.fetchall()
+                    for r in rows:
+                        sname = r[0] if isinstance(r, tuple) else r.get('substance_name')
+                        unii = r[1] if isinstance(r, tuple) else r.get('unii')
+                        components.append({
+                            'name': sname or unii or 'Unknown',
+                            'unii': unii or None,
+                            'smiles': None
+                        })
+                cursor.close()
+            except Exception as e:
+                logger.warning('Failed to query label structures from PG: %s', e)
+            finally:
+                try:
+                    pg_conn.close()
+                except Exception:
+                    pass
+
+    return jsonify({
+        'set_id': set_id,
+        'spl_id': spl_id or None,
+        'product_name': product_name,
+        'components': components
+    })
+

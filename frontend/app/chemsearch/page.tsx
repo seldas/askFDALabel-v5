@@ -3,16 +3,21 @@
 /*
  * Chemical Structure Search page.
  *
- * Standalone page (opens in a new tab from the Resources dropdown).
+ * Standalone page (opens in a new tab from the Resources dropdown or Toolbox).
  * Accepts a SMILES or InChI string, a match mode (exact / substructure /
  * similarity) and an optional Tanimoto threshold, then shows matching drug
  * labels using the shared ResultsTable with an extra "Match" column prepended.
  *
+ * Supports ?set_id=... to auto-load and prefill the SMILES for the target labeling,
+ * with multi-component selection for combination products.
+ *
  * Backend: POST /api/chemsearch/search
  *          GET  /api/chemsearch/validate
+ *          GET  /api/chemsearch/label_structures
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { Page } from '../platform/primitives';
@@ -48,6 +53,12 @@ interface ChemResultSet {
 }
 
 type MatchMode = 'exact' | 'substructure' | 'similarity';
+
+export interface LabelComponent {
+  name: string;
+  unii: string | null;
+  smiles: string | null;
+}
 
 const PAGE_SIZE = 50;
 
@@ -134,16 +145,35 @@ const MATCH_COLUMN: ColumnDef = {
 function InputPanel({
   onSearch,
   busy,
+  initialSmiles = '',
+  components = [],
+  selectedComponentIndex = null,
+  onSelectComponent,
+  productName = '',
+  loadingComponents = false,
 }: {
   onSearch: (smiles: string, mode: MatchMode, threshold: number) => void;
   busy: boolean;
+  initialSmiles?: string;
+  components?: LabelComponent[];
+  selectedComponentIndex?: number | null;
+  onSelectComponent?: (index: number) => void;
+  productName?: string;
+  loadingComponents?: boolean;
 }) {
-  const [smiles, setSmiles] = useState('');
+  const [smiles, setSmiles] = useState(initialSmiles);
   const [mode, setMode] = useState<MatchMode>('substructure');
   const [threshold, setThreshold] = useState(0.7);
   const [validation, setValidation] = useState<{ valid: boolean; canonical?: string; error?: string; warning?: string; fmt?: string } | null>(null);
   const [validating, setValidating] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync external initialSmiles changes (e.g. from URL or component selection)
+  useEffect(() => {
+    if (initialSmiles !== undefined) {
+      setSmiles(initialSmiles);
+    }
+  }, [initialSmiles]);
 
   // Inline validation — debounced on input
   useEffect(() => {
@@ -216,6 +246,136 @@ function InputPanel({
         </h2>
       </div>
 
+      {/* Labeling Context & Component Selection Banner */}
+      {loadingComponents && (
+        <div style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: 8, fontSize: '0.85rem', color: '#64748b', marginBottom: 16 }}>
+          Loading active ingredients from labeling...
+        </div>
+      )}
+
+      {components && components.length > 0 && (
+        <div
+          style={{
+            marginBottom: 18,
+            padding: '14px 18px',
+            background: '#f0f9ff',
+            border: '1px solid #bae6fd',
+            borderRadius: 12,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: components.length > 1 ? 10 : 4,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.88rem', color: '#0369a1', fontWeight: 700 }}>
+              <span aria-hidden="true">💊</span>
+              <span>
+                Labeling Active Ingredients {productName ? `— ${productName}` : ''}
+              </span>
+            </div>
+            {components.length > 1 && (
+              <span
+                style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  color: '#0284c7',
+                  background: '#e0f2fe',
+                  padding: '3px 9px',
+                  borderRadius: 999,
+                }}
+              >
+                {components.length} components
+              </span>
+            )}
+          </div>
+
+          {components.length > 1 ? (
+            <div>
+              <p style={{ margin: '0 0 8px 0', fontSize: '0.8rem', color: '#0284c7' }}>
+                This product contains multiple active ingredients. Click one to search its chemical structure:
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {components.map((comp, idx) => {
+                  const isSelected = selectedComponentIndex === idx;
+                  const hasSmiles = Boolean(comp.smiles);
+                  return (
+                    <button
+                      key={`${comp.name}-${idx}`}
+                      type="button"
+                      disabled={!hasSmiles}
+                      onClick={() => onSelectComponent?.(idx)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '6px 12px',
+                        borderRadius: 8,
+                        border: `1.5px solid ${isSelected ? '#0284c7' : '#cbd5e1'}`,
+                        background: isSelected ? '#0284c7' : hasSmiles ? '#ffffff' : '#f8fafc',
+                        color: isSelected ? '#ffffff' : hasSmiles ? '#0f172a' : '#94a3b8',
+                        fontSize: '0.82rem',
+                        fontWeight: isSelected ? 700 : 500,
+                        cursor: hasSmiles ? 'pointer' : 'not-allowed',
+                        boxShadow: isSelected ? '0 1px 4px rgba(2, 132, 199, 0.25)' : 'none',
+                        transition: 'all 0.15s ease',
+                      }}
+                      title={hasSmiles ? `Select ${comp.name}` : 'No structure found in UNII registry'}
+                    >
+                      <span>{comp.name}</span>
+                      {comp.unii && (
+                        <code
+                          style={{
+                            fontSize: '0.68rem',
+                            padding: '1px 4px',
+                            borderRadius: 4,
+                            background: isSelected ? 'rgba(255,255,255,0.2)' : '#f1f5f9',
+                          }}
+                        >
+                          {comp.unii}
+                        </code>
+                      )}
+                      {!hasSmiles && (
+                        <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>(No SMILES)</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', color: '#0f172a', flexWrap: 'wrap' }}>
+              <strong>{components[0].name}</strong>
+              {components[0].unii && (
+                <code
+                  style={{
+                    fontSize: '0.72rem',
+                    color: '#64748b',
+                    background: '#e2e8f0',
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                  }}
+                >
+                  UNII: {components[0].unii}
+                </code>
+              )}
+              {components[0].smiles ? (
+                <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 700, marginLeft: 'auto' }}>
+                  ✓ Chemical structure loaded
+                </span>
+              ) : (
+                <span style={{ fontSize: '0.75rem', color: '#d97706', fontWeight: 600, marginLeft: 'auto' }}>
+                  ⚠ No SMILES registered in UNII_CHEM_STRUCT
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit}>
         {/* SMILES / InChI input */}
         <div style={{ marginBottom: 16 }}>
@@ -254,7 +414,7 @@ function InputPanel({
                   right: 12,
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  fontSize: '0.72rem',
+                  fontSize: '0.75rem',
                   color: '#94a3b8',
                 }}
               >
@@ -262,10 +422,12 @@ function InputPanel({
               </span>
             )}
           </div>
+
+          {/* Validation feedback */}
           {validation && (
-            <div style={{ marginTop: 5, fontSize: '0.75rem', lineHeight: 1.5 }}>
+            <div style={{ marginTop: 6, fontSize: '0.78rem' }}>
               {validation.valid ? (
-                <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   <div style={{ fontWeight: 600, color: '#15803d' }}>
                     ✓ Valid{validation.fmt && validation.fmt !== 'smiles' ? ` ${validation.fmt.toUpperCase()}` : ''}
                     {validation.canonical && validation.canonical !== smiles.trim()
@@ -273,25 +435,24 @@ function InputPanel({
                       : ''}
                   </div>
                   {validation.warning && (
-                    <div style={{ color: '#92400e', fontWeight: 500, marginTop: 2 }}>
-                      ⚠ {validation.warning}
-                    </div>
+                    <div style={{ color: '#d97706' }}>⚠ {validation.warning}</div>
                   )}
-                </>
+                </div>
               ) : (
-                <div style={{ fontWeight: 600, color: '#dc2626' }}>
-                  ✗ {validation.error || 'Invalid structure'}
+                <div style={{ color: '#b91c1c', fontWeight: 600 }}>
+                  ✗ {validation.error || 'Invalid structure string'}
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Match mode + threshold */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap', marginBottom: 20 }}>
+        {/* Match mode & threshold */}
+        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 20 }}>
+          {/* Match mode */}
           <div>
             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginBottom: 6 }}>
-              Match type
+              Match mode
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               {(['exact', 'substructure', 'similarity'] as MatchMode[]).map((m) => (
@@ -359,14 +520,17 @@ function InputPanel({
                   marginTop: 2,
                 }}
               >
-                <span>50% (loose)</span>
-                <span>100% (exact)</span>
+                <span>50% (broad)</span>
+                <span>70% (default)</span>
+                <span>85% (close)</span>
+                <span>100%</span>
               </div>
             </div>
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {/* Buttons */}
+        <div style={{ display: 'flex', gap: 10 }}>
           <button
             type="submit"
             disabled={!smiles.trim() || busy || isInvalid}
@@ -374,7 +538,7 @@ function InputPanel({
               background:
                 !smiles.trim() || busy || isInvalid
                   ? '#94a3b8'
-                  : 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
+                  : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
               color: '#ffffff',
               border: 'none',
               borderRadius: 8,
@@ -434,16 +598,28 @@ function InputPanel({
 }
 
 // ---------------------------------------------------------------------------
-// Main page
+// Main page content (reads useSearchParams)
 // ---------------------------------------------------------------------------
 
-export default function ChemSearchPage() {
+function ChemSearchContent() {
+  const searchParams = useSearchParams();
+  const setIdParam = searchParams.get('set_id');
+  const splIdParam = searchParams.get('spl_id');
+  const smilesParam = searchParams.get('smiles');
+
   const [data, setData] = useState<ChemResultSet | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<ResultView>('basic');
   const [offset, setOffset] = useState(0);
   const [sortState, setSortState] = useState<SortState>({ sort: 'revised_date', dir: 'desc' });
+
+  // Label components state
+  const [components, setComponents] = useState<LabelComponent[]>([]);
+  const [productName, setProductName] = useState<string>('');
+  const [loadingComponents, setLoadingComponents] = useState<boolean>(false);
+  const [selectedComponentIndex, setSelectedComponentIndex] = useState<number | null>(null);
+  const [currentSmiles, setCurrentSmiles] = useState<string>(smilesParam || '');
 
   // Last-run params for paging
   const lastParams = useRef<{ smiles: string; mode: MatchMode; threshold: number } | null>(null);
@@ -480,6 +656,68 @@ export default function ChemSearchPage() {
     [],
   );
 
+  // Fetch labeling components when ?set_id=... is present
+  useEffect(() => {
+    if (!setIdParam) {
+      if (smilesParam) {
+        setCurrentSmiles(smilesParam);
+        runSearch(smilesParam, 'substructure', 0.7, 0);
+      }
+      return;
+    }
+
+    let active = true;
+    setLoadingComponents(true);
+
+    const fetchStructures = async () => {
+      try {
+        const params = new URLSearchParams();
+        params.set('set_id', setIdParam);
+        if (splIdParam) params.set('spl_id', splIdParam);
+
+        const res = await fetch(`/api/chemsearch/label_structures?${params.toString()}`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!active) return;
+
+        const comps: LabelComponent[] = json.components || [];
+        setComponents(comps);
+        setProductName(json.product_name || '');
+
+        if (comps.length > 0) {
+          // Select the first component that has a SMILES string
+          const firstValid = comps.findIndex((c) => Boolean(c.smiles));
+          if (firstValid !== -1) {
+            setSelectedComponentIndex(firstValid);
+            const targetSmiles = comps[firstValid].smiles!;
+            setCurrentSmiles(targetSmiles);
+            runSearch(targetSmiles, 'substructure', 0.7, 0);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load label chemical structures:', e);
+      } finally {
+        if (active) setLoadingComponents(false);
+      }
+    };
+
+    fetchStructures();
+
+    return () => {
+      active = false;
+    };
+  }, [setIdParam, splIdParam, smilesParam, runSearch]);
+
+  const handleSelectComponent = (index: number) => {
+    setSelectedComponentIndex(index);
+    const comp = components[index];
+    if (comp?.smiles) {
+      setCurrentSmiles(comp.smiles);
+      setOffset(0);
+      runSearch(comp.smiles, 'substructure', 0.7, 0);
+    }
+  };
+
   const handleSearch = (smiles: string, mode: MatchMode, threshold: number) => {
     setOffset(0);
     runSearch(smiles, mode, threshold, 0);
@@ -513,7 +751,6 @@ export default function ChemSearchPage() {
       <Header />
 
       <main className="fdl-shell fdl-shell--results">
-
         {/* Data-source notice */}
         <div
           style={{
@@ -559,7 +796,16 @@ export default function ChemSearchPage() {
           </div>
         </div>
 
-        <InputPanel onSearch={handleSearch} busy={busy} />
+        <InputPanel
+          onSearch={handleSearch}
+          busy={busy}
+          initialSmiles={currentSmiles}
+          components={components}
+          selectedComponentIndex={selectedComponentIndex}
+          onSelectComponent={handleSelectComponent}
+          productName={productName}
+          loadingComponents={loadingComponents}
+        />
 
         {/* Errors */}
         {error && (
@@ -748,25 +994,25 @@ export default function ChemSearchPage() {
           </>
         )}
 
-        {/* Initial state (no search run yet) */}
+        {/* Initial empty state */}
         {!busy && !data && !error && (
           <div
             style={{
               textAlign: 'center',
-              padding: '4rem 2rem',
-              color: '#94a3b8',
+              padding: '4rem 1rem',
+              color: '#64748b',
             }}
           >
             <svg
-              width={56}
-              height={56}
+              width={48}
+              height={48}
               viewBox="0 0 24 24"
               fill="none"
               stroke="#cbd5e1"
               strokeWidth="1.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              style={{ margin: '0 auto 16px' }}
+              style={{ margin: '0 auto 16px auto', display: 'block' }}
               aria-hidden="true"
             >
               <circle cx="12" cy="5" r="2" />
@@ -801,5 +1047,13 @@ export default function ChemSearchPage() {
 
       <Footer />
     </Page>
+  );
+}
+
+export default function ChemSearchPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>Loading Chemical Structure Search...</div>}>
+      <ChemSearchContent />
+    </Suspense>
   );
 }
