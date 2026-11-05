@@ -1,0 +1,32 @@
+<!-- Template FDA SAML SSO3 IdP Metadata. Replace with your actual IdP metadata in production. -->
+<md:EntityDescriptor ID="Qc85eT6lPCcNupx_GJvFxxOhJZJ" cacheDuration="PT1440M" entityID="https://sso.example.com" xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata">
+<md:IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol" WantAuthnRequestsSigned="false">
+<md:KeyDescriptor use="signing">
+<ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+<ds:X509Data>
+<ds:X509Certificate>
+MIIDajCCAlKgAwIBAgIGAX8y+6n+MA0GCSqGSIb3DQEBCwUAMHYxCzAJBgNVBAYT
+AlVTMREwDwYDVQQIEwhNYXJ5bGFuZDEWMBQGA1UEBxMNU2lsdmVyIFNwcmluZzEl
+MCMGA1UEChMcRm9vZCBhbmQgRHJ1ZyBBZG1pbmlzdHJhdGlvbjEVMBMGA1UEAxMM
+c3NvMy5mZGEuZ292MB4XDTIyMDIyNTIyMjM0OFoXDTI3MDIyNDIyMjM0OFowdjEL
+MAkGA1UEBhMCVVMxETAPBgNVBAgTCE1hcnlsYW5kMRYwFAYDVQQHEw1TaWx2ZXIg
+U3ByaW5nMSUwIwYDVQQKExxGb29kIGFuZCBEcnVnIEFkbWluaXN0cmF0aW9uMRUw
+EwYDVQQDEwxzc28zLmZkYS5nb3Y=
+</ds:X509Certificate>
+</ds:X509Data>
+</ds:KeyInfo>
+</md:KeyDescriptor>
+<md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified</md:NameIDFormat>
+<md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://sso.example.com/idp/SSO.saml2"/>
+<md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://sso.example.com/idp/SSO.saml2"/>
+<saml:Attribute Name="mail" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:unspecified" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"/>
+<saml:Attribute Name="Username" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:unspecified" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"/>
+</md:IDPSSODescriptor>
+<md:ContactPerson contactType="administrative">
+<md:Company>Food and Drug Administration</md:Company>
+<md:GivenName>SSO</md:GivenName>
+<md:SurName>Administrator</md:SurName>
+<md:EmailAddress>sso-admin@example.com</md:EmailAddress>
+<md:TelephoneNumber>555-0100</md:TelephoneNumber>
+</md:ContactPerson>
+</md:EntityDescriptor>

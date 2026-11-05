@@ -1,0 +1,777 @@
+/*
+ * The criteria tree, and the catalog describing how each criterion renders.
+ *
+ * Shapes here mirror backend/labelquery/compiler.py exactly — a criterion's
+ * `value` is posted verbatim. Keep the two in step: the compiler rejects unknown
+ * types outright, and silently ignores keys it does not read.
+ *
+ * `uid` is client-only (React keys, remove buttons) and is stripped before the
+ * query is sent.
+ */
+
+export type CriterionType =
+  | 'labelingType'
+  | 'applicationType'
+  | 'productName'
+  | 'fullText'
+  | 'labelingSection'
+  | 'marketStatus'
+  | 'meddra'
+  | 'route'
+  | 'dosageForm'
+  | 'deaSchedule'
+  | 'activeMoiety'
+  | 'pharmClass'
+  | 'identifier';
+
+export type CriterionValue = Record<string, unknown>;
+
+export interface Criterion {
+  uid: string;
+  type: CriterionType;
+  value: CriterionValue;
+}
+
+export interface CriteriaGroup {
+  uid: string;
+  criteria: Criterion[];
+}
+
+export interface LabelQuery {
+  groups: CriteriaGroup[];
+  /** When checked, searches only the recognized input entities without expansion. */
+  exactMatch: boolean;
+}
+
+/** Wire format — what /api/labelquery/execute accepts and /translate returns. */
+export interface WireQuery {
+  groups: Array<{ criteria: Array<{ type: CriterionType; value: CriterionValue }> }>;
+  exactMatch?: boolean;
+}
+
+export interface QuickPick {
+  label: string;
+  /**
+   * Sent as-is. Matched against one element of the `; `-joined column, so a
+   * bare value is an exact category ("NDA" does not match "ANDA") and a value
+   * containing `%` is a LIKE pattern within a single element.
+   */
+  value: string;
+  /**
+   * Targets on which this pick can never match, and why.
+   *
+   * The CDER-CBER rollup contains human labeling only, so offering "Animal Rx"
+   * against it produces a confident zero rather than an error — the pick is
+   * disabled there instead, with the reason on the tooltip.
+   */
+  unavailableOn?: { targets: TargetDb[]; reason: string };
+}
+
+export interface CriterionDef {
+  type: CriterionType;
+  title: string;
+  /** Shown in the "Add more criteria" row. */
+  shortTitle: string;
+  quickPicks?: QuickPick[];
+  /** Which /api/labelquery/options list feeds this card's dropdown. */
+  optionsKey?: 'labelingTypes' | 'applicationTypes' | 'routes' | 'dosageForms' | 'sections';
+  defaultValue: () => CriterionValue;
+}
+
+let counter = 0;
+export const uid = () => `c${Date.now().toString(36)}${(counter += 1).toString(36)}`;
+
+/*
+ * Labeling-type quick picks are LIKE patterns rather than exact doc_type
+ * strings on purpose: SPL document types vary ("HUMAN PRESCRIPTION DRUG LABEL",
+ * "PRESCRIPTION DRUG LABEL FOR HUMAN USE"), and a substring is the only match
+ * that survives that. Marketing categories and routes are stable vocabularies,
+ * so those quick picks are exact — which is what keeps NDA off ANDA. The
+ * dropdown below each row offers exact values pulled live from the database.
+ */
+/*
+ * Shared by the animal labeling picks. Only the CDER-CBER rollup excludes them
+ * structurally — 'All' reads the raw SUM_SPL, and the local import contains
+ * whatever SPL archives were loaded, so neither can be ruled out from here.
+ */
+const NON_HUMAN_UNAVAILABLE = {
+  targets: ['oracle'] as TargetDb[],
+  reason:
+    'The CDER-CBER version covers human labeling only. Switch the database to "FDA ver." to search animal labeling.',
+};
+
+export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
+  labelingType: {
+    type: 'labelingType',
+    title: 'Labeling Types',
+    shortTitle: 'Labeling Types',
+    optionsKey: 'labelingTypes',
+    quickPicks: [
+      { label: 'HUMAN PRESCRIPTION DRUG LABEL', value: 'HUMAN PRESCRIPTION DRUG LABEL' },
+      { label: 'HUMAN OTC DRUG LABEL', value: 'HUMAN OTC DRUG LABEL' },
+      { label: 'ANIMAL PRESCRIPTION DRUG LABEL', value: 'ANIMAL PRESCRIPTION DRUG LABEL', unavailableOn: NON_HUMAN_UNAVAILABLE },
+      { label: 'ANIMAL OTC DRUG LABEL', value: 'ANIMAL OTC DRUG LABEL', unavailableOn: NON_HUMAN_UNAVAILABLE },
+      { label: 'VACCINE', value: 'VACCINE' },
+    ],
+    defaultValue: () => ({ values: [], plr: 'all' }),
+  },
+  applicationType: {
+    type: 'applicationType',
+    title: 'Application Types or Marketing Categories',
+    shortTitle: 'Application Types or Marketing Categories',
+    optionsKey: 'applicationTypes',
+    quickPicks: [
+      { label: 'ANDA', value: 'ANDA' },
+      { label: 'BLA', value: 'BLA' },
+      { label: 'NDA', value: 'NDA' },
+      { label: 'NDA Authorized Generic', value: 'NDA authorized generic' },
+      // Pattern, not exact: FDA uses several monograph categories ("OTC
+      // monograph drug", "OTC monograph final", "OTC monograph not final")
+      // and the quick pick means all of them.
+      { label: 'OTC Monograph Drug', value: '%OTC monograph%' },
+    ],
+    defaultValue: () => ({ values: [], isRld: false }),
+  },
+  productName: {
+    type: 'productName',
+    title: 'Product Identifier(s)',
+    shortTitle: 'Product Identifier(s)',
+    defaultValue: () => ({ field: 'any', op: 'equals', text: '', verified: false }),
+  },
+  fullText: {
+    type: 'fullText',
+    title: 'Labeling Full Text Search',
+    shortTitle: 'Labeling Full Text Search',
+    defaultValue: () => ({ mode: 'simple', text: '' }),
+  },
+  labelingSection: {
+    type: 'labelingSection',
+    title: 'Labeling Text & Section(s)',
+    shortTitle: 'Labeling Text & Section(s)',
+    optionsKey: 'sections',
+    defaultValue: () => ({ mode: 'simple', text: '', sections: [] }),
+  },
+  marketStatus: {
+    type: 'marketStatus',
+    title: 'Market Status',
+    shortTitle: 'Market Status',
+    defaultValue: () => ({ status: '', startDateMin: '', startDateMax: '', values: [] }),
+  },
+  meddra: {
+    type: 'meddra',
+    title: 'MedDRA Terms',
+    shortTitle: 'MedDRA Terms',
+    /*
+     * PTs and LLTs are two lists, not one list at a level, because a PT is
+     * only a handle for the LLTs beneath it and the panel lets those be
+     * dropped one at a time (`excludedLlts`). `level` now says only which of
+     * the two rows the search box files its next pick into, and it starts at
+     * LLT -- the level label text is actually written at.
+     *
+     * `terms` stays for what arrives in the old shape: saved URLs and
+     * everything /translate emits. The card folds it into the matching row on
+     * sight, and the compiler reads it the same way for anything that never
+     * passes through the card.
+     */
+    defaultValue: () => ({ level: 'llt', terms: [], ptTerms: [], lltTerms: [], excludedLlts: [] }),
+  },
+  route: {
+    type: 'route',
+    title: 'Route(s) of Administration',
+    shortTitle: 'Route(s) of Administration',
+    optionsKey: 'routes',
+    quickPicks: [
+      { label: 'Oral', value: 'ORAL' },
+      { label: 'Topical', value: 'TOPICAL' },
+      { label: 'Intravenous', value: 'INTRAVENOUS' },
+    ],
+    defaultValue: () => ({ values: [] }),
+  },
+  dosageForm: {
+    type: 'dosageForm',
+    title: 'Dosage Form(s)',
+    shortTitle: 'Dosage Form(s)',
+    optionsKey: 'dosageForms',
+    /*
+     * Exact values, like routes and marketing categories: NCI dosage-form terms
+     * are a controlled vocabulary. "TABLET" must not sweep in "TABLET, FILM
+     * COATED" or "TABLET, EXTENDED RELEASE" — those are separate picks in the
+     * dropdown below, which is fed live from the database.
+     */
+    quickPicks: [
+      { label: 'Capsule', value: 'CAPSULE' },
+      { label: 'Cream', value: 'CREAM' },
+      { label: 'Injection', value: 'INJECTION' },
+      { label: 'Injection, Solution', value: 'INJECTION, SOLUTION' },
+      { label: 'Solution', value: 'SOLUTION' },
+      { label: 'Tablet', value: 'TABLET' },
+      { label: 'Tablet, Film Coated', value: 'TABLET, FILM COATED' },
+    ],
+    defaultValue: () => ({ values: [] }),
+  },
+  deaSchedule: {
+    type: 'deaSchedule',
+    title: 'DEA Schedule',
+    shortTitle: 'DEA Schedule',
+    /*
+     * The SPL acceptable terms, not roman-numeral prose: PROD_DEA stores
+     * "CII", never "Schedule II". Oracle only — the local import derives no
+     * DEA data, and the compiler warns rather than silently widening.
+     */
+    quickPicks: [
+      { label: 'CI — Schedule I', value: 'CI' },
+      { label: 'CII — Schedule II', value: 'CII' },
+      { label: 'CIII — Schedule III', value: 'CIII' },
+      { label: 'CIV — Schedule IV', value: 'CIV' },
+      { label: 'CV — Schedule V', value: 'CV' },
+    ],
+    defaultValue: () => ({ values: [] }),
+  },
+  activeMoiety: {
+    type: 'activeMoiety',
+    title: 'Active Moiety',
+    shortTitle: 'Active Moiety',
+    defaultValue: () => ({ op: 'equals', terms: [] }),
+  },
+  pharmClass: {
+    type: 'pharmClass',
+    title: 'Pharmacologic Class(es)',
+    shortTitle: 'Pharmacologic Class(es)',
+    defaultValue: () => ({ classType: 'any', terms: [] }),
+  },
+  identifier: {
+    type: 'identifier',
+    title: 'Labeling, Product and Ingredient Identifiers',
+    shortTitle: 'Labeling, Product and Ingredient Identifiers',
+    defaultValue: () => ({
+      text: '',
+      setSplGuid: '',
+      setSplGuids: [],
+      applKind: '',
+      applNum: '',
+      uniiCode: '',
+      uniiTarget: 'active',
+    }),
+  },
+};
+
+/** The cards FDALabel shows on a fresh search, in its order. */
+export const DEFAULT_CARDS: CriterionType[] = [
+  'labelingType',
+  'applicationType',
+  'productName',
+  'labelingSection',
+  'route',
+  'pharmClass',
+  'identifier',
+];
+
+/** The "Add more criteria" row, in FDALabel's order. */
+export const ADD_MORE_ORDER: CriterionType[] = [
+  'labelingSection',
+  'productName',
+  'labelingType',
+  'pharmClass',
+  'applicationType',
+  'marketStatus',
+  'meddra',
+  'route',
+  'dosageForm',
+  'deaSchedule',
+  'activeMoiety',
+  'identifier',
+];
+
+export type SearchSectionId = 'filters' | 'identifiers' | 'pharmClass' | 'textMatch';
+
+export interface SearchSectionDef {
+  id: SearchSectionId;
+  stepNumber: number;
+  title: string;
+  subtitle: string;
+  criterionTypes: CriterionType[];
+}
+
+export const SEARCH_SECTIONS: SearchSectionDef[] = [
+  {
+    id: 'filters',
+    stepNumber: 1,
+    title: 'Market & Categorical Filters',
+    subtitle: 'Filter by marketing categories and status',
+    criterionTypes: [
+      'labelingType',
+      'applicationType',
+      'marketStatus',
+      'deaSchedule',
+      'activeMoiety',
+    ],
+  },
+  {
+    id: 'identifiers',
+    stepNumber: 2,
+    title: 'Product Names & Identifiers',
+    subtitle: 'Exact or keyword lookup by drug product names, NDCs, UNIIs, or Set/Document IDs',
+    criterionTypes: ['productName', 'identifier'],
+  },
+  {
+    id: 'pharmClass',
+    stepNumber: 3,
+    title: 'Pharmacologic Class & Product Form',
+    subtitle: 'Filter by pharmacologic class, dosage form, or route of administration',
+    criterionTypes: ['pharmClass', 'dosageForm', 'route'],
+  },
+  {
+    id: 'textMatch',
+    stepNumber: 4,
+    title: 'Labeling Text & MedDRA',
+    subtitle: 'Search labeling text, specific sections (e.g. Boxed Warning), or MedDRA safety terms',
+    criterionTypes: ['labelingSection', 'meddra'],
+  },
+];
+
+export function getSectionForCriterion(type: CriterionType): SearchSectionId {
+  if (type === 'fullText') return 'textMatch';
+  for (const section of SEARCH_SECTIONS) {
+    if (section.criterionTypes.includes(type)) return section.id;
+  }
+  return 'filters';
+}
+
+
+/*
+ * Search target.
+ *
+ * The two Oracle values hit the same database and differ only in the summary
+ * table the compiler bases on. 'oracle' uses DGV_SUM_RX_SPL, which is a curated
+ * subset -- it excludes animal and other non-human labeling, so an "Animal Rx"
+ * search against it returns nothing. 'oracle_all' uses the raw SUM_SPL, which
+ * covers everything. Both expose every column the compiler reads.
+ */
+export type TargetDb = 'local' | 'oracle' | 'oracle_all';
+
+export const isOracleTarget = (t: TargetDb) => t === 'oracle' || t === 'oracle_all';
+
+export const TARGET_DB_LABELS: Record<TargetDb, string> = {
+  local: 'Local DB',
+  oracle: 'CDER-CBER ver.',
+  oracle_all: 'FDA ver.',
+};
+
+/*
+ * Which backends can actually evaluate a criterion.
+ *
+ * Absent from this map means "both", which is the common case. The entries
+ * here are the exceptions, and they are the single source of truth for the
+ * disabled state in the "Add more criteria" row and the banner on a card —
+ * the compilers warn about the same cases server-side, but a warning that
+ * only arrives with the results is a wasted round trip.
+ *
+ */
+export const CRITERION_SUPPORT: Partial<Record<CriterionType, TargetDb[]>> = {
+  deaSchedule: ['oracle', 'oracle_all'],
+  activeMoiety: ['oracle', 'oracle_all'],
+  applicationType: ['oracle', 'oracle_all'],
+  fullText: ['oracle', 'oracle_all'],
+  labelingSection: ['oracle', 'oracle_all'],
+  meddra: ['oracle', 'oracle_all'],
+};
+
+/**
+ * Overrides the generated wording in `unsupportedReason` where "the other
+ * database has it" is not the useful explanation.
+ */
+export const CRITERION_UNAVAILABLE_REASON: Partial<Record<CriterionType, string>> = {
+  applicationType:
+    'Application Types / Marketing Categories is currently not available for the Local DB.',
+  fullText:
+    'Labeling Full Text Search is disabled for the Local DB.',
+  labelingSection:
+    'Labeling Text & Section Search is disabled for the Local DB.',
+  meddra:
+    'MedDRA Terms Search is disabled for the Local DB.',
+};
+
+/**
+ * Criteria whose card is hidden outright on a target that cannot evaluate them,
+ * rather than shown with a banner.
+ *
+ * Only for criteria the builder adds by default: an unusable card the user
+ * never asked for is clutter, and Application Types is in the starting group.
+ * A criterion the user added themselves keeps its card and its banner, because
+ * silently removing what someone typed is worse than showing it struck out.
+ *
+ * The criterion stays in the query while hidden. Dropping it would discard the
+ * selections on a target switch, and the compiler already ignores it with a
+ * warning; switching back brings the card and its values back intact.
+ */
+export const CRITERION_HIDDEN_WHEN_UNAVAILABLE: CriterionType[] = ['applicationType'];
+
+export function isCriterionHidden(type: CriterionType, targetDb: TargetDb): boolean {
+  return (
+    CRITERION_HIDDEN_WHEN_UNAVAILABLE.includes(type) && !isCriterionSupported(type, targetDb)
+  );
+}
+
+export function isCriterionSupported(type: CriterionType, targetDb: TargetDb): boolean {
+  const support = CRITERION_SUPPORT[type];
+  return support === undefined || support.includes(targetDb);
+}
+
+/** Why a criterion is unavailable, or null when it is fine. Shown verbatim. */
+export function unsupportedReason(type: CriterionType, targetDb: TargetDb): string | null {
+  if (isCriterionSupported(type, targetDb)) return null;
+  const override = CRITERION_UNAVAILABLE_REASON[type];
+  if (override) return override;
+  const { shortTitle } = CRITERION_DEFS[type];
+  const support = CRITERION_SUPPORT[type] ?? [];
+  const only = support.some(isOracleTarget) ? 'FDALabel Oracle' : 'local';
+  return `${shortTitle} is only available against the ${only} database. This criterion will be ignored for the current target.`;
+}
+
+export function makeCriterion(type: CriterionType): Criterion {
+  return { uid: uid(), type, value: CRITERION_DEFS[type].defaultValue() };
+}
+
+export function makeDefaultGroup(): CriteriaGroup {
+  return { uid: uid(), criteria: DEFAULT_CARDS.map(makeCriterion) };
+}
+
+export function makeEmptyQuery(): LabelQuery {
+  return { groups: [makeDefaultGroup()], exactMatch: false };
+}
+
+/** Drops client-only ids so the tree matches what the compiler expects. */
+export function toWire(query: LabelQuery, targetDb?: TargetDb): WireQuery {
+  return {
+    exactMatch: Boolean(query.exactMatch),
+    groups: query.groups.map((g) => ({
+      criteria: g.criteria
+        .filter((c) => {
+          if (targetDb === 'local') {
+            if (c.type === 'fullText' || c.type === 'meddra') return false;
+            if (c.type === 'labelingSection') {
+              const v = c.value as any;
+              const rawSections = v?.sections || [];
+              const isProductTitle = rawSections.some((s: string) => s === 'SPLTITLE' || s === 'Product Title');
+              const isApprovalYear = rawSections.some((s: string) => s === '43683-2' || s === 'Initial U.S. Approval [4 Digit Year]');
+              if (!isProductTitle && !isApprovalYear) return false;
+            }
+          }
+          return true;
+        })
+        .map((c) => {
+          const value = { ...(c.value as Record<string, unknown>) };
+          // The complete entity list is only needed by the builder's candidate
+          // manager. Keep the selected names in the wire query, not thousands
+          // of unselected candidates in the URL or search request.
+          delete value.entityCandidateNames;
+          delete value.entityCandidateDetails;
+          delete value.entityExpandedSelectedNames;
+          return { type: c.type, value };
+        }),
+    })),
+  };
+}
+
+/** Rehydrates a wire query (from /translate or localStorage) with fresh uids. */
+export function fromWire(wire: WireQuery): LabelQuery {
+  const groups = (wire.groups || [])
+    .map((g) => ({
+      uid: uid(),
+      criteria: (g.criteria || [])
+        .filter((c) => c && CRITERION_DEFS[c.type])
+        .map((c) => ({
+          uid: uid(),
+          type: c.type,
+          // Merge over the default so a partial value from the model still
+          // renders every control the card expects.
+          value: { ...CRITERION_DEFS[c.type].defaultValue(), ...(c.value || {}) },
+        })),
+    }))
+    .filter((g) => g.criteria.length > 0);
+
+  return groups.length ? { groups, exactMatch: Boolean(wire.exactMatch) } : makeEmptyQuery();
+}
+
+/** True when a criterion would contribute nothing to the SQL. */
+export function isCriterionEmpty(c: Criterion): boolean {
+  const v = c.value as Record<string, any>;
+  switch (c.type) {
+    case 'route':
+    case 'marketStatus':
+    case 'dosageForm':
+    case 'deaSchedule':
+      return !(v.values?.length > 0);
+    case 'labelingType':
+      return !(v.values?.length > 0) && (!v.plr || v.plr === 'all');
+    case 'applicationType':
+      return (
+        !(v.values?.length > 0) &&
+        !v.isRld
+      );
+    case 'meddra':
+      return !(
+        v.terms?.length > 0 ||
+        v.ptTerms?.length > 0 ||
+        v.lltTerms?.length > 0
+      );
+    case 'productName':
+      return v.entityNamesResolved ? false : !String(v.text || '').trim();
+    case 'pharmClass':
+      return !(v.terms?.length > 0 || v.unverifiedTerms?.length > 0);
+    case 'activeMoiety':
+      return !(v.terms?.length > 0);
+    case 'labelingSection':
+      return !String(v.text || '').trim() && !(v.sections?.length > 0);
+    case 'identifier':
+      return (
+        !String(v.text || '').trim() &&
+        !String(v.setSplGuid || '').trim() &&
+        !(v.setSplGuids?.length > 0) &&
+        !String(v.applNum || '').trim() &&
+        !String(v.uniiCode || '').trim()
+      );
+    default:
+      return !String(v.text || '').trim();
+  }
+}
+
+/**
+ * The criterion fields the sidebar filter panel drives, per criterion type.
+ *
+ * Mirrors CATEGORY_CRITERION in backend/labelquery/facets.py, which is what
+ * the /facets endpoint strips before counting. Keep the two in sync: the
+ * backend decides what the numbers mean, this decides when they are refetched.
+ */
+const FACET_FILTER_FIELDS: Partial<Record<CriterionType, string[]>> = {
+  labelingType: ['values', 'plr', 'formatGroup'],
+  applicationType: ['values', 'isRld'],
+  marketStatus: ['values', 'startDateMin', 'startDateMax'],
+  route: ['values'],
+  dosageForm: ['values'],
+  pharmClass: ['terms'],
+  deaSchedule: ['values'],
+};
+
+/**
+ * A copy of `query` with every sidebar-driven filter cleared, leaving only the
+ * real search criteria (free text, MedDRA, product name, identifiers, ...).
+ *
+ * This is exactly the set the facet counts are computed over, so it is also
+ * the right cache key for them: toggling a filter changes the query but not
+ * its backbone, and the counts the panel is showing are still correct.
+ */
+export function stripFacetFilters<T extends { groups: Array<{ criteria: Array<{ type: CriterionType; value: CriterionValue }> }> }>(
+  query: T,
+): T {
+  return {
+    ...query,
+    groups: (query.groups || []).map((g) => ({
+      ...g,
+      criteria: (g.criteria || []).map((c) => {
+        const fields = FACET_FILTER_FIELDS[c.type];
+        if (!fields) return c;
+        const value: CriterionValue = { ...(c.value || {}) };
+        for (const field of fields) {
+          if (!(field in value)) continue;
+          const current = value[field];
+          if (Array.isArray(current)) value[field] = [];
+          else if (typeof current === 'boolean') value[field] = false;
+          else value[field] = null;
+        }
+        return { ...c, value };
+      }),
+    })),
+  } as T;
+}
+
+/*
+ * AI-suggested categorical pre-filters.
+ *
+ * /translate keeps these out of the criteria tree and returns them here
+ * instead, because they are suggestions until the analyst ticks one. Every
+ * type used is a category the results sidebar drives, which is what makes the
+ * count read "300 / 1,500": the backend strips exactly these before computing
+ * `unfiltered_total`, so a ticked box narrows the results while the backbone
+ * total stays visible beside it.
+ */
+export interface PreFilter {
+  /** `type:value`, stable across renders — used as the React key and toggle id. */
+  id: string;
+  type: CriterionType;
+  /** The criterion field the value is appended to. Always `values` today. */
+  field: string;
+  value: string;
+  label: string;
+  checked: boolean;
+}
+
+/** Reads /translate's `prefilters`, which arrive without a checked flag. */
+export function fromWirePrefilters(raw: unknown): PreFilter[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((p): p is Record<string, any> => Boolean(p) && typeof p === 'object')
+    .filter((p) => CRITERION_DEFS[p.type as CriterionType] && typeof p.value === 'string' && p.value)
+    .map((p) => ({
+      id: String(p.id || `${p.type}:${p.value}`),
+      type: p.type as CriterionType,
+      field: typeof p.field === 'string' && p.field ? p.field : 'values',
+      value: String(p.value),
+      label: String(p.label || p.value),
+      // Ticked on arrival: the analyst asked for these in the description, so
+      // the default is the search they described. Unticking widens it back.
+      checked: true,
+    }));
+}
+
+/** Flips one box. */
+export function togglePrefilter(list: PreFilter[], id: string): PreFilter[] {
+  return list.map((p) => (p.id === id ? { ...p, checked: !p.checked } : p));
+}
+
+/** Ticks or clears every box at once. */
+export function setAllPrefilters(list: PreFilter[], checked: boolean): PreFilter[] {
+  return list.map((p) => ({ ...p, checked }));
+}
+
+/**
+ * `query` with every ticked pre-filter merged in as a normal criterion.
+ *
+ * Applied to every group rather than the first one: these are filters over the
+ * whole result set, and an OR branch without them would come back unfiltered
+ * while the header claimed otherwise.
+ *
+ * Nothing else in the pipeline needs to know about pre-filters after this —
+ * they land as ordinary categorical criteria, so the results sidebar shows
+ * them ticked and the facet code strips them from the backbone as usual.
+ */
+export function applyPrefilters(query: LabelQuery, prefilters: PreFilter[]): LabelQuery {
+  const active = prefilters.filter((p) => p.checked);
+  if (active.length === 0) return query;
+
+  return {
+    ...query,
+    groups: (query.groups.length ? query.groups : [makeDefaultGroup()]).map((group) => {
+      const criteria = group.criteria.slice();
+      for (const pre of active) {
+        const index = criteria.findIndex((c) => c.type === pre.type);
+        const base = index >= 0 ? criteria[index] : makeCriterion(pre.type);
+        const current = (base.value as Record<string, any>)[pre.field];
+        const values: string[] = Array.isArray(current) ? current.slice() : [];
+        if (!values.some((v) => v.toLowerCase() === pre.value.toLowerCase())) {
+          values.push(pre.value);
+        }
+        const merged = { ...base, value: { ...base.value, [pre.field]: values } };
+        if (index >= 0) criteria[index] = merged;
+        else criteria.push(merged);
+      }
+      return { ...group, criteria };
+    }),
+  };
+}
+
+export function countFilled(query: LabelQuery): number {
+  return query.groups.reduce(
+    (n, g) => n + g.criteria.filter((c) => !isCriterionEmpty(c)).length,
+    0,
+  );
+}
+
+/**
+ * Returns true if any active productName or meddra criterion has unconfirmed terms
+ * pending user verification from the standardized vocabulary.
+ */
+export function hasUnverifiedCriteria(query: LabelQuery): boolean {
+  return query.groups.some((g) =>
+    g.criteria.some((c) => {
+      if (c.type === 'productName') {
+        const v = c.value as Record<string, any>;
+        const op = v?.op || 'equals';
+        if (op === 'equals') {
+          return Boolean(v?.text && String(v.text).trim()) && v.verified === false;
+        }
+        return false;
+      }
+      if (c.type === 'pharmClass') {
+        const v = c.value as Record<string, any>;
+        return Array.isArray(v?.unverifiedTerms) && v.unverifiedTerms.length > 0;
+      }
+      if (c.type === 'meddra') {
+        const v = c.value as Record<string, any>;
+        const unverified = Array.isArray(v?.unverifiedTerms) && v.unverifiedTerms.length > 0;
+        const hasAnyTerms = (v?.ptTerms?.length || 0) > 0 || (v?.lltTerms?.length || 0) > 0 || (v?.terms?.length || 0) > 0;
+        return (unverified || hasAnyTerms) && v.verified === false;
+      }
+      return false;
+    }),
+  );
+}
+
+export const hasUnverifiedProductNames = hasUnverifiedCriteria;
+
+export const COMMON_FULLTEXT_WORDS = new Set([
+  // Standard English stopwords
+  'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and',
+  'any', 'are', 'aren', 'as', 'at', 'be', 'because', 'been', 'before', 'being',
+  'below', 'between', 'both', 'but', 'by', 'can', 'cannot', 'could', 'did',
+  'do', 'does', 'doing', 'down', 'during', 'each', 'few', 'for', 'from',
+  'further', 'had', 'has', 'have', 'having', 'he', 'her', 'here', 'hers',
+  'herself', 'him', 'himself', 'his', 'how', 'i', 'if', 'in', 'into', 'is',
+  'it', 'its', 'itself', 'just', 'me', 'more', 'most', 'my', 'myself', 'no',
+  'nor', 'not', 'now', 'of', 'off', 'on', 'once', 'only', 'or', 'other',
+  'our', 'ours', 'ourselves', 'out', 'over', 'own', 'same', 'she', 'should',
+  'so', 'some', 'such', 'than', 'that', 'the', 'their', 'theirs', 'them',
+  'themselves', 'then', 'there', 'these', 'they', 'this', 'those', 'through',
+  'to', 'too', 'under', 'until', 'up', 'very', 'was', 'we', 'were', 'what',
+  'when', 'where', 'which', 'while', 'who', 'whom', 'why', 'with', 'would',
+  'you', 'your', 'yours', 'yourself', 'yourselves',
+
+  // Ubiquitous drug labeling terms
+  'drug', 'drugs', 'product', 'products', 'patient', 'patients', 'dose', 'doses',
+  'dosage', 'dosages', 'mg', 'ml', 'g', 'mcg', 'kg', 'tablet', 'tablets',
+  'capsule', 'capsules', 'treatment', 'treatments', 'treat', 'treated', 'treating',
+  'administer', 'administered', 'administration', 'administering',
+  'clinical', 'effect', 'effects', 'safety', 'efficacy', 'study', 'studies',
+  'label', 'labels', 'labeling', 'information', 'daily', 'day', 'days',
+  'use', 'used', 'uses', 'using', 'contraindication', 'contraindications',
+  'warning', 'warnings', 'precaution', 'precautions', 'indication', 'indications',
+  'adverse', 'reaction', 'reactions', 'table', 'section', 'package', 'insert',
+  'oral', 'injectable', 'solution', 'usp', 'fda', 'ndc', 'rx'
+]);
+
+export function isCommonFullTextQuery(text: string | null | undefined): boolean {
+  if (!text || !text.trim()) return false;
+  const clean = text.replace(/[{}\[\]\(\)"',;:\-]/g, ' ').toLowerCase();
+  const tokens = clean.split(/\s+/).filter((t) => t.length > 0 && !['and', 'or', 'not'].includes(t));
+  if (tokens.length === 0) return false;
+  return tokens.every((t) => COMMON_FULLTEXT_WORDS.has(t) || t.length <= 1);
+}
+
+export function hasInvalidCommonFullText(query: LabelQuery): boolean {
+  return query.groups.some((g) =>
+    g.criteria.some((c) => {
+      if (c.type === 'fullText' || c.type === 'labelingSection') {
+        const text = (c.value as Record<string, any>)?.text;
+        return Boolean(text && String(text).trim()) && isCommonFullTextQuery(text);
+      }
+      return false;
+    })
+  );
+}
+
+export function hasInvalidMeddraLevel(query: LabelQuery): boolean {
+  return query.groups.some((g) =>
+    g.criteria.some((c) => {
+      if (c.type === 'pharmClass') {
+        const v = c.value as Record<string, any>;
+        return Array.isArray(v?.unverifiedTerms) && v.unverifiedTerms.length > 0;
+      }
+      if (c.type === 'meddra') {
+        const v = c.value as Record<string, any>;
+        const lvl = String(v?.level || '').toLowerCase();
+        return ['soc', 'hlgt', 'hlt'].includes(lvl);
+      }
+      return false;
+    })
+  );
+}

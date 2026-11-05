@@ -1,0 +1,18 @@
+# Next.js
+.next/
+out/
+.env.local
+.env*.local
+node_modules/
+
+# Vite
+dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/

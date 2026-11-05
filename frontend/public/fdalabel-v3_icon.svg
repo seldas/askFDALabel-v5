@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background Circle: FDA Blue -->
+  <circle cx="256" cy="256" r="240" fill="#005187"/>
+  
+  <!-- Chat Bubble Shape representing "Ask" -->
+  <path d="M360 140 H152 c-22 0 -40 18 -40 40 v152 c0 22 18 40 40 40 h30 l20 40 20 -40 h138 c22 0 40 -18 40 -40 V180 c0 -22 -18 -40 -40 -40 z" fill="#ffffff"/>
+  
+  <!-- Magnifying Glass / Search Icon representing "Search/Label" inside the bubble -->
+  <circle cx="240" cy="240" r="50" stroke="#005187" stroke-width="15" fill="none"/>
+  <line x1="275" y1="275" x2="310" y2="310" stroke="#005187" stroke-width="15" stroke-linecap="round"/>
+  
+  <!-- Lines representing text/label -->
+  <line x1="180" y1="200" x2="280" y2="200" stroke="#005187" stroke-width="10" stroke-linecap="round"/>
+</svg>

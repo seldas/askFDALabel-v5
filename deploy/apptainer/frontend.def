@@ -1,0 +1,30 @@
+Bootstrap: docker
+From: node:22-bullseye-slim
+
+%files
+frontend /app
+
+%environment
+    export HOST=127.0.0.1
+    export FRONTEND_PORT=8841
+    export BACKEND_URL=http://127.0.0.1:8842
+
+%post
+    apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+    cd /app && npm ci && BACKEND_URL=http://127.0.0.1:8842 npm run build
+
+%startscript
+    cd /app
+    if [ "${NODE_ENV:-production}" = "development" ]; then
+        exec npm run dev -- -H 127.0.0.1 -p "${FRONTEND_PORT:-8841}"
+    else
+        exec npm run start -- -H 127.0.0.1 -p "${FRONTEND_PORT:-8841}"
+    fi
+
+%runscript
+    cd /app
+    if [ "${NODE_ENV:-production}" = "development" ]; then
+        exec npm run dev -- -H 127.0.0.1 -p "${FRONTEND_PORT:-8841}"
+    else
+        exec npm run start -- -H 127.0.0.1 -p "${FRONTEND_PORT:-8841}"
+    fi

@@ -1,0 +1,776 @@
+import json
+from datetime import datetime, timezone
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
+from .extensions import db
+
+def utc_now():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+# --- Identity Models ---
+
+project_users = db.Table('project_users',
+    db.Column('project_id', db.Integer, db.ForeignKey('project.id'), primary_key=True),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
+)
+
+class Project(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    share_code = db.Column(db.String(36), unique=True)
+    display_order = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=utc_now)
+
+    owner = db.relationship('User', backref=db.backref('owned_projects', lazy=True), foreign_keys=[owner_id])
+    members = db.relationship('User', secondary=project_users, lazy='subquery',
+        backref=db.backref('shared_projects', lazy=True))
+    
+    favorites = db.relationship('Favorite', backref='project', lazy=True, cascade="all, delete-orphan")
+    comparisons = db.relationship('FavoriteComparison', backref='project', lazy=True, cascade="all, delete-orphan")
+
+import os
+
+#: Account roles, least to most privileged.
+#:
+#: 'developer' is 'user' plus the tooling a plain account has no business
+#: reaching: choosing which labeling database a query runs against, and the
+#: LabelChat and Local Database Search modules. Normal users are
+#: pinned to the CDER-CBER scope and are not offered those three tools.
+ROLE_USER = 'user'
+ROLE_DEVELOPER = 'developer'
+ROLE_ADMIN = 'admin'
+ROLES = (ROLE_USER, ROLE_DEVELOPER, ROLE_ADMIN)
+
+#: Roles with developer tooling. Both capabilities below key off this set --
+#: they have the same answer today, and are named separately so a future split
+#: does not have to untangle call sites.
+_DEVELOPER_ROLES = frozenset({ROLE_DEVELOPER, ROLE_ADMIN})
+
+#: The shared anonymous account created by /auth/guest-login. It is a real row
+#: rather than a session flag, so everyone signing in as a guest shares one
+#: user id -- which is exactly why per-account features are closed to it: one
+#: guest's query history and AI credentials would be visible to the next.
+GUEST_USERNAME = 'guest'
+
+
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+
+    # `role` is the source of truth. `is_admin` is kept in lockstep with it by
+    # `set_role` because a lot of existing code (admin_required, the management
+    # UI, several routes) still reads the boolean; dropping it would have meant
+    # touching all of that in the same change.
+    role = db.Column(db.String(20), nullable=False, default=ROLE_USER, server_default=ROLE_USER)
+    is_admin = db.Column(db.Boolean, default=False)
+    is_active = db.Column(db.Boolean, default=True, server_default='true')
+    can_comment = db.Column(db.Boolean, default=True, server_default='true', nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    last_login = db.Column(db.DateTime, nullable=True)
+
+    def set_role(self, role):
+        """Assigns a role, keeping the legacy is_admin flag consistent."""
+        role = (role or ROLE_USER).strip().lower()
+        if role not in ROLES:
+            raise ValueError(f"Unknown role: {role!r}")
+        self.role = role
+        self.is_admin = (role == ROLE_ADMIN)
+        return self.role
+
+    @property
+    def effective_role(self):
+        """
+        The role to act on.
+
+        Falls back to is_admin for rows written before the column existed, so a
+        database that has not run the startup backfill still authorizes
+        correctly instead of silently demoting every admin.
+        """
+        if self.role in ROLES:
+            return self.role
+        return ROLE_ADMIN if self.is_admin else ROLE_USER
+
+    @property
+    def is_guest(self):
+        """
+        The shared anonymous account.
+
+        Query history and preferences are disabled for it -- both are per-user
+        state on a row every anonymous visitor shares, so one visitor would be
+        reading and overwriting another's. `username` is stored in lowercase,
+        so this comparison is case-insensitive.
+        """
+        return (self.username or '').lower() == GUEST_USERNAME
+
+    @property
+    def has_developer_access(self):
+        """
+        Whether this account may reach developer-only modules.
+
+        Covers LabelChat (/api/search) and Local Database Search (/api/localquery),
+        each gated at the blueprint
+        level so every route inside is covered.
+        """
+        return self.effective_role in _DEVELOPER_ROLES
+
+    @property
+    def can_select_database(self):
+        """Whether this account may choose the labeling database to query."""
+        return self.effective_role in _DEVELOPER_ROLES
+
+    # An empty preference follows the deployment default at request time.
+    ai_provider = db.Column(db.String(20), nullable=True, default=None)
+    custom_gemini_key = db.Column(db.String(255), nullable=True)
+    openai_api_key = db.Column(db.String(255), nullable=True)
+    openai_base_url = db.Column(db.String(255), nullable=True)
+    openai_model_name = db.Column(db.String(100), nullable=True)
+    ai_settings = db.Column(db.Text, nullable=True)
+    api_key = db.Column(db.String(64), unique=True, index=True, nullable=True)
+    api_key_created_at = db.Column(db.DateTime, nullable=True)
+    api_key_last_used = db.Column(db.DateTime, nullable=True)
+
+    def generate_api_key(self):
+        """Generates a new secure API key for REST API access."""
+        import secrets
+        self.api_key = f"afl_live_{secrets.token_hex(24)}"
+        self.api_key_created_at = utc_now()
+        return self.api_key
+    
+    favorites = db.relationship('Favorite', backref='user', lazy=True)
+    comparisons = db.relationship('FavoriteComparison', backref='user', lazy=True)
+
+    @property
+    def display_name(self):
+        """Human-readable SSO name, falling back to the local account name."""
+        for identity in self.sso_identities:
+            name = (identity.display_name or '').strip()
+            if name:
+                return name
+        return self.username
+
+    def set_password(self, password):
+        if self.sso_identities:
+            raise ValueError('SSO accounts cannot use local passwords')
+        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
+
+    def check_password(self, password):
+        if self.sso_identities or self.password_hash == '!sso-only':
+            return False
+        return check_password_hash(self.password_hash, password)
+
+# --- User Content Models ---
+
+class SsoIdentity(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    identity_key = db.Column(db.String(64), unique=True, nullable=False)
+    issuer = db.Column(db.Text, nullable=False)
+    subject = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True)
+    email = db.Column(db.String(320))
+    display_name = db.Column(db.Text)
+    office = db.Column(db.Text)
+    user = db.relationship('User', backref=db.backref('sso_identities', cascade='all, delete-orphan'))
+
+
+class SearchHistory(db.Model):
+    __tablename__ = 'search_history'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    chat_data = db.Column(db.Text, nullable=False) # JSON string
+    timestamp = db.Column(db.DateTime, default=utc_now)
+
+    user = db.relationship('User', backref=db.backref('search_histories', lazy=True, cascade="all, delete-orphan"))
+
+class UserQueryHistory(db.Model):
+    __tablename__ = 'user_query_history'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    query_title = db.Column(db.String(500), nullable=False)
+    query_link = db.Column(db.Text, nullable=False)
+    query_json = db.Column(db.Text, nullable=True) # JSON string of query structure
+    result_count = db.Column(db.Integer, default=0)
+    target_db = db.Column(db.String(50), default='oracle')
+    timestamp = db.Column(db.DateTime, default=utc_now)
+
+    user = db.relationship('User', backref=db.backref('query_histories', lazy=True, cascade="all, delete-orphan"))
+
+class Favorite(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True)
+    set_id = db.Column(db.String(100), nullable=False)
+    brand_name = db.Column(db.Text)
+    generic_name = db.Column(db.Text)
+    manufacturer_name = db.Column(db.Text)
+    market_category = db.Column(db.Text)
+    application_number = db.Column(db.Text)
+    ndc = db.Column(db.Text)
+    effective_time = db.Column(db.String(100))
+    
+    # Missing columns for full analysis
+    active_ingredients = db.Column(db.Text)
+    labeling_type = db.Column(db.Text)
+    dosage_forms = db.Column(db.Text)
+    routes = db.Column(db.Text)
+    epc = db.Column(db.Text)
+    fdalabel_link = db.Column(db.Text)
+    dailymed_spl_link = db.Column(db.Text)
+    dailymed_pdf_link = db.Column(db.Text)
+    product_type = db.Column(db.Text)
+    label_format = db.Column(db.Text)
+    source = db.Column(db.String(50))
+    tag = db.Column(db.String(100), nullable=True)
+
+    timestamp = db.Column(db.DateTime, default=utc_now)
+
+class Annotation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    set_id = db.Column(db.String(100), nullable=False)
+    section_number = db.Column(db.String(50), nullable=False)
+    question = db.Column(db.Text, nullable=False)
+    answer = db.Column(db.Text, nullable=False)
+    keywords = db.Column(db.Text) # Stored as JSON string
+    is_public = db.Column(db.Boolean, default=False)
+    timestamp = db.Column(db.DateTime, default=utc_now)
+
+class FavoriteComparison(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True)
+    set_ids = db.Column(db.Text, nullable=False) # JSON string of list of set_ids
+    title = db.Column(db.String(255), nullable=False)
+    timestamp = db.Column(db.DateTime, default=utc_now)
+
+
+class ImageAnalysisCache(db.Model):
+    """Cached comparisons between two images belonging to a stored label."""
+    id = db.Column(db.Integer, primary_key=True)
+    cache_key = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    set_id = db.Column(db.String(100), nullable=False, index=True)
+    spl_id = db.Column(db.String(100), nullable=True)
+    model_name = db.Column(db.String(255), nullable=False)
+    result_json = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+
+
+class ImageReviewComment(db.Model):
+    """User comments, justifications, and decision records on visual review findings."""
+    __tablename__ = 'image_review_comments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('system_tasks.id', ondelete='CASCADE'), nullable=False, index=True)
+    finding_id = db.Column(db.Integer, nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
+    set_id = db.Column(db.String(100), nullable=True, index=True)
+
+    decision = db.Column(db.String(20), default='unreviewed', nullable=False)  # 'unreviewed', 'confirmed', 'dismissed'
+    comment = db.Column(db.Text, nullable=True)  # Reviewer comments or clinical justification
+    is_public = db.Column(db.Boolean, default=False, nullable=False)  # False=private, True=public
+    regions = db.Column(db.Text, nullable=True)  # Optional JSON string of adjusted region coordinates
+
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    user = db.relationship('User', backref=db.backref('image_review_comments', lazy=True, cascade='all, delete-orphan'))
+    task = db.relationship('SystemTask', backref=db.backref('image_review_comments', lazy=True, cascade='all, delete-orphan'))
+
+    __table_args__ = (
+        db.UniqueConstraint('task_id', 'finding_id', 'user_id', name='uq_image_review_comment_task_finding_user'),
+    )
+
+    def to_dict(self, current_user_id=None):
+        return {
+            'id': self.id,
+            'task_id': self.task_id,
+            'finding_id': self.finding_id,
+            'user_id': self.user_id,
+            'username': self.user.username if self.user else 'Unknown',
+            'display_name': self.user.display_name if self.user else 'Unknown',
+            'set_id': self.set_id,
+            'decision': self.decision,
+            'comment': self.comment or '',
+            'is_public': bool(self.is_public),
+            'is_mine': (self.user_id == current_user_id) if current_user_id is not None else False,
+            'regions': json.loads(self.regions) if self.regions else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class LabelAnnotation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True)
+    set_id = db.Column(db.String(100), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    section_id = db.Column(db.String(100), nullable=False)
+    start_offset = db.Column(db.Integer, nullable=False)
+    end_offset = db.Column(db.Integer, nullable=False)
+    selected_text = db.Column(db.Text, nullable=False)
+    annotation_type = db.Column(db.String(20), nullable=False)
+    color = db.Column(db.String(20))
+    comment = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    
+    user = db.relationship('User', backref=db.backref('label_annotations', lazy=True))
+    project = db.relationship('Project', backref=db.backref('label_annotations', lazy=True, cascade="all, delete-orphan"))
+
+class ComparisonSummary(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    set_ids_hash = db.Column(db.String(64), unique=True, nullable=False)
+    set_ids = db.Column(db.Text, nullable=False)
+    summary_content = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=utc_now)
+
+# --- Pharmacology / Toxicity Models ---
+
+class DrugToxicity(db.Model):
+    __tablename__ = 'drug_toxicity'
+    id = db.Column(db.Integer, primary_key=True)
+    SETID = db.Column(db.String(100), index=True)
+    Toxicity_Class = db.Column(db.String(50), index=True)
+    Tox_Type = db.Column(db.String(50), index=True)
+    is_historical = db.Column(db.Integer, default=0)
+    Update_Notes = db.Column(db.Text)
+    AI_Summary = db.Column(db.Text)
+    Evidence = db.Column(db.Text)
+    endpoint = db.Column(db.String(50))
+    AI_Model = db.Column(db.String(100))
+    Assessment_Date = db.Column(db.String(50))
+
+
+class DiliRo2Reference(db.Model):
+    """The Chen 2013 reference drugs for the Rule-of-Two (DILI) quadrant plot.
+
+    The published dataset the rule was derived on: Supporting Table 1 of
+    Chen M, Borlak J, Tong W, Hepatology 2013;58(1):388-396 — 164 oral drugs,
+    116 Most-DILI-concern and 48 No-DILI-concern. The paper deliberately omits
+    Less-DILI-concern drugs, which is why only two classes appear.
+
+    Seeded from backend/database/seed/dili_ro2_reference.csv; see the README
+    there for per-column provenance. Both plotted axes are published values,
+    so no column here is hand-curated any more.
+
+    `paper_logp` is what the paper printed. `alogp` is recomputed at import by
+    RDKit from smiles and is what gets plotted, so the reference points and the
+    drug under assessment always share one logP implementation — mixing them
+    would move points across the ALogP >= 3 boundary. The two are kept side by
+    side so the difference is auditable rather than assumed away.
+    """
+    __tablename__ = 'dili_ro2_reference'
+    id = db.Column(db.Integer, primary_key=True)
+    drug_name = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    dilirank_compound = db.Column(db.String(200))
+    dili_concern = db.Column(db.String(40), index=True)
+    dili_severity_class = db.Column(db.String(10))
+    max_daily_dose_mg = db.Column(db.Float, nullable=False)
+    dose_basis = db.Column(db.String(40))
+    dose_note = db.Column(db.Text)
+    #: 'published' for the Chen 2013 doses. Retained because a future
+    #: addition from another source may need reviewing.
+    dose_review_status = db.Column(db.String(40), default='published')
+    route = db.Column(db.String(40), default='oral')
+    pubchem_cid = db.Column(db.String(30))
+    inchikey = db.Column(db.String(30), index=True)
+    smiles = db.Column(db.Text)
+    mol_weight = db.Column(db.Float)
+    pubchem_xlogp3 = db.Column(db.Float)
+    #: logP exactly as published in the paper, and the paper's own rule-of-two
+    #: verdict. Kept for validation: recomputing ALogP must not silently move a
+    #: reference drug into a different quadrant than the paper put it in.
+    paper_logp = db.Column(db.Float)
+    paper_ro2_test = db.Column(db.String(20))
+    # Computed at import from smiles via rdkit Crippen.MolLogP. Null when RDKit
+    # is unavailable — the tool must then fall back to paper_logp and say so.
+    alogp = db.Column(db.Float, index=True)
+    alogp_method = db.Column(db.String(60))
+
+
+class ProjectAeReport(db.Model):
+    __tablename__ = 'project_ae_report'
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
+    target_pt = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(20), default='pending') # pending, processing, completed, failed
+    progress = db.Column(db.Integer, default=0) # 0 to 100
+    total_labels = db.Column(db.Integer, default=0)
+    processed_labels = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    completed_at = db.Column(db.DateTime)
+
+    project = db.relationship('Project', backref=db.backref('ae_reports', lazy=True, cascade="all, delete-orphan"))
+    details = db.relationship('ProjectAeReportDetail', backref='report', cascade="all, delete-orphan")
+
+class ProjectAeReportDetail(db.Model):
+    __tablename__ = 'project_ae_report_detail'
+    id = db.Column(db.Integer, primary_key=True)
+    report_id = db.Column(db.Integer, db.ForeignKey('project_ae_report.id'), nullable=False)
+    set_id = db.Column(db.String(100), nullable=False)
+    brand_name = db.Column(db.String(255))
+    generic_name = db.Column(db.String(255))
+    is_labeled = db.Column(db.Boolean, default=False)
+    found_sections = db.Column(db.Text) # JSON string: [{"section": "Warnings", "snippet": "..."}]
+    faers_count = db.Column(db.Integer, default=0)
+    faers_1yr_count = db.Column(db.Integer, default=0)
+    faers_5yr_count = db.Column(db.Integer, default=0)
+    faers_serious_count = db.Column(db.Integer, default=0)
+
+# --- MedDRA Models ---
+
+class MeddraSOC(db.Model):
+    __tablename__ = 'meddra_soc'
+    soc_code = db.Column(db.Integer, primary_key=True)
+    soc_name = db.Column(db.String(255), nullable=False)
+    soc_abbrev = db.Column(db.String(50))
+    soc_whoart_code = db.Column(db.String(20))
+    soc_harts_code = db.Column(db.Integer)
+    soc_costart_code = db.Column(db.String(20))
+    soc_icd9_code = db.Column(db.String(20))
+    soc_icd9cm_code = db.Column(db.String(20))
+    soc_icd10_code = db.Column(db.String(20))
+    soc_currency = db.Column(db.String(1))
+
+class MeddraHLGT(db.Model):
+    __tablename__ = 'meddra_hlgt'
+    hlgt_code = db.Column(db.Integer, primary_key=True)
+    hlgt_name = db.Column(db.String(255), nullable=False)
+    hlgt_whoart_code = db.Column(db.String(20))
+    hlgt_harts_code = db.Column(db.Integer)
+    hlgt_costart_code = db.Column(db.String(20))
+    hlgt_icd9_code = db.Column(db.String(20))
+    hlgt_icd9cm_code = db.Column(db.String(20))
+    hlgt_icd10_code = db.Column(db.String(20))
+    hlgt_currency = db.Column(db.String(1))
+
+class MeddraHLT(db.Model):
+    __tablename__ = 'meddra_hlt'
+    hlt_code = db.Column(db.Integer, primary_key=True)
+    hlt_name = db.Column(db.String(255), nullable=False)
+    hlt_whoart_code = db.Column(db.String(20))
+    hlt_harts_code = db.Column(db.Integer)
+    hlt_costart_code = db.Column(db.String(20))
+    hlt_icd9_code = db.Column(db.String(20))
+    hlt_icd9cm_code = db.Column(db.String(20))
+    hlt_icd10_code = db.Column(db.String(20))
+    hlt_currency = db.Column(db.String(1))
+
+class MeddraPT(db.Model):
+    __tablename__ = 'meddra_pt'
+    pt_code = db.Column(db.Integer, primary_key=True)
+    pt_name = db.Column(db.String(255), nullable=False)
+    null_field = db.Column(db.String(1))
+    pt_soc_code = db.Column(db.Integer)
+    pt_whoart_code = db.Column(db.String(20))
+    pt_harts_code = db.Column(db.Integer)
+    pt_costart_code = db.Column(db.String(20))
+    pt_icd9_code = db.Column(db.String(20))
+    pt_icd9cm_code = db.Column(db.String(20))
+    pt_icd10_code = db.Column(db.String(20))
+    pt_currency = db.Column(db.String(1))
+
+class MeddraLLT(db.Model):
+    __tablename__ = 'meddra_llt'
+    llt_code = db.Column(db.Integer, primary_key=True)
+    llt_name = db.Column(db.String(255), nullable=False)
+    pt_code = db.Column(db.Integer, db.ForeignKey('meddra_pt.pt_code'))
+    llt_whoart_code = db.Column(db.String(20))
+    llt_harts_code = db.Column(db.Integer)
+    llt_costart_code = db.Column(db.String(20))
+    llt_icd9_code = db.Column(db.String(20))
+    llt_icd9cm_code = db.Column(db.String(20))
+    llt_icd10_code = db.Column(db.String(20))
+    llt_currency = db.Column(db.String(1))
+    
+    pt = db.relationship('MeddraPT', backref='llts')
+
+class MeddraMDHIER(db.Model):
+    __tablename__ = 'meddra_mdhier'
+    id = db.Column(db.Integer, primary_key=True)
+    pt_code = db.Column(db.Integer, db.ForeignKey('meddra_pt.pt_code'), nullable=False)
+    hlt_code = db.Column(db.Integer, db.ForeignKey('meddra_hlt.hlt_code'), nullable=False)
+    hlgt_code = db.Column(db.Integer, db.ForeignKey('meddra_hlgt.hlgt_code'), nullable=False)
+    soc_code = db.Column(db.Integer, db.ForeignKey('meddra_soc.soc_code'), nullable=False)
+    pt_name = db.Column(db.String(255))
+    hlt_name = db.Column(db.String(255))
+    hlgt_name = db.Column(db.String(255))
+    soc_name = db.Column(db.String(255))
+    soc_abbrev = db.Column(db.String(50))
+    null_field = db.Column(db.String(1))
+    pt_soc_code = db.Column(db.Integer)
+    primary_soc_fg = db.Column(db.String(1))
+
+    __table_args__ = (
+        db.Index('idx_mdhier_pt', 'pt_code'),
+        db.Index('idx_mdhier_soc', 'soc_code'),
+    )
+
+class MeddraSMQList(db.Model):
+    __tablename__ = 'meddra_smq_list'
+    smq_code = db.Column(db.Integer, primary_key=True)
+    smq_name = db.Column(db.Text, nullable=False)
+    smq_level = db.Column(db.Integer)
+    smq_description = db.Column(db.Text)
+    smq_source = db.Column(db.Text)
+    smq_note = db.Column(db.Text)
+    meddra_version = db.Column(db.String(10))
+    status = db.Column(db.String(1))
+    smq_algorithm = db.Column(db.Text)
+
+class MeddraSMQContent(db.Model):
+    __tablename__ = 'meddra_smq_content'
+    id = db.Column(db.Integer, primary_key=True)
+    smq_code = db.Column(db.Integer, db.ForeignKey('meddra_smq_list.smq_code'), nullable=False)
+    term_code = db.Column(db.Integer, nullable=False)
+    term_level = db.Column(db.Integer, nullable=False)
+    term_scope = db.Column(db.Integer)
+    term_category = db.Column(db.String(1))
+    term_weight = db.Column(db.Integer)
+    term_status = db.Column(db.String(1))
+    term_addition_version = db.Column(db.String(10))
+    term_last_modified_version = db.Column(db.String(10))
+
+    __table_args__ = (
+        db.Index('idx_smq_content_smq', 'smq_code'),
+        db.Index('idx_smq_content_term', 'term_code'),
+    )
+
+# --- PGx Models ---
+
+class PgxBiomarker(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    drug_name = db.Column(db.String(255), nullable=False)
+    therapeutic_area = db.Column(db.String(255))
+    biomarker_name = db.Column(db.String(255), nullable=False)
+    labeling_sections = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=utc_now)
+
+class PgxSynonym(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    term = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    normalized_name = db.Column(db.String(255), nullable=False)
+
+class PgxAssessment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    set_id = db.Column(db.String(100), unique=True, nullable=False)
+    report_content = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=utc_now)
+
+# --- AI Assessment Models ---
+
+class AeAiAssessment(db.Model):
+    __tablename__ = 'ae_ai_assessment'
+    id = db.Column(db.Integer, primary_key=True)
+    set_id = db.Column(db.String(100), nullable=False, index=True)
+    drug_name = db.Column(db.String(255), nullable=False)
+    result_json = db.Column(db.Text, nullable=False) # Store as JSON string
+    min_count = db.Column(db.Integer, default=10)
+    timestamp = db.Column(db.DateTime, default=utc_now)
+
+
+
+# --- Drug Labeling Models (in 'labeling' schema) ---
+
+class DrugLabel(db.Model):
+    __tablename__ = 'sum_spl'
+    __table_args__ = {'schema': 'labeling'}
+    
+    spl_id = db.Column(db.String(100), primary_key=True)
+    set_id = db.Column(db.String(100), index=True)
+    product_names = db.Column(db.Text)
+    generic_names = db.Column(db.Text)
+    manufacturer = db.Column(db.Text)
+    appr_num = db.Column(db.Text)
+    active_ingredients = db.Column(db.Text)
+    market_categories = db.Column(db.Text)
+    doc_type = db.Column(db.Text)
+    routes = db.Column(db.Text)
+    dosage_forms = db.Column(db.Text)
+    epc = db.Column(db.Text)
+    ndc_codes = db.Column(db.Text)
+    revised_date = db.Column(db.String(20))
+    effective_time_raw = db.Column(db.String(50))
+    version_number = db.Column(db.Integer, nullable=True)
+    parent_spl_id = db.Column(db.Text)
+    is_latest = db.Column(db.Boolean, default=False)
+    initial_approval_year = db.Column(db.Integer)
+    is_rld = db.Column(db.Integer, default=0)
+    is_rs = db.Column(db.Integer, default=0)
+    local_path = db.Column(db.Text)
+
+class ActiveIngredientMap(db.Model):
+    __tablename__ = 'active_ingredients_map'
+    __table_args__ = {'schema': 'labeling'}
+
+    id = db.Column(db.Integer, db.Identity(start=1, cycle=True), primary_key=True)
+    spl_id = db.Column(db.String(100), db.ForeignKey('labeling.sum_spl.spl_id', ondelete='CASCADE'), index=True)
+    substance_name = db.Column(db.Text)
+    unii = db.Column(db.Text)
+    is_active = db.Column(db.Integer)
+class OrangeBook(db.Model):
+    __tablename__ = 'orange_book'
+    id = db.Column(db.Integer, primary_key=True)
+    ingredient = db.Column(db.String(500))
+    df_route = db.Column(db.String(500))
+    trade_name = db.Column(db.String(500))
+    applicant = db.Column(db.String(255))
+    strength = db.Column(db.String(500))
+    appl_type = db.Column(db.String(10)) # N or A
+    appl_no = db.Column(db.String(20), index=True)
+    product_no = db.Column(db.String(10))
+    te_code = db.Column(db.String(50))
+    approval_date = db.Column(db.String(50))
+    rld = db.Column(db.String(10)) # Yes or No
+    rs = db.Column(db.String(10))  # Yes or No
+    type = db.Column(db.String(20)) # RX, OTC, DISCN
+    applicant_full_name = db.Column(db.String(500))
+
+class SystemTask(db.Model):
+    __tablename__ = 'system_tasks'
+    id = db.Column(db.Integer, primary_key=True)
+    task_type = db.Column(db.String(50), nullable=False) # 'labeling', 'ae_report', etc.
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True)
+    status = db.Column(db.String(20), default='pending') # pending, processing, completed, failed
+    progress = db.Column(db.Integer, default=0) # 0 to 100
+    message = db.Column(db.String(255))
+    error_details = db.Column(db.Text)
+    result_data = db.Column(db.Text) # JSON string for any task-specific output
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    completed_at = db.Column(db.DateTime)
+
+    user = db.relationship('User', backref=db.backref('tasks', lazy=True))
+    project = db.relationship('Project', backref=db.backref('tasks', lazy=True))
+
+class DatabaseUpdateLog(db.Model):
+    __tablename__ = 'database_update_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    db_type = db.Column(db.String(50), nullable=False, index=True)
+    completed_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+    status = db.Column(db.String(20), default='completed')
+    message = db.Column(db.String(255))
+
+class LabelMeddraProfile(db.Model):
+    __tablename__ = 'label_meddra_profiles'
+    id = db.Column(db.Integer, primary_key=True)
+    set_id = db.Column(db.String(100), index=True, nullable=False)
+    section_loinc = db.Column(db.String(50), index=True, nullable=False)
+    terms = db.Column(db.Text) # Stored as a comma-separated or JSON string
+    created_at = db.Column(db.DateTime, default=utc_now)
+
+    __table_args__ = (
+        db.UniqueConstraint('set_id', 'section_loinc', name='_set_section_uc'),
+    )
+
+class LabelPvProfile(db.Model):
+    __tablename__ = 'label_pv_profiles'
+    id = db.Column(db.Integer, primary_key=True)
+    set_id = db.Column(db.String(100), index=True, nullable=False)
+    spl_id = db.Column(db.String(100), index=True, nullable=True)
+    brand_name = db.Column(db.String(255))
+    generic_name = db.Column(db.String(255))
+    active_ingredient = db.Column(db.String(255))
+    label_format = db.Column(db.String(20)) # PLR, NON-PLR, OTC
+    profile_data = db.Column(db.Text) # JSON string of extracted adverse events and summary
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+
+    __table_args__ = (
+        db.UniqueConstraint('set_id', name='_pv_profile_set_id_uc'),
+    )
+
+class LabelPvFeedback(db.Model):
+    __tablename__ = 'label_pv_feedbacks'
+    id = db.Column(db.Integer, primary_key=True)
+    set_id = db.Column(db.String(100), index=True, nullable=False)
+    spl_id = db.Column(db.String(100), index=True, nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    term = db.Column(db.String(255), nullable=False)
+    meddra_pt = db.Column(db.String(255), nullable=True)
+    soc_name = db.Column(db.String(255), nullable=True)
+    section_name = db.Column(db.String(255), nullable=True)
+    feedback_type = db.Column(db.String(32), nullable=False) # 'is_ae' (reported real AE from leftovers), 'not_ae' (reported not AE from main table)
+    comment = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(32), default='pending') # pending, reviewed, resolved
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+
+    user = db.relationship('User', backref=db.backref('pv_feedbacks', lazy='dynamic'))
+
+    __table_args__ = (
+        db.UniqueConstraint('set_id', 'term', 'feedback_type', name='_pv_feedback_term_type_uc'),
+    )
+
+class TokenUsage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    model_name = db.Column(db.String(100), nullable=False)
+    input_tokens = db.Column(db.Integer, default=0)
+    output_tokens = db.Column(db.Integer, default=0)
+    total_tokens = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
+
+    user = db.relationship('User', backref=db.backref('token_usages', lazy='dynamic'))
+
+# --- Examine Feature Models ---
+
+class ExaminePrompt(db.Model):
+    """Stores admin-managed clinical query templates for the Examine tab."""
+    __tablename__ = 'examine_prompts'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    prompt_text = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=True)  # Tooltip / helper text
+    display_order = db.Column(db.Integer, default=0)
+    is_active = db.Column(db.Boolean, default=True)
+    is_custom = db.Column(db.Boolean, default=False, nullable=False)
+    set_id = db.Column(db.String(100), nullable=True, index=True)
+    generic_name = db.Column(db.String(255), nullable=True, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now)
+
+    histories = db.relationship('ExamineHistory', backref='prompt', lazy=True, foreign_keys='ExamineHistory.prompt_id')
+
+
+class ExamineHistory(db.Model):
+    """Caches AI-generated answers for a given label set_id and prompt."""
+    __tablename__ = 'examine_history'
+    id = db.Column(db.Integer, primary_key=True)
+    set_id = db.Column(db.String(100), nullable=False, index=True)
+    prompt_id = db.Column(db.Integer, db.ForeignKey('examine_prompts.id'), nullable=True)
+    prompt_text_snapshot = db.Column(db.Text, nullable=False)  # Snapshot at time of run
+    generated_answer = db.Column(db.Text, nullable=False)
+    model_used = db.Column(db.String(100), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
+
+
+class FeatureGate(db.Model):
+    """
+    Admin-configurable access rule for one gated feature.
+
+    Only the mutable part of a gate lives here. The human-readable name, the
+    blurb and where the rule is enforced stay in code -- see
+    `dashboard.services.feature_gates.FEATURE_CATALOG` -- so adding or
+    re-describing a feature never needs a data migration, and a row for a
+    feature that no longer exists is simply ignored.
+
+    Rows are seeded from the catalog defaults at startup, which reproduce the
+    behaviour these gates had while they were hardcoded.
+    """
+    __tablename__ = 'feature_gate'
+
+    id = db.Column(db.Integer, primary_key=True)
+    #: Catalog key, e.g. 'labelchat'. Stable identifier used by API and UI.
+    key = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    #: Least-privileged role allowed to use the feature: user | developer | admin.
+    min_role = db.Column(db.String(20), nullable=False, default=ROLE_USER)
+    #: Whether the shared anonymous account may use it. Tracked separately from
+    #: min_role because `guest` holds the 'user' role but must be excluded from
+    #: anything storing per-account state.
+    allow_guest = db.Column(db.Boolean, nullable=False, default=False)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    updated_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)

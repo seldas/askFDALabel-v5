@@ -1,0 +1,11 @@
+Bootstrap: docker
+From: quay.io/keycloak/keycloak:26.7.4
+
+%post
+    /opt/keycloak/bin/kc.sh build --db=dev-file
+
+%startscript
+    exec /opt/keycloak/bin/kc.sh start --optimized --db=dev-file --http-enabled=true --http-host=0.0.0.0 --import-realm
+
+%runscript
+    exec /opt/keycloak/bin/kc.sh start --optimized --db=dev-file --http-enabled=true --http-host=0.0.0.0 --import-realm

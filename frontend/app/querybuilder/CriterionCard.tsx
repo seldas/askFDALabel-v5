@@ -1,0 +1,1981 @@
+'use client';
+
+/*
+ * One criteria card. The body switches on criterion type; the frame (title,
+ * dismiss "×") is shared.
+ *
+ * Every body is a controlled editor over `criterion.value`, which is the exact
+ * object posted to the compiler — there is no separate form model to keep in
+ * sync, so what the card shows is what the query contains.
+ */
+
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { AutoCompleteInput, Chips, isPickSelected, ListAdder, type Option, QuickPicks, Select, TokenInput } from './controls';
+import {
+  CRITERION_DEFS,
+  type Criterion,
+  type CriterionValue,
+  isCommonFullTextQuery,
+  type TargetDb,
+  unsupportedReason,
+} from './types';
+
+function AlertIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
+export interface OptionLists {
+  labelingTypes: Option[];
+  applicationTypes: Option[];
+  routes: Option[];
+  dosageForms: Option[];
+  sections: Option[];
+  loading: boolean;
+}
+
+const MODE_OPTIONS = [
+  { value: 'simple', label: 'Simple Search' },
+  { value: 'advanced', label: 'Advanced Search' },
+];
+
+const SEARCH_HELP = (
+  <div className="fdl-help">
+    <p>
+      <span className="fdl-help__term">Simple Search</span>: Full span phrase match. Supports uppercase AND, OR, NOT operators.
+    </p>
+  </div>
+);
+
+const ENTITY_NAMES_INLINE_LIMIT = 20;
+
+function labelForOption(options: Option[], value: string) {
+  return options.find((o) => o.value === value)?.label || value;
+}
+
+export function CriterionCard({
+  criterion,
+  onChange,
+  onRemove,
+  options,
+  targetDb = 'local',
+}: {
+  criterion: Criterion;
+  onChange: (value: CriterionValue) => void;
+  onRemove: () => void;
+  options: OptionLists;
+  targetDb?: TargetDb;
+}) {
+  const def = CRITERION_DEFS[criterion.type];
+  const v = criterion.value as Record<string, any>;
+
+  /* One banner on the frame, so every card reports unavailability the same
+   * way instead of each body inventing its own note. */
+  const unavailable = unsupportedReason(criterion.type, targetDb);
+  const [showCandidateManager, setShowCandidateManager] = useState(false);
+
+  const [hierarchies, setHierarchies] = useState<Record<string, string>>({});
+  const [hierarchyLoading, setHierarchyLoading] = useState<Record<string, boolean>>({});
+  /* LLT names under each selected PT, keyed by `pt:${term}`. A PT
+   * searches its descendants, so showing them is the only way to see how wide
+   * a pick really is before running it -- and, now, to drop the ones that do
+   * not belong. */
+  const [llts, setLlts] = useState<Record<string, string[]>>({});
+  /* The PT above each directly-picked LLT, keyed by LLT name, for the
+   * "broaden to PT" control. Fetched up front rather than on click so the
+   * button can name the term it would swap in. */
+  const [parentPts, setParentPts] = useState<Record<string, string | null>>({});
+  const [parentPtLoading, setParentPtLoading] = useState<Record<string, boolean>>({});
+
+  /* MedDRA holds two lists at once now: a PT row and an LLT row. `terms` is
+   * the old single-level shape, still what /translate writes and what a saved
+   * URL carries, so it is folded into whichever row `level` named. HLT / HLGT
+   * / SOC have no row of their own and stay on `terms`, compiled the way they
+   * always were. */
+  const meddraPts: string[] = useMemo(
+    () => (Array.isArray(v.ptTerms) ? v.ptTerms : []),
+    [v.ptTerms],
+  );
+  const meddraLlts: string[] = useMemo(
+    () => (Array.isArray(v.lltTerms) ? v.lltTerms : []),
+    [v.lltTerms],
+  );
+  const meddraExcluded: string[] = useMemo(
+    () => (Array.isArray(v.excludedLlts) ? v.excludedLlts : []),
+    [v.excludedLlts],
+  );
+
+  useEffect(() => {
+    if (criterion.type !== 'meddra') return;
+    const legacy: string[] = Array.isArray(v.terms) ? v.terms : [];
+    if (!legacy.length) return;
+    const level = (v.level || 'llt').toLowerCase();
+    if (level !== 'pt' && level !== 'llt') return;
+    const field = level === 'pt' ? 'ptTerms' : 'lltTerms';
+    const existing: string[] = Array.isArray(v[field]) ? v[field] : [];
+    const merged = [...existing, ...legacy.filter((t) => !existing.includes(t))];
+    onChange({ ...v, [field]: merged, terms: [] });
+  }, [criterion.type, v, onChange]);
+
+  useEffect(() => {
+    if (criterion.type !== 'meddra') return;
+    // Limit eager background lookups to avoid flooding the browser connection pool
+    // when queries contain large vocabulary lists (e.g. 50-100+ terms).
+    const wanted: Array<[string, string]> = [
+      ...meddraPts.map((t) => ['pt', t] as [string, string]),
+      ...meddraLlts.map((t) => ['llt', t] as [string, string]),
+    ].slice(0, 35);
+    wanted.forEach(async ([level, t]) => {
+      const key = `${level}:${t}`;
+      if (key in hierarchies || hierarchyLoading[key]) return;
+      setHierarchyLoading((prev) => ({ ...prev, [key]: true }));
+      try {
+        const res = await fetch(
+          `/api/labelquery/meddra/hierarchy?term=${encodeURIComponent(t)}&level=${level}`,
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setHierarchies((prev) => ({ ...prev, [key]: data.formatted || t }));
+        } else {
+          setHierarchies((prev) => ({ ...prev, [key]: t }));
+        }
+      } catch {
+        setHierarchies((prev) => ({ ...prev, [key]: t }));
+      } finally {
+        setHierarchyLoading((prev) => ({ ...prev, [key]: false }));
+      }
+    });
+  }, [criterion.type, meddraPts, meddraLlts, hierarchies, hierarchyLoading]);
+
+  useEffect(() => {
+    // Only a PT has LLTs below it; at LLT level the term is already the leaf.
+    if (criterion.type !== 'meddra' || meddraPts.length === 0) return;
+    meddraPts.slice(0, 35).forEach(async (t: string) => {
+      const key = `pt:${t}`;
+      // `in`, not truthiness: an empty array is truthy, so `if (llts[key])`
+      // would treat "no LLTs found" as "not fetched yet" and refetch forever.
+      if (key in llts) return;
+      try {
+        const res = await fetch(
+          `/api/labelquery/meddra/llts?term=${encodeURIComponent(t)}`,
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data.llts)) {
+          setLlts((prev) => ({ ...prev, [key]: data.llts }));
+        }
+      } catch {
+        // ignore fetch error
+      }
+    });
+  }, [criterion.type, meddraPts, llts]);
+
+  useEffect(() => {
+    if (criterion.type !== 'meddra' || meddraLlts.length === 0) return;
+    meddraLlts.slice(0, 35).forEach(async (t: string) => {
+      const key = t;
+      if (key in parentPts || parentPtLoading[key]) return;
+      setParentPtLoading((prev) => ({ ...prev, [key]: true }));
+      try {
+        const res = await fetch(
+          `/api/labelquery/meddra/parent_pt?term=${encodeURIComponent(t)}`,
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        setParentPts((prev) => ({
+          ...prev,
+          [key]: data.pt || null,
+          [key.toLowerCase()]: data.pt || null,
+        }));
+      } catch {
+        setParentPts((prev) => ({ ...prev, [key]: null, [key.toLowerCase()]: null }));
+      } finally {
+        setParentPtLoading((prev) => ({ ...prev, [key]: false }));
+      }
+    });
+  }, [criterion.type, meddraLlts, parentPts, parentPtLoading]);
+
+  const [showMultiSetIdModal, setShowMultiSetIdModal] = useState(false);
+
+  const set = useCallback(
+    (patch: Record<string, unknown>) => onChange({ ...v, ...patch }),
+    [onChange, v],
+  );
+  const removeProductCandidate = useCallback((name: string) => {
+    set({ candidateNames: (v.candidateNames || []).filter((item: string) => item.toLowerCase() !== name.toLowerCase()) });
+  }, [set, v]);
+  const addProductCandidate = useCallback((name: string) => {
+    if ((v.candidateNames || []).some((item: string) => item.toLowerCase() === name.toLowerCase())) return;
+    const excluded = (v.entityExcludedNames || []).filter((item: string) => item.toLowerCase() !== name.toLowerCase());
+    set({ candidateNames: [...(v.candidateNames || []), name], entityExcludedNames: excluded });
+  }, [set, v]);
+  const closeCandidateManager = useCallback(() => setShowCandidateManager(false), []);
+
+  const values: string[] = v.values || [];
+  const toggle = useCallback(
+    (value: string) => {
+      const already = isPickSelected(value, values);
+      if (already) {
+        set({ values: values.filter((x) => !isPickSelected(value, [x])) });
+      } else {
+        set({ values: [...values, value] });
+      }
+    },
+    [set, values],
+  );
+
+  const list = def.optionsKey ? options[def.optionsKey] : [];
+
+  const quickPickReason = useCallback(
+    (value: string) => {
+      const gate = def.quickPicks?.find((p) => p.value === value)?.unavailableOn;
+      return gate && gate.targets.includes(targetDb) ? gate.reason : null;
+    },
+    [def.quickPicks, targetDb],
+  );
+
+  const fetchPharmClass = useCallback(
+    async (q: string) => {
+      const res = await fetch(
+        `/api/labelquery/suggest/pharm_class?q=${encodeURIComponent(q)}&type=${v.classType || 'any'}&target_db=${encodeURIComponent(targetDb)}`,
+      );
+      if (!res.ok) return [];
+      const json = await res.json();
+      return (json.suggestions || []).map((s: { name: string }) => s.name);
+    },
+    [v.classType, targetDb],
+  );
+
+  const fetchMeddra = useCallback(
+    async (q: string) => {
+      const res = await fetch(
+        `/api/labelquery/suggest/meddra?q=${encodeURIComponent(q)}&level=${v.level || 'llt'}`,
+      );
+      if (!res.ok) return [];
+      const json = await res.json();
+      return json.suggestions || [];
+    },
+    [v.level, targetDb],
+  );
+
+  const fetchProductName = useCallback(
+    async (q: string) => {
+      if (q.length < 2) return [];
+      const res = await fetch(
+        `/api/labelquery/suggest/product_name?q=${encodeURIComponent(q)}&field=${v.field || 'any'}&target_db=${targetDb}`,
+      );
+      if (!res.ok) return [];
+      const json = await res.json();
+      return json.suggestions || [];
+    },
+    [v.field, targetDb],
+  );
+
+  const body = useMemo(() => {
+    switch (criterion.type) {
+      case 'labelingType':
+        return (
+          <>
+            {def.quickPicks ? (
+              <QuickPicks
+                picks={def.quickPicks}
+                selected={values}
+                onToggle={toggle}
+                reasonFor={quickPickReason}
+              />
+            ) : null}
+            <ListAdder
+              options={list}
+              selected={values}
+              loading={options.loading}
+              onAdd={(value) => set({ values: [...values, value] })}
+            />
+            <Chips
+              values={values}
+              onRemove={(value) => set({ values: values.filter((x: string) => x !== value) })}
+              labelFor={(value) =>
+                def.quickPicks?.find((p) => p.value === value)?.label || value
+              }
+            />
+            <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                PLR Format:
+              </span>
+              {[
+                { id: 'all', label: 'All (Rx, OTC, etc.)' },
+                { id: 'plr', label: 'PLR Format' },
+                { id: 'non_plr', label: 'non-PLR Format' },
+              ].map((opt) => {
+                const active = (v.plr || 'all') === opt.id;
+                return (
+                  <label key={opt.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: active ? 700 : 500, color: active ? '#2563eb' : '#334155' }}>
+                    <input
+                      type="radio"
+                      name={`plr_${criterion.uid}`}
+                      checked={active}
+                      onChange={() => set({ plr: opt.id })}
+                      style={{ cursor: 'pointer', accentColor: '#2563eb' }}
+                    />
+                    <span>{opt.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </>
+        );
+
+      case 'route':
+      case 'dosageForm':
+        return (
+          <>
+            {def.quickPicks ? (
+              <QuickPicks
+                picks={def.quickPicks}
+                selected={values}
+                onToggle={toggle}
+                reasonFor={quickPickReason}
+              />
+            ) : null}
+            <ListAdder
+              options={list}
+              selected={values}
+              loading={options.loading}
+              onAdd={(value) => set({ values: [...values, value] })}
+            />
+            <Chips
+              values={values}
+              onRemove={(value) => set({ values: values.filter((x: string) => x !== value) })}
+              labelFor={(value) =>
+                def.quickPicks?.find((p) => p.value === value)?.label || value
+              }
+            />
+          </>
+        );
+
+      case 'applicationType':
+        return (
+          <>
+            {def.quickPicks ? (
+              <QuickPicks
+                picks={def.quickPicks}
+                selected={values}
+                onToggle={toggle}
+                reasonFor={quickPickReason}
+              />
+            ) : null}
+            <ListAdder
+              options={list}
+              selected={values}
+              loading={options.loading}
+              onAdd={(value) => set({ values: [...values, value] })}
+            />
+            <Chips
+              values={values}
+              onRemove={(value) => set({ values: values.filter((x: string) => x !== value) })}
+              labelFor={(value) =>
+                def.quickPicks?.find((p) => p.value === value)?.label || value
+              }
+            />
+            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(v.isRld)}
+                  onChange={(e) => set({ isRld: e.target.checked })}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#2563eb' }}
+                />
+                <span>RLD (Reference Listed Drug)</span>
+              </label>
+            </div>
+          </>
+        );
+
+      case 'productName': {
+        const op = v.op || 'equals';
+        const isExact = op === 'equals';
+        const isStartsWith = op === 'startsWith';
+        const isFlexible = op === 'contains' || op === 'notContains';
+        const isUnverified = isExact && Boolean(v.text && String(v.text).trim()) && v.verified === false;
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {isUnverified && (
+              <div
+                style={{
+                  backgroundColor: '#fffbeb',
+                  border: '1px solid #fde68a',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  padding: '10px 14px',
+                  marginBottom: '4px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <AlertIcon size={14} />
+                    <span>Verification Required: <em>&ldquo;{v.text}&rdquo;</em></span>
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 600 }}>
+                    Selection required for exact match
+                  </span>
+                </div>
+                <p style={{ margin: '0 0 8px 0', fontSize: '0.82rem', color: '#78350f' }}>
+                  Please confirm the standardized matching product or generic name below to ensure indexed exact matching:
+                </p>
+                <UnverifiedProductPicker
+                  queryText={v.text}
+                  field={v.field || 'any'}
+                  targetDb={targetDb}
+                  onConfirm={(confirmedName) => set({ text: confirmedName, verified: true, op: 'equals', candidateNames: undefined, entityNamesResolved: false, entityCandidateNames: undefined, entityCandidateDetails: undefined, entityOriginalNames: undefined, entityExcludedNames: [] })}
+                />
+              </div>
+            )}
+
+            <div className="fdl-row" style={{ position: 'relative' }}>
+              <Select
+                ariaLabel="Field scope"
+                value={v.field || 'any'}
+                disabled={Boolean(v.entityNamesResolved)}
+                onChange={(field) => set({ field })}
+                options={[
+                  { value: 'any', label: 'All Product Identifiers' },
+                  { value: 'trade', label: 'Trade / Brand Name' },
+                  { value: 'generic', label: 'Generic / Established Name' },
+                  { value: 'unii', label: 'UNII / Ingredient Name' },
+                ]}
+              />
+              <Select
+                ariaLabel="Match type"
+                value={v.op || 'equals'}
+                disabled={Boolean(v.entityNamesResolved)}
+                onChange={(newOp) => {
+                  if (newOp === 'equals') {
+                    set({ op: newOp, verified: false });
+                  } else {
+                    set({ op: newOp, verified: true });
+                  }
+                }}
+                options={[
+                  { value: 'equals', label: 'is exactly (standardized)' },
+                  { value: 'startsWith', label: 'starts with' },
+                  { value: 'contains', label: 'contains' },
+                  { value: 'notContains', label: 'does not contain' },
+                ]}
+              />
+              {isFlexible ? (
+                <input
+                  type="text"
+                  className="fdl-input"
+                  value={v.text || ''}
+                  onChange={(e) => set({ text: e.target.value, verified: true, candidateNames: undefined, entityNamesResolved: false, entityCandidateNames: undefined, entityCandidateDetails: undefined, entityOriginalNames: undefined, entityExcludedNames: [] })}
+                  placeholder="Enter partial product or ingredient name (freeform text)"
+                  style={{ flex: 1 }}
+                />
+              ) : (
+                <AutoCompleteInput
+                  value={v.text || ''}
+                  onChange={(text) => set({ text, verified: isStartsWith ? true : false, candidateNames: undefined, entityNamesResolved: false, entityCandidateNames: undefined, entityCandidateDetails: undefined, entityOriginalNames: undefined, entityExcludedNames: [] })}
+                  onSelect={(text) => set({ text, verified: true, candidateNames: undefined, entityNamesResolved: false, entityCandidateNames: undefined, entityCandidateDetails: undefined, entityOriginalNames: undefined, entityExcludedNames: [] })}
+                  placeholder={
+                    isStartsWith
+                      ? 'Enter prefix or select suggestion (e.g. Tylenol)'
+                      : 'Enter product name (select suggestion to verify)'
+                  }
+                  fetchSuggestions={fetchProductName}
+                  minChars={2}
+                />
+              )}
+              {v.text && isExact && v.verified !== false && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 10px',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    backgroundColor: '#ecfdf5',
+                    color: '#065f46',
+                    border: '1px solid #a7f3d0',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title="Standardized product name confirmed"
+                >
+                  ✓ Confirmed
+                </span>
+              )}
+            </div>
+            {v.entityNamesResolved && Array.isArray(v.candidateNames) && (
+              <div className="fdl-entity-name-candidates">
+                <div className="fdl-entity-name-candidates__header">
+                  <span className="fdl-entity-name-candidates__label">
+                    Selected exact names <span className="fdl-entity-name-candidates__count">({v.candidateNames.length.toLocaleString()} selected / {(v.entityCandidateNames || v.candidateNames).length.toLocaleString()} available)</span>
+                  </span>
+                  {v.candidateNames.length > 0 && (
+                    <div className="fdl-entity-name-candidates__actions">
+                      {(v.entityCandidateNames || v.candidateNames).length > ENTITY_NAMES_INLINE_LIMIT && (
+                        <button
+                          type="button"
+                          className="fdl-entity-name-candidates__action"
+                          onClick={() => setShowCandidateManager(true)}
+                        >
+                          Manage all {(v.entityCandidateNames || v.candidateNames).length.toLocaleString()} names
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="fdl-entity-name-candidates__action fdl-entity-name-candidates__action--clear"
+                        onClick={onRemove}
+                        aria-label="Clear all product-name candidates and remove this criterion"
+                        title="Remove this product-name criterion and all its candidates"
+                      >
+                        Clear all
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {v.candidateNames.length ? (
+                  <Chips
+                    values={v.candidateNames.slice(0, ENTITY_NAMES_INLINE_LIMIT)}
+                    onRemove={removeProductCandidate}
+                  />
+                ) : (
+                  <span className="fdl-entity-name-candidates__empty">No product names selected; this criterion will not match labels.</span>
+                )}
+                {(v.entityCandidateNames || v.candidateNames).length > 25 && (
+                  <div className="fdl-note fdl-note--warn" role="status">
+                    There are more than 25 product-name candidates. Only the first 20 were selected automatically. Review the full list and remove names you do not need; add other names from the table if needed.
+                  </div>
+                )}
+              </div>
+            )}
+            <p className="fdl-note">
+              {v.entityNamesResolved ? (
+                'Each selected name badge is matched as an exact product or generic name. Remove a badge to exclude it, or use Clear all to remove this criterion.'
+              ) : isExact ? (
+                v.verified !== false ? (
+                  'Standardized product name is confirmed. Exact match index scan will be used.'
+                ) : (
+                  <span>
+                    Select from auto-complete suggestions to confirm the standardized product name.
+                    <span style={{ display: 'block', marginTop: '2px', color: '#0369a1', fontWeight: 600 }}>
+                      Tip: Change match type to &ldquo;contains&rdquo; or &ldquo;starts with&rdquo; to allow flexible matching without confirmation.
+                    </span>
+                  </span>
+                )
+              ) : isStartsWith ? (
+                'Prefix match will search products starting with this term. Auto-complete suggestions are optional.'
+              ) : (
+                'Flexible match will search products containing this term.'
+              )}
+            </p>
+          </div>
+        );
+      }
+
+      case 'fullText': {
+        const isAdv = (v.mode || 'simple') === 'advanced';
+        const isCommon = isCommonFullTextQuery(v.text);
+        return (
+          <>
+            <div className="fdl-row">
+              <Select
+                ariaLabel="Search mode"
+                value={v.mode || 'simple'}
+                onChange={(mode) => set({ mode })}
+                options={MODE_OPTIONS}
+              />
+              <input
+                className="fdl-input fdl-input--grow"
+                type="text"
+                value={v.text || ''}
+                placeholder={
+                  isAdv
+                    ? 'Advanced search: regex, wildcards (*, ?, %, .), exact span {NDA}, AND/OR/NOT (escape with \\)'
+                    : 'Simple search: enter phrase or text with AND, OR, NOT (e.g. "nausea or vomiting" or "nausea AND vomiting")'
+                }
+                onChange={(e) => set({ text: e.target.value })}
+              />
+            </div>
+            {isCommon && (
+              <div
+                style={{
+                  marginTop: '8px',
+                  backgroundColor: '#fef3c7',
+                  color: '#92400e',
+                  border: '1px solid #f59e0b',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  padding: '6px 12px',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  lineHeight: 1.4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span style={{ flexShrink: 0, marginTop: '2px', color: '#b45309' }}>
+                  <AlertIcon size={14} />
+                </span>
+                <span>
+                  <strong>Generic Word Warning:</strong> Full-text search for common/generic words
+                  like &ldquo;{v.text}&rdquo; matches almost all drug labels and is restricted to prevent slow query execution. Please search for a specific medical term, condition, or multi-word phrase.
+                </span>
+              </div>
+            )}
+            {SEARCH_HELP}
+          </>
+        );
+      }
+
+      case 'labelingSection': {
+        const sections: string[] = v.sections || [];
+        const available = list.filter((o) => !sections.includes(o.value));
+        const groupedMap = new Map<string, typeof list>();
+        for (const opt of available) {
+          const g = opt.group || 'Other Sections';
+          if (!groupedMap.has(g)) groupedMap.set(g, []);
+          groupedMap.get(g)!.push(opt);
+        }
+        const isAdv = (v.mode || 'simple') === 'advanced';
+        const isCommon = isCommonFullTextQuery(v.text);
+
+        return (
+          <>
+            <div className="fdl-row">
+              <Select
+                ariaLabel="Search mode"
+                value={v.mode || 'simple'}
+                onChange={(mode) => set({ mode })}
+                options={MODE_OPTIONS}
+              />
+              <input
+                className="fdl-input fdl-input--grow"
+                type="text"
+                value={v.text || ''}
+                placeholder={
+                  isAdv
+                    ? 'Advanced search: regex, wildcards (*, ?, %, .), exact span {NDA}, AND/OR/NOT (escape with \\)'
+                    : 'Simple search: enter phrase or text with AND, OR, NOT (e.g. "nausea or vomiting" or "nausea AND vomiting")'
+                }
+                onChange={(e) => set({ text: e.target.value })}
+              />
+              <span className="fdl-row__word">within</span>
+              <select
+                className="fdl-select fdl-select--wide"
+                value=""
+                aria-label="Labeling section"
+                disabled={options.loading}
+                onChange={(e) => {
+                  if (e.target.value && !sections.includes(e.target.value)) {
+                    set({ sections: [...sections, e.target.value] });
+                  }
+                }}
+              >
+                <option value="">
+                  {options.loading ? 'Loading sections…' : '-- Select a section (default: Full Text) --'}
+                </option>
+                {Array.from(groupedMap.entries()).map(([groupLabel, opts]) => (
+                  <optgroup key={groupLabel} label={groupLabel}>
+                    {opts.map((o) => (
+                      <option key={`${groupLabel}-${o.value}`} value={o.value}>
+                        {o.label || o.value}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+            {isCommon && (
+              <div
+                style={{
+                  marginTop: '8px',
+                  backgroundColor: '#fef3c7',
+                  color: '#92400e',
+                  border: '1px solid #f59e0b',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  padding: '6px 12px',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  lineHeight: 1.4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span style={{ flexShrink: 0, marginTop: '2px', color: '#b45309' }}>
+                  <AlertIcon size={14} />
+                </span>
+                <span>
+                  <strong>Generic Word Warning:</strong> Section text search for common/generic words
+                  like &ldquo;{v.text}&rdquo; matches almost all drug labels and is restricted to prevent slow query execution. Please search for a specific medical term, condition, or multi-word phrase.
+                </span>
+              </div>
+            )}
+            {sections.length > 0 ? (
+              <Chips
+                values={sections}
+                onRemove={(value) =>
+                  set({ sections: sections.filter((x: string) => x !== value) })
+                }
+                labelFor={(value) => labelForOption(list, value)}
+              />
+            ) : (
+              <div className="fdl-help-subtle" style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '4px' }}>
+                Scope: Searching full text of labeling (no section filter applied)
+              </div>
+            )}
+            {sections.length > 0 && !String(v.text || '').trim() && (
+              <div className="fdl-help-subtle" style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '4px' }}>
+                No text entered: matches labeling containing any selected section.
+              </div>
+            )}
+            {SEARCH_HELP}
+          </>
+        );
+      }
+
+      case 'marketStatus': {
+        const currentStatus = v.status || (values?.[0] ?? '');
+        const startDateMin = v.startDateMin || '';
+        const startDateMax = v.startDateMax || '';
+
+        return (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center', paddingTop: '4px', paddingBottom: '4px' }}>
+            {/* Status Dropdown */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '0.88rem', fontWeight: 600, color: '#334155' }}>Status</label>
+              <select
+                className="fdl-select"
+                value={currentStatus}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  set({ status: val, values: val ? [val] : [] });
+                }}
+                style={{
+                  height: '34px',
+                  padding: '0 12px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.88rem',
+                  background: '#ffffff',
+                  minWidth: '130px',
+                }}
+              >
+                <option value="">-- Select --</option>
+                <option value="active">active</option>
+                <option value="completed">completed</option>
+                <option value="discontinued">discontinued</option>
+              </select>
+            </div>
+
+            {/* Start Date Min & Max Panel (Styled exactly like attached screenshot) */}
+            <div
+              style={{
+                background: 'var(--fdl-canvas, #f3f6f8)',
+                padding: '12px 18px',
+                borderRadius: 'var(--fdl-radius-sm, 2px)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                border: '1px solid var(--fdl-line-soft, #d7e0e7)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>Start Date, Min 📅</span>
+                <input
+                  type="date"
+                  value={startDateMin}
+                  onChange={(e) => set({ startDateMin: e.target.value })}
+                  style={{
+                    height: '30px',
+                    padding: '0 8px',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
+                    border: '1px solid var(--fdl-line, #b8c8d7)',
+                    fontSize: '0.85rem',
+                    background: '#ffffff',
+                    color: '#0f172a',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>Start Date, Max 📅</span>
+                <input
+                  type="date"
+                  value={startDateMax}
+                  onChange={(e) => set({ startDateMax: e.target.value })}
+                  style={{
+                    height: '30px',
+                    padding: '0 8px',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
+                    border: '1px solid var(--fdl-line, #b8c8d7)',
+                    fontSize: '0.85rem',
+                    background: '#ffffff',
+                    color: '#0f172a',
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      case 'meddra': {
+        const level = (v.level || 'llt').toLowerCase();
+
+        /* Every LLT the query will actually search for, and where it came
+         * from. A PT contributes its whole expansion; the LLT row contributes
+         * its own picks. An LLT can be both, and an outright pick outranks an
+         * exclusion -- the exclusion only says "not via this PT". */
+        const derived = new Map<string, string[]>();
+        meddraPts.forEach((pt) => {
+          (llts[`pt:${pt}`] || []).forEach((llt) => {
+            derived.set(llt, [...(derived.get(llt) || []), pt]);
+          });
+        });
+        const isExcluded = (llt: string) =>
+          meddraExcluded.includes(llt) && !meddraLlts.includes(llt);
+        const searchedCount =
+          meddraLlts.length +
+          [...derived.keys()].filter((llt) => !meddraLlts.includes(llt) && !isExcluded(llt)).length;
+
+        const addTerm = (term: string) => {
+          const field = level === 'pt' ? 'ptTerms' : 'lltTerms';
+          const current: string[] = field === 'ptTerms' ? meddraPts : meddraLlts;
+          const nextTerms = current.includes(term) ? current : [...current, term];
+          const nextUnverified = unverifiedTerms.filter((u) => u !== term);
+          // Adding a term back clears any standing exclusion of it, or the
+          // pick would land already crossed out.
+          set({
+            [field]: nextTerms,
+            excludedLlts: meddraExcluded.filter((x) => x !== term),
+            verified: nextUnverified.length === 0,
+            unverifiedTerms: nextUnverified,
+          });
+        };
+
+        const removePt = (pt: string) =>
+          set({
+            ptTerms: meddraPts.filter((x) => x !== pt),
+            verified: unverifiedTerms.length === 0,
+          });
+
+        const removeDirectLlt = (llt: string) =>
+          set({
+            lltTerms: meddraLlts.filter((x) => x !== llt),
+            entityOriginalLltTerms: Array.isArray(v.entityOriginalLltTerms)
+              ? v.entityOriginalLltTerms.filter((x: string) => x !== llt)
+              : v.entityOriginalLltTerms,
+            entityCandidateLltTerms: Array.isArray(v.entityCandidateLltTerms)
+              ? v.entityCandidateLltTerms.filter((x: string) => x !== llt)
+              : v.entityCandidateLltTerms,
+            verified: unverifiedTerms.length === 0,
+          });
+
+        const toggleExcluded = (llt: string) =>
+          set({
+            excludedLlts: meddraExcluded.includes(llt)
+              ? meddraExcluded.filter((x) => x !== llt)
+              : [...meddraExcluded, llt],
+          });
+
+        /* Swaps a directly-picked LLT for the PT above it, which pulls in
+         * every sibling LLT -- the difference between the labels that use the
+         * user's wording and the labels that mean the same thing. */
+        const broadenToPt = (llt: string) => {
+          const pt = parentPts[llt] || parentPts[llt.toLowerCase()] || parentPts[llt.trim()];
+          if (!pt) return;
+          set({
+            lltTerms: meddraLlts.filter((x) => x !== llt),
+            entityOriginalLltTerms: Array.isArray(v.entityOriginalLltTerms)
+              ? v.entityOriginalLltTerms.filter((x: string) => x !== llt)
+              : v.entityOriginalLltTerms,
+            entityCandidateLltTerms: Array.isArray(v.entityCandidateLltTerms)
+              ? v.entityCandidateLltTerms.filter((x: string) => x !== llt)
+              : v.entityCandidateLltTerms,
+            ptTerms: meddraPts.includes(pt) ? meddraPts : [...meddraPts, pt],
+            verified: unverifiedTerms.length === 0,
+          });
+        };
+
+        const lltBadge = (llt: string, fromPts: string[]) => {
+          const excluded = isExcluded(llt);
+          const direct = meddraLlts.includes(llt);
+          const parentPt = direct ? (parentPts[llt] || parentPts[llt.toLowerCase()] || parentPts[llt.trim()] || null) : null;
+          const lookingUpParent = direct && (parentPtLoading[llt] || parentPtLoading[llt.toLowerCase()]);
+          return (
+            <span
+              key={llt}
+              className={`fdl-term-badge${excluded ? ' fdl-term-badge--off' : ''}${direct ? ' fdl-term-badge--direct' : ''}`}
+              title={
+                fromPts.length
+                  ? `${llt} — under ${fromPts.join(', ')}`
+                  : `${llt} — picked directly`
+              }
+            >
+              <span className="fdl-term-badge__name">{llt}</span>
+              {parentPt ? (
+                <button
+                  type="button"
+                  className="fdl-term-badge__act"
+                  onClick={() => broadenToPt(llt)}
+                  title={`Broaden to its Preferred Term "${parentPt}" — searches every LLT under it`}
+                  aria-label={`Broaden ${llt} to Preferred Term ${parentPt}`}
+                >
+                  ↑PT
+                </button>
+              ) : lookingUpParent ? (
+                <span className="fdl-term-badge__meta" title="Looking up parent Preferred Term">…</span>
+              ) : null}
+              <button
+                type="button"
+                className="fdl-term-badge__x"
+                onClick={() =>
+                  direct
+                    ? removeDirectLlt(llt)
+                    : toggleExcluded(llt)
+                }
+                title={
+                  direct
+                    ? `Remove ${llt}`
+                    : excluded
+                      ? `Search ${llt} again`
+                      : `Leave ${llt} out of the search`
+                }
+                aria-label={direct ? `Remove ${llt}` : excluded ? `Restore ${llt}` : `Exclude ${llt}`}
+              >
+                {excluded ? '+' : '×'}
+              </button>
+            </span>
+          );
+        };
+
+        const unverifiedTerms: string[] = Array.isArray(v.unverifiedTerms) ? v.unverifiedTerms : [];
+
+        return (
+          <>
+            {unverifiedTerms.length > 0 && (
+              <div
+                style={{
+                  backgroundColor: '#fffbeb',
+                  border: '1px solid #fde68a',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  padding: '10px 14px',
+                  marginBottom: '10px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <AlertIcon size={14} />
+                    <span>Verification Required for MedDRA Term(s)</span>
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 600 }}>
+                    Select standardized PT below to enable search
+                  </span>
+                </div>
+                <p style={{ margin: '0 0 8px 0', fontSize: '0.82rem', color: '#78350f' }}>
+                  Please confirm the standardized MedDRA Preferred Term (PT) for each item below:
+                </p>
+                {unverifiedTerms.map((term) => (
+                  <div key={term} style={{ marginBottom: '8px' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#78350f', marginBottom: '4px' }}>
+                      Term: <em>&ldquo;{term}&rdquo;</em>
+                    </div>
+                    <UnverifiedMeddraPicker
+                      term={term}
+                      targetDb={targetDb}
+                      onConfirm={(canonical, lvl) => {
+                        const nextUnverified = unverifiedTerms.filter((u) => u !== term);
+                        const nextPts = lvl === 'pt' && !meddraPts.includes(canonical) ? [...meddraPts, canonical] : meddraPts;
+                        const nextLlts = lvl === 'llt' && !meddraLlts.includes(canonical) ? [...meddraLlts, canonical] : meddraLlts;
+                        set({
+                          unverifiedTerms: nextUnverified,
+                          ptTerms: nextPts,
+                          lltTerms: nextLlts,
+                          entityOriginalLltTerms: Array.isArray(v.entityOriginalLltTerms)
+                            ? [...v.entityOriginalLltTerms, ...(lvl === 'llt' ? [canonical] : [])]
+                            : v.entityOriginalLltTerms,
+                          entityCandidateLltTerms: Array.isArray(v.entityCandidateLltTerms)
+                            ? [...v.entityCandidateLltTerms, ...(lvl === 'llt' ? [canonical] : [])]
+                            : v.entityCandidateLltTerms,
+                          verified: nextUnverified.length === 0,
+                        });
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {['soc', 'hlgt', 'hlt'].includes(String(v.level || '').toLowerCase()) && (
+              <div
+                style={{
+                  marginBottom: '10px',
+                  backgroundColor: '#fef3c7',
+                  color: '#92400e',
+                  border: '1px solid #f59e0b',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  padding: '8px 12px',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  lineHeight: 1.4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span style={{ flexShrink: 0, marginTop: '2px', color: '#b45309' }}>
+                  <AlertIcon size={14} />
+                </span>
+                <span>
+                  <strong>Higher MedDRA Level Disabled:</strong> Searches above Preferred Term (PT) level (such as {String(v.level).toUpperCase()}) are disabled to prevent query timeouts. Please select Preferred Term (PT) or Lowest Level Term (LLT).
+                </span>
+              </div>
+            )}
+
+            <div className="fdl-row">
+              <Select
+                ariaLabel="MedDRA level"
+                value={level}
+                onChange={(next) => set({ level: next })}
+                options={[
+                  { value: 'llt', label: 'Lowest Level Term (LLT)' },
+                  { value: 'pt', label: 'Preferred Term (PT)' },
+                ]}
+              />
+              <div className="fdl-row__grow">
+                <TokenInput
+                  placeholder={
+                    level === 'pt'
+                      ? 'Begin entering a Preferred Term, then select from suggestions that appear'
+                      : 'Begin entering a Lowest Level Term, then select from suggestions that appear'
+                  }
+                  onCommit={(term) => {
+                    addTerm(term);
+                  }}
+                  fetchSuggestions={fetchMeddra}
+                  requireSuggestion={true}
+                />
+              </div>
+            </div>
+
+            {/* The two rows are the selection: a PT is a handle for the LLTs
+              * below it, so it cannot share a line with the terms it expands
+              * into without reading as one flat list of equals. */}
+            {meddraPts.length > 0 && (
+              <div className="fdl-term-row">
+                <span className="fdl-term-row__label">PT</span>
+                <div className="fdl-term-row__items">
+                  {meddraPts.map((pt) => {
+                    const expansion = llts[`pt:${pt}`];
+                    return (
+                      <span key={pt} className="fdl-term-badge fdl-term-badge--pt" title={hierarchies[`pt:${pt}`] || pt}>
+                        <span className="fdl-term-badge__name">{pt}</span>
+                        <span className="fdl-term-badge__meta">
+                          {expansion === undefined
+                            ? '…'
+                            : `${expansion.length} LLT${expansion.length === 1 ? '' : 's'}`}
+                        </span>
+                        <button
+                          type="button"
+                          className="fdl-term-badge__x"
+                          onClick={() => removePt(pt)}
+                          aria-label={`Remove ${pt}`}
+                          title={`Remove ${pt} and the LLTs it contributes`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {(meddraLlts.length > 0 || derived.size > 0) && (
+              <div className="fdl-term-row">
+                <span className="fdl-term-row__label">LLT</span>
+                <div className="fdl-term-row__items">
+                  {meddraLlts.map((llt) => lltBadge(llt, derived.get(llt) || []))}
+                  {[...derived.entries()]
+                    .filter(([llt]) => !meddraLlts.includes(llt))
+                    .map(([llt, fromPts]) => lltBadge(llt, fromPts))}
+                </div>
+              </div>
+            )}
+
+            {(meddraPts.length > 0 || meddraLlts.length > 0) && (
+              <div className="fdl-meddra-hierarchies">
+                {[...meddraPts.map((t) => ['pt', t]), ...meddraLlts.map((t) => ['llt', t])].map(
+                  ([lvl, t]) => (
+                    <div key={`${lvl}:${t}`} className="fdl-meddra-hier-item">
+                      <span className="fdl-meddra-hier-term">
+                        • <strong>{t}</strong> ({lvl.toUpperCase()}):
+                      </span>
+                      <span className="fdl-meddra-hier-path">
+                        {hierarchies[`${lvl}:${t}`] || (hierarchyLoading[`${lvl}:${t}`] ? 'Loading hierarchy…' : t)}
+                      </span>
+                    </div>
+                  ),
+                )}
+              </div>
+            )}
+
+            <p className="fdl-note">
+              Labeling text is written at the Lowest Level Term, so that is what is searched:{' '}
+              {searchedCount > 0 ? (
+                <strong>
+                  {searchedCount} LLT{searchedCount === 1 ? '' : 's'}
+                </strong>
+              ) : (
+                'nothing yet'
+              )}
+              . Adding a Preferred Term brings in every LLT beneath it — remove any that do not
+              belong with ×, or press ↑PT on an LLT to widen it to its Preferred Term.
+            </p>
+          </>
+        );
+      }
+
+      case 'deaSchedule':
+        return (
+          <>
+            <QuickPicks picks={def.quickPicks!} selected={values} onToggle={toggle} />
+            <Chips
+              values={values}
+              onRemove={(value) => set({ values: values.filter((x: string) => x !== value) })}
+              labelFor={(value) => def.quickPicks?.find((p) => p.value === value)?.label || value}
+            />
+          </>
+        );
+
+      case 'activeMoiety':
+        return (
+          <>
+            <div className="fdl-row">
+              <Select
+                ariaLabel="Match type"
+                value={v.op || 'equals'}
+                onChange={(op) => set({ op })}
+                options={[
+                  { value: 'equals', label: 'is exactly' },
+                  { value: 'startsWith', label: 'starts with' },
+                  { value: 'contains', label: 'contains' },
+                ]}
+              />
+              <div className="fdl-row__grow">
+                <TokenInput
+                  placeholder="Enter active moiety name(s) or UNII code(s)"
+                  values={v.terms || []}
+                  onChange={(terms) => set({ terms })}
+                />
+              </div>
+            </div>
+            <p className="fdl-note">
+              The active moiety is the therapeutically active part of the molecule, so a search for
+              amphetamine also returns its salts — which an active ingredient search does not.
+              &ldquo;is exactly&rdquo; and &ldquo;starts with&rdquo; use an index; &ldquo;contains&rdquo;
+              does not.
+            </p>
+          </>
+        );
+
+      case 'pharmClass':
+        return (
+          <>
+            {(v.unverifiedTerms || []).map((term: string) => (
+              <div key={term} className="fdl-class-confirm">
+                <div className="fdl-class-confirm__heading"><AlertIcon size={14} /> Verification required: {term}</div>
+                <p>Select a matching standard class or search for another term.</p>
+                <UnverifiedClassPicker term={term} fetchSuggestions={fetchPharmClass}
+                  onConfirm={(canonical) => set({ terms: [...new Set([...(v.terms || []), canonical])], unverifiedTerms: v.unverifiedTerms.filter((t: string) => t !== term) })} />
+                <button type="button" className="fdl-btn fdl-class-confirm__remove" onClick={() => set({ unverifiedTerms: v.unverifiedTerms.filter((t: string) => t !== term) })}>Remove unconfirmed class</button>
+              </div>
+            ))}
+            <div className="fdl-row">
+              <div className="fdl-row__grow">
+                <TokenInput
+                  placeholder="Begin typing a class name, then select from suggestions that appear"
+                  values={v.terms || []}
+                  onChange={(terms) => set({ terms })}
+                  fetchSuggestions={fetchPharmClass}
+                  requireSuggestion={true}
+                />
+              </div>
+              <span className="fdl-row__word">of type</span>
+              <Select
+                ariaLabel="Class type"
+                value={v.classType || 'any'}
+                onChange={(classType) => set({ classType, terms: [] })}
+                options={[
+                  { value: 'any', label: 'Any' },
+                  { value: 'epc', label: 'Established Pharmacologic Class (EPC)' },
+                  { value: 'moa', label: 'Mechanism of Action (MoA)' },
+                  { value: 'pe', label: 'Physiologic Effect (PE)' },
+                  { value: 'cs', label: 'Chemical Structure (CS)' },
+                ]}
+              />
+            </div>
+            <p className="fdl-note">
+              Select one or more standardized pharmacologic classes from the suggestions.
+              Exact-match indexing will be applied. Changing the class type clears selected classes.
+            </p>
+          </>
+        );
+
+      case 'identifier': {
+        const multiGuids: string[] = Array.isArray(v.setSplGuids) ? v.setSplGuids : [];
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {/* Sub-panel 1: SET ID / SPL GUID */}
+            <div className="fdl-subpanel">
+              <div className="fdl-row fdl-row--tight" style={{ alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <span className="fdl-subpanel-label" style={{ minWidth: '130px' }}>SET ID / SPL GUID:</span>
+                <input
+                  className="fdl-input"
+                  style={{ maxWidth: '380px', flex: '1', minWidth: '220px' }}
+                  type="text"
+                  value={v.setSplGuid || ''}
+                  placeholder="Single SET ID (e.g. ca73b519-015a-436d-aa3c-af53492825a1)"
+                  onChange={(e) => set({ setSplGuid: e.target.value })}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowMultiSetIdModal(true)}
+                  style={{
+                    backgroundColor: multiGuids.length > 0 ? '#2563eb' : '#f1f5f9',
+                    color: multiGuids.length > 0 ? '#ffffff' : '#334155',
+                    border: multiGuids.length > 0 ? '1px solid #1d4ed8' : '1px solid #cbd5e1',
+                    borderRadius: 'var(--fdl-radius-sm, 2px)',
+                    padding: '6px 12px',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title="Paste and configure multiple SET-IDs"
+                >
+                  <span>Multi SET-IDs {multiGuids.length > 0 ? `(${multiGuids.length})` : ''}</span>
+                </button>
+              </div>
+
+              {multiGuids.length > 0 && (
+                <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#1e40af', fontWeight: 600 }}>
+                    Configured SET-IDs ({multiGuids.length}):
+                  </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '650px' }}>
+                    {multiGuids.slice(0, 5).map((id) => (
+                      <span
+                        key={id}
+                        style={{
+                          backgroundColor: '#eff6ff',
+                          color: '#1d4ed8',
+                          border: '1px solid #bfdbfe',
+                          padding: '2px 8px',
+                          borderRadius: 'var(--fdl-radius-sm, 2px)',
+                          fontSize: '0.75rem',
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        {id}
+                      </span>
+                    ))}
+                    {multiGuids.length > 5 && (
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', alignSelf: 'center' }}>
+                        +{multiGuids.length - 5} more
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => set({ setSplGuids: [] })}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#ef4444',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      padding: '0 4px',
+                    }}
+                  >
+                    Clear All
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Sub-panel 2: Application Number (digits only + optional category dropdown) */}
+            <div className="fdl-subpanel">
+              <div className="fdl-row fdl-row--tight" style={{ alignItems: 'center' }}>
+                <span className="fdl-subpanel-label" style={{ minWidth: '130px' }}>Application No:</span>
+                <Select
+                  ariaLabel="Application Category (Optional)"
+                  value={v.applKind || ''}
+                  onChange={(applKind) => set({ applKind })}
+                  options={[
+                    { value: '', label: 'All Categories' },
+                    { value: 'NDA', label: 'NDA' },
+                    { value: 'ANDA', label: 'ANDA' },
+                    { value: 'BLA', label: 'BLA' },
+                  ]}
+                />
+                <input
+                  className="fdl-input"
+                  style={{ maxWidth: '280px', flex: '1' }}
+                  type="text"
+                  value={v.applNum || ''}
+                  placeholder="3 to 6 digits (e.g. 021436 or 077844)"
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '');
+                    set({ applNum: digits });
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Sub-panel 3: UNII Identifier Code */}
+            <div className="fdl-subpanel">
+              <div className="fdl-row fdl-row--tight" style={{ alignItems: 'center' }}>
+                <span className="fdl-subpanel-label" style={{ minWidth: '130px' }}>UNII Code:</span>
+                <input
+                  className="fdl-input"
+                  style={{ maxWidth: '240px', flex: '1' }}
+                  type="text"
+                  value={v.uniiCode || ''}
+                  placeholder="10-char UNII (e.g. J220T4J9Q2)"
+                  onChange={(e) => set({ uniiCode: e.target.value.toUpperCase() })}
+                />
+                <Select
+                  ariaLabel="UNII Selection Target"
+                  value={v.uniiTarget || 'active'}
+                  onChange={(uniiTarget) => set({ uniiTarget })}
+                  options={[
+                    { value: 'active', label: 'Active Ingredient' },
+                    { value: 'moiety', label: 'Active Moiety' },
+                  ]}
+                />
+              </div>
+            </div>
+
+            {showMultiSetIdModal && (
+              <MultiSetIdModal
+                initialValues={multiGuids}
+                onSave={(newGuids) => {
+                  set({ setSplGuids: newGuids });
+                  setShowMultiSetIdModal(false);
+                }}
+                onClose={() => setShowMultiSetIdModal(false)}
+              />
+            )}
+          </div>
+        );
+      }
+
+      default:
+        return null;
+    }
+  }, [
+    criterion.type,
+    def,
+    fetchMeddra,
+    fetchPharmClass,
+    fetchProductName,
+    hierarchies,
+    list,
+    quickPickReason,
+    llts,
+    options.loading,
+    removeProductCandidate,
+    set,
+    targetDb,
+    toggle,
+    v,
+    values,
+  ]);
+
+  return (
+    <div className="fdl-card">
+      <div className="fdl-card__header">
+        <h2 className="fdl-card__title">{def.title}</h2>
+        <button
+          type="button"
+          className="fdl-card__remove-btn"
+          onClick={onRemove}
+          aria-label={`Remove ${def.title}`}
+          title="Remove this criterion"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      {unavailable ? (
+        <p className="fdl-note fdl-note--warn" role="status">
+          {unavailable}
+        </p>
+      ) : null}
+      <div className="fdl-card__body">{body}</div>
+      {showCandidateManager && Array.isArray(v.candidateNames) && (
+        <ProductNameCandidateDialog
+          names={v.candidateNames}
+          details={v.entityCandidateDetails || (v.entityCandidateNames || v.candidateNames).map((name: string) => ({ name, type: 'genericName' }))}
+          onRemove={removeProductCandidate}
+          onAdd={addProductCandidate}
+          onClearAll={onRemove}
+          onClose={closeCandidateManager}
+        />
+      )}
+    </div>
+  );
+}
+
+function ProductNameCandidateDialog({
+  names,
+  details,
+  onRemove,
+  onAdd,
+  onClearAll,
+  onClose,
+}: {
+  names: string[];
+  details: { name: string; type: 'genericName' | 'brandName' | 'activeIngredient' }[];
+  onRemove: (name: string) => void;
+  onAdd: (name: string) => void;
+  onClearAll: () => void;
+  onClose: () => void;
+}) {
+  const titleId = useId();
+  const [filter, setFilter] = useState('');
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
+  const filteredDetails = useMemo(() => {
+    const query = filter.trim().toLocaleLowerCase();
+    return query ? details.filter((item) => item.name.toLocaleLowerCase().includes(query)) : details;
+  }, [filter, details]);
+  const selected = useMemo(() => new Set(names.map((name) => name.toLocaleLowerCase())), [names]);
+  const pageCount = Math.max(1, Math.ceil(filteredDetails.length / pageSize));
+  const visibleDetails = filteredDetails.slice(page * pageSize, (page + 1) * pageSize);
+  const typeCounts = useMemo(() => ({
+    genericName: details.filter((item) => item.type === 'genericName').length,
+    brandName: details.filter((item) => item.type === 'brandName').length,
+    activeIngredient: details.filter((item) => item.type === 'activeIngredient').length,
+  }), [details]);
+
+  const toggleCandidate = (name: string, checked: boolean) => {
+    if (checked) onAdd(name);
+    else onRemove(name);
+  };
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, pageCount - 1));
+  }, [pageCount]);
+
+  return (
+    <div className="fdl-candidate-dialog-backdrop" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose();
+    }}>
+      <section className="fdl-candidate-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <header className="fdl-candidate-dialog__header">
+          <div>
+            <p className="fdl-candidate-dialog__eyebrow">Product name candidates</p>
+            <h2 id={titleId}>Review exact-match names</h2>
+            <p className="fdl-candidate-dialog__summary">
+              {names.length.toLocaleString()} selected of {details.length.toLocaleString()} available. Select names by type to control the exact-match search.
+            </p>
+          </div>
+          <button type="button" className="fdl-candidate-dialog__close" onClick={onClose} aria-label="Close name manager">×</button>
+        </header>
+
+        <div className="fdl-candidate-dialog__toolbar">
+          <input
+            className="fdl-input"
+            type="search"
+            value={filter}
+            onChange={(event) => { setFilter(event.target.value); setPage(0); }}
+            placeholder="Filter names..."
+            aria-label="Filter product-name candidates"
+            autoFocus
+          />
+          <span className="fdl-candidate-dialog__count">
+            {filteredDetails.length.toLocaleString()} of {details.length.toLocaleString()} names
+          </span>
+        </div>
+
+        <div className="fdl-candidate-dialog__table-wrap">
+          <table className="fdl-candidate-dialog__table">
+            <thead>
+              <tr>
+                <th scope="col">Generic name ({typeCounts.genericName})</th>
+                <th scope="col">Brand name ({typeCounts.brandName})</th>
+                <th scope="col">Active ingredient ({typeCounts.activeIngredient})</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleDetails.map(({ name, type }) => (
+                <tr key={name}>
+                  {(['genericName', 'brandName', 'activeIngredient'] as const).map((columnType) => (
+                    <td key={columnType}>
+                      {type === columnType ? (
+                        <label className="fdl-candidate-dialog__candidate">
+                          <input
+                            type="checkbox"
+                            checked={selected.has(name.toLocaleLowerCase())}
+                            onChange={(event) => toggleCandidate(name, event.target.checked)}
+                            aria-label={`${selected.has(name.toLocaleLowerCase()) ? 'Remove' : 'Add'} ${name} ${columnType}`}
+                          />
+                          <span>{name}</span>
+                        </label>
+                      ) : null}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              {!visibleDetails.length && <tr><td colSpan={3} className="fdl-candidate-dialog__empty">No matching names.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+
+        <footer className="fdl-candidate-dialog__footer">
+          <span>Page {page + 1} of {pageCount}</span>
+          <div className="fdl-candidate-dialog__actions">
+            <button type="button" className="fdl-candidate-dialog__clear" onClick={onClearAll}>Clear all</button>
+            <button type="button" className="fdl-btn fdl-btn--quiet" onClick={() => setPage((current) => Math.max(0, current - 1))} disabled={page === 0}>Previous</button>
+            <button type="button" className="fdl-btn fdl-btn--quiet" onClick={() => setPage((current) => Math.min(pageCount - 1, current + 1))} disabled={page >= pageCount - 1}>Next</button>
+            <button type="button" className="fdl-btn fdl-btn--search" onClick={onClose}>Done</button>
+          </div>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
+function UnverifiedProductPicker({
+  queryText,
+  field,
+  targetDb = 'oracle',
+  onConfirm,
+}: {
+  queryText: string;
+  field: string;
+  targetDb?: TargetDb;
+  onConfirm: (name: string) => void;
+}) {
+  const [items, setItems] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `/api/labelquery/suggest/product_name?q=${encodeURIComponent(queryText.trim())}&field=${field}&target_db=${targetDb}`,
+        );
+        if (res.ok && !cancelled) {
+          const json = await res.json();
+          setItems(json.suggestions || []);
+        }
+      } catch {
+        if (!cancelled) setItems([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    if (queryText.trim().length >= 2) {
+      load();
+    } else {
+      setItems([]);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [queryText, field, targetDb]);
+
+  if (loading) {
+    return <span style={{ fontSize: '0.8rem', color: '#b45309' }}>Searching matching standard names…</span>;
+  }
+
+  if (!items.length) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.8rem', color: '#b45309' }}>
+          No direct exact matches found for &ldquo;{queryText}&rdquo;. Use the input box below to search suggestions, or confirm:
+        </span>
+        <button
+          type="button"
+          onClick={() => onConfirm(queryText.trim())}
+          style={{
+            background: '#d97706',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
+            padding: '3px 10px',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          Confirm &ldquo;{queryText.trim()}&rdquo; as-is
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+      {items.slice(0, 10).map((item) => (
+        <button
+          key={item}
+          type="button"
+          onClick={() => onConfirm(item)}
+          style={{
+            background: '#ffffff',
+            color: '#92400e',
+            border: '1px solid #d97706',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
+            padding: '4px 10px',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+          }}
+          title={`Confirm standard name: ${item}`}
+        >
+          <span>✓ {item}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function UnverifiedClassPicker({ term, fetchSuggestions, onConfirm }: {
+  term: string;
+  fetchSuggestions: (query: string) => Promise<string[]>;
+  onConfirm: (term: string) => void;
+}) {
+  const [items, setItems] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetchSuggestions(term).then((results) => {
+      if (!cancelled) setItems(results);
+    }).catch(() => {
+      if (!cancelled) setItems([]);
+    }).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [term, fetchSuggestions]);
+
+  return (
+    <>
+      {loading ? <p>Searching matching classes…</p> : items.length > 0 ? (
+        <div className="fdl-class-confirm__suggestions">
+          {items.slice(0, 5).map((item) => (
+            <button key={item} type="button" onClick={() => onConfirm(item)}>✓ {item}</button>
+          ))}
+          {items.length > 5 && <button type="button" onClick={() => dialogRef.current?.showModal()}>More… ({items.length})</button>}
+        </div>
+      ) : <p>No matching classes found. Try another search below.</p>}
+      <TokenInput placeholder="Search for another class" fetchSuggestions={fetchSuggestions} requireSuggestion onCommit={onConfirm} />
+      <dialog ref={dialogRef} className="fdl-query-code-dialog fdl-class-dialog" aria-labelledby={titleId}>
+        <div className="fdl-class-dialog__header">
+          <h2 id={titleId}>Matching pharmacologic classes</h2>
+          <button type="button" className="fdl-candidate-dialog__close" onClick={() => dialogRef.current?.close()} aria-label="Close">×</button>
+        </div>
+        <p>Select a standard class for “{term}”.</p>
+        <div className="fdl-class-dialog__list">
+          {items.map((item) => <button key={item} type="button" onClick={() => { dialogRef.current?.close(); onConfirm(item); }}>{item}</button>)}
+        </div>
+      </dialog>
+    </>
+  );
+}
+
+function UnverifiedMeddraPicker({
+  term,
+  targetDb = 'oracle',
+  onConfirm,
+}: {
+  term: string;
+  targetDb?: TargetDb;
+  onConfirm: (canonicalTerm: string, level: 'pt' | 'llt') => void;
+}) {
+  const [items, setItems] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `/api/labelquery/suggest/meddra?q=${encodeURIComponent(term.trim())}&level=pt`,
+        );
+        if (res.ok && !cancelled) {
+          const json = await res.json();
+          setItems(json.suggestions || []);
+        }
+      } catch {
+        if (!cancelled) setItems([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    if (term.trim().length >= 2) load();
+    else setItems([]);
+    return () => {
+      cancelled = true;
+    };
+  }, [term, targetDb]);
+
+  if (loading) {
+    return <span style={{ fontSize: '0.8rem', color: '#b45309' }}>Searching matching MedDRA terms…</span>;
+  }
+
+  if (!items.length) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.8rem', color: '#b45309' }}>
+          No exact MedDRA PT match found for &ldquo;{term}&rdquo;.
+        </span>
+        <button
+          type="button"
+          onClick={() => onConfirm(term.trim(), 'pt')}
+          style={{
+            background: '#d97706',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
+            padding: '3px 10px',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          Confirm &ldquo;{term.trim()}&rdquo; as-is
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+      {items.slice(0, 10).map((item) => (
+        <button
+          key={item}
+          type="button"
+          onClick={() => onConfirm(item, 'pt')}
+          style={{
+            background: '#ffffff',
+            color: '#92400e',
+            border: '1px solid #d97706',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
+            padding: '4px 10px',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+          }}
+          title={`Confirm MedDRA Preferred Term: ${item}`}
+        >
+          <span>✓ {item} (PT)</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function MultiSetIdModal({
+  initialValues,
+  onSave,
+  onClose,
+}: {
+  initialValues: string[];
+  onSave: (setIds: string[]) => void;
+  onClose: () => void;
+}) {
+  const [rawText, setRawText] = useState(initialValues.join('\n'));
+
+  const parsedIds = useMemo(() => {
+    return rawText
+      .split(/[\r\n;,]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }, [rawText]);
+
+  // Remove duplicates while preserving order
+  const uniqueIds = useMemo(() => {
+    return Array.from(new Set(parsedIds));
+  }, [parsedIds]);
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(7, 31, 61, 0.58)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: '16px',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          backgroundColor: 'var(--fdl-paper, #ffffff)',
+          borderRadius: 'var(--fdl-radius-sm, 2px)',
+          border: '1px solid var(--fdl-line, #b8c8d7)',
+          borderTop: '3px solid var(--fdl-navy-800, #12375b)',
+          padding: '20px 24px',
+          maxWidth: '560px',
+          width: '100%',
+          boxShadow: '0 16px 36px rgba(7, 31, 61, 0.24)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '14px',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--fdl-navy-950, #071f3d)', fontWeight: 800 }}>
+            Multi SET-IDs Input
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '1.25rem',
+              cursor: 'pointer',
+              color: 'var(--fdl-muted, #5e6e7c)',
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--fdl-muted, #5e6e7c)', lineHeight: 1.45 }}>
+          Paste multiple <strong>SET IDs</strong> or <strong>SPL GUIDs</strong> below. Entries can be separated by
+          <strong> newlines</strong>, <strong>semicolons (;)</strong>, or <strong>commas (,)</strong>.
+        </p>
+
+        <textarea
+          rows={8}
+          value={rawText}
+          onChange={(e) => setRawText(e.target.value)}
+          placeholder={`ca73b519-015a-436d-aa3c-af53492825a1\nc7247391-7fb8-4bd8-90db-2d1d072fec01\n43683519-015a-436d-aa3c-af53492825a2`}
+          style={{
+            width: '100%',
+            padding: '8px 10px',
+            borderRadius: 'var(--fdl-radius-sm, 2px)',
+            border: '1px solid var(--fdl-line, #b8c8d7)',
+            fontSize: '0.82rem',
+            fontFamily: 'var(--fdl-font-mono, monospace)',
+            resize: 'vertical',
+            boxSizing: 'border-box',
+            backgroundColor: 'var(--fdl-paper, #ffffff)',
+            color: 'var(--fdl-ink, #132332)',
+          }}
+        />
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '0.82rem', color: uniqueIds.length > 0 ? 'var(--fdl-blue-700, #0759a5)' : 'var(--fdl-muted, #5e6e7c)', fontWeight: 700 }}>
+            {uniqueIds.length} {uniqueIds.length === 1 ? 'SET-ID' : 'SET-IDs'} detected
+            {parsedIds.length !== uniqueIds.length && ` (${parsedIds.length - uniqueIds.length} duplicates filtered)`}
+          </span>
+          {rawText.trim() && (
+            <button
+              type="button"
+              onClick={() => setRawText('')}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--fdl-red, #b50909)',
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
+            >
+              Clear Text
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 'var(--fdl-radius-sm, 2px)',
+              border: '1px solid var(--fdl-line, #b8c8d7)',
+              background: 'var(--fdl-paper, #ffffff)',
+              color: 'var(--fdl-ink-soft, #273843)',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onSave(uniqueIds)}
+            style={{
+              padding: '6px 16px',
+              borderRadius: 'var(--fdl-radius-sm, 2px)',
+              border: '1px solid var(--fdl-blue-700, #0759a5)',
+              background: 'var(--fdl-blue-700, #0759a5)',
+              color: 'var(--fdl-paper, #ffffff)',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Save SET-IDs ({uniqueIds.length})
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

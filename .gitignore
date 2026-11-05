@@ -1,0 +1,85 @@
+# Credentials and SSL
+cert.pem
+key.pem
+deploy/nginx/certs/
+*.key
+*.crt
+*.pem
+
+
+# Python
+venv/
+__pycache__/
+.ipynb_checkpoints/
+*.py[cod]
+*$py.class
+.env
+.env.*
+!.env.template
+!.env.rapid.template
+
+# Node/Frontend
+node_modules/
+dist/
+.env.local
+.next/
+
+# System
+.DS_Store
+Thumbs.db
+nohup.out
+nohup.out.log
+sync_embeddings_multigpu.log
+
+# archive_folder
+OLD_VER_2025/
+tmp/
+dashboard_old/
+
+# Database
+logs/
+GEMINI.md
+/database/
+
+
+data/*
+!data/image_review/
+data/image_review/*
+!data/image_review/.gitkeep
+backend/data/uploads/
+*.db
+
+deepdive_outputs/
+scripts/evaluation/emerging_ae/cache/
+scripts/evaluation/emerging_ae/archived/
+scripts/evaluation/emerging_ae/*.csv
+scripts/evaluation/
+scripts/askdrugtox_eval/
+data.tar.gz
+data.tar
+deploy/*.tar.gz
+deploy/rapid_migration/*.tar.gz
+docker-compose.yml
+
+./archive/
+backups/
+*.dump
+deploy/rapid_migration/*.tar
+deploy/rapid_migration/*.zip
+
+#apptainer
+deploy/**/*.sif
+
+# FDA SSO local metadata and logs
+deploy/SSO_config/*.xml
+!deploy/SSO_config/*.xml.template
+deploy/SSO_config/*.log*
+
+# Deploy Data Transfer and proprietary datasets
+deploy/data_transfer/MedDRA*/
+deploy/data_transfer/*.doc
+deploy/data_transfer/*.docx
+*.tsv
+
+# Versioned offline migration bundles
+deploy/rapid_migration/releases/

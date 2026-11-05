@@ -1,0 +1,52 @@
+Bootstrap: docker
+From: ankane/pgvector:latest
+
+%environment
+    export PGDATA=/var/lib/postgresql/data
+    export PGRUN=/tmp/pg-fdalabel-run
+
+%startscript
+    #!/bin/bash
+    set -e
+
+    # In rootless Apptainer we run as the host user, not uid 999 (postgres).
+    # Bypass docker-entrypoint.sh (which requires gosu) and drive postgres directly.
+
+    # Use /tmp for the unix socket — /var/run/postgresql is read-only in Apptainer.
+    mkdir -p "$PGRUN"
+
+    # Find the postgres binaries (version-agnostic).
+    PG_BIN=$(dirname "$(find /usr/lib/postgresql -name 'postgres' -type f 2>/dev/null | sort -V | tail -1)")
+    export PATH="$PG_BIN:$PATH"
+
+    if [ ! -f "$PGDATA/PG_VERSION" ]; then
+        echo "[db] Initializing PostgreSQL data directory as $(whoami)..."
+        PWFILE=$(mktemp)
+        printf '%s' "${POSTGRES_PASSWORD:-afd_password}" > "$PWFILE"
+        initdb -D "$PGDATA" \
+            --username="${POSTGRES_USER:-afd_user}" \
+            --auth=scram-sha-256 \
+            --pwfile="$PWFILE"
+        rm -f "$PWFILE"
+
+        # Allow TCP connections from localhost.
+        cat >> "$PGDATA/pg_hba.conf" <<'EOF'
+host    all             all             127.0.0.1/32            scram-sha-256
+host    all             all             ::1/128                 scram-sha-256
+EOF
+        sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" \
+            "$PGDATA/postgresql.conf"
+
+        # Start temporarily to create the application database.
+        pg_ctl -D "$PGDATA" -o "-c unix_socket_directories=$PGRUN" start -w -t 30
+        createdb -h "$PGRUN" -U "${POSTGRES_USER:-afd_user}" \
+            "${POSTGRES_DB:-fdalabel-v3}" 2>/dev/null || true
+        pg_ctl -D "$PGDATA" stop -w
+        echo "[db] Initialization complete."
+    fi
+
+    echo "[db] Starting PostgreSQL..."
+    exec postgres -D "$PGDATA" \
+        -c unix_socket_directories="$PGRUN" \
+        -c listen_addresses='127.0.0.1' \
+        -c max_connections=300

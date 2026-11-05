@@ -1,0 +1,4111 @@
+{
+  "annotations": [
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10000496",
+        "hlgt_code": "10040798",
+        "hlgt_name": "Skin appendage conditions",
+        "hlt_code": "10000497",
+        "hlt_name": "Acnes",
+        "level": "PT",
+        "name": "Acne",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 106,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Acne"
+        }
+      ],
+      "id": "ann_000001",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0002",
+        "loinc_code": "34067-9",
+        "loinc_name": "INDICATIONS & USAGE SECTION",
+        "name": "INDICATIONS & USAGE SECTION",
+        "observed_section_name": "1 INDICATIONS AND USAGE",
+        "path": "1 INDICATIONS AND USAGE"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 102,
+      "term": "acne"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10072082",
+        "hlgt_code": "10071947",
+        "hlgt_name": "Exposures, chemical injuries and poisoning",
+        "hlt_code": "10073308",
+        "hlt_name": "Non-occupational environmental exposures",
+        "level": "PT",
+        "name": "Environmental exposure",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Inj&P",
+        "soc_code": "10022117",
+        "soc_name": "Injury, poisoning and procedural complications",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 842,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Environmental exposure"
+        }
+      ],
+      "id": "ann_000002",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0006",
+        "loinc_code": "43685-7",
+        "loinc_name": "WARNINGS AND PRECAUTIONS SECTION",
+        "name": "WARNINGS AND PRECAUTIONS SECTION",
+        "observed_section_name": "5 WARNINGS AND PRECAUTIONS",
+        "path": "5 WARNINGS AND PRECAUTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 820,
+      "term": "Environmental Exposure"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10015150",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10015151",
+        "hlt_name": "Erythemas",
+        "level": "PT",
+        "name": "Erythema",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 1359,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Erythema"
+        }
+      ],
+      "id": "ann_000003",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0006",
+        "loinc_code": "43685-7",
+        "loinc_name": "WARNINGS AND PRECAUTIONS SECTION",
+        "name": "WARNINGS AND PRECAUTIONS SECTION",
+        "observed_section_name": "5 WARNINGS AND PRECAUTIONS",
+        "path": "5 WARNINGS AND PRECAUTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 1351,
+      "term": "Erythema"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9983970522880554,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 1679,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 252,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.99839705",
+            "start": 234,
+            "word": "Contact dermatitis"
+          }
+        },
+        {
+          "matched_text": "contact dermatitis",
+          "propagated_from_annotation_id": "ann_000202",
+          "propagation": "case_insensitive_repeated_adverse_reaction_phrase",
+          "seed_text": "Contact dermatitis"
+        }
+      ],
+      "id": "ann_000239",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0006",
+        "loinc_code": "43685-7",
+        "loinc_name": "WARNINGS AND PRECAUTIONS SECTION",
+        "name": "WARNINGS AND PRECAUTIONS SECTION",
+        "observed_section_name": "5 WARNINGS AND PRECAUTIONS",
+        "path": "5 WARNINGS AND PRECAUTIONS"
+      },
+      "source": {
+        "annotator": "rxb_ner_propagator",
+        "device": 0,
+        "method": "model_span_propagation",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "propagated_from_annotation_id": "ann_000202",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 1661,
+      "term": "contact dermatitis"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10012431",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10012435",
+        "hlt_name": "Dermatitis and eczema",
+        "level": "PT",
+        "name": "Dermatitis",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 1679,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Dermatitis"
+        }
+      ],
+      "id": "ann_000004",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0006",
+        "loinc_code": "43685-7",
+        "loinc_name": "WARNINGS AND PRECAUTIONS SECTION",
+        "name": "WARNINGS AND PRECAUTIONS SECTION",
+        "observed_section_name": "5 WARNINGS AND PRECAUTIONS",
+        "path": "5 WARNINGS AND PRECAUTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 1669,
+      "term": "dermatitis"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10067484",
+        "hlgt_code": "10062915",
+        "hlgt_name": "Therapeutic and nontherapeutic effects (excl toxicity)",
+        "hlt_code": "10043409",
+        "hlt_name": "Therapeutic and nontherapeutic responses",
+        "level": "PT",
+        "name": "Adverse reaction",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Genrl",
+        "soc_code": "10018065",
+        "soc_name": "General disorders and administration site conditions",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 2518,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Adverse reaction"
+        }
+      ],
+      "id": "ann_000005",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 2502,
+      "term": "adverse reaction"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10000496",
+        "hlgt_code": "10040798",
+        "hlgt_name": "Skin appendage conditions",
+        "hlt_code": "10000497",
+        "hlt_name": "Acnes",
+        "level": "PT",
+        "name": "Acne",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 2822,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Acne"
+        }
+      ],
+      "id": "ann_000006",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 2818,
+      "term": "acne"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9971203804016113,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 3387,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 222,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.9971204",
+            "start": 214,
+            "word": "Dry Skin"
+          }
+        }
+      ],
+      "id": "ann_000201",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 3379,
+      "term": "Dry Skin"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10013786",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10012424",
+        "hlt_name": "Dermal and epidermal conditions NEC",
+        "level": "PT",
+        "name": "Dry skin",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 3387,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Dry skin"
+        }
+      ],
+      "id": "ann_000007",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 3379,
+      "term": "Dry Skin"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9983970522880554,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 3417,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 252,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.99839705",
+            "start": 234,
+            "word": "Contact dermatitis"
+          }
+        }
+      ],
+      "id": "ann_000202",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 3399,
+      "term": "Contact dermatitis"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10012431",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10012435",
+        "hlt_name": "Dermatitis and eczema",
+        "level": "PT",
+        "name": "Dermatitis",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 3417,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Dermatitis"
+        }
+      ],
+      "id": "ann_000008",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 3407,
+      "term": "dermatitis"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9987948536872864,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 3454,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 289,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.99879485",
+            "start": 265,
+            "word": "Application site burning"
+          }
+        }
+      ],
+      "id": "ann_000203",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 3430,
+      "term": "Application site burning"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9986845850944519,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 3494,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 329,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.9986846",
+            "start": 302,
+            "word": "Application site irritation"
+          }
+        }
+      ],
+      "id": "ann_000204",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 3467,
+      "term": "Application site irritation"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10003046",
+        "hlgt_code": "10001316",
+        "hlgt_name": "Administration site reactions",
+        "hlt_code": "10003057",
+        "hlt_name": "Application site reactions",
+        "level": "PT",
+        "name": "Application site irritation",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Genrl",
+        "soc_code": "10018065",
+        "soc_name": "General disorders and administration site conditions",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 3494,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Application site irritation"
+        }
+      ],
+      "id": "ann_000009",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 3467,
+      "term": "Application site irritation"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9980748891830444,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 3522,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 357,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.9980749",
+            "start": 342,
+            "word": "Skin irritation"
+          }
+        }
+      ],
+      "id": "ann_000205",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 3507,
+      "term": "Skin irritation"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10040880",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10012435",
+        "hlt_name": "Dermatitis and eczema",
+        "level": "PT",
+        "name": "Skin irritation",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 3522,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Skin irritation"
+        }
+      ],
+      "id": "ann_000010",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 3507,
+      "term": "Skin irritation"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10015150",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10015151",
+        "hlt_name": "Erythemas",
+        "level": "PT",
+        "name": "Erythema",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 3667,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Erythema"
+        }
+      ],
+      "id": "ann_000011",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 3659,
+      "term": "erythema"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10015150",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10015151",
+        "hlt_name": "Erythemas",
+        "level": "PT",
+        "name": "Erythema",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 3973,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Erythema"
+        }
+      ],
+      "id": "ann_000012",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 3965,
+      "term": "Erythema"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.95875084400177,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 4056,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 891,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.95875084",
+            "start": 884,
+            "word": "Dryness"
+          }
+        }
+      ],
+      "id": "ann_000206",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 4049,
+      "term": "Dryness"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10015150",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10015151",
+        "hlt_name": "Erythemas",
+        "level": "PT",
+        "name": "Erythema",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 4225,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Erythema"
+        }
+      ],
+      "id": "ann_000013",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 4217,
+      "term": "erythema"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10000496",
+        "hlgt_code": "10040798",
+        "hlgt_name": "Skin appendage conditions",
+        "hlt_code": "10000497",
+        "hlt_name": "Acnes",
+        "level": "PT",
+        "name": "Acne",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 4378,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Acne"
+        }
+      ],
+      "id": "ann_000014",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 4374,
+      "term": "acne"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10042496",
+        "hlgt_code": "10022119",
+        "hlgt_name": "Injuries by physical agents",
+        "hlt_code": "10037759",
+        "hlt_name": "Radiation injuries",
+        "level": "PT",
+        "name": "Sunburn",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Inj&P",
+        "soc_code": "10022117",
+        "soc_name": "Injury, poisoning and procedural complications",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 5161,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Sunburn"
+        }
+      ],
+      "id": "ann_000015",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 5154,
+      "term": "sunburn"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10005191",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10006555",
+        "hlt_name": "Bullous conditions",
+        "level": "PT",
+        "name": "Blister",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 5170,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Blister"
+        }
+      ],
+      "id": "ann_000016",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 5163,
+      "term": "blister"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10033474",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10012424",
+        "hlt_name": "Dermal and epidermal conditions NEC",
+        "level": "PT",
+        "name": "Pain of skin",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 5184,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Pain of skin"
+        }
+      ],
+      "id": "ann_000017",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 5172,
+      "term": "pain of skin"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10037087",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10049293",
+        "hlt_name": "Pruritus NEC",
+        "level": "PT",
+        "name": "Pruritus",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 5194,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Pruritus"
+        }
+      ],
+      "id": "ann_000018",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 5186,
+      "term": "pruritus"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10042682",
+        "hlgt_code": "10018073",
+        "hlgt_name": "General system disorders NEC",
+        "hlt_code": "10018072",
+        "hlt_name": "General signs and symptoms NEC",
+        "level": "PT",
+        "name": "Swelling face",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Genrl",
+        "soc_code": "10018065",
+        "soc_name": "General disorders and administration site conditions",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 5209,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Swelling face"
+        }
+      ],
+      "id": "ann_000019",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 5196,
+      "term": "swelling face"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10010741",
+        "hlgt_code": "10021879",
+        "hlgt_name": "Infections - pathogen unspecified",
+        "hlt_code": "10015909",
+        "hlt_name": "Eye and eyelid infections",
+        "level": "PT",
+        "name": "Conjunctivitis",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Infec",
+        "soc_code": "10021881",
+        "soc_name": "Infections and infestations",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 5225,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Conjunctivitis"
+        }
+      ],
+      "id": "ann_000020",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 5211,
+      "term": "conjunctivitis"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10037844",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10052566",
+        "hlt_name": "Rashes, eruptions and exanthems NEC",
+        "level": "PT",
+        "name": "Rash",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 5251,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Rash"
+        }
+      ],
+      "id": "ann_000021",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 5247,
+      "term": "rash"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10014184",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10012435",
+        "hlt_name": "Dermatitis and eczema",
+        "level": "PT",
+        "name": "Eczema",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 5259,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Eczema"
+        }
+      ],
+      "id": "ann_000022",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 5253,
+      "term": "eczema"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10043528",
+        "hlgt_code": "10079101",
+        "hlgt_name": "Respiratory tract signs and symptoms",
+        "hlt_code": "10046313",
+        "hlt_name": "Upper respiratory tract signs and symptoms",
+        "level": "PT",
+        "name": "Throat tightness",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Resp",
+        "soc_code": "10038738",
+        "soc_name": "Respiratory, thoracic and mediastinal disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 5277,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Throat tightness"
+        }
+      ],
+      "id": "ann_000023",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 5261,
+      "term": "throat tightness"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9983970522880554,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 5309,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 252,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.99839705",
+            "start": 234,
+            "word": "Contact dermatitis"
+          }
+        },
+        {
+          "matched_text": "contact dermatitis",
+          "propagated_from_annotation_id": "ann_000202",
+          "propagation": "case_insensitive_repeated_adverse_reaction_phrase",
+          "seed_text": "Contact dermatitis"
+        }
+      ],
+      "id": "ann_000240",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "rxb_ner_propagator",
+        "device": 0,
+        "method": "model_span_propagation",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "propagated_from_annotation_id": "ann_000202",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 5291,
+      "term": "contact dermatitis"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10012431",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10012435",
+        "hlt_name": "Dermatitis and eczema",
+        "level": "PT",
+        "name": "Dermatitis",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 5309,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Dermatitis"
+        }
+      ],
+      "id": "ann_000024",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0007",
+        "loinc_code": "34084-4",
+        "loinc_name": "ADVERSE REACTIONS SECTION",
+        "name": "ADVERSE REACTIONS SECTION",
+        "observed_section_name": "6 ADVERSE REACTIONS",
+        "path": "6 ADVERSE REACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 5299,
+      "term": "dermatitis"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10000496",
+        "hlgt_code": "10040798",
+        "hlgt_name": "Skin appendage conditions",
+        "hlt_code": "10000497",
+        "hlt_name": "Acnes",
+        "level": "PT",
+        "name": "Acne",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 5559,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Acne"
+        }
+      ],
+      "id": "ann_000025",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0008",
+        "loinc_code": "34073-7",
+        "loinc_name": "DRUG INTERACTIONS SECTION",
+        "name": "DRUG INTERACTIONS SECTION",
+        "observed_section_name": "7 DRUG INTERACTIONS",
+        "path": "7 DRUG INTERACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 5555,
+      "term": "acne"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10013710",
+        "hlgt_code": "10062915",
+        "hlgt_name": "Therapeutic and nontherapeutic effects (excl toxicity)",
+        "hlt_code": "10022528",
+        "hlt_name": "Interactions",
+        "level": "PT",
+        "name": "Drug interaction",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Genrl",
+        "soc_code": "10018065",
+        "soc_name": "General disorders and administration site conditions",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 5756,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Drug interaction"
+        }
+      ],
+      "id": "ann_000026",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0008",
+        "loinc_code": "34073-7",
+        "loinc_name": "DRUG INTERACTIONS SECTION",
+        "name": "DRUG INTERACTIONS SECTION",
+        "observed_section_name": "7 DRUG INTERACTIONS",
+        "path": "7 DRUG INTERACTIONS"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 5740,
+      "term": "drug interaction"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10036556",
+        "hlgt_code": "10010273",
+        "hlgt_name": "Pregnancy, labour, delivery and postpartum conditions",
+        "hlt_code": "10029772",
+        "hlt_name": "Normal pregnancy, labour and delivery",
+        "level": "PT",
+        "name": "Pregnancy",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Preg",
+        "soc_code": "10036585",
+        "soc_name": "Pregnancy, puerperium and perinatal conditions",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 5866,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Pregnancy"
+        }
+      ],
+      "id": "ann_000027",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0010",
+        "loinc_code": "42228-7",
+        "loinc_name": "PREGNANCY SECTION",
+        "name": "PREGNANCY SECTION",
+        "observed_section_name": "8.1 Pregnancy",
+        "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 5857,
+      "term": "Pregnancy"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10036556",
+        "hlgt_code": "10010273",
+        "hlgt_name": "Pregnancy, labour, delivery and postpartum conditions",
+        "hlt_code": "10029772",
+        "hlt_name": "Normal pregnancy, labour and delivery",
+        "level": "PT",
+        "name": "Pregnancy",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Preg",
+        "soc_code": "10036585",
+        "soc_name": "Pregnancy, puerperium and perinatal conditions",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 5877,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Pregnancy"
+        }
+      ],
+      "id": "ann_000028",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0010",
+        "loinc_code": "42228-7",
+        "loinc_name": "PREGNANCY SECTION",
+        "name": "PREGNANCY SECTION",
+        "observed_section_name": "8.1 Pregnancy",
+        "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 5868,
+      "term": "Pregnancy"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10036556",
+        "hlgt_code": "10010273",
+        "hlgt_name": "Pregnancy, labour, delivery and postpartum conditions",
+        "hlt_code": "10029772",
+        "hlt_name": "Normal pregnancy, labour and delivery",
+        "level": "PT",
+        "name": "Pregnancy",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Preg",
+        "soc_code": "10036585",
+        "soc_name": "Pregnancy, puerperium and perinatal conditions",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 6239,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Pregnancy"
+        }
+      ],
+      "id": "ann_000029",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0010",
+        "loinc_code": "42228-7",
+        "loinc_name": "PREGNANCY SECTION",
+        "name": "PREGNANCY SECTION",
+        "observed_section_name": "8.1 Pregnancy",
+        "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 6230,
+      "term": "pregnancy"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9567670822143555,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 6326,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 324,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.9567671",
+            "start": 305,
+            "word": "teratogenic effects"
+          }
+        }
+      ],
+      "id": "ann_000208",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0010",
+        "loinc_code": "42228-7",
+        "loinc_name": "PREGNANCY SECTION",
+        "name": "PREGNANCY SECTION",
+        "observed_section_name": "8.1 Pregnancy",
+        "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 6307,
+      "term": "teratogenic effects"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9968655109405518,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 6554,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 552,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.9968655",
+            "start": 533,
+            "word": "teratogenic changes"
+          }
+        }
+      ],
+      "id": "ann_000210",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0010",
+        "loinc_code": "42228-7",
+        "loinc_name": "PREGNANCY SECTION",
+        "name": "PREGNANCY SECTION",
+        "observed_section_name": "8.1 Pregnancy",
+        "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 6535,
+      "term": "teratogenic changes"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.998152494430542,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 6727,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 725,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.9981525",
+            "start": 713,
+            "word": "cleft palate"
+          }
+        }
+      ],
+      "id": "ann_000213",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0010",
+        "loinc_code": "42228-7",
+        "loinc_name": "PREGNANCY SECTION",
+        "name": "PREGNANCY SECTION",
+        "observed_section_name": "8.1 Pregnancy",
+        "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 6715,
+      "term": "cleft palate"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10009269",
+        "hlgt_code": "10018018",
+        "hlgt_name": "Gastrointestinal tract disorders congenital",
+        "hlt_code": "10033530",
+        "hlt_name": "Palate disorders congenital",
+        "level": "PT",
+        "name": "Cleft palate",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Cong",
+        "soc_code": "10010331",
+        "soc_name": "Congenital, familial and genetic disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 6727,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Cleft palate"
+        }
+      ],
+      "id": "ann_000030",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0010",
+        "loinc_code": "42228-7",
+        "loinc_name": "PREGNANCY SECTION",
+        "name": "PREGNANCY SECTION",
+        "observed_section_name": "8.1 Pregnancy",
+        "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 6715,
+      "term": "cleft palate"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9977854490280151,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 6743,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 741,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.99778545",
+            "start": 727,
+            "word": "microphthalmia"
+          }
+        }
+      ],
+      "id": "ann_000214",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0010",
+        "loinc_code": "42228-7",
+        "loinc_name": "PREGNANCY SECTION",
+        "name": "PREGNANCY SECTION",
+        "observed_section_name": "8.1 Pregnancy",
+        "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 6729,
+      "term": "microphthalmia"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9979596138000488,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 6758,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 756,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.9979596",
+            "start": 743,
+            "word": "encephalocele"
+          }
+        }
+      ],
+      "id": "ann_000215",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0010",
+        "loinc_code": "42228-7",
+        "loinc_name": "PREGNANCY SECTION",
+        "name": "PREGNANCY SECTION",
+        "observed_section_name": "8.1 Pregnancy",
+        "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 6745,
+      "term": "encephalocele"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10014617",
+        "hlgt_code": "10029299",
+        "hlgt_name": "Neurological disorders congenital",
+        "hlt_code": "10009713",
+        "hlt_name": "Central nervous system disorders congenital NEC",
+        "level": "PT",
+        "name": "Encephalocele",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Cong",
+        "soc_code": "10010331",
+        "soc_name": "Congenital, familial and genetic disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 6758,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Encephalocele"
+        }
+      ],
+      "id": "ann_000031",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0010",
+        "loinc_code": "42228-7",
+        "loinc_name": "PREGNANCY SECTION",
+        "name": "PREGNANCY SECTION",
+        "observed_section_name": "8.1 Pregnancy",
+        "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 6745,
+      "term": "encephalocele"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9936665892601013,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 6785,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 783,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.9936666",
+            "start": 761,
+            "word": "skeletal abnormalities"
+          }
+        }
+      ],
+      "id": "ann_000216",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0010",
+        "loinc_code": "42228-7",
+        "loinc_name": "PREGNANCY SECTION",
+        "name": "PREGNANCY SECTION",
+        "observed_section_name": "8.1 Pregnancy",
+        "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 6763,
+      "term": "skeletal abnormalities"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9983436465263367,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 6815,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 813,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.99834365",
+            "start": 797,
+            "word": "umbilical hernia"
+          }
+        }
+      ],
+      "id": "ann_000218",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0010",
+        "loinc_code": "42228-7",
+        "loinc_name": "PREGNANCY SECTION",
+        "name": "PREGNANCY SECTION",
+        "observed_section_name": "8.1 Pregnancy",
+        "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 6799,
+      "term": "umbilical hernia"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10045458",
+        "hlgt_code": "10000073",
+        "hlgt_name": "Abdominal hernias and other abdominal wall conditions",
+        "hlt_code": "10045459",
+        "hlt_name": "Umbilical hernias",
+        "level": "PT",
+        "name": "Umbilical hernia",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Gastr",
+        "soc_code": "10017947",
+        "soc_name": "Gastrointestinal disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 6815,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Umbilical hernia"
+        }
+      ],
+      "id": "ann_000032",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0010",
+        "loinc_code": "42228-7",
+        "loinc_name": "PREGNANCY SECTION",
+        "name": "PREGNANCY SECTION",
+        "observed_section_name": "8.1 Pregnancy",
+        "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 6799,
+      "term": "umbilical hernia"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.991326630115509,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 6829,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 827,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.99132663",
+            "start": 815,
+            "word": "exophthalmos"
+          }
+        }
+      ],
+      "id": "ann_000219",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0010",
+        "loinc_code": "42228-7",
+        "loinc_name": "PREGNANCY SECTION",
+        "name": "PREGNANCY SECTION",
+        "observed_section_name": "8.1 Pregnancy",
+        "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 6817,
+      "term": "exophthalmos"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10015683",
+        "hlgt_code": "10042261",
+        "hlgt_name": "Ocular structural change, deposit and degeneration NEC",
+        "hlt_code": "10042260",
+        "hlt_name": "Structural change, deposit and degeneration of eye NEC",
+        "level": "PT",
+        "name": "Exophthalmos",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Eye",
+        "soc_code": "10015919",
+        "soc_name": "Eye disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 6829,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Exophthalmos"
+        }
+      ],
+      "id": "ann_000033",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0010",
+        "loinc_code": "42228-7",
+        "loinc_name": "PREGNANCY SECTION",
+        "name": "PREGNANCY SECTION",
+        "observed_section_name": "8.1 Pregnancy",
+        "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 6817,
+      "term": "exophthalmos"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9820588231086731,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 6867,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 865,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.9820588",
+            "start": 843,
+            "word": "skeletal abnormalities"
+          }
+        }
+      ],
+      "id": "ann_000220",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0010",
+        "loinc_code": "42228-7",
+        "loinc_name": "PREGNANCY SECTION",
+        "name": "PREGNANCY SECTION",
+        "observed_section_name": "8.1 Pregnancy",
+        "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 6845,
+      "term": "skeletal abnormalities"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9971550107002258,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 7037,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 1035,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.997155",
+            "start": 1023,
+            "word": "fetotoxicity"
+          }
+        }
+      ],
+      "id": "ann_000225",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0010",
+        "loinc_code": "42228-7",
+        "loinc_name": "PREGNANCY SECTION",
+        "name": "PREGNANCY SECTION",
+        "observed_section_name": "8.1 Pregnancy",
+        "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 7025,
+      "term": "fetotoxicity"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9972603917121887,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 7127,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 1125,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.9972604",
+            "start": 1105,
+            "word": "delayed ossification"
+          }
+        }
+      ],
+      "id": "ann_000227",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0010",
+        "loinc_code": "42228-7",
+        "loinc_name": "PREGNANCY SECTION",
+        "name": "PREGNANCY SECTION",
+        "observed_section_name": "8.1 Pregnancy",
+        "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 7107,
+      "term": "delayed ossification"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10047890",
+        "hlgt_code": "10071940",
+        "hlgt_name": "Physical examination and organ system status topics",
+        "hlt_code": "10071941",
+        "hlt_name": "Physical examination procedures and organ system status",
+        "level": "PT",
+        "name": "Weight",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Inv",
+        "soc_code": "10022891",
+        "soc_name": "Investigations",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 8317,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Weight"
+        }
+      ],
+      "id": "ann_000034",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0014",
+        "loinc_code": "34089-3",
+        "loinc_name": "DESCRIPTION SECTION",
+        "name": "DESCRIPTION SECTION",
+        "observed_section_name": "11 DESCRIPTION",
+        "path": "11 DESCRIPTION"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 8311,
+      "term": "weight"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10047890",
+        "hlgt_code": "10071940",
+        "hlgt_name": "Physical examination and organ system status topics",
+        "hlt_code": "10071941",
+        "hlt_name": "Physical examination procedures and organ system status",
+        "level": "PT",
+        "name": "Weight",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Inv",
+        "soc_code": "10022891",
+        "soc_name": "Investigations",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 8637,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Weight"
+        }
+      ],
+      "id": "ann_000035",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0014",
+        "loinc_code": "34089-3",
+        "loinc_name": "DESCRIPTION SECTION",
+        "name": "DESCRIPTION SECTION",
+        "observed_section_name": "11 DESCRIPTION",
+        "path": "11 DESCRIPTION"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 8631,
+      "term": "weight"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10000496",
+        "hlgt_code": "10040798",
+        "hlgt_name": "Skin appendage conditions",
+        "hlt_code": "10000497",
+        "hlt_name": "Acnes",
+        "level": "PT",
+        "name": "Acne",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 9372,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Acne"
+        }
+      ],
+      "id": "ann_000036",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0016",
+        "loinc_code": "43679-0",
+        "loinc_name": "MECHANISM OF ACTION SECTION",
+        "name": "MECHANISM OF ACTION SECTION",
+        "observed_section_name": "12.1 Mechanism of Action",
+        "path": "12 CLINICAL PHARMACOLOGY > 12.1 Mechanism of Action"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 9368,
+      "term": "acne"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10000496",
+        "hlgt_code": "10040798",
+        "hlgt_name": "Skin appendage conditions",
+        "hlt_code": "10000497",
+        "hlt_name": "Acnes",
+        "level": "PT",
+        "name": "Acne",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 9669,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Acne"
+        }
+      ],
+      "id": "ann_000037",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0018",
+        "loinc_code": "43682-4",
+        "loinc_name": "PHARMACOKINETICS SECTION",
+        "name": "PHARMACOKINETICS SECTION",
+        "observed_section_name": "12.3 Pharmacokinetics",
+        "path": "12 CLINICAL PHARMACOLOGY > 12.3 Pharmacokinetics"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 9665,
+      "term": "acne"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10000496",
+        "hlgt_code": "10040798",
+        "hlgt_name": "Skin appendage conditions",
+        "hlt_code": "10000497",
+        "hlt_name": "Acnes",
+        "level": "PT",
+        "name": "Acne",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 9801,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Acne"
+        }
+      ],
+      "id": "ann_000038",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0018",
+        "loinc_code": "43682-4",
+        "loinc_name": "PHARMACOKINETICS SECTION",
+        "name": "PHARMACOKINETICS SECTION",
+        "observed_section_name": "12.3 Pharmacokinetics",
+        "path": "12 CLINICAL PHARMACOLOGY > 12.3 Pharmacokinetics"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 9797,
+      "term": "acne"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10007269",
+        "hlgt_code": "10071947",
+        "hlgt_name": "Exposures, chemical injuries and poisoning",
+        "hlt_code": "10035777",
+        "hlt_name": "Poisoning and toxicity",
+        "level": "PT",
+        "name": "Carcinogenicity",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Inj&P",
+        "soc_code": "10022117",
+        "soc_name": "Injury, poisoning and procedural complications",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 10441,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Carcinogenicity"
+        }
+      ],
+      "id": "ann_000039",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0020",
+        "loinc_code": "34083-6",
+        "loinc_name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+        "name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+        "observed_section_name": "13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility",
+        "path": "13 NONCLINICAL TOXICOLOGY > 13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 10426,
+      "term": "carcinogenicity"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10078948",
+        "hlgt_code": "10071947",
+        "hlgt_name": "Exposures, chemical injuries and poisoning",
+        "hlt_code": "10035777",
+        "hlt_name": "Poisoning and toxicity",
+        "level": "PT",
+        "name": "Genotoxicity",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Inj&P",
+        "soc_code": "10022117",
+        "soc_name": "Injury, poisoning and procedural complications",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 10477,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Genotoxicity"
+        }
+      ],
+      "id": "ann_000040",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0020",
+        "loinc_code": "34083-6",
+        "loinc_name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+        "name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+        "observed_section_name": "13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility",
+        "path": "13 NONCLINICAL TOXICOLOGY > 13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 10465,
+      "term": "genotoxicity"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10007269",
+        "hlgt_code": "10071947",
+        "hlgt_name": "Exposures, chemical injuries and poisoning",
+        "hlt_code": "10035777",
+        "hlt_name": "Poisoning and toxicity",
+        "level": "PT",
+        "name": "Carcinogenicity",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Inj&P",
+        "soc_code": "10022117",
+        "soc_name": "Injury, poisoning and procedural complications",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 10572,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Carcinogenicity"
+        }
+      ],
+      "id": "ann_000041",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0020",
+        "loinc_code": "34083-6",
+        "loinc_name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+        "name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+        "observed_section_name": "13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility",
+        "path": "13 NONCLINICAL TOXICOLOGY > 13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 10557,
+      "term": "Carcinogenicity"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10050311",
+        "hlgt_code": "10071940",
+        "hlgt_name": "Physical examination and organ system status topics",
+        "hlt_code": "10071941",
+        "hlt_name": "Physical examination procedures and organ system status",
+        "level": "PT",
+        "name": "Body surface area",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Inv",
+        "soc_code": "10022891",
+        "soc_name": "Investigations",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 10814,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Body surface area"
+        }
+      ],
+      "id": "ann_000042",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0020",
+        "loinc_code": "34083-6",
+        "loinc_name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+        "name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+        "observed_section_name": "13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility",
+        "path": "13 NONCLINICAL TOXICOLOGY > 13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 10797,
+      "term": "body surface area"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10050311",
+        "hlgt_code": "10071940",
+        "hlgt_name": "Physical examination and organ system status topics",
+        "hlt_code": "10071941",
+        "hlt_name": "Physical examination procedures and organ system status",
+        "level": "PT",
+        "name": "Body surface area",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Inv",
+        "soc_code": "10022891",
+        "soc_name": "Investigations",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 11433,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Body surface area"
+        }
+      ],
+      "id": "ann_000043",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0020",
+        "loinc_code": "34083-6",
+        "loinc_name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+        "name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+        "observed_section_name": "13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility",
+        "path": "13 NONCLINICAL TOXICOLOGY > 13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 11416,
+      "term": "body surface area"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9917661547660828,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 12605,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 579,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.99176615",
+            "start": 570,
+            "word": "mutagenic"
+          }
+        },
+        {
+          "matched_text": "mutagenic",
+          "propagated_from_annotation_id": "ann_000234",
+          "propagation": "case_insensitive_repeated_adverse_reaction_phrase",
+          "seed_text": "mutagenic"
+        }
+      ],
+      "id": "ann_000243",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0020",
+        "loinc_code": "34083-6",
+        "loinc_name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+        "name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+        "observed_section_name": "13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility",
+        "path": "13 NONCLINICAL TOXICOLOGY > 13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility"
+      },
+      "source": {
+        "annotator": "rxb_ner_propagator",
+        "device": 0,
+        "method": "model_span_propagation",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "propagated_from_annotation_id": "ann_000234",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 12596,
+      "term": "mutagenic"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10025310",
+        "hlgt_code": "10025323",
+        "hlgt_name": "Lymphomas NEC",
+        "hlt_code": "10025324",
+        "hlt_name": "Lymphomas unspecified NEC",
+        "level": "PT",
+        "name": "Lymphoma",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Neopl",
+        "soc_code": "10029104",
+        "soc_name": "Neoplasms benign, malignant and unspecified (incl cysts and polyps)",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 12696,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Lymphoma"
+        }
+      ],
+      "id": "ann_000044",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0020",
+        "loinc_code": "34083-6",
+        "loinc_name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+        "name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+        "observed_section_name": "13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility",
+        "path": "13 NONCLINICAL TOXICOLOGY > 13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 12688,
+      "term": "lymphoma"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9917661547660828,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 12847,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 579,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.99176615",
+            "start": 570,
+            "word": "mutagenic"
+          }
+        }
+      ],
+      "id": "ann_000234",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0020",
+        "loinc_code": "34083-6",
+        "loinc_name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+        "name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+        "observed_section_name": "13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility",
+        "path": "13 NONCLINICAL TOXICOLOGY > 13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 12838,
+      "term": "mutagenic"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9955849647521973,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 12988,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 720,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.99558496",
+            "start": 696,
+            "word": "single - strand DNA breaks"
+          }
+        }
+      ],
+      "id": "ann_000235",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0020",
+        "loinc_code": "34083-6",
+        "loinc_name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+        "name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+        "observed_section_name": "13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility",
+        "path": "13 NONCLINICAL TOXICOLOGY > 13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility"
+      },
+      "source": {
+        "annotator": "rxb_ner",
+        "device": 0,
+        "method": "model",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 12964,
+      "term": "single-strand DNA breaks"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10000496",
+        "hlgt_code": "10040798",
+        "hlgt_name": "Skin appendage conditions",
+        "hlt_code": "10000497",
+        "hlt_name": "Acnes",
+        "level": "PT",
+        "name": "Acne",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 13660,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Acne"
+        }
+      ],
+      "id": "ann_000045",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0021",
+        "loinc_code": "34092-7",
+        "loinc_name": "CLINICAL STUDIES SECTION",
+        "name": "CLINICAL STUDIES SECTION",
+        "observed_section_name": "14 CLINICAL STUDIES",
+        "path": "14 CLINICAL STUDIES"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 13656,
+      "term": "acne"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10000496",
+        "hlgt_code": "10040798",
+        "hlgt_name": "Skin appendage conditions",
+        "hlt_code": "10000497",
+        "hlt_name": "Acnes",
+        "level": "PT",
+        "name": "Acne",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 13831,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Acne"
+        }
+      ],
+      "id": "ann_000046",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0021",
+        "loinc_code": "34092-7",
+        "loinc_name": "CLINICAL STUDIES SECTION",
+        "name": "CLINICAL STUDIES SECTION",
+        "observed_section_name": "14 CLINICAL STUDIES",
+        "path": "14 CLINICAL STUDIES"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 13827,
+      "term": "acne"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10015150",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10015151",
+        "hlt_name": "Erythemas",
+        "level": "PT",
+        "name": "Erythema",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 14219,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Erythema"
+        }
+      ],
+      "id": "ann_000047",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0021",
+        "loinc_code": "34092-7",
+        "loinc_name": "CLINICAL STUDIES SECTION",
+        "name": "CLINICAL STUDIES SECTION",
+        "observed_section_name": "14 CLINICAL STUDIES",
+        "path": "14 CLINICAL STUDIES"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 14211,
+      "term": "erythema"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10015150",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10015151",
+        "hlt_name": "Erythemas",
+        "level": "PT",
+        "name": "Erythema",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 18437,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Erythema"
+        }
+      ],
+      "id": "ann_000048",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0023",
+        "loinc_code": "34076-0",
+        "loinc_name": "INFORMATION FOR PATIENTS SECTION",
+        "name": "INFORMATION FOR PATIENTS SECTION",
+        "observed_section_name": "17 PATIENT COUNSELING INFORMATION",
+        "path": "17 PATIENT COUNSELING INFORMATION"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 18429,
+      "term": "erythema"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10000496",
+        "hlgt_code": "10040798",
+        "hlgt_name": "Skin appendage conditions",
+        "hlt_code": "10000497",
+        "hlt_name": "Acnes",
+        "level": "PT",
+        "name": "Acne",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 19661,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Acne"
+        }
+      ],
+      "id": "ann_000049",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0024",
+        "loinc_code": "42230-3",
+        "loinc_name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "observed_section_name": "Patient Information",
+        "path": "Patient Information"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 19657,
+      "term": "acne"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10000496",
+        "hlgt_code": "10040798",
+        "hlgt_name": "Skin appendage conditions",
+        "hlt_code": "10000497",
+        "hlt_name": "Acnes",
+        "level": "PT",
+        "name": "Acne",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 19712,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Acne"
+        }
+      ],
+      "id": "ann_000050",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0024",
+        "loinc_code": "42230-3",
+        "loinc_name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "observed_section_name": "Patient Information",
+        "path": "Patient Information"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 19708,
+      "term": "Acne"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10042496",
+        "hlgt_code": "10022119",
+        "hlgt_name": "Injuries by physical agents",
+        "hlt_code": "10037759",
+        "hlt_name": "Radiation injuries",
+        "level": "PT",
+        "name": "Sunburn",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Inj&P",
+        "soc_code": "10022117",
+        "soc_name": "Injury, poisoning and procedural complications",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 20120,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Sunburn"
+        }
+      ],
+      "id": "ann_000051",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0024",
+        "loinc_code": "42230-3",
+        "loinc_name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "observed_section_name": "Patient Information",
+        "path": "Patient Information"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 20113,
+      "term": "sunburn"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10076056",
+        "hlgt_code": "10018057",
+        "hlgt_name": "Gender related factors",
+        "hlt_code": "10036569",
+        "hlt_name": "Pregnancy related circumstances",
+        "level": "PT",
+        "name": "Planning to become pregnant",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "SocCi",
+        "soc_code": "10041244",
+        "soc_name": "Social circumstances",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 20206,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Planning to become pregnant"
+        }
+      ],
+      "id": "ann_000052",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0024",
+        "loinc_code": "42230-3",
+        "loinc_name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "observed_section_name": "Patient Information",
+        "path": "Patient Information"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 20179,
+      "term": "planning to become pregnant"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10000496",
+        "hlgt_code": "10040798",
+        "hlgt_name": "Skin appendage conditions",
+        "hlt_code": "10000497",
+        "hlt_name": "Acnes",
+        "level": "PT",
+        "name": "Acne",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 20826,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Acne"
+        }
+      ],
+      "id": "ann_000053",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0024",
+        "loinc_code": "42230-3",
+        "loinc_name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "observed_section_name": "Patient Information",
+        "path": "Patient Information"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 20822,
+      "term": "acne"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9980748891830444,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 20967,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 357,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.9980749",
+            "start": 342,
+            "word": "Skin irritation"
+          }
+        },
+        {
+          "matched_text": "skin irritation",
+          "propagated_from_annotation_id": "ann_000205",
+          "propagation": "case_insensitive_repeated_adverse_reaction_phrase",
+          "seed_text": "Skin irritation"
+        }
+      ],
+      "id": "ann_000241",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0024",
+        "loinc_code": "42230-3",
+        "loinc_name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "observed_section_name": "Patient Information",
+        "path": "Patient Information"
+      },
+      "source": {
+        "annotator": "rxb_ner_propagator",
+        "device": 0,
+        "method": "model_span_propagation",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "propagated_from_annotation_id": "ann_000205",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 20952,
+      "term": "skin irritation"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10040880",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10012435",
+        "hlt_name": "Dermatitis and eczema",
+        "level": "PT",
+        "name": "Skin irritation",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 20967,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Skin irritation"
+        }
+      ],
+      "id": "ann_000054",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0024",
+        "loinc_code": "42230-3",
+        "loinc_name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "observed_section_name": "Patient Information",
+        "path": "Patient Information"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 20952,
+      "term": "skin irritation"
+    },
+    {
+      "classification": "ADVERSE_REACTION_MODEL",
+      "coding": {},
+      "confidence": 0.9980748891830444,
+      "display_classification": "RxBERT Adverse Reaction",
+      "end": 21650,
+      "evidence": [
+        {
+          "model_label": "ADVERSE_REACTION",
+          "raw_result": {
+            "end": 357,
+            "entity_group": "ADVERSE_REACTION",
+            "score": "0.9980749",
+            "start": 342,
+            "word": "Skin irritation"
+          }
+        },
+        {
+          "matched_text": "skin irritation",
+          "propagated_from_annotation_id": "ann_000205",
+          "propagation": "case_insensitive_repeated_adverse_reaction_phrase",
+          "seed_text": "Skin irritation"
+        }
+      ],
+      "id": "ann_000242",
+      "safety_type": "rxbert_adverse_reaction",
+      "section": {
+        "id": "sec_0024",
+        "loinc_code": "42230-3",
+        "loinc_name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "observed_section_name": "Patient Information",
+        "path": "Patient Information"
+      },
+      "source": {
+        "annotator": "rxb_ner_propagator",
+        "device": 0,
+        "method": "model_span_propagation",
+        "model_name_or_path": "/app/models/rxbert-tac-ner-v2-paper100",
+        "model_version": "rxbert-tac-ner-v2-paper100-calibrated-propagated",
+        "propagated_from_annotation_id": "ann_000205",
+        "threshold_config": {
+          "by_label": {
+            "ADVERSE_REACTION": 0.95,
+            "ANIMAL": 0,
+            "DRUG_CLASS": 0.9,
+            "FACTOR": 0.55,
+            "NEGATION": 0,
+            "SEVERITY": 0.8
+          },
+          "default": 0.9
+        }
+      },
+      "start": 21635,
+      "term": "skin irritation"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10040880",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10012435",
+        "hlt_name": "Dermatitis and eczema",
+        "level": "PT",
+        "name": "Skin irritation",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 21650,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Skin irritation"
+        }
+      ],
+      "id": "ann_000055",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0024",
+        "loinc_code": "42230-3",
+        "loinc_name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "observed_section_name": "Patient Information",
+        "path": "Patient Information"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 21635,
+      "term": "skin irritation"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10043115",
+        "hlgt_code": "10024450",
+        "hlgt_name": "Lifestyle issues",
+        "hlt_code": "10070967",
+        "hlt_name": "Social issues NEC",
+        "level": "PT",
+        "name": "Tanning",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "SocCi",
+        "soc_code": "10041244",
+        "soc_name": "Social circumstances",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 22367,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Tanning"
+        }
+      ],
+      "id": "ann_000056",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0024",
+        "loinc_code": "42230-3",
+        "loinc_name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "observed_section_name": "Patient Information",
+        "path": "Patient Information"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 22360,
+      "term": "tanning"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10043115",
+        "hlgt_code": "10024450",
+        "hlgt_name": "Lifestyle issues",
+        "hlt_code": "10070967",
+        "hlt_name": "Social issues NEC",
+        "level": "PT",
+        "name": "Tanning",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "SocCi",
+        "soc_code": "10041244",
+        "soc_name": "Social circumstances",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 22483,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Tanning"
+        }
+      ],
+      "id": "ann_000057",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0024",
+        "loinc_code": "42230-3",
+        "loinc_name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "observed_section_name": "Patient Information",
+        "path": "Patient Information"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 22476,
+      "term": "tanning"
+    },
+    {
+      "classification": "MEDDRA_PT",
+      "coding": {
+        "code": "10040914",
+        "hlgt_code": "10014982",
+        "hlgt_name": "Epidermal and dermal conditions",
+        "hlt_code": "10012424",
+        "hlt_name": "Dermal and epidermal conditions NEC",
+        "level": "PT",
+        "name": "Skin reaction",
+        "primary_soc_flag": "Y",
+        "soc_abbrev": "Skin",
+        "soc_code": "10040785",
+        "soc_name": "Skin and subcutaneous tissue disorders",
+        "system": "MedDRA",
+        "version": "28.1"
+      },
+      "confidence": 1,
+      "display_classification": "MedDRA Adverse Reaction",
+      "end": 23752,
+      "evidence": [
+        {
+          "matched_dictionary_term": "Skin reaction"
+        }
+      ],
+      "id": "ann_000058",
+      "safety_type": "meddra_adverse_reaction",
+      "section": {
+        "id": "sec_0024",
+        "loinc_code": "42230-3",
+        "loinc_name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "name": "SPL PATIENT PACKAGE INSERT SECTION",
+        "observed_section_name": "Patient Information",
+        "path": "Patient Information"
+      },
+      "source": {
+        "annotator": "meddra_exact_matcher",
+        "method": "dictionary",
+        "version": "0.3.0"
+      },
+      "start": 23739,
+      "term": "skin reaction"
+    }
+  ],
+  "document": {
+    "canonical_text_sha256": "94a7e5a50307f31819a22dc9400ba49988d9a016f7ed6a87c700789b7a6cead2",
+    "canonicalization_version": "spl-canon-1.2.0",
+    "effective_time": "20261123",
+    "metadata": {
+      "label_type": "HUMAN PRESCRIPTION DRUG LABEL",
+      "parser": "SPLParser"
+    },
+    "raw_xml_sha256": "c57a85ac7e5c79f2c81ebad7e85f38c45d3230ff0fa5b8172248169c464b618c",
+    "set_id": "fc8e868f-9699-4ae6-83d5-fa27789336cd",
+    "source_uri": "/app/data/spl_xml/fc8e868f-9699-4ae6-83d5-fa27789336cd.xml",
+    "spl_id": "194a1ade-7163-4a56-ad50-6220398ede14",
+    "title": "These highlights do not include all the information needed to use ADAPALENE AND BENZOYL PEROXIDE GEL safely and effectively. See full prescribing information for ADAPALENE AND BENZOYL PEROXIDE GEL. ADAPALENE AND BENZOYL PEROXIDE Gel, for topical useInitial U.S. Approval: 2008",
+    "version_number": "5"
+  },
+  "offsets": {
+    "basis": "canonical_text",
+    "canonicalization_version": "spl-canon-1.2.0",
+    "indexing": "0-based",
+    "interval": "half-open",
+    "normalization": "NFC"
+  },
+  "processing": {
+    "database": "/app/data/labels_v053_parent_sections.sqlite",
+    "safety_filter": "rxbert_and_meddra_adverse_reactions_only",
+    "safety_overlap_policy": "MedDRA annotations overlapping countable RxBERT AR spans are retained in payload but not counted separately.",
+    "store": "sqlite"
+  },
+  "section_stats_by_loinc": [
+    {
+      "combined_adverse_reactions": 22,
+      "loinc_code": "34084-4",
+      "loinc_name": "ADVERSE REACTIONS SECTION",
+      "meddra_adverse_reactions": 15,
+      "rxbert_adverse_reactions": 7
+    },
+    {
+      "combined_adverse_reactions": 14,
+      "loinc_code": "42228-7",
+      "loinc_name": "PREGNANCY SECTION",
+      "meddra_adverse_reactions": 3,
+      "rxbert_adverse_reactions": 11
+    },
+    {
+      "combined_adverse_reactions": 10,
+      "loinc_code": "42230-3",
+      "loinc_name": "SPL PATIENT PACKAGE INSERT SECTION",
+      "meddra_adverse_reactions": 8,
+      "rxbert_adverse_reactions": 2
+    },
+    {
+      "combined_adverse_reactions": 9,
+      "loinc_code": "34083-6",
+      "loinc_name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+      "meddra_adverse_reactions": 6,
+      "rxbert_adverse_reactions": 3
+    },
+    {
+      "combined_adverse_reactions": 3,
+      "loinc_code": "34092-7",
+      "loinc_name": "CLINICAL STUDIES SECTION",
+      "meddra_adverse_reactions": 3,
+      "rxbert_adverse_reactions": 0
+    },
+    {
+      "combined_adverse_reactions": 3,
+      "loinc_code": "43685-7",
+      "loinc_name": "WARNINGS AND PRECAUTIONS SECTION",
+      "meddra_adverse_reactions": 2,
+      "rxbert_adverse_reactions": 1
+    },
+    {
+      "combined_adverse_reactions": 2,
+      "loinc_code": "34073-7",
+      "loinc_name": "DRUG INTERACTIONS SECTION",
+      "meddra_adverse_reactions": 2,
+      "rxbert_adverse_reactions": 0
+    },
+    {
+      "combined_adverse_reactions": 2,
+      "loinc_code": "34089-3",
+      "loinc_name": "DESCRIPTION SECTION",
+      "meddra_adverse_reactions": 2,
+      "rxbert_adverse_reactions": 0
+    },
+    {
+      "combined_adverse_reactions": 2,
+      "loinc_code": "43682-4",
+      "loinc_name": "PHARMACOKINETICS SECTION",
+      "meddra_adverse_reactions": 2,
+      "rxbert_adverse_reactions": 0
+    },
+    {
+      "combined_adverse_reactions": 1,
+      "loinc_code": "34067-9",
+      "loinc_name": "INDICATIONS & USAGE SECTION",
+      "meddra_adverse_reactions": 1,
+      "rxbert_adverse_reactions": 0
+    },
+    {
+      "combined_adverse_reactions": 1,
+      "loinc_code": "34076-0",
+      "loinc_name": "INFORMATION FOR PATIENTS SECTION",
+      "meddra_adverse_reactions": 1,
+      "rxbert_adverse_reactions": 0
+    },
+    {
+      "combined_adverse_reactions": 1,
+      "loinc_code": "43679-0",
+      "loinc_name": "MECHANISM OF ACTION SECTION",
+      "meddra_adverse_reactions": 1,
+      "rxbert_adverse_reactions": 0
+    }
+  ],
+  "sections": [
+    {
+      "end": 153,
+      "id": "sec_0002",
+      "loinc_code": "34067-9",
+      "loinc_name": "INDICATIONS & USAGE SECTION",
+      "name": "INDICATIONS & USAGE SECTION",
+      "observed_section_name": "1 INDICATIONS AND USAGE",
+      "path": "1 INDICATIONS AND USAGE",
+      "start": 0,
+      "xml_path": "/document/component/structuredBody/component[2]/section"
+    },
+    {
+      "end": 544,
+      "id": "sec_0003",
+      "loinc_code": "34068-7",
+      "loinc_name": "DOSAGE & ADMINISTRATION SECTION",
+      "name": "DOSAGE & ADMINISTRATION SECTION",
+      "observed_section_name": "2 DOSAGE AND ADMINISTRATION",
+      "path": "2 DOSAGE AND ADMINISTRATION",
+      "start": 155,
+      "xml_path": "/document/component/structuredBody/component[3]/section"
+    },
+    {
+      "end": 737,
+      "id": "sec_0004",
+      "loinc_code": "43678-2",
+      "loinc_name": "DOSAGE FORMS & STRENGTHS SECTION",
+      "name": "DOSAGE FORMS & STRENGTHS SECTION",
+      "observed_section_name": "3 DOSAGE FORMS AND STRENGTHS",
+      "path": "3 DOSAGE FORMS AND STRENGTHS",
+      "start": 546,
+      "xml_path": "/document/component/structuredBody/component[4]/section"
+    },
+    {
+      "end": 764,
+      "id": "sec_0005",
+      "loinc_code": "34070-3",
+      "loinc_name": "CONTRAINDICATIONS SECTION",
+      "name": "CONTRAINDICATIONS SECTION",
+      "observed_section_name": "4 CONTRAINDICATIONS",
+      "path": "4 CONTRAINDICATIONS",
+      "start": 739,
+      "xml_path": "/document/component/structuredBody/component[5]/section"
+    },
+    {
+      "end": 2374,
+      "id": "sec_0006",
+      "loinc_code": "43685-7",
+      "loinc_name": "WARNINGS AND PRECAUTIONS SECTION",
+      "name": "WARNINGS AND PRECAUTIONS SECTION",
+      "observed_section_name": "5 WARNINGS AND PRECAUTIONS",
+      "path": "5 WARNINGS AND PRECAUTIONS",
+      "start": 766,
+      "xml_path": "/document/component/structuredBody/component[6]/section"
+    },
+    {
+      "end": 5512,
+      "id": "sec_0007",
+      "loinc_code": "34084-4",
+      "loinc_name": "ADVERSE REACTIONS SECTION",
+      "name": "ADVERSE REACTIONS SECTION",
+      "observed_section_name": "6 ADVERSE REACTIONS",
+      "path": "6 ADVERSE REACTIONS",
+      "start": 2376,
+      "xml_path": "/document/component/structuredBody/component[7]/section"
+    },
+    {
+      "end": 5820,
+      "id": "sec_0008",
+      "loinc_code": "34073-7",
+      "loinc_name": "DRUG INTERACTIONS SECTION",
+      "name": "DRUG INTERACTIONS SECTION",
+      "observed_section_name": "7 DRUG INTERACTIONS",
+      "path": "7 DRUG INTERACTIONS",
+      "start": 5514,
+      "xml_path": "/document/component/structuredBody/component[8]/section"
+    },
+    {
+      "end": 7804,
+      "id": "sec_0009",
+      "loinc_code": "43684-0",
+      "loinc_name": "USE IN SPECIFIC POPULATIONS SECTION",
+      "name": "USE IN SPECIFIC POPULATIONS SECTION",
+      "observed_section_name": "8 USE IN SPECIFIC POPULATIONS",
+      "path": "8 USE IN SPECIFIC POPULATIONS",
+      "start": 5822,
+      "xml_path": "/document/component/structuredBody/component[9]/section"
+    },
+    {
+      "end": 7139,
+      "id": "sec_0010",
+      "loinc_code": "42228-7",
+      "loinc_name": "PREGNANCY SECTION",
+      "name": "PREGNANCY SECTION",
+      "observed_section_name": "8.1 Pregnancy",
+      "path": "8 USE IN SPECIFIC POPULATIONS > 8.1 Pregnancy",
+      "start": 5853,
+      "xml_path": "/document/component/structuredBody/component[9]/section/component[1]/section"
+    },
+    {
+      "end": 7445,
+      "id": "sec_0011",
+      "loinc_code": "34080-2",
+      "loinc_name": "NURSING MOTHERS SECTION",
+      "name": "NURSING MOTHERS SECTION",
+      "observed_section_name": "8.3 Nursing Mothers",
+      "path": "8 USE IN SPECIFIC POPULATIONS > 8.3 Nursing Mothers",
+      "start": 7141,
+      "xml_path": "/document/component/structuredBody/component[9]/section/component[2]/section"
+    },
+    {
+      "end": 7596,
+      "id": "sec_0012",
+      "loinc_code": "34081-0",
+      "loinc_name": "PEDIATRIC USE SECTION",
+      "name": "PEDIATRIC USE SECTION",
+      "observed_section_name": "8.4 Pediatric Use",
+      "path": "8 USE IN SPECIFIC POPULATIONS > 8.4 Pediatric Use",
+      "start": 7447,
+      "xml_path": "/document/component/structuredBody/component[9]/section/component[3]/section"
+    },
+    {
+      "end": 7804,
+      "id": "sec_0013",
+      "loinc_code": "34082-8",
+      "loinc_name": "GERIATRIC USE SECTION",
+      "name": "GERIATRIC USE SECTION",
+      "observed_section_name": "8.5 Geriatric Use",
+      "path": "8 USE IN SPECIFIC POPULATIONS > 8.5 Geriatric Use",
+      "start": 7598,
+      "xml_path": "/document/component/structuredBody/component[9]/section/component[4]/section"
+    },
+    {
+      "end": 8909,
+      "id": "sec_0014",
+      "loinc_code": "34089-3",
+      "loinc_name": "DESCRIPTION SECTION",
+      "name": "DESCRIPTION SECTION",
+      "observed_section_name": "11 DESCRIPTION",
+      "path": "11 DESCRIPTION",
+      "start": 7806,
+      "xml_path": "/document/component/structuredBody/component[10]/section"
+    },
+    {
+      "end": 10335,
+      "id": "sec_0015",
+      "loinc_code": "34090-1",
+      "loinc_name": "CLINICAL PHARMACOLOGY SECTION",
+      "name": "CLINICAL PHARMACOLOGY SECTION",
+      "observed_section_name": "12 CLINICAL PHARMACOLOGY",
+      "path": "12 CLINICAL PHARMACOLOGY",
+      "start": 8911,
+      "xml_path": "/document/component/structuredBody/component[11]/section"
+    },
+    {
+      "end": 9485,
+      "id": "sec_0016",
+      "loinc_code": "43679-0",
+      "loinc_name": "MECHANISM OF ACTION SECTION",
+      "name": "MECHANISM OF ACTION SECTION",
+      "observed_section_name": "12.1 Mechanism of Action",
+      "path": "12 CLINICAL PHARMACOLOGY > 12.1 Mechanism of Action",
+      "start": 8937,
+      "xml_path": "/document/component/structuredBody/component[11]/section/component[1]/section"
+    },
+    {
+      "end": 9576,
+      "id": "sec_0017",
+      "loinc_code": "43681-6",
+      "loinc_name": "PHARMACODYNAMICS SECTION",
+      "name": "PHARMACODYNAMICS SECTION",
+      "observed_section_name": "12.2 Pharmacodynamics",
+      "path": "12 CLINICAL PHARMACOLOGY > 12.2 Pharmacodynamics",
+      "start": 9487,
+      "xml_path": "/document/component/structuredBody/component[11]/section/component[2]/section"
+    },
+    {
+      "end": 10335,
+      "id": "sec_0018",
+      "loinc_code": "43682-4",
+      "loinc_name": "PHARMACOKINETICS SECTION",
+      "name": "PHARMACOKINETICS SECTION",
+      "observed_section_name": "12.3 Pharmacokinetics",
+      "path": "12 CLINICAL PHARMACOLOGY > 12.3 Pharmacokinetics",
+      "start": 9578,
+      "xml_path": "/document/component/structuredBody/component[11]/section/component[3]/section"
+    },
+    {
+      "end": 13531,
+      "id": "sec_0019",
+      "loinc_code": "43680-8",
+      "loinc_name": "NONCLINICAL TOXICOLOGY SECTION",
+      "name": "NONCLINICAL TOXICOLOGY SECTION",
+      "observed_section_name": "13 NONCLINICAL TOXICOLOGY",
+      "path": "13 NONCLINICAL TOXICOLOGY",
+      "start": 10337,
+      "xml_path": "/document/component/structuredBody/component[12]/section"
+    },
+    {
+      "end": 13531,
+      "id": "sec_0020",
+      "loinc_code": "34083-6",
+      "loinc_name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+      "name": "CARCINOGENESIS & MUTAGENESIS & IMPAIRMENT OF FERTILITY SECTION",
+      "observed_section_name": "13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility",
+      "path": "13 NONCLINICAL TOXICOLOGY > 13.1 Carcinogenesis, Mutagenesis, Impairment of Fertility",
+      "start": 10364,
+      "xml_path": "/document/component/structuredBody/component[12]/section/component[1]/section"
+    },
+    {
+      "end": 17410,
+      "id": "sec_0021",
+      "loinc_code": "34092-7",
+      "loinc_name": "CLINICAL STUDIES SECTION",
+      "name": "CLINICAL STUDIES SECTION",
+      "observed_section_name": "14 CLINICAL STUDIES",
+      "path": "14 CLINICAL STUDIES",
+      "start": 13533,
+      "xml_path": "/document/component/structuredBody/component[13]/section"
+    },
+    {
+      "end": 17870,
+      "id": "sec_0022",
+      "loinc_code": "34069-5",
+      "loinc_name": "HOW SUPPLIED SECTION",
+      "name": "HOW SUPPLIED SECTION",
+      "observed_section_name": "16 HOW SUPPLIED/STORAGE AND HANDLING",
+      "path": "16 HOW SUPPLIED/STORAGE AND HANDLING",
+      "start": 17412,
+      "xml_path": "/document/component/structuredBody/component[14]/section"
+    },
+    {
+      "end": 18879,
+      "id": "sec_0023",
+      "loinc_code": "34076-0",
+      "loinc_name": "INFORMATION FOR PATIENTS SECTION",
+      "name": "INFORMATION FOR PATIENTS SECTION",
+      "observed_section_name": "17 PATIENT COUNSELING INFORMATION",
+      "path": "17 PATIENT COUNSELING INFORMATION",
+      "start": 17872,
+      "xml_path": "/document/component/structuredBody/component[15]/section"
+    },
+    {
+      "end": 25915,
+      "id": "sec_0024",
+      "loinc_code": "42230-3",
+      "loinc_name": "SPL PATIENT PACKAGE INSERT SECTION",
+      "name": "SPL PATIENT PACKAGE INSERT SECTION",
+      "observed_section_name": "Patient Information",
+      "path": "Patient Information",
+      "start": 18881,
+      "xml_path": "/document/component/structuredBody/component[16]/section"
+    },
+    {
+      "end": 26029,
+      "id": "sec_0025",
+      "loinc_code": "51945-4",
+      "loinc_name": "PACKAGE LABEL.PRINCIPAL DISPLAY PANEL",
+      "name": "PACKAGE LABEL.PRINCIPAL DISPLAY PANEL",
+      "observed_section_name": "Package/Label Display Panel",
+      "path": "Package/Label Display Panel",
+      "start": 25917,
+      "xml_path": "/document/component/structuredBody/component[17]/section"
+    }
+  ],
+  "summary": {
+    "annotation_count": 70,
+    "annotation_counts_by_class": {
+      "MedDRA Adverse Reaction": 46,
+      "RxBERT Adverse Reaction": 24
+    },
+    "annotation_counts_by_source": {
+      "meddra_exact_matcher": 58,
+      "rxb_ner": 19,
+      "rxb_ner_propagator": 5
+    },
+    "combined_adverse_reactions": 70,
+    "effective_annotation_count": 70,
+    "meddra_adverse_reactions": 46,
+    "min_confidence": 0,
+    "overlap_policy": "rxbert_priority",
+    "raw_safety_annotation_count": 82,
+    "rxbert_adverse_reactions": 24,
+    "safety_view": true,
+    "section_count": 24,
+    "suppressed_meddra_overlap_count": 12
+  }
+}

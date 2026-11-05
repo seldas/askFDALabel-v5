@@ -1,0 +1,3111 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { useUser } from '../context/UserContext';
+import AccessRestricted from '../components/AccessRestricted';
+import Header from '../components/Header';
+import './management.css';
+import AiPreferences from './AiPreferences';
+import { useRouter } from 'next/navigation';
+
+interface User {
+  id: number;
+  username: string;
+  display_name?: string;
+  email?: string | null;
+  office?: string | null;
+  is_sso?: boolean;
+  is_admin: boolean;
+  role?: 'user' | 'developer' | 'admin';
+  can_comment?: boolean;
+  ai_provider: string;
+  is_active?: boolean;
+  api_key?: string;
+  created_at?: string | null;
+  last_login?: string | null;
+}
+
+interface AdminApiKey {
+  user_id: number;
+  username: string;
+  display_name?: string;
+  role: string;
+  is_active: boolean;
+  has_api_key: boolean;
+  api_key: string | null;
+  api_key_masked: string | null;
+  created_at: string | null;
+  last_used_at: string | null;
+}
+
+export default function ManagementPage() {
+  const { session, loading: sessionLoading, updateAiProvider, refreshSession } = useUser();
+  const router = useRouter();
+
+  const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'user' | 'developer' | 'admin'>('all');
+  const [userStatusFilter, setUserStatusFilter] = useState<'all' | 'active' | 'deactivated'>('all');
+  const [userSortBy, setUserSortBy] = useState<'last_login_desc' | 'last_login_asc' | 'created_at_desc' | 'created_at_asc' | 'username_asc'>('last_login_desc');
+  const [managingUser, setManagingUser] = useState<User | null>(null);
+
+  // Admin API Keys state
+  const [adminApiKeys, setAdminApiKeys] = useState<AdminApiKey[]>([]);
+  const [loadingAdminApiKeys, setLoadingAdminApiKeys] = useState(false);
+  const [adminKeySearch, setAdminKeySearch] = useState('');
+  const [adminKeyFilter, setAdminKeyFilter] = useState<'all' | 'active' | 'never_used' | 'no_key'>('all');
+  const [adminKeySortBy, setAdminKeySortBy] = useState<'last_used_desc' | 'last_used_asc' | 'created_at_desc' | 'created_at_asc' | 'username_asc'>('last_used_desc');
+  const [revealedKeys, setRevealedKeys] = useState<Record<number, boolean>>({});
+  const [copiedKeyUserId, setCopiedKeyUserId] = useState<number | null>(null);
+  const [actionInProgressUserId, setActionInProgressUserId] = useState<number | null>(null);
+
+  const formatUserDate = (isoStr?: string | null) => {
+    if (!isoStr) return null;
+    try {
+      const normalized = isoStr.endsWith('Z') || isoStr.includes('+') ? isoStr : `${isoStr}Z`;
+      const d = new Date(normalized);
+      if (isNaN(d.getTime())) {
+        const d2 = new Date(isoStr);
+        if (isNaN(d2.getTime())) return isoStr;
+        return d2.toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+      return d.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return isoStr;
+    }
+  };
+
+  const [activeTasks, setActiveTasks] = useState<Record<number, any>>({});
+
+  const [editingUserModelId, setEditingUserModelId] = useState<number | null>(null);
+  const [selectedUserModelProvider, setSelectedUserModelProvider] = useState<string>('');
+  const [savingUserModel, setSavingUserModel] = useState<boolean>(false);
+  const [userModelError, setUserModelError] = useState<string | null>(null);
+
+  // Modals state
+  const [activeTab, setActiveTab] = useState<string>('users');
+  const [initialTabSet, setInitialTabSet] = useState(false);
+
+  useEffect(() => {
+    if (session && !initialTabSet) {
+      const requestedTab = typeof window === 'undefined'
+        ? null
+        : new URLSearchParams(window.location.search).get('tab');
+      if (requestedTab === 'ai' && !session.is_guest) {
+        setActiveTab('ai');
+      } else if (session.username?.toLowerCase() === 'guest') {
+        setActiveTab('tokens');
+      } else if (session.is_admin) {
+        setActiveTab(requestedTab || 'ai');
+      } else {
+        setActiveTab(requestedTab === 'tokens' ? 'tokens' : requestedTab === 'users' ? 'users' : 'ai');
+      }
+      setInitialTabSet(true);
+    }
+  }, [session, initialTabSet]);
+
+  // API Key state
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [loadingApiKey, setLoadingApiKey] = useState(false);
+  const [generatingKey, setGeneratingKey] = useState(false);
+  const [revokingKey, setRevokingKey] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
+  const [showKey, setShowKey] = useState(false);
+
+  const fetchApiKey = async () => {
+    setLoadingApiKey(true);
+    try {
+      const res = await fetch('/api/dashboard/auth/api-key');
+      const data = await res.json();
+      if (data.success) {
+        setApiKey(data.api_key || null);
+      }
+    } catch (e) {
+      console.error('Failed to fetch API key', e);
+    }
+    setLoadingApiKey(false);
+  };
+
+  useEffect(() => {
+    if (session && session.username?.toLowerCase() !== 'guest') {
+      if (session.api_key !== undefined) {
+        setApiKey(session.api_key);
+      } else if (activeTab === 'apikey') {
+        fetchApiKey();
+      }
+    }
+  }, [session, activeTab]);
+
+  const handleGenerateApiKey = async () => {
+    if (apiKey && !window.confirm('Generating a new API key will replace and invalidate your current key immediately. Are you sure you want to continue?')) {
+      return;
+    }
+    setGeneratingKey(true);
+    try {
+      const res = await fetch('/api/dashboard/auth/api-key/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setApiKey(data.api_key);
+        setShowKey(true);
+        if (typeof refreshSession === 'function') {
+          refreshSession();
+        }
+      } else {
+        alert(data.error || 'Failed to generate API key');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error generating API key');
+    }
+    setGeneratingKey(false);
+  };
+
+  const handleRevokeApiKey = async () => {
+    if (!window.confirm('Are you sure you want to revoke your API key? Any applications or scripts using this key will no longer be authenticated.')) {
+      return;
+    }
+    setRevokingKey(true);
+    try {
+      const res = await fetch('/api/dashboard/auth/api-key', {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setApiKey(null);
+        if (typeof refreshSession === 'function') {
+          refreshSession();
+        }
+      } else {
+        alert(data.error || 'Failed to revoke API key');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error revoking API key');
+    }
+    setRevokingKey(false);
+  };
+
+  const handleCopyApiKey = () => {
+    if (!apiKey) return;
+    navigator.clipboard.writeText(apiKey);
+    setCopiedKey(true);
+    setTimeout(() => setCopiedKey(false), 2000);
+  };
+
+  const fetchAdminApiKeys = async () => {
+    setLoadingAdminApiKeys(true);
+    try {
+      const res = await fetch('/api/dashboard/admin/api_keys');
+      const data = await res.json();
+      if (data.success) {
+        setAdminApiKeys(data.keys || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch admin API keys', err);
+    } finally {
+      setLoadingAdminApiKeys(false);
+    }
+  };
+
+  const handleAdminGenerateKey = async (userId: number, username: string) => {
+    if (!window.confirm(`Generate or rotate API key for user "${username}"? Any existing key will be invalidated immediately.`)) return;
+    setActionInProgressUserId(userId);
+    try {
+      const res = await fetch(`/api/dashboard/admin/api_keys/${userId}/generate`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchAdminApiKeys();
+      } else {
+        alert(data.error || 'Failed to generate API key');
+      }
+    } catch (err) {
+      console.error('Error generating API key', err);
+      alert('Error generating API key');
+    } finally {
+      setActionInProgressUserId(null);
+    }
+  };
+
+  const handleAdminRevokeKey = async (userId: number, username: string) => {
+    if (!window.confirm(`Are you sure you want to revoke the API key for user "${username}"? Their REST API calls will fail immediately.`)) return;
+    setActionInProgressUserId(userId);
+    try {
+      const res = await fetch(`/api/dashboard/admin/api_keys/${userId}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchAdminApiKeys();
+      } else {
+        alert(data.error || 'Failed to revoke API key');
+      }
+    } catch (err) {
+      console.error('Error revoking API key', err);
+      alert('Error revoking API key');
+    } finally {
+      setActionInProgressUserId(null);
+    }
+  };
+
+  const handleCopyKey = (key: string, userId: number) => {
+    navigator.clipboard.writeText(key);
+    setCopiedKeyUserId(userId);
+    setTimeout(() => setCopiedKeyUserId(null), 2000);
+  };
+
+  const toggleRevealKey = (userId: number) => {
+    setRevealedKeys(prev => ({ ...prev, [userId]: !prev[userId] }));
+  };
+
+  const [pendingUpdateType, setPendingUpdateType] = useState<string | null>(null);
+  const [pendingUpdateStats, setPendingUpdateStats] = useState<any>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [completedUpdateTask, setCompletedUpdateTask] = useState<any>(null);
+  const [dbStatus, setDbStatus] = useState<Record<string, any>>({});
+  const [selectedLogs, setSelectedLogs] = useState<string | null>(null);
+  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const logScrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Oracle (FDALabel) connection panel
+  const [oracleForm, setOracleForm] = useState({
+    oracle_db_env: 'tst',
+    host: '',
+    port: '',
+    service: '',
+    user: '',
+    password: ''
+  });
+  const [oraclePresets, setOraclePresets] = useState<Record<string, any> | null>(null);
+  const [oracleLoaded, setOracleLoaded] = useState(false);
+  const [showOraclePassword, setShowOraclePassword] = useState(false);
+  const [savingOracle, setSavingOracle] = useState(false);
+  const [testingOracle, setTestingOracle] = useState(false);
+  const [oracleTestResult, setOracleTestResult] = useState<{ success: boolean; message: string; elapsed_ms?: number | null } | null>(null);
+
+  useEffect(() => {
+    if ((activeTab === 'functions' || activeTab === 'tools') && session?.is_admin && features.length === 0 && !loadingFeatures) {
+      fetchFeatureGates();
+    }
+    if (activeTab !== 'database' || !session?.is_admin || oracleLoaded) return;
+    (async () => {
+      try {
+        const res = await fetch('/api/dashboard/admin/oracle-settings');
+        const data = await res.json();
+        if (data.success) {
+          setOracleForm({
+            oracle_db_env: data.settings.oracle_db_env || 'tst',
+            host: data.settings.host || '',
+            port: data.settings.port || '',
+            service: data.settings.service || '',
+            user: data.settings.user || '',
+            password: data.settings.password || ''
+          });
+          setOraclePresets(data.presets || null);
+        }
+      } catch (e) {
+        console.error('Failed to load Oracle settings', e);
+      }
+      setOracleLoaded(true);
+    })();
+  }, [activeTab, session, oracleLoaded]);
+
+  const applyOraclePreset = (env: 'dev' | 'tst') => {
+    const preset = oraclePresets?.[env];
+    if (!preset) return;
+    setOracleForm(prev => ({
+      ...prev,
+      oracle_db_env: env,
+      host: preset.host || '',
+      port: preset.port || '',
+      service: preset.service || '',
+      user: preset.user || prev.user,
+      password: preset.password || prev.password
+    }));
+    setOracleTestResult(null);
+  };
+
+  const handleTestOracle = async () => {
+    setTestingOracle(true);
+    setOracleTestResult(null);
+    try {
+      const res = await fetch('/api/dashboard/admin/oracle-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(oracleForm)
+      });
+      const data = await res.json();
+      setOracleTestResult({ success: !!data.success, message: data.message || data.error || 'No response', elapsed_ms: data.elapsed_ms });
+    } catch (e: any) {
+      setOracleTestResult({ success: false, message: e?.message || 'Request failed' });
+    }
+    setTestingOracle(false);
+  };
+
+  const handleSaveOracle = async () => {
+    setSavingOracle(true);
+    try {
+      const res = await fetch('/api/dashboard/admin/oracle-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(oracleForm)
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Oracle connection settings saved.');
+      } else {
+        alert(data.error || 'Failed to save Oracle settings');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error saving Oracle settings');
+    }
+    setSavingOracle(false);
+  };
+
+  // New user form
+  // --- Function Control (feature gates) ---
+  const [features, setFeatures] = useState<any[]>([]);
+  const [featureRoles, setFeatureRoles] = useState<string[]>(['user', 'developer', 'admin']);
+  const [loadingFeatures, setLoadingFeatures] = useState(false);
+  const [savingFeature, setSavingFeature] = useState<string | null>(null);
+  const [featureError, setFeatureError] = useState<string | null>(null);
+
+  const fetchFeatureGates = async () => {
+    setLoadingFeatures(true);
+    setFeatureError(null);
+    try {
+      const res = await fetch('/api/dashboard/admin/feature_gates');
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setFeatures(data.features || []);
+        if (Array.isArray(data.roles) && data.roles.length) setFeatureRoles(data.roles);
+      } else {
+        setFeatureError(data.error || 'Could not load function controls.');
+      }
+    } catch (e) {
+      setFeatureError('Could not load function controls.');
+    } finally {
+      setLoadingFeatures(false);
+    }
+  };
+
+  const updateFeatureGate = async (key: string, patch: Record<string, any>) => {
+    setSavingFeature(key);
+    setFeatureError(null);
+    try {
+      const res = await fetch(`/api/dashboard/admin/feature_gates/${key}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        // The response carries the full list, so the panel re-renders from the
+        // server's view rather than a locally patched guess.
+        setFeatures(data.features || []);
+        // The change may affect this admin's own session; pick it up now
+        // instead of waiting for the poll.
+        refreshSession();
+      } else {
+        setFeatureError(data.error || 'Could not update this function.');
+      }
+    } catch (e) {
+      setFeatureError('Could not update this function.');
+    } finally {
+      setSavingFeature(null);
+    }
+  };
+
+  const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newRole, setNewRole] = useState<'user' | 'developer' | 'admin'>('user');
+
+  // Edit user state
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [editPassword, setEditPassword] = useState('');
+
+  // Database Update Options
+  const [skipUnpack, setSkipUnpack] = useState(false);
+  const [workers, setWorkers] = useState(4);
+  const [archived, setArchived] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(false);
+  const [useLocalDB, setUseLocalDB] = useState(false);
+  const [dataFiles, setDataFiles] = useState<any[]>([]);
+  const [uploadingFileType, setUploadingFileType] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+
+  const refreshDataFiles = async () => {
+    try {
+      const res = await fetch('/api/dashboard/admin/data_files');
+      const data = await res.json();
+      if (data.success) setDataFiles(data.files || []);
+    } catch (err) {
+      console.error('Unable to read managed data files', err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'database' && session?.is_admin) refreshDataFiles();
+  }, [activeTab, session?.is_admin]);
+
+  const uploadDataFile = async (fileType: string, file: File) => {
+    setUploadingFileType(fileType);
+    setUploadProgress({ ...uploadProgress, [fileType]: 0 });
+    try {
+      const init = await fetch('/api/dashboard/admin/data_files/upload/init', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: fileType, name: file.name, size: file.size }),
+      });
+      const initData = await init.json();
+      if (!initData.success) throw new Error(initData.error || 'Could not start upload');
+      const chunkSize = 10 * 1024 * 1024;
+      let offset = initData.received || 0;
+      while (offset < file.size) {
+        const chunk = file.slice(offset, Math.min(offset + chunkSize, file.size));
+        const part = await fetch(`/api/dashboard/admin/data_files/upload/${initData.upload_id}/chunk`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/octet-stream', 'X-Upload-Offset': String(offset) }, body: chunk,
+        });
+        const partData = await part.json();
+        if (!partData.success) throw new Error(partData.error || 'Upload interrupted');
+        offset = partData.received;
+        setUploadProgress(prev => ({ ...prev, [fileType]: Math.round((offset / file.size) * 100) }));
+      }
+      const complete = await fetch(`/api/dashboard/admin/data_files/upload/${initData.upload_id}/complete`, { method: 'POST' });
+      const completeData = await complete.json();
+      if (!completeData.success) throw new Error(completeData.error || 'Could not finish upload');
+      await refreshDataFiles();
+    } catch (err: any) {
+      alert(err.message || 'Upload failed. You can choose the file again to resume with a new upload session.');
+    } finally {
+      setUploadingFileType(null);
+    }
+  };
+
+  // Token Usage state
+  const [tokenUsage, setTokenUsage] = useState<any[]>([]);
+  const [loadingTokenUsage, setLoadingTokenUsage] = useState(false);
+  const [selectedUserTokens, setSelectedUserTokens] = useState<any[] | null>(null);
+  const [selectedUserTokensName, setSelectedUserTokensName] = useState('');
+  const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
+  const [loadingUserTokens, setLoadingUserTokens] = useState(false);
+
+  // AI Action History filter & pagination state
+  const [historyDateFilter, setHistoryDateFilter] = useState<'7d'|'1m'|'all'|'custom'>('7d');
+  const [historyCustomStart, setHistoryCustomStart] = useState('');
+  const [historyCustomEnd, setHistoryCustomEnd] = useState('');
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyModelFilter, setHistoryModelFilter] = useState<string>('all');
+
+  // Poll for active tasks
+  useEffect(() => {
+    const taskIds = Object.keys(activeTasks).map(Number);
+    if (taskIds.length === 0) return;
+
+    const interval = setInterval(async () => {
+      for (const id of taskIds) {
+        try {
+          const res = await fetch(`/api/dashboard/admin/tasks/${id}`);
+          const data = await res.json();
+          if (data.success) {
+            const task = data.task;
+
+            if (task.status === 'completed' && activeTasks[id]?.status !== 'completed') {
+              setCompletedUpdateTask(task);
+            }
+
+            setActiveTasks(prev => ({ ...prev, [id]: task }));
+            setDbStatus(prev => ({ ...prev, [task.type]: task }));
+
+            if (task.status === 'completed' || task.status === 'failed') {
+              setActiveTasks(prev => {
+                const next = { ...prev };
+                delete next[id];
+                return next;
+              });
+            }
+          }
+        } catch (err) {
+          console.error(`Poll error for task ${id}`, err);
+        }
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [activeTasks]);
+
+  // Poll for logs if the selected task is active
+  useEffect(() => {
+    if (!isLogModalOpen || !selectedTaskId) return;
+
+    const task = activeTasks[selectedTaskId];
+    const isTaskActive = task && (task.status === 'processing' || task.status === 'pending');
+    if (!isTaskActive) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/dashboard/admin/tasks/${selectedTaskId}/logs`);
+        const data = await res.json();
+        if (data.success) {
+          setSelectedLogs(data.logs);
+        }
+      } catch (err) {
+        console.error('Error polling logs', err);
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isLogModalOpen, selectedTaskId, activeTasks]);
+
+  // Scroll to bottom when logs update or modal opens (if auto-scroll is enabled)
+  useEffect(() => {
+    if (isLogModalOpen && logScrollRef.current) {
+      if (shouldAutoScroll) {
+        logScrollRef.current.scrollTop = logScrollRef.current.scrollHeight;
+      }
+    }
+  }, [selectedLogs, isLogModalOpen, shouldAutoScroll]);
+
+  const handleLogScroll = () => {
+    const container = logScrollRef.current;
+    if (!container) return;
+
+    const threshold = 50; // pixels from the bottom
+    const isAtBottom = container.scrollHeight - container.clientHeight - container.scrollTop <= threshold;
+    setShouldAutoScroll(isAtBottom);
+  };
+
+  useEffect(() => {
+    if (!sessionLoading && !session?.is_authenticated) {
+      router.push('/');
+    }
+  }, [session, sessionLoading, router]);
+
+  useEffect(() => {
+    if (session?.is_authenticated) {
+      if (session.is_admin) {
+        fetchUsers();
+        fetchTokenUsage();
+        fetchAllTokenDetails();
+        fetchAdminApiKeys();
+      } else {
+        setUsers([{
+          id: session.id || 0,
+          username: session.username || 'Unknown',
+          display_name: session.display_name,
+          is_admin: false,
+          role: 'user',
+          ai_provider: session.ai_provider || 'elsa',
+          is_active: true,
+          created_at: new Date().toISOString()
+        }]);
+        setActiveTab((prev) => (prev === 'users' ? 'tokens' : prev));
+        fetchUserTokenDetails(session.id || 0, session.display_name || session.username || '');
+      }
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (activeTab === 'apimanagement' && session?.is_admin) {
+      fetchAdminApiKeys();
+    }
+  }, [activeTab, session?.is_admin]);
+
+  const fetchTokenUsage = async () => {
+    setLoadingTokenUsage(true);
+    try {
+      const res = await fetch('/api/dashboard/admin/token_usage');
+      const data = await res.json();
+      if (data.success) {
+        setTokenUsage(data.usage);
+      }
+    } catch (err) {
+      console.error('Failed to fetch token usage', err);
+    } finally {
+      setLoadingTokenUsage(false);
+    }
+  };
+
+  const fetchAllTokenDetails = async () => {
+    setLoadingUserTokens(true);
+    setHistoryDateFilter('7d');
+    setHistoryPage(1);
+    try {
+      const res = await fetch(`/api/dashboard/admin/token_usage/all`);
+      const data = await res.json();
+      if (data.success) {
+        setSelectedUserTokens(data.details);
+      } else {
+        alert(data.error || 'Failed to fetch all token details');
+      }
+    } catch (err) {
+      console.error('Fetch all token details error', err);
+    } finally {
+      setLoadingUserTokens(false);
+    }
+  };
+
+  const fetchUserTokenDetails = async (userId: number, username: string) => {
+    setLoadingUserTokens(true);
+    setSelectedUserTokensName(username);
+    setIsTokenModalOpen(true);
+    setHistoryDateFilter('7d');
+    setHistoryPage(1);
+    try {
+      const res = await fetch(`/api/dashboard/admin/token_usage/${userId}`);
+      const data = await res.json();
+      if (data.success) {
+        setSelectedUserTokens(data.details);
+      } else {
+        alert(data.error || 'Failed to fetch details');
+      }
+    } catch (err) {
+      console.error('Fetch user token details error', err);
+    } finally {
+      setLoadingUserTokens(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const res = await fetch('/api/dashboard/admin/users');
+      const data = await res.json();
+      if (data.success) {
+        setUsers(data.users);
+      }
+    } catch (err) {
+      console.error('Failed to fetch users', err);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/dashboard/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: newUsername,
+          password: newPassword,
+          role: newRole
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNewUsername('');
+        setNewPassword('');
+        setNewRole('user');
+        fetchUsers();
+      } else {
+        alert(data.error || 'Failed to create user');
+      }
+    } catch (err) {
+      console.error('Create user error', err);
+    }
+  };
+
+  const handleUpdateRole = async (userId: number, role: string) => {
+    try {
+      const res = await fetch(`/api/dashboard/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
+        fetchUsers();
+      } else {
+        alert(data.error || 'Could not update role.');
+      }
+    } catch (err) {
+      console.error('Update role error', err);
+    }
+  };
+
+  const handleToggleActive = async (userId: number, isActive: boolean) => {
+    if (!confirm(`Are you sure you want to ${isActive ? 'reactivate' : 'deactivate'} this user?`)) return;
+    try {
+      const res = await fetch(`/api/dashboard/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: isActive })
+      });
+      if (res.ok) fetchUsers();
+    } catch (err) {
+      console.error('Toggle active error', err);
+    }
+  };
+
+  const handleToggleCommentPermission = async (userId: number, canComment: boolean) => {
+    try {
+      const res = await fetch(`/api/dashboard/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ can_comment: canComment })
+      });
+      if (res.ok) {
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, can_comment: canComment } : u));
+        setManagingUser(prev => prev?.id === userId ? { ...prev, can_comment: canComment } : prev);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Failed to update comment permission.');
+      }
+    } catch (err) {
+      console.error('Toggle comment permission error', err);
+    }
+  };
+
+  const handleChangePassword = async (userId: number) => {
+    if (!editPassword) return;
+    try {
+      const res = await fetch(`/api/dashboard/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: editPassword })
+      });
+      if (res.ok) {
+        setEditingUserId(null);
+        setEditPassword('');
+        alert('Password updated successfully');
+      }
+    } catch (err) {
+      console.error('Change password error', err);
+    }
+  };
+
+  const handleDeleteUser = async (userId: number) => {
+    if (!confirm('Are you sure you want to delete this user?')) return;
+    try {
+      const res = await fetch(`/api/dashboard/admin/users/${userId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) fetchUsers();
+      else {
+        const data = await res.json();
+        alert(data.error || 'Failed to delete user');
+      }
+    } catch (err) {
+      console.error('Delete user error', err);
+    }
+  };
+
+  const handleSaveUserModel = async (userId: number, provider: string): Promise<boolean> => {
+    setSavingUserModel(true);
+    setUserModelError(null);
+    try {
+      const res = await fetch(`/api/dashboard/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ai_provider: provider })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setUserModelError(data.error || 'Failed to update user AI model');
+        return false;
+      }
+      setEditingUserModelId(null);
+      setUsers(prev => prev.map(user => user.id === userId ? { ...user, ai_provider: provider } : user));
+      setManagingUser(prev => prev?.id === userId ? { ...prev, ai_provider: provider } : prev);
+      if (userId === session?.id) await refreshSession();
+      return true;
+    } catch (err) {
+      console.error('Update user AI model error', err);
+      setUserModelError('Error updating user AI model. Please try again.');
+      return false;
+    } finally {
+      setSavingUserModel(false);
+    }
+  };
+
+  const handleManageUserDone = async () => {
+    if (!managingUser || savingUserModel) return;
+    if (session?.is_admin && managingUser.is_active !== false &&
+        selectedUserModelProvider !== (managingUser.ai_provider || '')) {
+      const saved = await handleSaveUserModel(managingUser.id, selectedUserModelProvider);
+      if (!saved) return;
+    }
+    setManagingUser(null);
+  };
+
+
+  const handleUpdateClick = async (type: string) => {
+    setLoadingStats(true);
+    setPendingUpdateType(type);
+    try {
+      const preflight = await fetch(`/api/dashboard/admin/update_preflight/${type}`);
+      const preflightData = await preflight.json();
+      if (preflightData.warning) {
+        if (!preflightData.file?.exists) {
+          alert(`${preflightData.warning}\n\nUpload the required file in Managed data files before starting this update.`);
+          setPendingUpdateType(null);
+          return;
+        }
+        if (!window.confirm(`${preflightData.warning}\n\nContinue with this local file?`)) {
+          setPendingUpdateType(null);
+          return;
+        }
+      }
+      const res = await fetch(`/api/dashboard/admin/db_stats/${type}`);
+      const data = await res.json();
+      if (data.success) {
+        setPendingUpdateStats(data.stats);
+      } else {
+        alert('Failed to load stats: ' + data.error);
+        setPendingUpdateType(null);
+      }
+    } catch (err) {
+      console.error('Fetch stats error', err);
+      setPendingUpdateType(null);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  const triggerUpdate = async (type: string) => {
+    setPendingUpdateType(null);
+    setPendingUpdateStats(null);
+    try {
+      const bodyPayload: any = { type, confirm_file_warning: true };
+      if (type === 'monthly_labeling') {
+        bodyPayload.workers = workers;
+      } else if (type === 'generate_drugtox') {
+        bodyPayload.local = useLocalDB;
+      }
+      const res = await fetch('/api/dashboard/admin/update_db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bodyPayload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        const taskId = data.task_id;
+        setActiveTasks(prev => ({ ...prev, [taskId]: { id: taskId, type, status: 'processing', progress: 0 } }));
+        setDbStatus(prev => ({ ...prev, [type]: { id: taskId, type, status: 'processing', progress: 0 } }));
+      } else {
+        alert(data.error || 'Failed to trigger update');
+      }
+    } catch (err) {
+      console.error('Trigger update error', err);
+    }
+  };
+
+  const ProgressBar = ({ progress, status, message, taskId }: { progress: number, status: string, message?: string, taskId?: number }) => {
+    const isError = status === 'failed';
+    const isComplete = status === 'completed';
+
+    const fetchLogs = async () => {
+      if (!taskId) return;
+      try {
+        const res = await fetch(`/api/dashboard/admin/tasks/${taskId}/logs`);
+        const data = await res.json();
+        if (data.success) {
+          setSelectedLogs(data.logs);
+          setSelectedTaskId(taskId);
+          setShouldAutoScroll(true);
+          setIsLogModalOpen(true);
+        } else {
+          alert(data.error || 'Failed to fetch logs');
+        }
+      } catch (err) {
+        alert('Error fetching logs');
+      }
+    };
+
+    const cancelTask = async () => {
+      if (!taskId) return;
+      if (!window.confirm("Are you sure you want to cancel this task?")) return;
+      try {
+        const res = await fetch(`/api/dashboard/admin/tasks/${taskId}/cancel`, { method: 'POST' });
+        const data = await res.json();
+        if (!data.success) alert(data.error || 'Failed to cancel task');
+      } catch (err) {
+        alert('Error cancelling task');
+      }
+    };
+
+    return (
+      <div style={{ marginTop: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: '4px' }}>
+          <span style={{ fontWeight: 700, color: isError ? 'var(--fdl-red)' : (isComplete ? 'var(--fdl-green)' : 'var(--fdl-blue-600)'), display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {status.toUpperCase()}: {message || ''}
+            {taskId && (
+              <button
+                onClick={(e) => { e.stopPropagation(); fetchLogs(); }}
+                style={{
+                  background: 'var(--fdl-line-soft)',
+                  border: '1px solid var(--fdl-line)',
+                  borderRadius: '2px',
+                  padding: '1px 6px',
+                  fontSize: '0.6rem',
+                  cursor: 'pointer',
+                  fontWeight: 800
+                }}
+              >
+                VIEW LOGS
+              </button>
+            )}
+            {taskId && (status === 'processing' || status === 'pending') && (
+              <button
+                onClick={(e) => { e.stopPropagation(); cancelTask(); }}
+                style={{
+                  background: 'var(--fdl-red-050)',
+                  color: 'var(--fdl-red)',
+                  border: '1px solid var(--fdl-red-050)',
+                  borderRadius: '2px',
+                  padding: '1px 6px',
+                  fontSize: '0.6rem',
+                  cursor: 'pointer',
+                  fontWeight: 800
+                }}
+              >
+                CANCEL
+              </button>
+            )}
+          </span>
+          <span style={{ fontWeight: 800 }}>{progress}%</span>
+        </div>
+        <div style={{ width: '100%', height: '6px', background: 'var(--fdl-line)', borderRadius: '2px', overflow: 'hidden' }}>
+          <div
+            style={{
+              width: `${progress}%`,
+              height: '100%',
+              background: isError ? 'var(--fdl-red)' : (isComplete ? 'var(--fdl-green)' : 'var(--fdl-blue-600)'),
+              transition: 'width 0.4s ease'
+            }}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  if (sessionLoading || !session?.is_authenticated) {
+    return <div style={{ padding: '2rem', textAlign: 'center' }}>Verifying access...</div>;
+  }
+
+  // Reachable by URL even though the header hides the link; /preferences
+  // returns 403 for a guest regardless.
+  // Admins always reach this page — it is where Function Control lives, and
+  // locking themselves out of it would be unrecoverable.
+  if (!session?.is_admin && !(session?.permissions?.preferences ?? false)) {
+    return (
+      <AccessRestricted
+        feature="Settings & Preferences"
+        title="Settings & Preferences is not available for your account"
+        body="An administrator controls which accounts can use saved preferences from the Function Control panel."
+      />
+    );
+  }
+
+  // AI Action History Filtering & Pagination logic
+  const tokensToFilter = selectedUserTokens || [];
+  const uniqueModels = Array.from(new Set(tokensToFilter.map((t: any) => t.model_name))).filter(Boolean) as string[];
+  
+  const historyFilteredTokens = tokensToFilter.filter((t: any) => {
+    // Model Filter
+    if (historyModelFilter !== 'all' && t.model_name !== historyModelFilter) {
+      return false;
+    }
+    // Date Filter
+    if (historyDateFilter === 'all') return true;
+    const tDate = new Date(t.created_at);
+    const now = new Date();
+    if (historyDateFilter === '7d') {
+      return (now.getTime() - tDate.getTime()) <= 7 * 24 * 60 * 60 * 1000;
+    }
+    if (historyDateFilter === '1m') {
+      return (now.getTime() - tDate.getTime()) <= 30 * 24 * 60 * 60 * 1000;
+    }
+    if (historyDateFilter === 'custom') {
+      const start = historyCustomStart ? new Date(historyCustomStart) : new Date(0);
+      const end = historyCustomEnd ? new Date(historyCustomEnd) : new Date();
+      // add 1 day to end to include the entire end day
+      end.setHours(23, 59, 59, 999);
+      return tDate >= start && tDate <= end;
+    }
+    return true;
+  });
+
+  const totalInputTokens = historyFilteredTokens.reduce((acc: number, t: any) => acc + (t.input_tokens || 0), 0);
+  const totalOutputTokens = historyFilteredTokens.reduce((acc: number, t: any) => acc + (t.output_tokens || 0), 0);
+  const totalOverallTokens = historyFilteredTokens.reduce((acc: number, t: any) => acc + (t.total_tokens || 0), 0);
+
+  const historyTotalItems = historyFilteredTokens.length;
+  const historyTotalPages = Math.ceil(historyTotalItems / 100) || 1;
+  const historyPagedTokens = historyFilteredTokens.slice((historyPage - 1) * 100, historyPage * 100);
+
+  return (
+    <div className="management-container">
+      <Header />
+
+      {/* Log Modal */}
+      {isLogModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(7, 31, 61, 0.58)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '40px'
+          }}
+          onClick={() => {
+            setIsLogModalOpen(false);
+            setSelectedTaskId(null);
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '900px',
+              maxHeight: '80vh',
+              background: 'var(--fdl-ink)',
+              borderRadius: '2px',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: 'var(--fdl-elevation-3, 0 12px 32px rgba(7, 31, 61, 0.18))', borderTop: '3px solid var(--fdl-blue-600)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--fdl-ink-soft)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, color: 'var(--fdl-canvas)', fontWeight: 800 }}>
+                Task Execution Logs {selectedTaskId ? `(ID: ${selectedTaskId})` : ''}
+              </h3>
+              <button
+                onClick={() => {
+                  setIsLogModalOpen(false);
+                  setSelectedTaskId(null);
+                }}
+                style={{ background: 'var(--fdl-ink-soft)', border: 'none', borderRadius: '2px', color: 'var(--fdl-muted)', padding: '4px 12px', cursor: 'pointer', fontWeight: 700 }}
+              >
+                CLOSE
+              </button>
+            </div>
+            <div
+              ref={logScrollRef}
+              onScroll={handleLogScroll}
+              style={{
+                flex: 1,
+                padding: '1.5rem',
+                overflowY: 'auto',
+                fontFamily: 'monospace',
+                fontSize: '0.85rem',
+                lineHeight: 1.6,
+                color: 'var(--fdl-line)',
+                whiteSpace: 'pre-wrap',
+                background: 'var(--fdl-ink)'
+              }}
+            >
+              {selectedLogs || 'No logs available for this task.'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <main className="management-main">
+        <h1 className="management-title">
+          {session?.is_admin ? 'System Management' : 'Settings & Preferences'}
+        </h1>
+
+        <div className="management-workstation">
+
+          {/* SIDEBAR NAVIGATION */}
+          <nav className="management-nav" aria-label="System management sections">
+            {!session?.is_guest && (
+              <button
+                className={`sidebar-tab ${activeTab === 'ai' ? 'active' : ''}`}
+                aria-current={activeTab === 'ai' ? 'page' : undefined}
+                onClick={() => setActiveTab('ai')}
+                disabled={session?.username?.toLowerCase() === 'guest'}
+                style={{ opacity: session?.username?.toLowerCase() === 'guest' ? 0.5 : 1, cursor: session?.username?.toLowerCase() === 'guest' ? 'not-allowed' : 'pointer' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                AI Settings
+              </button>
+            )}
+            <button
+              className={`sidebar-tab ${activeTab === 'users' ? 'active' : ''}`}
+                aria-current={activeTab === 'users' ? 'page' : undefined}
+              onClick={() => setActiveTab('users')}
+              disabled={session?.username?.toLowerCase() === 'guest'}
+              style={{ opacity: session?.username?.toLowerCase() === 'guest' ? 0.5 : 1, cursor: session?.username?.toLowerCase() === 'guest' ? 'not-allowed' : 'pointer' }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              {session?.is_admin ? 'User Management' : 'My Account'}
+            </button>
+            <button
+              className={`sidebar-tab ${activeTab === 'apikey' ? 'active' : ''}`}
+                aria-current={activeTab === 'apikey' ? 'page' : undefined}
+              onClick={() => setActiveTab('apikey')}
+              disabled={session?.username?.toLowerCase() === 'guest'}
+              style={{ opacity: session?.username?.toLowerCase() === 'guest' ? 0.5 : 1, cursor: session?.username?.toLowerCase() === 'guest' ? 'not-allowed' : 'pointer' }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 2l-2 2m-1.5 1.5L16 7l-1.5-1.5L13 7l-1.5-1.5L10 7l-1.5-1.5L7 7l-1.5-1.5L4 7l-2-2"></path>
+                <circle cx="7.5" cy="15.5" r="5.5"></circle>
+                <path d="m11.5 11.5 8.5-8.5"></path>
+                <path d="m16 4 4 4"></path>
+              </svg>
+              API Key
+            </button>
+            {session?.is_admin && (
+              <button
+                className={`sidebar-tab ${activeTab === 'apimanagement' ? 'active' : ''}`}
+                aria-current={activeTab === 'apimanagement' ? 'page' : undefined}
+                onClick={() => setActiveTab('apimanagement')}
+                disabled={session?.username?.toLowerCase() === 'guest'}
+                style={{ opacity: session?.username?.toLowerCase() === 'guest' ? 0.5 : 1, cursor: session?.username?.toLowerCase() === 'guest' ? 'not-allowed' : 'pointer' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                API Management
+              </button>
+            )}
+            <button
+              className={`sidebar-tab ${activeTab === 'tokens' ? 'active' : ''}`}
+                aria-current={activeTab === 'tokens' ? 'page' : undefined}
+              onClick={() => setActiveTab('tokens')}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              {session?.is_admin ? 'Token Usage' : 'My Token Usage'}
+            </button>
+            {session?.is_admin && (
+              <button
+                className={`sidebar-tab ${activeTab === 'tools' ? 'active' : ''}`}
+                aria-current={activeTab === 'tools' ? 'page' : undefined}
+                onClick={() => setActiveTab('tools')}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                Product Toolbox
+              </button>
+            )}
+            {session?.is_admin && (
+              <button
+                className={`sidebar-tab ${activeTab === 'functions' ? 'active' : ''}`}
+                aria-current={activeTab === 'functions' ? 'page' : undefined}
+                onClick={() => setActiveTab('functions')}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                Function Control
+              </button>
+            )}
+            {session?.is_admin && (
+              <button
+                className={`sidebar-tab ${activeTab === 'database' ? 'active' : ''}`}
+                aria-current={activeTab === 'database' ? 'page' : undefined}
+                onClick={() => setActiveTab('database')}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                Database Maintenance
+              </button>
+            )}
+          </nav>
+
+          {/* MAIN CONTENT AREA */}
+          <div className="management-content">
+
+
+            {activeTab === 'ai' && !session?.is_guest && <AiPreferences />}
+
+            {activeTab === 'users' && session?.username?.toLowerCase() !== 'guest' && (
+              <section className="mgmt-card">
+                <h2 className="section-title">{session?.is_admin ? 'User Management' : 'My Account'}</h2>
+
+                {/* Create User Form */}
+                {session?.is_admin && (
+                  <form onSubmit={handleCreateUser} className="mgmt-form">
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '1rem' }}>
+                    <input
+                      type="text"
+                      placeholder="Username"
+                      value={newUsername}
+                      onChange={e => setNewUsername(e.target.value)}
+                      className="mgmt-input"
+                      required
+                    />
+                    <input
+                      type="password"
+                      placeholder="Password"
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      className="mgmt-input"
+                      required
+                    />
+                    <select
+                      value={newRole}
+                      onChange={e => setNewRole(e.target.value as 'user' | 'developer' | 'admin')}
+                      className="mgmt-select"
+                      title="Developer is User plus the labeling-database switch"
+                    >
+                      <option value="user">User</option>
+                      <option value="developer">Developer</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <button type="submit" className="btn-primary">Add</button>
+                  </div>
+                </form>
+                )}
+
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1rem', marginTop: '1rem' }}>
+                  <div style={{ flex: '1 1 200px' }}>
+                    <input
+                      type="text"
+                      placeholder="Search by name, username or email..."
+                      value={userSearch}
+                      onChange={e => setUserSearch(e.target.value)}
+                      className="mgmt-input"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <select
+                    value={userRoleFilter}
+                    onChange={e => setUserRoleFilter(e.target.value as any)}
+                    className="mgmt-select"
+                    style={{ minWidth: '120px' }}
+                  >
+                    <option value="all">All Roles</option>
+                    <option value="user">User</option>
+                    <option value="developer">Developer</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <select
+                    value={userStatusFilter}
+                    onChange={e => setUserStatusFilter(e.target.value as any)}
+                    className="mgmt-select"
+                    style={{ minWidth: '130px' }}
+                  >
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="deactivated">Deactivated</option>
+                  </select>
+                  <select
+                    value={userSortBy}
+                    onChange={e => setUserSortBy(e.target.value as any)}
+                    className="mgmt-select"
+                    style={{ minWidth: '170px' }}
+                  >
+                    <option value="last_login_desc">Last Login (Newest)</option>
+                    <option value="last_login_asc">Last Login (Oldest)</option>
+                    <option value="created_at_desc">Created (Newest)</option>
+                    <option value="created_at_asc">Created (Oldest)</option>
+                    <option value="username_asc">Name (A-Z)</option>
+                  </select>
+                </div>
+
+                <div className="user-table-wrapper">
+                  <table className="user-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '26%', maxWidth: '240px' }}>User</th>
+                        <th style={{ width: '18%', minWidth: '130px' }}>Role</th>
+                        <th style={{ width: '22%', minWidth: '140px' }}>Comments / Notes</th>
+                        <th style={{ width: '20%', minWidth: '140px' }}>Last Login</th>
+                        <th style={{ width: '14%', minWidth: '90px', textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const filtered = users
+                          .filter(u => session?.is_admin || u.id === session?.id)
+                          .filter(u => {
+                            if (userSearch.trim()) {
+                              const q = userSearch.toLowerCase();
+                              if (![u.display_name, u.username, u.email, u.office].some(value => value?.toLowerCase().includes(q))) return false;
+                            }
+                            if (userRoleFilter !== 'all') {
+                              const r = u.role ?? (u.is_admin ? 'admin' : 'user');
+                              if (r !== userRoleFilter) return false;
+                            }
+                            if (userStatusFilter === 'active' && u.is_active === false) return false;
+                            if (userStatusFilter === 'deactivated' && u.is_active !== false) return false;
+                            return true;
+                          })
+                          .sort((a, b) => {
+                            if (userSortBy === 'username_asc') {
+                              return (a.display_name || a.username).localeCompare(b.display_name || b.username);
+                            }
+                            if (userSortBy === 'created_at_desc') {
+                              return (b.created_at || '').localeCompare(a.created_at || '');
+                            }
+                            if (userSortBy === 'created_at_asc') {
+                              return (a.created_at || '').localeCompare(b.created_at || '');
+                            }
+                            if (userSortBy === 'last_login_asc') {
+                              if (!a.last_login && !b.last_login) return 0;
+                              if (!a.last_login) return 1;
+                              if (!b.last_login) return -1;
+                              return a.last_login.localeCompare(b.last_login);
+                            }
+                            // default: last_login_desc
+                            if (!a.last_login && !b.last_login) return (b.created_at || '').localeCompare(a.created_at || '');
+                            if (!a.last_login) return 1;
+                            if (!b.last_login) return -1;
+                            return b.last_login.localeCompare(a.last_login);
+                          });
+
+                        if (filtered.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--fdl-muted)' }}>
+                                No users found matching filters.
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return filtered.map(user => (
+                          <tr key={user.id} style={{ opacity: user.is_active === false ? 0.6 : 1 }}>
+                            <td style={{ maxWidth: '240px' }}>
+                              <div
+                                style={{
+                                  fontWeight: 700,
+                                  color: 'var(--fdl-ink)',
+                                  fontSize: '0.9rem',
+                                  maxWidth: '240px',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                                title={user.display_name || user.username}
+                              >
+                                {user.display_name || user.username}
+                              </div>
+                              {user.is_active === false && (
+                                <span style={{ fontSize: '0.65rem', background: 'var(--fdl-red-050)', color: 'var(--fdl-red)', padding: '2px 6px', borderRadius: '2px', fontWeight: 800, marginTop: '2px', display: 'inline-block' }}>DEACTIVATED</span>
+                              )}
+                              <div style={{ fontSize: '0.75rem', color: 'var(--fdl-canvas0)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                Joined {formatUserDate(user.created_at) || '—'}
+                              </div>
+                            </td>
+                            <td style={{ minWidth: '130px' }}>
+                              <select
+                                value={user.role ?? (user.is_admin ? 'admin' : 'user')}
+                                onChange={e => handleUpdateRole(user.id, e.target.value)}
+                                className="mgmt-select"
+                                disabled={user.is_active === false || !session?.is_admin}
+                                title="Developer is User plus the labeling-database switch"
+                                style={{ width: '100%', minWidth: '110px', maxWidth: '140px' }}
+                              >
+                                <option value="user">User</option>
+                                <option value="developer">Developer</option>
+                                <option value="admin">Admin</option>
+                              </select>
+                            </td>
+                            <td style={{ minWidth: '140px' }}>
+                              <button
+                                type="button"
+                                disabled={user.is_active === false || !session?.is_admin}
+                                onClick={() => handleToggleCommentPermission(user.id, !(user.can_comment !== false))}
+                                className="btn-ghost"
+                                style={{
+                                  padding: '4px 10px',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  borderRadius: '2px',
+                                  color: user.can_comment !== false ? '#15803d' : '#b91c1c',
+                                  backgroundColor: user.can_comment !== false ? '#dcfce7' : '#fee2e2',
+                                  borderColor: user.can_comment !== false ? '#86efac' : '#fca5a5',
+                                  cursor: session?.is_admin ? 'pointer' : 'default',
+                                }}
+                                title={session?.is_admin ? "Click to toggle commenting, annotations & AI notes permission" : undefined}
+                              >
+                                {user.can_comment !== false ? '✓ Enabled' : '✕ Disabled'}
+                              </button>
+                            </td>
+                            <td style={{ minWidth: '140px' }}>
+                              {user.last_login ? (
+                                <span style={{ fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', whiteSpace: 'nowrap' }}>
+                                  {formatUserDate(user.last_login)}
+                                </span>
+                              ) : (
+                                <span style={{ fontSize: '0.85rem', color: 'var(--fdl-muted)', fontStyle: 'italic' }}>
+                                  Never
+                                </span>
+                              )}
+                            </td>
+                            <td style={{ minWidth: '90px', textAlign: 'right' }}>
+                              <button
+                                onClick={() => {
+                                  setUserModelError(null);
+                                  setManagingUser(user);
+                                  setEditPassword('');
+                                  setSelectedUserModelProvider(['vllm', 'llama'].includes(user.ai_provider) ? 'llama-4' : user.ai_provider || '');
+                                }}
+                                className="btn-ghost"
+                                style={{ padding: '6px 14px', fontWeight: 600, fontSize: '0.8rem' }}
+                              >
+                                Manage
+                              </button>
+                            </td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+
+            {activeTab === 'apikey' && session?.username?.toLowerCase() !== 'guest' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                {/* API KEY MANAGEMENT CARD */}
+                <section className="mgmt-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <div>
+                      <h2 className="section-title" style={{ margin: 0 }}>API Access & Keys</h2>
+                      <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.9rem', margin: '4px 0 0 0' }}>
+                        Generate your personal API key for authenticating RESTful search queries to askFDALabel.
+                      </p>
+                    </div>
+                  </div>
+
+                  {apiKey ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                      <div style={{
+                        background: 'var(--fdl-canvas)',
+                        border: '1px solid var(--fdl-line)',
+                        borderRadius: '2px',
+                        padding: '1.25rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.75rem'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
+                            Personal REST API Key
+                          </span>
+                          <span style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
+                            padding: '2px 8px',
+                            borderRadius: '2px',
+                            background: 'var(--fdl-green-050)',
+                            color: 'var(--fdl-green)'
+                          }}>
+                            ACTIVE
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                          <div style={{
+                            flex: 1,
+                            position: 'relative',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}>
+                            <input
+                              type={showKey ? 'text' : 'password'}
+                              readOnly
+                              value={apiKey}
+                              style={{
+                                width: '100%',
+                                padding: '0.65rem 0.85rem',
+                                paddingRight: '4.5rem',
+                                borderRadius: '2px',
+                                border: '1px solid var(--fdl-line)',
+                                background: 'white',
+                                fontFamily: 'monospace',
+                                fontSize: '0.9rem',
+                                color: 'var(--fdl-ink)'
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowKey(!showKey)}
+                              style={{
+                                position: 'absolute',
+                                right: '8px',
+                                padding: '4px 8px',
+                                fontSize: '0.75rem',
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'var(--fdl-canvas0)',
+                                cursor: 'pointer',
+                                fontWeight: 600
+                              }}
+                            >
+                              {showKey ? 'Hide' : 'Reveal'}
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={handleCopyApiKey}
+                            className="btn-primary"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '0.65rem 1.25rem',
+                              borderRadius: '2px',
+                              fontWeight: 700,
+                              fontSize: '0.85rem'
+                            }}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                            {copiedKey ? 'Copied!' : 'Copy Key'}
+                          </button>
+                        </div>
+
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--fdl-canvas0)' }}>
+                          Keep your API key secure. Authenticate requests by sending the header <code style={{ background: 'var(--fdl-line)', padding: '1px 5px', borderRadius: '2px' }}>X-API-Key: {showKey ? apiKey : 'your_key'}</code> or <code style={{ background: 'var(--fdl-line)', padding: '1px 5px', borderRadius: '2px' }}>Authorization: Bearer {showKey ? apiKey : 'your_key'}</code>.
+                        </p>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                        <button
+                          type="button"
+                          onClick={handleRevokeApiKey}
+                          disabled={revokingKey}
+                          className="btn-ghost"
+                          style={{ color: 'var(--fdl-red)', borderColor: 'var(--fdl-red)' }}
+                        >
+                          {revokingKey ? 'Revoking...' : 'Revoke Key'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleGenerateApiKey}
+                          disabled={generatingKey}
+                          className="btn-ghost"
+                          style={{ color: 'var(--fdl-blue-700)', borderColor: 'var(--fdl-line)' }}
+                        >
+                          {generatingKey ? 'Regenerating...' : 'Regenerate New Key'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{
+                      padding: '2.5rem 1.5rem',
+                      textAlign: 'center',
+                      background: 'var(--fdl-canvas)',
+                      borderRadius: '2px',
+                      border: '1px dashed var(--fdl-line)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '1rem'
+                    }}>
+                      <div style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%',
+                        background: 'var(--fdl-blue-050)',
+                        color: 'var(--fdl-blue-700)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="7.5" cy="15.5" r="5.5"></circle>
+                          <path d="m11.5 11.5 8.5-8.5"></path>
+                          <path d="m16 4 4 4"></path>
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--fdl-ink)' }}>
+                          No API Key Generated
+                        </h3>
+                        <p style={{ margin: '6px 0 0 0', color: 'var(--fdl-canvas0)', fontSize: '0.85rem', maxWidth: '460px' }}>
+                          Generate your exclusive API key to query drug labels programmatically using standard RESTful HTTP requests.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleGenerateApiKey}
+                        disabled={generatingKey}
+                        className="btn-primary"
+                        style={{ padding: '0.65rem 1.5rem', borderRadius: '2px', fontWeight: 700 }}
+                      >
+                        {generatingKey ? 'Generating Key...' : 'Generate API Key'}
+                      </button>
+                    </div>
+                  )}
+                </section>
+
+                {/* API USAGE & QUICK START DOCUMENTATION */}
+                <section className="mgmt-card">
+                  <h2 className="section-title">REST API Quick Start Guide</h2>
+                  <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                    The askFDALabel REST API provides direct querying over the official CDER-CBER Oracle labeling database.
+                  </p>
+
+                  {/* Dev Server Host Notice */}
+                  {(() => {
+                    const apiHost = session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov';
+                    const devApiUrl = `https://${apiHost}/fdalabel-v3_api/api/v1`;
+                    return (
+                      <div style={{
+                        background: '#eff6ff',
+                        border: '1px solid #bfdbfe',
+                        borderLeft: '4px solid #2563eb',
+                        padding: '1rem 1.25rem',
+                        borderRadius: '2px',
+                        marginBottom: '1.5rem'
+                      }}>
+                        <div style={{ fontWeight: 800, color: '#1e40af', marginBottom: '4px', fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>🚀</span>
+                          <span>Development Server API Endpoint</span>
+                        </div>
+                        <p style={{ margin: '0 0 6px 0', fontSize: '0.88rem', color: '#1e3a8a', lineHeight: 1.55 }}>
+                          Current Server Address:{' '}
+                          <code style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 6px', borderRadius: '2px', fontWeight: 700, fontFamily: 'monospace' }}>
+                            {apiHost}/fdalabel-v3_api/api/v1/...
+                          </code>
+                        </p>
+                        <div style={{
+                          background: '#fef3c7',
+                          border: '1px solid #fde68a',
+                          padding: '6px 10px',
+                          borderRadius: '2px',
+                          fontSize: '0.82rem',
+                          color: '#92400e',
+                          lineHeight: 1.45
+                        }}>
+                          ⚠️ <strong>Critical Path Notice:</strong> The server API route prefix is <strong><code>/fdalabel-v3_api/api/</code></strong> (using <code>fdalabel-v3_api/api</code>, <em>not</em> <code>fdalabel-v3/api</code>).
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    {/* Endpoint Overview */}
+                    {(() => {
+                      const apiHost = session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov';
+                      return (
+                        <div style={{ background: 'var(--fdl-canvas)', padding: '1rem 1.25rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
+                          <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--fdl-ink)', marginBottom: '0.5rem' }}>
+                            Primary Endpoints ({apiHost})
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem', fontFamily: 'monospace' }}>
+                            <div><span style={{ color: 'var(--fdl-green)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/search?q=diabetes&limit=20</div>
+                            <div><span style={{ color: 'var(--fdl-blue-700)', fontWeight: 800 }}>POST</span> /fdalabel-v3_api/api/v1/search (JSON payload)</div>
+                            <div><span style={{ color: 'var(--fdl-green)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/labels/:set_id_or_spl_id <span style={{ color: 'var(--fdl-canvas0)', fontSize: '0.78rem' }}>(Metadata + Full XML)</span></div>
+                            <div><span style={{ color: 'var(--fdl-green)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/sections/:set_id_or_spl_id?loinc_code=34066-1,34067-9 <span style={{ color: 'var(--fdl-canvas0)', fontSize: '0.78rem' }}>(Section XMLs)</span></div>
+                            <div><span style={{ color: 'var(--fdl-green)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/pvlabeling/:set_id_or_spl_id <span style={{ color: 'var(--fdl-canvas0)', fontSize: '0.78rem' }}>(PV-Profile Adverse Events Table JSON)</span></div>
+                            <div><span style={{ color: 'var(--fdl-green)', fontWeight: 800 }}>GET</span> /fdalabel-v3_api/api/v1/status</div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Example 1: Full-Text Search */}
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', marginBottom: '4px' }}>
+                        1. Full-Text Search
+                      </div>
+                      <pre style={{
+                        background: 'var(--fdl-ink)',
+                        color: 'var(--fdl-canvas)',
+                        padding: '0.85rem 1rem',
+                        borderRadius: '2px',
+                        fontSize: '0.8rem',
+                        overflowX: 'auto',
+                        fontFamily: 'monospace'
+                      }}>
+{`curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/search?q=myocardial+infarction&limit=10" \\
+  -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
+                      </pre>
+                    </div>
+
+                    {/* Example 2: Product Name & ID Search */}
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', marginBottom: '4px' }}>
+                        2. Product Identifier / Application Number Search
+                      </div>
+                      <pre style={{
+                        background: 'var(--fdl-ink)',
+                        color: 'var(--fdl-canvas)',
+                        padding: '0.85rem 1rem',
+                        borderRadius: '2px',
+                        fontSize: '0.8rem',
+                        overflowX: 'auto',
+                        fontFamily: 'monospace'
+                      }}>
+{`curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/search?appl_num=NDA021436&limit=5" \\
+  -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
+                      </pre>
+                    </div>
+
+                    {/* Example 3: Multi-Section XML Extraction */}
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', marginBottom: '4px' }}>
+                        3. Extract Targeted Section XMLs by LOINC Code (Boxed Warning, Indications, etc.)
+                      </div>
+                      <pre style={{
+                        background: 'var(--fdl-ink)',
+                        color: 'var(--fdl-canvas)',
+                        padding: '0.85rem 1rem',
+                        borderRadius: '2px',
+                        fontSize: '0.8rem',
+                        overflowX: 'auto',
+                        fontFamily: 'monospace'
+                      }}>
+{`# Multi-section query (34066-1 Boxed Warning & 34067-9 Indications)
+curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/sections/7e606a5b-010e-4050-bf6c-6712b32bbbc4?loinc_code=34066-1,34067-9" \\
+  -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
+                      </pre>
+                    </div>
+
+                    {/* Example 4: PV-Profile Adverse Events Export JSON */}
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', marginBottom: '4px' }}>
+                        4. PV-Profile / PV Labeling Adverse Event Table (JSON corresponding to CSV export)
+                      </div>
+                      <pre style={{
+                        background: 'var(--fdl-ink)',
+                        color: 'var(--fdl-canvas)',
+                        padding: '0.85rem 1rem',
+                        borderRadius: '2px',
+                        fontSize: '0.8rem',
+                        overflowX: 'auto',
+                        fontFamily: 'monospace'
+                      }}>
+{`# Returns adverse events, severity tiers, frequencies, MedDRA PTs, and leftover matches
+curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/pvlabeling/7e606a5b-010e-4050-bf6c-6712b32bbbc4" \\
+  -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
+                      </pre>
+                    </div>
+
+                    {/* Example 5: Label Metadata & Full XML */}
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', marginBottom: '4px' }}>
+                        5. Retrieve Label Metadata and Full SPL XML
+                      </div>
+                      <pre style={{
+                        background: 'var(--fdl-ink)',
+                        color: 'var(--fdl-canvas)',
+                        padding: '0.85rem 1rem',
+                        borderRadius: '2px',
+                        fontSize: '0.8rem',
+                        overflowX: 'auto',
+                        fontFamily: 'monospace'
+                      }}>
+{`curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1/labels/7e606a5b-010e-4050-bf6c-6712b32bbbc4" \\
+  -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
+                      </pre>
+                    </div>
+
+                    {/* Example 6: Python Script */}
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', marginBottom: '4px' }}>
+                        6. Python Integration Example (Fetch PV-Profile Adverse Events Table)
+                      </div>
+                      <pre style={{
+                        background: 'var(--fdl-ink)',
+                        color: 'var(--fdl-canvas)',
+                        padding: '0.85rem 1rem',
+                        borderRadius: '2px',
+                        fontSize: '0.8rem',
+                        overflowX: 'auto',
+                        fontFamily: 'monospace'
+                      }}>
+{`import requests
+
+base_url = "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'ncshpcgpu01.fda.gov'}/fdalabel-v3_api/api/v1"
+headers = {"X-API-Key": "${apiKey || 'YOUR_API_KEY'}"}
+
+set_id = "7e606a5b-010e-4050-bf6c-6712b32bbbc4"
+pv_resp = requests.get(f"{base_url}/pvlabeling/{set_id}", headers=headers)
+
+if pv_resp.status_code == 200:
+    data = pv_resp.json()
+    print(f"Total Adverse Events: {data['summary']['total_adverse_events']}")
+    for ae in data.get("adverse_events", []):
+        print(f"[{ae['severity_tier_label']}] {ae['side_effect_pt']} ({ae['drug_frequency']}) - {ae['meddra_soc']}")
+else:
+    err = pv_resp.json()
+    print("Notice:", err.get("message"))
+    print("Generate here:", err.get("pv_profile_tool_url"))`}
+                      </pre>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            )}
+
+            {activeTab === 'apimanagement' && session?.is_admin && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <section className="mgmt-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <div>
+                      <h2 className="section-title" style={{ margin: 0 }}>API Key Management</h2>
+                      <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.9rem', margin: '4px 0 0' }}>
+                        Monitor active REST API keys across all users, track last used dates, and rotate or revoke keys.
+                      </p>
+                    </div>
+                    <button
+                      onClick={fetchAdminApiKeys}
+                      className="btn-ghost"
+                      style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+                      disabled={loadingAdminApiKeys}
+                    >
+                      {loadingAdminApiKeys ? 'Refreshing...' : 'Refresh'}
+                    </button>
+                  </div>
+
+                  {/* Summary Metric Cards */}
+                  {(() => {
+                    const now = new Date().getTime();
+                    const past24hMs = 24 * 60 * 60 * 1000;
+                    const isRecent = (isoStr: string | null | undefined, windowMs: number) => {
+                      if (!isoStr) return false;
+                      const t = new Date(isoStr.endsWith('Z') || isoStr.includes('+') ? isoStr : `${isoStr}Z`).getTime();
+                      return !isNaN(t) && (now - t) <= windowMs;
+                    };
+
+                    const activeCount = adminApiKeys.filter(k => k.has_api_key && k.is_active !== false).length;
+                    const past24hCount = adminApiKeys.filter(k => isRecent(k.last_used_at, past24hMs)).length;
+                    const neverUsedCount = adminApiKeys.filter(k => k.has_api_key && !k.last_used_at).length;
+                    const noKeyCount = adminApiKeys.filter(k => !k.has_api_key).length;
+
+                    return (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                        <div style={{ background: 'var(--fdl-canvas)', border: '1px solid var(--fdl-line)', borderRadius: '2px', padding: '1rem' }}>
+                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--fdl-canvas0)', letterSpacing: '0.05em' }}>Active Keys</div>
+                          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--fdl-ink)', marginTop: '4px' }}>{activeCount}</div>
+                        </div>
+                        <div style={{ background: 'var(--fdl-canvas)', border: '1px solid var(--fdl-line)', borderRadius: '2px', padding: '1rem' }}>
+                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--fdl-canvas0)', letterSpacing: '0.05em' }}>Used Past 24h</div>
+                          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--fdl-green)', marginTop: '4px' }}>{past24hCount}</div>
+                        </div>
+                        <div style={{ background: 'var(--fdl-canvas)', border: '1px solid var(--fdl-line)', borderRadius: '2px', padding: '1rem' }}>
+                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--fdl-canvas0)', letterSpacing: '0.05em' }}>Never Used</div>
+                          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--fdl-amber)', marginTop: '4px' }}>{neverUsedCount}</div>
+                        </div>
+                        <div style={{ background: 'var(--fdl-canvas)', border: '1px solid var(--fdl-line)', borderRadius: '2px', padding: '1rem' }}>
+                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--fdl-canvas0)', letterSpacing: '0.05em' }}>No Key Issued</div>
+                          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--fdl-ink-soft)', marginTop: '4px' }}>{noKeyCount}</div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Search, Filter & Sort Toolbar */}
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                    <div style={{ flex: '1 1 200px' }}>
+                      <input
+                        type="text"
+                        placeholder="Search by name, username or key..."
+                        value={adminKeySearch}
+                        onChange={e => setAdminKeySearch(e.target.value)}
+                        className="mgmt-input"
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <select
+                      value={adminKeyFilter}
+                      onChange={e => setAdminKeyFilter(e.target.value as any)}
+                      className="mgmt-select"
+                      style={{ minWidth: '130px' }}
+                    >
+                      <option value="all">All Keys</option>
+                      <option value="active">Active Only</option>
+                      <option value="never_used">Never Used</option>
+                      <option value="no_key">No Key</option>
+                    </select>
+                    <select
+                      value={adminKeySortBy}
+                      onChange={e => setAdminKeySortBy(e.target.value as any)}
+                      className="mgmt-select"
+                      style={{ minWidth: '170px' }}
+                    >
+                      <option value="last_used_desc">Last Used (Newest)</option>
+                      <option value="last_used_asc">Last Used (Oldest)</option>
+                      <option value="created_at_desc">Generated (Newest)</option>
+                      <option value="created_at_asc">Generated (Oldest)</option>
+                      <option value="username_asc">Name (A-Z)</option>
+                    </select>
+                  </div>
+
+                  {/* API Keys Table */}
+                  <div className="user-table-wrapper">
+                    <table className="user-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '28%', maxWidth: '240px' }}>User</th>
+                          <th style={{ width: '36%' }}>API Key</th>
+                          <th style={{ width: '22%' }}>Activity</th>
+                          <th style={{ width: '14%', textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const filtered = adminApiKeys
+                            .filter(k => {
+                              if (adminKeySearch.trim()) {
+                                const q = adminKeySearch.toLowerCase();
+                                const matchUser = [k.display_name, k.username].some(value => value?.toLowerCase().includes(q));
+                                const matchKey = k.api_key && k.api_key.toLowerCase().includes(q);
+                                if (!matchUser && !matchKey) return false;
+                              }
+                              if (adminKeyFilter === 'active') {
+                                if (!k.has_api_key || k.is_active === false) return false;
+                              } else if (adminKeyFilter === 'never_used') {
+                                if (!k.has_api_key || k.last_used_at) return false;
+                              } else if (adminKeyFilter === 'no_key') {
+                                if (k.has_api_key) return false;
+                              }
+                              return true;
+                            })
+                            .sort((a, b) => {
+                              if (adminKeySortBy === 'username_asc') {
+                                return (a.display_name || a.username).localeCompare(b.display_name || b.username);
+                              }
+                              if (adminKeySortBy === 'created_at_desc') {
+                                return (b.created_at || '').localeCompare(a.created_at || '');
+                              }
+                              if (adminKeySortBy === 'created_at_asc') {
+                                return (a.created_at || '').localeCompare(b.created_at || '');
+                              }
+                              if (adminKeySortBy === 'last_used_asc') {
+                                if (!a.last_used_at && !b.last_used_at) return 0;
+                                if (!a.last_used_at) return 1;
+                                if (!b.last_used_at) return -1;
+                                return a.last_used_at.localeCompare(b.last_used_at);
+                              }
+                              // default: last_used_desc
+                              if (!a.last_used_at && !b.last_used_at) return (b.created_at || '').localeCompare(a.created_at || '');
+                              if (!a.last_used_at) return 1;
+                              if (!b.last_used_at) return -1;
+                              return b.last_used_at.localeCompare(a.last_used_at);
+                            });
+
+                          if (filtered.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: 'var(--fdl-muted)' }}>
+                                  No API keys found matching filters.
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          return filtered.map(k => {
+                            const isRevealed = Boolean(revealedKeys[k.user_id]);
+                            const isCopied = copiedKeyUserId === k.user_id;
+                            const isBusy = actionInProgressUserId === k.user_id;
+
+                            return (
+                              <tr key={k.user_id} style={{ opacity: k.is_active === false ? 0.6 : 1 }}>
+                                <td style={{ maxWidth: '240px' }}>
+                                  <div
+                                    style={{
+                                      fontWeight: 700,
+                                      color: 'var(--fdl-ink)',
+                                      fontSize: '0.9rem',
+                                      maxWidth: '240px',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                    title={k.display_name || k.username}
+                                  >
+                                    {k.display_name || k.username}
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--fdl-canvas0)', textTransform: 'capitalize' }}>
+                                      {k.role}
+                                    </span>
+                                    {k.is_active === false && (
+                                      <span style={{ fontSize: '0.65rem', background: 'var(--fdl-red-050)', color: 'var(--fdl-red)', padding: '1px 5px', borderRadius: '2px', fontWeight: 800 }}>
+                                        DEACTIVATED
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td>
+                                  {k.has_api_key && k.api_key ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <code style={{
+                                        fontFamily: 'monospace',
+                                        fontSize: '0.8rem',
+                                        background: 'var(--fdl-line-soft)',
+                                        padding: '4px 8px',
+                                        borderRadius: '2px',
+                                        color: 'var(--fdl-ink)',
+                                        maxWidth: '220px',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
+                                      }}>
+                                        {isRevealed ? k.api_key : k.api_key_masked}
+                                      </code>
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleRevealKey(k.user_id)}
+                                        className="btn-ghost"
+                                        style={{ padding: '2px 6px', fontSize: '0.7rem' }}
+                                        title={isRevealed ? 'Mask key' : 'Reveal full key'}
+                                      >
+                                        {isRevealed ? 'Hide' : 'Show'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopyKey(k.api_key!, k.user_id)}
+                                        className="btn-ghost"
+                                        style={{ padding: '2px 6px', fontSize: '0.7rem' }}
+                                      >
+                                        {isCopied ? 'Copied!' : 'Copy'}
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span style={{ color: 'var(--fdl-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>
+                                      No key generated
+                                    </span>
+                                  )}
+                                </td>
+                                <td>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--fdl-canvas0)' }}>
+                                    Generated: {formatUserDate(k.created_at) || '—'}
+                                  </div>
+                                  <div style={{ fontSize: '0.8rem', marginTop: '2px' }}>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--fdl-canvas0)' }}>Last used: </span>
+                                    {k.last_used_at ? (
+                                      <span style={{ fontWeight: 600, color: 'var(--fdl-ink)', whiteSpace: 'nowrap' }}>
+                                        {formatUserDate(k.last_used_at)}
+                                      </span>
+                                    ) : (
+                                      <span style={{ color: 'var(--fdl-muted)', fontStyle: 'italic' }}>Never</span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td style={{ textAlign: 'right' }}>
+                                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                    {k.has_api_key ? (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleAdminGenerateKey(k.user_id, k.display_name || k.username)}
+                                          className="btn-ghost"
+                                          disabled={isBusy || k.is_active === false}
+                                          style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                          title="Rotate and issue a new API key"
+                                        >
+                                          {isBusy ? '...' : 'Rotate'}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleAdminRevokeKey(k.user_id, k.display_name || k.username)}
+                                          className="btn-danger-ghost"
+                                          disabled={isBusy}
+                                          style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                          title="Revoke and invalidate API key"
+                                        >
+                                          Revoke
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleAdminGenerateKey(k.user_id, k.display_name || k.username)}
+                                        className="btn-primary-sm"
+                                        disabled={isBusy || k.is_active === false}
+                                        style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                                      >
+                                        {isBusy ? '...' : 'Generate'}
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </div>
+            )}
+
+            {activeTab === 'tokens' && (
+              <section className="mgmt-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                  <h2 className="section-title" style={{ margin: 0 }}>{session?.is_admin ? 'Global AI Action History' : 'My AI Action History'}</h2>
+                  {session?.is_admin && (
+                    <button 
+                      className="btn-primary" 
+                      onClick={() => setIsTokenModalOpen(true)}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                      </svg>
+                      Show Top 10 Users Summary
+                    </button>
+                  )}
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem', padding: '0.5rem', background: 'var(--fdl-canvas)', borderRadius: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>Filter Date:</div>
+                      <select 
+                        value={historyDateFilter} 
+                        onChange={(e) => { setHistoryDateFilter(e.target.value as any); setHistoryPage(1); }}
+                        style={{ padding: '6px 12px', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
+                      >
+                        <option value="7d">Last 7 Days</option>
+                        <option value="1m">Last 1 Month</option>
+                        <option value="all">All Time</option>
+                        <option value="custom">Custom Range</option>
+                      </select>
+                    </div>
+                    
+                    {historyDateFilter === 'custom' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input type="date" value={historyCustomStart} onChange={e => { setHistoryCustomStart(e.target.value); setHistoryPage(1); }} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }} />
+                        <span style={{ fontSize: '0.8rem', color: 'var(--fdl-canvas0)' }}>to</span>
+                        <input type="date" value={historyCustomEnd} onChange={e => { setHistoryCustomEnd(e.target.value); setHistoryPage(1); }} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }} />
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>Filter Model:</div>
+                      <select 
+                        value={historyModelFilter} 
+                        onChange={(e) => { setHistoryModelFilter(e.target.value); setHistoryPage(1); }}
+                        style={{ padding: '6px 12px', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
+                      >
+                        <option value="all">All Models</option>
+                        {uniqueModels.map(model => (
+                          <option key={model} value={model}>{model}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div style={{ marginLeft: 'auto', fontSize: '0.85rem', color: 'var(--fdl-canvas0)' }}>
+                      {historyTotalItems} record{historyTotalItems !== 1 ? 's' : ''} found
+                    </div>
+                  </div>
+
+                  {/* Aggregated Token Counts Summary */}
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(3, 1fr)', 
+                    gap: '1rem', 
+                    marginBottom: '1.5rem',
+                    background: 'var(--fdl-canvas)',
+                    padding: '1.25rem',
+                    borderRadius: '2px',
+                    border: '1px solid var(--fdl-line)'
+                  }}>
+                    <div style={{ background: 'white', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-canvas0)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Input Tokens</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--fdl-ink)', marginTop: '4px' }}>
+                        {totalInputTokens.toLocaleString()}
+                      </div>
+                    </div>
+                    <div style={{ background: 'white', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-canvas0)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Output Tokens</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--fdl-ink)', marginTop: '4px' }}>
+                        {totalOutputTokens.toLocaleString()}
+                      </div>
+                    </div>
+                    <div style={{ background: 'white', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-canvas0)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Overall Tokens</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--fdl-blue-600)', marginTop: '4px' }}>
+                        {totalOverallTokens.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="user-table-wrapper">
+                    <table className="user-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ padding: '0 12px 8px', borderBottom: 'none' }}>Timestamp</th>
+                          {session?.is_admin && <th style={{ padding: '0 12px 8px', borderBottom: 'none' }}>Name</th>}
+                          <th style={{ padding: '0 12px 8px', borderBottom: 'none' }}>Model</th>
+                          <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Input</th>
+                          <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Output</th>
+                          <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {loadingUserTokens ? (
+                          <tr><td colSpan={session?.is_admin ? 6 : 5} style={{ textAlign: 'center', padding: '24px', color: 'var(--fdl-muted)' }}>Loading detailed usage...</td></tr>
+                        ) : historyFilteredTokens.length === 0 ? (
+                          <tr><td colSpan={session?.is_admin ? 6 : 5} style={{ textAlign: 'center', padding: '24px', color: 'var(--fdl-muted)' }}>No records found for the selected date range.</td></tr>
+                        ) : (
+                          historyPagedTokens.map((record: any) => (
+                            <tr key={record.id} style={{ background: 'var(--fdl-canvas)', borderRadius: '2px' }}>
+                              <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '2px 0 0 2px', fontSize: '0.85rem', color: 'var(--fdl-ink-soft)' }}>
+                                {new Date(record.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'medium' })}
+                              </td>
+                              {session?.is_admin && (
+                                <td style={{ padding: '12px', borderBottom: 'none', fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', fontWeight: 600 }}>
+                                  {record.display_name || record.username}
+                                </td>
+                              )}
+                              <td style={{ padding: '12px', borderBottom: 'none', fontSize: '0.85rem', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>
+                                <span style={{ background: 'var(--fdl-line)', padding: '4px 8px', borderRadius: '2px' }}>{record.model_name}</span>
+                              </td>
+                              <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontSize: '0.9rem', color: 'var(--fdl-canvas0)' }}>
+                                {record.input_tokens.toLocaleString()}
+                              </td>
+                              <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontSize: '0.9rem', color: 'var(--fdl-canvas0)' }}>
+                                {record.output_tokens.toLocaleString()}
+                              </td>
+                              <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '0 2px 2px 0', textAlign: 'right', fontWeight: 800, color: 'var(--fdl-ink)' }}>
+                                {record.total_tokens.toLocaleString()}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  {!loadingUserTokens && historyTotalPages > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
+                      <button 
+                        disabled={historyPage === 1}
+                        onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
+                        style={{ padding: '6px 12px', background: historyPage === 1 ? 'var(--fdl-line-soft)' : 'var(--fdl-line)', color: historyPage === 1 ? 'var(--fdl-muted)' : 'var(--fdl-ink-soft)', border: 'none', borderRadius: '2px', cursor: historyPage === 1 ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}
+                      >
+                        Previous
+                      </button>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--fdl-ink-soft)' }}>
+                        Page {historyPage} of {historyTotalPages}
+                      </span>
+                      <button 
+                        disabled={historyPage === historyTotalPages}
+                        onClick={() => setHistoryPage(p => Math.min(historyTotalPages, p + 1))}
+                        style={{ padding: '6px 12px', background: historyPage === historyTotalPages ? 'var(--fdl-line-soft)' : 'var(--fdl-line)', color: historyPage === historyTotalPages ? 'var(--fdl-muted)' : 'var(--fdl-ink-soft)', border: 'none', borderRadius: '2px', cursor: historyPage === historyTotalPages ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {activeTab === 'tools' && session?.is_admin && (
+              <div className="mgmt-section">
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                  <h2 className="section-title" style={{ margin: 0 }}>Product Toolbox Access Control</h2>
+                  <button className="btn-ghost" onClick={fetchFeatureGates} disabled={loadingFeatures}>
+                    {loadingFeatures ? 'Refreshing...' : 'Refresh'}
+                  </button>
+                </div>
+                <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.85rem', lineHeight: 1.6, marginTop: '4px' }}>
+                  Control which analytical and clinical tools in the label <strong>Product Toolbox</strong> are open to standard users.
+                  Changes take effect immediately across all active user sessions.
+                </p>
+
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '2px', padding: '12px 16px', margin: '14px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '1.25rem' }}>🧰</span>
+                  <div style={{ fontSize: '0.82rem', color: '#166534', lineHeight: 1.5 }}>
+                    <strong>Default User Open Tools:</strong> DILI Agent, DICT Agent, Compare, Rule of Two.
+                    <br />
+                    All other clinical tools (DIRI, PGx, FAERS, Examine, Deep Dive, Archived Versions, Application Profile) are restricted to <em>Developer & Admin</em> by default.
+                  </div>
+                </div>
+
+                {featureError && (
+                  <div style={{ background: 'var(--fdl-red-050)', color: '#991b1b', padding: '10px 12px', borderRadius: '2px', fontSize: '0.85rem', fontWeight: 600, marginBottom: '12px' }}>
+                    ⚠️ {featureError}
+                  </div>
+                )}
+
+                {loadingFeatures && features.length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: 'var(--fdl-muted)' }}>Loading toolbox tools...</div>
+                ) : (
+                  <div className="user-table-wrapper">
+                    <table className="user-table">
+                      <thead>
+                        <tr>
+                          <th>Tool Name & Description</th>
+                          <th style={{ width: '180px' }}>Minimum Role</th>
+                          <th style={{ width: '120px' }}>Guest Access</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {features
+                          .filter((f: any) => f.category === 'Product Toolbox')
+                          .map((f: any) => {
+                            const changed =
+                              f.min_role !== f.default_min_role ||
+                              Boolean(f.allow_guest) !== Boolean(f.default_allow_guest);
+                            const isOpenToUser = f.min_role === 'user';
+                            return (
+                              <tr key={f.key} style={{ opacity: savingFeature === f.key ? 0.6 : 1 }}>
+                                <td>
+                                  <div style={{ fontWeight: 700, color: 'var(--fdl-ink)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span>{f.name}</span>
+                                    <span
+                                      style={{
+                                        fontSize: '0.65rem',
+                                        fontWeight: 800,
+                                        letterSpacing: '0.04em',
+                                        textTransform: 'uppercase',
+                                        background: isOpenToUser ? '#dcfce7' : '#f1f5f9',
+                                        color: isOpenToUser ? '#15803d' : '#64748b',
+                                        padding: '2px 8px',
+                                        borderRadius: '2px',
+                                        border: isOpenToUser ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
+                                      }}
+                                    >
+                                      {isOpenToUser ? '✓ Open to User' : 'Restricted (Dev/Admin)'}
+                                    </span>
+                                    {changed && (
+                                      <span title="Differs from built-in default" style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', background: 'var(--fdl-blue-100)', color: 'var(--fdl-blue-700)', padding: '2px 6px', borderRadius: '2px' }}>
+                                        Customized
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div style={{ fontSize: '0.78rem', color: 'var(--fdl-canvas0)', marginTop: '2px' }}>{f.blurb}</div>
+                                  <div style={{ fontSize: '0.7rem', color: 'var(--fdl-muted)', marginTop: '2px' }}>
+                                    Enforced at {f.enforced_at}
+                                  </div>
+                                </td>
+                                <td>
+                                  <select
+                                    className="mgmt-select"
+                                    value={f.min_role}
+                                    disabled={savingFeature === f.key}
+                                    onChange={e => updateFeatureGate(f.key, { min_role: e.target.value })}
+                                  >
+                                    {featureRoles.map(r => (
+                                      <option key={r} value={r}>
+                                        {r.charAt(0).toUpperCase() + r.slice(1)} and above
+                                      </option>
+                                    ))}
+                                  </select>
+                                </td>
+                                <td>
+                                  {f.guest_relevant ? (
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
+                                      <input
+                                        type="checkbox"
+                                        checked={Boolean(f.allow_guest)}
+                                        disabled={savingFeature === f.key}
+                                        onChange={e => updateFeatureGate(f.key, { allow_guest: e.target.checked })}
+                                      />
+                                      Allow
+                                    </label>
+                                  ) : (
+                                    <span title="The role requirement already excludes the shared guest account" style={{ fontSize: '0.75rem', color: 'var(--fdl-muted)' }}>
+                                      n/a
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'functions' && session?.is_admin && (
+              <div className="mgmt-section">
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                  <h2 className="section-title" style={{ margin: 0 }}>Function Control</h2>
+                  <button className="btn-ghost" onClick={fetchFeatureGates} disabled={loadingFeatures}>
+                    {loadingFeatures ? 'Refreshing...' : 'Refresh'}
+                  </button>
+                </div>
+                <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.85rem', lineHeight: 1.6, marginTop: '4px' }}>
+                  Each function below is gated by account role. Changes apply immediately —
+                  no restart — and reach open sessions within a minute. Both the API and the
+                  interface read the same rule, so a function you close here cannot be reached
+                  by calling the endpoint directly.
+                </p>
+
+                {featureError && (
+                  <div style={{ background: 'var(--fdl-red-050)', color: '#991b1b', padding: '10px 12px', borderRadius: '2px', fontSize: '0.85rem', fontWeight: 600, marginBottom: '12px' }}>
+                    ⚠️ {featureError}
+                  </div>
+                )}
+
+                {loadingFeatures && features.length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: 'var(--fdl-muted)' }}>Loading functions...</div>
+                ) : (
+                  <div className="user-table-wrapper">
+                    <table className="user-table">
+                      <thead>
+                        <tr>
+                          <th>Function</th>
+                          <th style={{ width: '170px' }}>Minimum role</th>
+                          <th style={{ width: '120px' }}>Guest</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {features
+                          .filter((f: any) => f.category !== 'Product Toolbox')
+                          .map((f: any) => {
+                          const changed =
+                            f.min_role !== f.default_min_role ||
+                            Boolean(f.allow_guest) !== Boolean(f.default_allow_guest);
+                          return (
+                            <tr key={f.key} style={{ opacity: savingFeature === f.key ? 0.6 : 1 }}>
+                              <td>
+                                <div style={{ fontWeight: 700, color: 'var(--fdl-ink)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  {f.name}
+                                  <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', background: 'var(--fdl-line-soft)', color: 'var(--fdl-canvas0)', padding: '2px 6px', borderRadius: '2px' }}>
+                                    {f.category}
+                                  </span>
+                                  {changed && (
+                                    <span title="Differs from the built-in default" style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', background: 'var(--fdl-blue-100)', color: 'var(--fdl-blue-700)', padding: '2px 6px', borderRadius: '2px' }}>
+                                      Customized
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: '0.78rem', color: 'var(--fdl-canvas0)', marginTop: '2px' }}>{f.blurb}</div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--fdl-muted)', marginTop: '2px' }}>
+                                  Enforced at {f.enforced_at}
+                                </div>
+                              </td>
+                              <td>
+                                <select
+                                  className="mgmt-select"
+                                  value={f.min_role}
+                                  disabled={savingFeature === f.key}
+                                  onChange={e => updateFeatureGate(f.key, { min_role: e.target.value })}
+                                >
+                                  {featureRoles.map(r => (
+                                    <option key={r} value={r}>
+                                      {r.charAt(0).toUpperCase() + r.slice(1)} and above
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td>
+                                {f.guest_relevant ? (
+                                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(f.allow_guest)}
+                                      disabled={savingFeature === f.key}
+                                      onChange={e => updateFeatureGate(f.key, { allow_guest: e.target.checked })}
+                                    />
+                                    Allow
+                                  </label>
+                                ) : (
+                                  <span title="The role requirement already excludes the shared guest account" style={{ fontSize: '0.75rem', color: 'var(--fdl-muted)' }}>
+                                    n/a
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'database' && session?.is_admin && (
+              <>
+              <section className="mgmt-card">
+                <h2 className="section-title">Database Maintenance</h2>
+                <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                  Manually trigger background synchronization with local source files (data/downloads).
+                </p>
+
+                <section style={{ marginBottom: '1.75rem', padding: '1rem', border: '1px solid var(--fdl-line)', borderRadius: '2px', background: 'var(--fdl-canvas)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'baseline', marginBottom: '6px' }}>
+                    <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--fdl-ink)' }}>Managed data files</h3>
+                    <button type="button" onClick={refreshDataFiles} className="btn-ghost" style={{ padding: '4px 9px', fontSize: '0.75rem' }}>Refresh</button>
+                  </div>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.78rem', color: 'var(--fdl-canvas0)', lineHeight: 1.45 }}>
+                    Upload is separate from database updates. Files are renamed automatically; an existing file is moved into an <code>archive</code> folder before replacement. Large files upload in 10 MB resumable chunks.
+                  </p>
+                  {[
+                    { type: 'dailymed', title: 'DailyMed monthly update', accept: '.zip', name: 'dailymed_monthly_update.zip' },
+                    { type: 'pharmacologic_class', title: 'Pharmacologic class indexing', accept: '.zip', name: 'pharmacologic_class_indexing_spl_files.zip' },
+                    { type: 'meddra', title: 'MedDRA', accept: '.zip', name: 'meddra.zip' },
+                    { type: 'orangebook', title: 'Orange Book (EOBZIP)', accept: '.zip', name: 'EOBZIP.zip' },
+                    { type: 'askdrugtox', title: 'AskDrugTox update', accept: '.xlsx', name: 'askdrugtox_update.xlsx' },
+                  ].map(item => {
+                    const status = dataFiles.find(file => file.type === item.type);
+                    const busy = uploadingFileType === item.type;
+                    return <div key={item.type} style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) minmax(180px, 1.4fr) auto', gap: '12px', alignItems: 'center', padding: '10px 0', borderTop: '1px solid var(--fdl-line)' }}>
+                      <div><div style={{ fontWeight: 750, fontSize: '0.84rem', color: 'var(--fdl-ink)' }}>{item.title}</div><code style={{ fontSize: '0.7rem', color: 'var(--fdl-canvas0)' }}>{item.name}</code></div>
+                      <div style={{ fontSize: '0.75rem', color: status?.exists ? (status.stale ? '#b45309' : '#15803d') : '#b91c1c' }}>
+                        {busy ? `Uploading ${uploadProgress[item.type] || 0}%…` : status?.exists ? `${status.stale ? 'Older than one month' : 'Ready'} · ${(status.size / 1024 / 1024).toFixed(1)} MB · ${new Date(status.updated_at).toLocaleDateString()}` : 'No file uploaded'}
+                      </div>
+                      <label className="btn-ghost" style={{ padding: '6px 10px', fontSize: '0.75rem', cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                        {busy ? 'Uploading…' : 'Upload file'}
+                        <input type="file" accept={item.accept} disabled={busy} style={{ display: 'none' }} onChange={e => { const file = e.target.files?.[0]; if (file) uploadDataFile(item.type, file); e.currentTarget.value = ''; }} />
+                      </label>
+                    </div>;
+                  })}
+                </section>
+
+                <div className="update-grid">
+                  {[
+                    { id: 'monthly_labeling', name: 'Monthly Label Update', desc: 'Incrementally import the uploaded DailyMed monthly update' },
+                    { id: 'orangebook', name: 'Orange Book', desc: 'Approved Drug Products with Therapeutic Equivalence Evaluations' },
+                    { id: 'epc', name: 'Pharmacologic Class Indexing', desc: 'Import EPC, MoA, and physiologic-effect indexing records' },
+                    { id: 'drugtox', name: 'AskDrugTox', desc: 'Import the current AskDrugTox Excel update' },
+                    { id: 'generate_drugtox', name: 'Generate DrugTox (AI)', desc: 'Dynamically generate DILI/DICT/DIRI for recently updated single-ingredient human Rx labels' },
+                    { id: 'meddra', name: 'MedDRA', desc: 'Dictionary (SOC, HLT, etc.)' }
+                  ].map(item => (
+                    <div key={item.id} className="update-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 800, color: 'var(--fdl-ink)' }}>{item.name}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--fdl-canvas0)' }}>{item.desc}</div>
+                        </div>
+                        <button
+                          onClick={() => handleUpdateClick(item.id)}
+                          className="btn-update"
+                          disabled={dbStatus[item.id]?.status === 'processing'}
+                        >
+                          {dbStatus[item.id]?.status === 'processing' ? 'Running...' : 'Update'}
+                        </button>
+                      </div>
+
+                      {item.id === 'monthly_labeling' && (
+                        <div style={{ marginTop: '12px', padding: '12px', background: 'white', borderRadius: '2px', border: '1px solid var(--fdl-line)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--fdl-ink-soft)', marginBottom: '4px' }}>Configuration Options</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--fdl-ink-soft)' }}>
+                              The uploaded monthly package is unpacked automatically and only new SPL versions are imported.
+                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--fdl-ink-soft)' }}>
+                              <span>Workers:</span>
+                              <select value={workers} onChange={(e) => setWorkers(Number(e.target.value))} style={{ padding: '2px 8px', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.8rem', cursor: 'pointer' }}>
+                                <option value={1}>1</option>
+                                <option value={4}>4</option>
+                                <option value={10}>10</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {item.id === 'generate_drugtox' && (
+                        <div style={{ marginTop: '12px', padding: '12px', background: 'white', borderRadius: '2px', border: '1px solid var(--fdl-line)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--fdl-ink-soft)', marginBottom: '4px' }}>Configuration Options</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--fdl-ink-soft)', cursor: 'pointer', userSelect: 'none' }}>
+                              <input type="checkbox" checked={useLocalDB} onChange={(e) => setUseLocalDB(e.target.checked)} style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: 'var(--fdl-blue-600)' }} />
+                              Use Local DB (Postgres)
+                            </label>
+                          </div>
+                        </div>
+                      )}
+
+                      {dbStatus[item.id] && (
+                        <ProgressBar
+                          progress={dbStatus[item.id].progress}
+                          status={dbStatus[item.id].status}
+                          message={dbStatus[item.id].message}
+                          taskId={dbStatus[item.id].id}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--fdl-canvas)', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
+                  <div style={{ fontWeight: 800, fontSize: '0.8rem', color: 'var(--fdl-ink-soft)', marginBottom: '8px' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ marginRight: '6px', verticalAlign: 'middle' }}>
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="16" x2="12" y2="12"></line>
+                      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    Processing Note
+                  </div>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--fdl-canvas0)', lineHeight: 1.4, margin: 0 }}>
+                    Updates run as background processes. Larger datasets (Labeling, MedDRA) may take 5-10 minutes.
+                    Existing data will be replaced using the <code>--force</code> flag.
+                  </p>
+                </div>
+              </section>
+
+              <section className="mgmt-card" style={{ marginTop: '1.5rem' }}>
+                <h2 className="section-title">FDALabel Oracle Connection</h2>
+                <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                  Target used when label queries run against Oracle. Values default to the TST server
+                  defined in <code>.env</code>; clearing a field falls back to that <code>.env</code> value.
+                </p>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Quick apply from .env:</span>
+                  <button
+                    type="button"
+                    onClick={() => applyOraclePreset('dev')}
+                    disabled={!oraclePresets}
+                    className={oracleForm.oracle_db_env === 'dev' ? 'btn-primary' : 'btn-ghost'}
+                    style={{ padding: '6px 16px', fontSize: '0.8rem' }}
+                  >
+                    DEV
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyOraclePreset('tst')}
+                    disabled={!oraclePresets}
+                    className={oracleForm.oracle_db_env === 'tst' ? 'btn-primary' : 'btn-ghost'}
+                    style={{ padding: '6px 16px', fontSize: '0.8rem' }}
+                  >
+                    TST
+                  </button>
+                </div>
+
+                <div className="mgmt-form" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
+                    Host / URL
+                    <input
+                      className="mgmt-input"
+                      value={oracleForm.host}
+                      onChange={e => setOracleForm({ ...oracleForm, host: e.target.value })}
+                      placeholder="ncsvmlbldbtst2.fda.gov"
+                    />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
+                    Port
+                    <input
+                      className="mgmt-input"
+                      value={oracleForm.port}
+                      onChange={e => setOracleForm({ ...oracleForm, port: e.target.value })}
+                      placeholder="1521"
+                    />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
+                    SID / Service
+                    <input
+                      className="mgmt-input"
+                      value={oracleForm.service}
+                      onChange={e => setOracleForm({ ...oracleForm, service: e.target.value })}
+                      placeholder="lbltst2"
+                    />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
+                    User
+                    <input
+                      className="mgmt-input"
+                      value={oracleForm.user}
+                      onChange={e => setOracleForm({ ...oracleForm, user: e.target.value })}
+                      autoComplete="off"
+                    />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
+                    Password
+                    <span style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <input
+                        className="mgmt-input"
+                        type={showOraclePassword ? 'text' : 'password'}
+                        value={oracleForm.password}
+                        onChange={e => setOracleForm({ ...oracleForm, password: e.target.value })}
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowOraclePassword(v => !v)}
+                        className="btn-ghost"
+                        style={{ padding: '6px 10px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                      >
+                        {showOraclePassword ? 'Hide' : 'Show'}
+                      </button>
+                    </span>
+                  </label>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button onClick={handleTestOracle} className="btn-ghost" disabled={testingOracle}>
+                    {testingOracle ? 'Testing...' : 'Test Connection'}
+                  </button>
+                  <button onClick={handleSaveOracle} className="btn-primary" disabled={savingOracle}>
+                    {savingOracle ? 'Saving...' : 'Save Settings'}
+                  </button>
+                  {oracleTestResult && (
+                    <span style={{
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      color: oracleTestResult.success ? 'var(--fdl-green)' : 'var(--fdl-red)'
+                    }}>
+                      {oracleTestResult.success ? '✓ ' : '✕ '}
+                      {oracleTestResult.message}
+                      {oracleTestResult.success && oracleTestResult.elapsed_ms != null ? ` (${oracleTestResult.elapsed_ms} ms)` : ''}
+                    </span>
+                  )}
+                </div>
+              </section>
+              </>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* Modals and Overlays */}
+      {/* Confirmation Modal */}
+      {pendingUpdateType && (
+        <div className="modal-overlay" onClick={() => !loadingStats && setPendingUpdateType(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px', width: '90%', padding: '2rem', borderRadius: '2px', background: 'white' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--fdl-ink)' }}>Confirm Database Update</h3>
+            </div>
+
+            {loadingStats ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--fdl-canvas0)' }}>
+                Fetching current database statistics...
+              </div>
+            ) : pendingUpdateStats ? (
+              <div>
+                <p style={{ color: 'var(--fdl-ink-soft)', marginBottom: '1.5rem' }}>
+                  You are about to run the update script for <strong>{pendingUpdateType}</strong>.
+                  Existing data will be overwritten or updated.
+                </p>
+                <div style={{ background: 'var(--fdl-canvas)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', marginBottom: '1.5rem' }}>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--fdl-ink)', fontSize: '0.9rem' }}>Current Database Stats</h4>
+                  {pendingUpdateStats.total_count ? (
+                    <>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Total MedDRA Records:</span>
+                        <span style={{ fontWeight: 600 }}>{pendingUpdateStats.total_count.toLocaleString()}</span>
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>SOC Terms:</span>
+                        <span style={{ fontWeight: 600 }}>{pendingUpdateStats.soc_count.toLocaleString()}</span>
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem' }}>
+                        <span>Last Updated Date:</span>
+                        <span style={{ fontWeight: 600 }}>{pendingUpdateStats.last_date || 'N/A'}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Total Records:</span>
+                        <span style={{ fontWeight: 600 }}>{pendingUpdateStats.count?.toLocaleString() || 0}</span>
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem' }}>
+                        <span>Last Updated Date:</span>
+                        <span style={{ fontWeight: 600 }}>{pendingUpdateStats.last_date || 'N/A'}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                  <button onClick={() => setPendingUpdateType(null)} className="btn-ghost">Cancel</button>
+                  <button onClick={() => triggerUpdate(pendingUpdateType)} className="btn-primary">Confirm Update</button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* Completion Summary Modal */}
+      {completedUpdateTask && (
+        <div className="modal-overlay" onClick={() => setCompletedUpdateTask(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px', width: '90%', padding: '2rem', borderRadius: '2px', background: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+              <div style={{ color: 'var(--fdl-green)' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+              </div>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--fdl-ink)' }}>Update Completed</h3>
+            </div>
+
+            <p style={{ color: 'var(--fdl-ink-soft)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+              The database update task for <strong>{completedUpdateTask.type}</strong> has finished successfully.
+            </p>
+
+            {completedUpdateTask.message && (
+              <div style={{ background: 'var(--fdl-green-050)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-green)', marginBottom: '1.5rem' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--fdl-green)', fontSize: '0.9rem' }}>Summary</h4>
+                <div style={{ fontSize: '0.85rem', color: 'var(--fdl-green)' }}>
+                  {completedUpdateTask.message}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setCompletedUpdateTask(null)} className="btn-primary">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Top 10 Users Summary Modal */}
+      {isTokenModalOpen && session?.is_admin && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(7, 31, 61, 0.58)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white', borderRadius: '2px', width: '90%', maxWidth: '800px',
+            maxHeight: '90vh', display: 'flex', flexDirection: 'column',
+            boxShadow: 'var(--fdl-elevation-3, 0 12px 32px rgba(7, 31, 61, 0.18))', borderTop: '3px solid var(--fdl-navy-800)'
+          }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid var(--fdl-line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--fdl-ink)' }}>Top 10 Users Summary</h3>
+              <button onClick={() => setIsTokenModalOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px', color: 'var(--fdl-canvas0)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            <div style={{ padding: '24px', overflowY: 'auto' }}>
+              <table className="user-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
+                <thead>
+                  <tr>
+                    <th style={{ padding: '0 12px 8px', borderBottom: 'none' }}>Name</th>
+                    <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>All Time</th>
+                    <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Past 30 Days</th>
+                    <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Past 7 Days</th>
+                    <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Past 24 Hrs</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tokenUsage.length === 0 ? (
+                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--fdl-muted)' }}>No token usage data</td></tr>
+                  ) : (
+                    [...tokenUsage]
+                      .sort((a: any, b: any) => b.stats.total_all_time - a.stats.total_all_time)
+                      .slice(0, 10)
+                      .map((u: any) => (
+                        <tr key={u.user_id} style={{ background: 'var(--fdl-canvas)', borderRadius: '2px' }}>
+                          <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '2px 0 0 2px', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>
+                            {u.display_name || u.username}
+                          </td>
+                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 800, color: 'var(--fdl-ink)' }}>
+                            {u.stats.total_all_time.toLocaleString()}
+                          </td>
+                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>
+                            {u.stats.total_30_days.toLocaleString()}
+                          </td>
+                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>
+                            {u.stats.total_7_days.toLocaleString()}
+                          </td>
+                          <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '0 2px 2px 0', textAlign: 'right', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>
+                            {u.stats.total_1_day.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--fdl-line)', display: 'flex', justifyContent: 'flex-end', background: 'var(--fdl-canvas)', borderRadius: '0 0 2px 2px' }}>
+              <button onClick={() => setIsTokenModalOpen(false)} className="btn-primary">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Manage User Modal */}
+      {managingUser && (
+        <div className="modal-overlay" onClick={() => { if (!savingUserModel) setManagingUser(null); }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px', width: '90%', padding: '2rem', borderRadius: '2px', background: 'white' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', borderBottom: '1px solid var(--fdl-line)', paddingBottom: '1rem' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--fdl-ink)', fontWeight: 800 }}>
+                  Manage Account: {managingUser.display_name || managingUser.username}
+                </h3>
+                <div style={{ fontSize: '0.8rem', color: 'var(--fdl-canvas0)', marginTop: '4px' }}>
+                  Role: <strong style={{ textTransform: 'capitalize' }}>{managingUser.role || (managingUser.is_admin ? 'Admin' : 'User')}</strong>
+                  {' • '}
+                  Joined: {formatUserDate(managingUser.created_at) || '—'}
+                </div>
+              </div>
+              <button 
+                onClick={() => setManagingUser(null)}
+                disabled={savingUserModel}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--fdl-muted)', padding: '4px 8px' }}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ background: 'var(--fdl-canvas)', padding: '1rem', border: '1px solid var(--fdl-line)', overflowWrap: 'anywhere' }}>
+                <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: '90px 1fr', gap: '8px' }}>
+                  <dt>Name</dt><dd style={{ margin: 0 }}>{managingUser.display_name || managingUser.username}</dd>
+                  <dt>Username</dt><dd style={{ margin: 0 }}>{managingUser.username}</dd>
+                  <dt>Email</dt><dd style={{ margin: 0 }}>{managingUser.email || '—'}</dd>
+                  <dt>Office</dt><dd style={{ margin: 0 }}>{managingUser.office || '—'}</dd>
+                </dl>
+              </div>
+              {managingUser.is_sso && <p style={{ margin: 0 }}>SSO account details and password are managed by the identity provider.</p>}
+              {/* Password Section */}
+              <div style={{ background: 'var(--fdl-canvas)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink)', marginBottom: '0.5rem' }}>
+                  Reset Password
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="password"
+                    placeholder="Enter new password"
+                    value={editPassword}
+                    onChange={e => setEditPassword(e.target.value)}
+                    className="mgmt-input"
+                    disabled={managingUser.is_active === false || managingUser.is_sso === true}
+                  />
+                  <button
+                    onClick={async () => {
+                      await handleChangePassword(managingUser.id);
+                    }}
+                    className="btn-primary"
+                    disabled={!editPassword || managingUser.is_active === false || managingUser.is_sso === true}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+
+              {/* AI Model Section (Admin Only) */}
+              {session?.is_admin && (
+                <div style={{ background: 'var(--fdl-canvas)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink)', marginBottom: '0.5rem' }}>
+                    Assigned Model Provider
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <select
+                      value={selectedUserModelProvider}
+                      onChange={e => { setSelectedUserModelProvider(e.target.value); setUserModelError(null); }}
+                      className="mgmt-select"
+                      style={{ flex: 1 }}
+                      disabled={savingUserModel || managingUser.is_active === false}
+                    >
+                      <option value="">Follow system default</option>
+                      {session?.ai_models?.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}
+                    </select>
+                    <button
+                      onClick={async () => {
+                        await handleSaveUserModel(managingUser.id, selectedUserModelProvider);
+                      }}
+                      className="btn-primary"
+                      disabled={savingUserModel || managingUser.is_active === false}
+                    >
+                      {savingUserModel ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                  {userModelError && <p role="alert" style={{ color: 'var(--fdl-red)', margin: '0.75rem 0 0' }}>{userModelError}</p>}
+                </div>
+              )}
+
+              {/* Comments, Annotations & AI Notes Permission (Admin Only) */}
+              {session?.is_admin && (
+                <div style={{ background: 'var(--fdl-canvas)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink)', marginBottom: '0.35rem' }}>
+                    Comments, Annotations & AI Notes Permission
+                  </div>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--fdl-canvas0)', margin: '0 0 0.75rem 0', lineHeight: 1.4 }}>
+                    Controls whether this user can post comments & justifications in visual compare, create label highlights/notes, and save AI notes.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleCommentPermission(managingUser.id, !(managingUser.can_comment !== false))}
+                    className="btn-ghost"
+                    style={{
+                      padding: '6px 14px',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      borderRadius: '2px',
+                      color: managingUser.can_comment !== false ? '#15803d' : '#b91c1c',
+                      backgroundColor: managingUser.can_comment !== false ? '#dcfce7' : '#fee2e2',
+                      borderColor: managingUser.can_comment !== false ? '#86efac' : '#fca5a5',
+                    }}
+                  >
+                    {managingUser.can_comment !== false ? '✓ Comments & Notes: Enabled' : '✕ Comments & Notes: Disabled'}
+                  </button>
+                </div>
+              )}
+
+              {/* Account Status / Danger Zone (Admin Only) */}
+              {session?.is_admin && (
+                <div style={{ borderTop: '1px solid var(--fdl-line)', paddingTop: '1rem' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink)', marginBottom: '0.75rem' }}>
+                    Account Status
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                    {managingUser.is_active !== false ? (
+                      <button
+                        onClick={async () => {
+                          await handleToggleActive(managingUser.id, false);
+                          setManagingUser(null);
+                        }}
+                        className="btn-ghost"
+                        style={{ color: 'var(--fdl-amber)', borderColor: 'var(--fdl-amber)', backgroundColor: 'var(--fdl-amber-050)' }}
+                      >
+                        Deactivate Account
+                      </button>
+                    ) : (
+                      <button
+                        onClick={async () => {
+                          await handleToggleActive(managingUser.id, true);
+                          setManagingUser(null);
+                        }}
+                        className="btn-ghost"
+                        style={{ color: 'var(--fdl-green)', borderColor: 'var(--fdl-green)', backgroundColor: 'var(--fdl-green-050)' }}
+                      >
+                        Reactivate Account
+                      </button>
+                    )}
+
+                    <button
+                      onClick={async () => {
+                        await handleDeleteUser(managingUser.id);
+                        setManagingUser(null);
+                      }}
+                      className="btn-danger-ghost"
+                    >
+                      Delete User
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid var(--fdl-line-soft)', paddingTop: '1rem' }}>
+              <button onClick={handleManageUserDone} disabled={savingUserModel} className="btn-primary" style={{ minWidth: '100px' }}>
+                {savingUserModel ? 'Saving...' : 'Done'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+
+  );
+}

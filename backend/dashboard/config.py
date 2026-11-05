@@ -1,0 +1,188 @@
+import os
+from dotenv import load_dotenv
+from pathlib import Path
+
+env_path = Path(__file__).resolve().parent.parent.parent / '.env'
+load_dotenv(dotenv_path=env_path)
+class Config:
+    SECRET_KEY = os.getenv('SECRET_KEY', 'afd-psw-prod')
+    if os.getenv('FLASK_ENV') == 'production' and (not SECRET_KEY or SECRET_KEY == 'afd-psw-prod'):
+        raise ValueError(
+            "SECURITY ERROR: Default or empty SECRET_KEY is in use in production mode. "
+            "Please configure a strong, unique SECRET_KEY in your .env file."
+        )
+
+    SESSION_COOKIE_PATH = '/'
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
+    _default_cookie_secure = 'True' if os.getenv('FLASK_ENV') == 'production' else 'False'
+    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', _default_cookie_secure).lower() in ('true', '1', 'yes')
+    PERMANENT_SESSION_LIFETIME = int(os.getenv('PERMANENT_SESSION_LIFETIME', 86400 * 7)) # 7 days
+
+    # CORS configuration: comma-separated list of origins or '*'
+    _cors_raw = os.getenv('CORS_ORIGINS', '*')
+    CORS_ORIGINS = [o.strip() for o in _cors_raw.split(',') if o.strip()] if _cors_raw != '*' else '*'
+
+    # Rate Limiting configuration
+    RATELIMIT_ENABLED = os.getenv('RATELIMIT_ENABLED', 'True').lower() in ('true', '1', 'yes')
+    RATELIMIT_DEFAULT = os.getenv('RATELIMIT_DEFAULT', '120 per minute')
+    RATELIMIT_AUTH = os.getenv('RATELIMIT_AUTH', '10 per minute')
+    CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+    CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+
+    OPENFDA_API_KEY=os.getenv('OPENFDA_API_KEY','')
+
+    LLM_URL=os.getenv('LLM_URL','')
+    LLM_KEY=os.getenv('LLM_KEY','')
+    LLM_MODEL=os.getenv('LLM_MODEL','')
+
+    # Gemini Models
+    PRIMARY_MODEL_ID = os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite')
+    # AI Providers Configuration
+    _allowed_providers_raw = os.getenv('ALLOWED_AI_PROVIDERS', 'gemini,elsa,llama,vllm,ollama,customized')
+    ALLOWED_AI_PROVIDERS = [p.strip().lower() for p in _allowed_providers_raw.split(',') if p.strip()]
+    DEFAULT_AI_MODEL = os.getenv('DEFAULT_AI_MODEL', 'elsa' if 'elsa' in ALLOWED_AI_PROVIDERS else 'gemini')
+
+    ELSA_API_NAME=os.getenv('ELSA_API_NAME','')
+    ELSA_API_KEY=os.getenv('ELSA_API_KEY','')
+    ELSA_MODEL_ID=os.getenv('ELSA_MODEL_ID','')
+    ELSA_MODEL_NAME=os.getenv('ELSA_MODEL_NAME','')
+
+    # LabelingAE External Server
+    LABELING_AE_SERVER = os.getenv('LABELING_AE_SERVER', 'http://ncslphpcgpu02:8809')
+
+    # Production Database Configuration
+    DATABASE_URL = os.getenv("DATABASE_URL")
+    if not DATABASE_URL:
+        # Fallback: construct from individual variables if they exist
+        pg_user = os.getenv("PG_USERNAME") or os.getenv("PG_USER")
+        pg_password = os.getenv("PG_PASSWORD")
+        pg_host = os.getenv("PG_HOST")
+        pg_port = os.getenv("PG_PORT") or "5432"
+        pg_database = os.getenv("PG_DATABASE") or os.getenv("PG_DB")
+        if pg_user and pg_password and pg_host and pg_database:
+            DATABASE_URL = f"postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_database}"
+
+    if not DATABASE_URL:
+        raise ValueError("DATABASE_URL (or PG_USERNAME, PG_PASSWORD, PG_HOST, PG_DATABASE) must be set in .env for PostgreSQL")
+    
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+    # SQLAlchemy 2.x defaults to the 'psycopg' (v3) driver for plain
+    # 'postgresql://' URLs, but this project installs psycopg2-binary (v2).
+    # Pin the dialect to psycopg2 so the import resolves correctly.
+    if DATABASE_URL.startswith("postgresql://") and "+psycopg" not in DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+
+    # If running outside Docker container, automatically map container DB host 'db' to 'localhost'
+    if not os.path.exists('/.dockerenv'):
+        if '@db:' in DATABASE_URL:
+            DATABASE_URL = DATABASE_URL.replace('@db:', '@localhost:')
+        elif '@db/' in DATABASE_URL:
+            DATABASE_URL = DATABASE_URL.replace('@db/', '@localhost/')
+        elif 'db:5432' in DATABASE_URL:
+            DATABASE_URL = DATABASE_URL.replace('db:5432', 'localhost:5432')
+
+    # Paths - Use project root as base, but check for Docker /data mount
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+    
+    if os.path.exists('/data'):
+        DATA_DIR = Path('/data')
+    else:
+        DATA_DIR = PROJECT_ROOT / 'data'
+    
+    try:
+        with open('/data/config/env_settings.json', 'r') as f:
+            env_config = __import__('json').load(f)
+            is_external_pg = env_config.get("postgres_db") == "external" or env_config.get("active_environment") == "rapid"
+            if is_external_pg:
+                pg_host = env_config.get("external_pg_host")
+                pg_user = env_config.get("external_pg_user")
+                pg_password = env_config.get("external_pg_password")
+                pg_database = env_config.get("external_pg_database")
+                
+                if pg_host:
+                    if pg_host.startswith("postgresql://") or pg_host.startswith("postgres://"):
+                        DATABASE_URL = pg_host
+                    elif pg_user and pg_password and pg_database:
+                        DATABASE_URL = f"postgresql://{pg_user}:{pg_password}@{pg_host}/{pg_database}"
+                else:
+                    rapid_url = os.getenv("RAPID_PG_URL")
+                    if rapid_url:
+                        DATABASE_URL = rapid_url
+    except Exception:
+        pass
+
+    SQLALCHEMY_DATABASE_URI = DATABASE_URL
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': int(os.getenv('DB_POOL_RECYCLE', 1800)),
+        'pool_timeout': int(os.getenv('DB_POOL_TIMEOUT', 30)),
+        'pool_size': int(os.getenv('DB_POOL_SIZE', 20)),
+        'max_overflow': int(os.getenv('DB_MAX_OVERFLOW', 40)),
+    }
+    
+    UPLOAD_FOLDER = os.path.join(DATA_DIR, 'uploads')
+    ANNOTATIONS_FILE = os.path.join(DATA_DIR, 'annotations.json')
+
+    # Whether this deployment offers Local Database Search at all. A
+    # deployment capability, reported by /api/check-fdalabel -- distinct from
+    # the per-account 'localquery' feature gate, which both must allow.
+    LOCAL_QUERY = os.getenv('LOCAL_QUERY', 'True').lower() == 'true'
+    
+    # Path/DSN for Labeling DB
+    POSTGRES_LABEL_DSN = DATABASE_URL # Shared DB, different schema ('labeling')
+    
+    SPL_STORAGE_DIR = os.path.join(DATA_DIR, 'spl_storage')
+    SPL_STORAGE_DIR_ARCHIVED = os.path.join(DATA_DIR, 'spl_storage_archived')
+    SPL_CACHE_DIR = os.path.join(DATA_DIR, 'spl_cache')
+
+    FDALabel_HOST = os.getenv('FDALabel_HOST') or os.getenv('FDALabel_SERV') or ''
+    FDALabel_PORT = os.getenv('FDALabel_PORT', '1521')
+    FDALabel_SERVICE = os.getenv('FDALabel_SERVICE') or os.getenv('FDALabel_APP') or ''
+    FDALabel_USER = os.getenv('FDALabel_USER', '')
+    FDALabel_PASSWORD = os.getenv('FDALabel_PASSWORD') or os.getenv('FDALabel_PSW')
+    FDALabel_PSW = FDALabel_PASSWORD
+
+    FDALABEL_HOST = FDALabel_HOST
+    FDALABEL_PORT = FDALabel_PORT
+    FDALABEL_SERVICE = FDALabel_SERVICE
+    FDALABEL_USER = FDALabel_USER
+    FDALABEL_PASSWORD = FDALabel_PASSWORD
+    FDALABEL_PSW = FDALabel_PSW
+
+    # External Services & Proxies (OpenFDA, DailyMed)
+    OPENFDA_HOST = os.getenv('OPENFDA_HOST', '').strip()
+    OPENFDA_PORT = os.getenv('OPENFDA_PORT', '').strip()
+    OPENFDA_PROTOCOL = os.getenv('OPENFDA_PROTOCOL', '').strip()
+    _raw_openfda_url = (os.getenv('OPENFDA_URL') or os.getenv('OPENFDA_API_URL') or os.getenv('OPENFDA_BASE_URL') or '').strip()
+    if _raw_openfda_url:
+        OPENFDA_URL = _raw_openfda_url.rstrip('/')
+    elif OPENFDA_HOST:
+        proto = OPENFDA_PROTOCOL or ('https' if str(OPENFDA_PORT) == '443' else 'http')
+        port_suffix = f':{OPENFDA_PORT}' if OPENFDA_PORT and str(OPENFDA_PORT) not in ('80', '443') else ''
+        OPENFDA_URL = f'{proto}://{OPENFDA_HOST}{port_suffix}'
+    else:
+        OPENFDA_URL = 'https://api.fda.gov'
+
+    DAILYMED_HOST = os.getenv('DAILYMED_HOST', '').strip()
+    DAILYMED_PORT = os.getenv('DAILYMED_PORT', '').strip()
+    DAILYMED_PROTOCOL = os.getenv('DAILYMED_PROTOCOL', '').strip()
+    _raw_dailymed_url = (os.getenv('DAILYMED_URL') or os.getenv('DAILYMED_API_URL') or os.getenv('DAILYMED_BASE_URL') or '').strip()
+    if _raw_dailymed_url:
+        DAILYMED_URL = _raw_dailymed_url.rstrip('/')
+    elif DAILYMED_HOST:
+        proto = DAILYMED_PROTOCOL or ('https' if str(DAILYMED_PORT) == '443' else 'http')
+        port_suffix = f':{DAILYMED_PORT}' if DAILYMED_PORT and str(DAILYMED_PORT) not in ('80', '443') else ''
+        DAILYMED_URL = f'{proto}://{DAILYMED_HOST}{port_suffix}'
+    else:
+        DAILYMED_URL = 'https://dailymed.nlm.nih.gov'
+
+    # SSL verification for external proxies (can be disabled for internal self-signed certs)
+    _ssl_verify_env = os.getenv('EXTERNAL_SSL_VERIFY', '').strip().lower()
+    EXTERNAL_SSL_VERIFY = False if _ssl_verify_env in ('false', '0', 'no') else True
+
+    # Frontend base path for redirects
+    FRONTEND_BASE_PATH = os.getenv('FRONTEND_BASE_PATH', '/fdalabel-v3').rstrip('/')

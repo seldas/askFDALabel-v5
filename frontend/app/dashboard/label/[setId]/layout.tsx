@@ -1,0 +1,302 @@
+'use client';
+import { ServiceWarning } from '../../../platform/ServiceWarning';
+
+/*
+ * Label workspace shell.
+ *
+ * Replaces the two copy-pasted label shells: the one inside this page and the
+ * one in drugtox/[setId], which reimplemented the same tab bar and navigated
+ * between them with full page reloads.
+ *
+ * Responsibilities kept here because they are label-level, not tool-level:
+ * fetching the label once, the identity header, and the tool strip. Each tool
+ * is now its own route under this layout, so it is addressable, back/forward
+ * works, and only the active tool mounts.
+ */
+
+import { use, useCallback, useEffect, useMemo, useState } from 'react';
+
+import { usePathname, useSearchParams } from 'next/navigation';
+import Header from '../../../components/Header';
+import { useCapabilities } from '../../../platform/capabilities';
+import { fdaLabelSplDocUrl } from '../../../platform/fdalabel';
+import { Badge } from '../../../platform/primitives';
+import { LabelToolStrip } from '../../../platform/ToolLauncher';
+import { LabelContextProvider } from './LabelContext';
+import type { LabelData } from './types';
+import './labelShell.css';
+import './label.css';
+
+/** Maps the trailing route segment to the registry tool id, for highlighting. */
+const SEGMENT_TO_TOOL: Record<string, string> = {
+  faers: 'label-faers',
+  tox: 'label-tox',
+  examine: 'label-examine',
+  'image-analysis': 'label-image-review',
+  deepdive: 'label-deepdive',
+  ro2: 'label-ro2',
+  'pv-profile': 'label-pv-profile',
+  'labeling-ae': 'label-labeling-ae',
+};
+
+export default function LabelLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ setId: string }>;
+}) {
+  const { setId } = use(params);
+  const pathname = usePathname() || '';
+  const searchParams = useSearchParams();
+  const splId = searchParams.get('spl_id');
+  // Decides whether the header's FDALabel link points at the internal host or
+  // the public site. This workspace has no database selector, so the target is
+  // left unset and resolves to CDER-CBER wherever it is reachable.
+  const { capabilities } = useCapabilities();
+
+  const [data, setData] = useState<LabelData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  /*
+   * Set when the backend says this labeling is not in the local store. It is
+   * not a failure -- the local database holds a subset -- so the shell offers
+   * the public servers instead of just reporting a status code.
+   */
+  const [notFound, setNotFound] = useState<{
+    error: string;
+    set_id: string;
+    spl_id: string | null;
+    external_links: { name: string; url: string }[];
+  } | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const refresh = useCallback(() => setReloadToken((n) => n + 1), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setNotFound(null);
+
+    (async () => {
+      try {
+        const url = `/api/dashboard/label/${setId}?json=1${splId ? `&spl_id=${splId}` : ''}`;
+        const res = await fetch(url, { headers: { Accept: 'application/json' } });
+        const json = await res.json().catch(() => null);
+        if (res.status === 404 && json?.external_links) {
+          if (!cancelled) setNotFound(json);
+          return;
+        }
+        if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+        if (!cancelled) setData(json);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setId, splId, reloadToken]);
+
+  const title = data?.brand_name || data?.drug_name || setId;
+
+  useEffect(() => {
+    if (!data) return;
+    const parts = [data.brand_name || data.drug_name, data.generic_name, data.effective_time]
+      .filter(Boolean)
+      .join(' - ');
+    if (parts) document.title = parts;
+  }, [data]);
+
+  const activeToolId = useMemo(() => {
+    const segment = pathname.split('/').filter(Boolean).pop() || '';
+    return SEGMENT_TO_TOOL[segment] ?? 'label-reader';
+  }, [pathname]);
+
+  const [headerCollapsed, setHeaderCollapsed] = useState(activeToolId === 'label-reader');
+
+  const ctx = useMemo(
+    () => ({ setId, splId, data, loading, error, refresh, headerCollapsed, setHeaderCollapsed }),
+    [setId, splId, data, loading, error, refresh, headerCollapsed, setHeaderCollapsed],
+  );
+
+  const isStale = data?.openfda_status === 'Archived' || data?.is_latest === false;
+  const [companyModalOpen, setCompanyModalOpen] = useState(false);
+
+  const hideCrumbsAndTools = activeToolId !== 'label-reader';
+
+  return (
+    <div className={`afl-label-shell${activeToolId === 'label-reader' ? ' afl-label-shell--reader' : ''}`}>
+      <Header activeApp="dashboard" />
+
+      <div className="afl-label-shell__scroll">
+        <div className="afl-label-shell__inner">
+          {!hideCrumbsAndTools && !headerCollapsed && (
+            <nav className="afl-label-crumbs">
+              <span className="afl-label-crumbs__current">{title}</span>
+            </nav>
+          )}
+
+          {notFound ? (
+            <div className="afl-label-alert" role="alert">
+              <p style={{ margin: '0 0 10px 0' }}>{notFound.error}</p>
+              <p style={{ margin: '0 0 10px 0', display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
+                {notFound.external_links.map((link) => (
+                  <a
+                    key={link.url}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontWeight: 700, textDecoration: 'underline' }}
+                  >
+                    {link.name} ↗
+                  </a>
+                ))}
+              </p>
+              <p style={{ margin: 0, fontSize: '0.84rem', opacity: 0.85 }}>
+                set-id <code>{notFound.set_id}</code>
+                {notFound.spl_id ? <> · spl-id <code>{notFound.spl_id}</code></> : null}
+              </p>
+            </div>
+          ) : error ? (
+            <div className="afl-label-alert" role="alert">
+              Could not load this label: {error}
+            </div>
+          ) : null}
+
+          {data ? (
+            <section
+              className={`afl-label-identity${isStale ? ' afl-label-identity--stale' : ''}${headerCollapsed ? ' afl-label-identity--collapsed' : ''}`}
+              aria-label="Label identity"
+              style={{
+                background: (data?.openfda_status === 'Archived' || data?.is_latest === false) ? '#fdfbf7' : '#ffffff',
+                boxShadow: (data?.openfda_status === 'Archived' || data?.is_latest === false) ? '0 4px 20px rgba(60,45,30,0.04)' : '0 4px 20px rgba(0,0,0,0.04)',
+                border: (data?.openfda_status === 'Archived' || data?.is_latest === false) ? '1px solid #dcd3bf' : '1px solid #e2e8f0',
+              }}
+            >
+              <div className="afl-label-identity__title-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                <h1 className="afl-label-identity__title" style={{ margin: 0, textTransform: 'capitalize' }}>
+                  {[data.brand_name || data.drug_name, data.effective_time]
+                    .filter(Boolean)
+                    .join(' - ')
+                    .toLowerCase()}
+                </h1>
+                <div className="afl-label-identity__badges" style={{ display: 'flex', gap: '8px' }}>
+                  {data.label_format ? (
+                    <Badge tone={data.label_format === 'PLR' ? 'success' : 'neutral'}>
+                      {data.label_format}
+                    </Badge>
+                  ) : null}
+                  {data.is_rld ? <Badge tone="danger">RLD</Badge> : null}
+                  {data.openfda_status ? (
+                    <Badge tone={data.openfda_status === 'Current' ? 'info' : 'warn'}>
+                      {data.openfda_status}
+                    </Badge>
+                  ) : null}
+                  {!headerCollapsed && activeToolId === 'label-reader' && (
+                    <button
+                      type="button"
+                      className="afl-collapse-toggle-btn afl-label-identity__collapse"
+                      onClick={() => setHeaderCollapsed(true)}
+                      aria-label="Collapse label details"
+                      title="Collapse label details"
+                    >
+                      <span>Collapse details</span>
+                      <span aria-hidden="true">⌃</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {data.generic_name ? (
+                <p className="afl-label-identity__generic" style={{ margin: '6px 0 16px 0', color: '#64748b', fontSize: '0.95rem' }}>{data.generic_name}</p>
+              ) : null}
+
+              {data.has_boxed_warning && (
+                <div className="meta-item" style={{ marginBottom: '16px', backgroundColor: 'var(--fdl-red-050, #fff1f1)', border: '1px solid var(--fdl-red)', borderRadius: 'var(--fdl-radius-sm, 2px)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontSize: '1.3rem', color: 'var(--fdl-red)' }}>{"\u26A0"}</span>
+                    <div>
+                        <span style={{ display: 'block', fontSize: '0.68rem', color: 'var(--fdl-red)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Clinical Alert</span>
+                        <span style={{ fontWeight: 700, color: 'var(--fdl-red)', fontSize: '0.9rem' }}>Boxed Warning Information Present</span>
+                    </div>
+                </div>
+              )}
+
+              <div className="label-meta-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
+                  <div className="meta-item">
+                      <span style={{ display: 'block', fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.1em', marginBottom: '4px' }}>Manufacturer</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: 700, color: '#334155', fontSize: '0.9rem' }}>{data.manufacturer_name || 'N/A'}</span>
+                        {data.companies && data.companies.length > 0 && (
+                          <button 
+                            onClick={() => setCompanyModalOpen(true)} 
+                            style={{ background: 'var(--fdl-canvas, #f3f6f8)', border: '1px solid var(--fdl-line, #b8c8d7)', padding: '2px 8px', borderRadius: 'var(--fdl-radius-sm, 2px)', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', color: 'var(--fdl-ink-soft, #273843)' }}
+                          >
+                            DETAILS
+                          </button>
+                        )}
+                      </div>
+                  </div>
+                  <div className="meta-item">
+                      <span style={{ display: 'block', fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.1em', marginBottom: '4px' }}>Market Category</span>
+                      <span style={{ fontWeight: 700, color: '#334155', fontSize: '0.9rem' }}>{data.metadata?.market_category || data.document_type || 'N/A'}</span>
+                  </div>
+                  <div className="meta-item">
+                      <span style={{ display: 'block', fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.1em', marginBottom: '4px' }}>Set ID</span>
+                      <span style={{ fontWeight: 700, color: '#334155', fontFamily: 'ui-monospace, monospace', fontSize: '0.78rem' }}>{data.set_id || 'N/A'}</span>
+                      {data.set_id ? (
+                        <a
+                          href={fdaLabelSplDocUrl(data.set_id, null, capabilities)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Open this SPL in the hosted FDALabel application"
+                          style={{ display: 'inline-block', marginTop: '4px', fontSize: '0.72rem', fontWeight: 700, color: '#2563eb', textDecoration: 'none' }}
+                        >
+                          Open in FDALabel {"↗"}
+                        </a>
+                      ) : null}
+                  </div>
+                  <div className="meta-item">
+                      <span style={{ display: 'block', fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.1em', marginBottom: '4px' }}>Application No.</span>
+                      <span style={{ fontWeight: 700, color: '#334155', fontSize: '0.9rem', fontFamily: 'ui-monospace, monospace' }}>{data.application_number || 'N/A'}</span>
+                  </div>
+              </div>
+            </section>
+          ) : null}
+
+          {companyModalOpen && data?.companies && (
+            <div onClick={() => setCompanyModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(7, 31, 61, 0.58)', zIndex: 5000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+              <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(550px, 95vw)', maxHeight: 'min(600px, 85vh)', background: 'var(--fdl-paper, #ffffff)', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)', borderTop: '3px solid var(--fdl-navy-800, #12375b)', boxShadow: 'var(--fdl-elevation-3, 0 12px 32px rgba(7, 31, 61, 0.18))', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)', background: 'var(--fdl-canvas, #f3f6f8)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div><h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)' }}>Company Details</h3><p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--fdl-muted, #5e6e7c)', fontWeight: 600 }}>Associated manufacturers and distributors</p></div>
+                  <button onClick={() => setCompanyModalOpen(false)} style={{ background: 'white', border: '1px solid var(--fdl-line, #b8c8d7)', width: '32px', height: '32px', borderRadius: 'var(--fdl-radius-sm, 2px)', cursor: 'pointer' }}>×</button>
+                </div>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {data.companies.map((comp: any, idx: number) => (
+                    <div key={idx} style={{ background: 'var(--fdl-canvas, #f3f6f8)', border: '1px solid var(--fdl-line-soft, #d7e0e7)', borderRadius: 'var(--fdl-radius-sm, 2px)', padding: '16px' }}>
+                      <div style={{ fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)', fontSize: '0.95rem', marginBottom: '4px' }}>{comp.name || 'Unknown Company'}</div>
+                      {comp.role && <div style={{ fontSize: '0.75rem', color: 'var(--fdl-blue-700, #0759a5)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>{comp.role}</div>}
+                      {comp.duns && <div style={{ fontSize: '0.8rem', color: 'var(--fdl-muted, #5e6e7c)' }}>DUNS: {comp.duns}</div>}
+                      {comp.address && <div style={{ fontSize: '0.8rem', color: 'var(--fdl-muted, #5e6e7c)', marginTop: '4px' }}>Address: {comp.address}</div>}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ padding: '20px 24px', borderTop: '1px solid var(--fdl-line-soft, #d7e0e7)', background: 'var(--fdl-canvas, #f3f6f8)', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button onClick={() => setCompanyModalOpen(false)} style={{ padding: '10px 24px', background: 'var(--fdl-navy-800, #12375b)', color: 'white', border: 'none', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 800, cursor: 'pointer' }}>CLOSE</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="afl-label-content">
+            <LabelContextProvider value={ctx}>{children}</LabelContextProvider>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,813 @@
+'use client';
+
+/*
+ * FDALabel's results table: a Links column, then Basic or Expanded columns.
+ *
+ * "View Label" is the one internal link — it opens the label in this app's own
+ * workspace, and it leads the cell because it is what most rows are clicked
+ * for. Everything else leaves for the authoritative source (FDALabel's own SPL
+ * document, DailyMed, Drugs@FDA, the Orange Book), keyed off the identifiers
+ * the label already carries.
+ */
+
+import Link from 'next/link';
+import { createPortal } from 'react-dom';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCapabilities } from '../platform/capabilities';
+import { labelRoute } from '../platform/context';
+import { fdaLabelSplDocUrl } from '../platform/fdalabel';
+import type { TargetDb } from './types';
+
+function DetailCodes({ value }: { value: string | null | undefined }) {
+  const codes = [...new Set((value || '').split(';').map(code => code.trim()).filter(Boolean))];
+  if (!codes.length) return <span className="fdl-detail-missing">Not available</span>;
+  const render = (items: string[]) => <span className="fdl-detail-codes">{items.map(code => <code key={code}>{code}</code>)}</span>;
+  return <>{render(codes.slice(0, 6))}{codes.length > 6 && <details className="fdl-detail-more"><summary>Show {codes.length - 6} more codes</summary>{render(codes.slice(6))}</details>}</>;
+}
+
+function RecordIdentifier({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  return <div><dt>{label}</dt><dd><code>{value || 'Not available'}</code>{value && <button type="button" aria-label={`Copy ${label}`} onClick={async event => {
+    event.stopPropagation();
+    try { await navigator.clipboard.writeText(value); setCopied(true); } catch { setCopied(false); }
+  }}>{copied ? 'Copied' : 'Copy'}</button>}</dd></div>;
+}
+
+export interface LabelRow {
+  set_id: string;
+  spl_id: string;
+  product_names: string | null;
+  generic_names: string | null;
+  manufacturer: string | null;
+  appr_num: string | null;
+  ndc_codes: string | null;
+  ndc3_codes?: string | null;
+  revised_date: string | null;
+  market_categories: string | null;
+  doc_type: string | null;
+  active_ingredients: string | null;
+  dosage_forms: string | null;
+  routes: string | null;
+  epc: string | null;
+  is_rld: number | null;
+  is_rs: number | null;
+  initial_approval_year: number | null;
+  /** Active-ingredient UNIIs, "; "-joined. Null when the label declares none. */
+  active_uniis: string | null;
+  /** Active moiety names, "; "-joined. */
+  active_moiety?: string | null;
+  /** Active moiety UNIIs, "; "-joined. */
+  active_moiety_uniis?: string | null;
+}
+
+export interface FacetItem {
+  value: string;
+  label: string;
+  count: number;
+}
+
+export interface QueryFacets {
+  labelingTypes?: FacetItem[];
+  labelingFormat?: FacetItem[];
+  applicationTypes?: FacetItem[];
+  marketStatus?: FacetItem[];
+  routes?: FacetItem[];
+  dosageForms?: FacetItem[];
+  pharmClasses?: FacetItem[];
+  deaSchedule?: FacetItem[];
+}
+
+export interface ResultSet {
+  results: LabelRow[];
+  /** Exact number of matching labels, however large. */
+  total: number;
+  /** How many of `total` can be paged through — min(total, cap). */
+  browsable: number;
+  cap: number;
+  /** True when `total` exceeds `cap`, i.e. only the most recent are browsable. */
+  capped: boolean;
+  limit: number;
+  offset: number;
+  warnings: string[];
+  /** The processed SQL (or Oracle) query, included for technical debugging. */
+  sql?: string;
+  facets?: QueryFacets;
+}
+
+export type ResultView = 'basic' | 'expanded';
+
+export interface SortState {
+  sort: string;
+  dir: 'asc' | 'desc';
+}
+
+const DAILYMED_BASE = (process.env.NEXT_PUBLIC_DAILYMED_URL || 'https://dailymed.nlm.nih.gov').replace(/\/+$/, '');
+const DAILYMED_SPL = (setId: string) =>
+  `${DAILYMED_BASE}/dailymed/lookup.cfm?setid=${encodeURIComponent(setId)}`;
+const DAILYMED_PDF = (setId: string) =>
+  `${DAILYMED_BASE}/dailymed/getpdf.cfm?setid=${encodeURIComponent(setId)}`;
+const DRUGS_AT_FDA = (n: string) =>
+  `https://www.accessdata.fda.gov/scripts/cder/daf/index.cfm?event=overview.process&ApplNo=${n}`;
+const ORANGE_BOOK = (kind: string, n: string) =>
+  `https://www.accessdata.fda.gov/scripts/cder/ob/results_product.cfm?Appl_Type=${kind}&Appl_No=${n}`;
+
+/** "; "-joined storage -> a readable cell. */
+function joined(value: string | null | undefined) {
+  if (!value) return '';
+  return value
+    .split(';')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(', ');
+}
+
+/**
+ * Splits "NDA 021436; ANDA 077844" into the parts the external registries need.
+ * Both take a bare number, and the Orange Book additionally wants N or A.
+ */
+function applications(apprNum: string | null | undefined) {
+  if (!apprNum) return [];
+  const seen = new Set<string>();
+  const out: Array<{ kind: string; number: string; obType: string | null }> = [];
+  for (const part of apprNum.split(';')) {
+    const m = part.trim().match(/^(ANADA|ANDA|NADA|BLA|NDA)\s*([0-9]+)$/i);
+    if (!m) continue;
+    const kind = m[1].toUpperCase();
+    const number = m[2];
+    if (seen.has(number)) continue;
+    seen.add(number);
+    // The Orange Book covers only NDA (N) and ANDA (A); biologics and animal
+    // drugs are not in it, so they get no Orange Book link.
+    const obType = kind === 'NDA' ? 'N' : kind === 'ANDA' ? 'A' : null;
+    out.push({ kind, number, obType });
+  }
+  return out;
+}
+
+function LinksCell({ row, targetDb }: { row: LabelRow; targetDb?: TargetDb }) {
+  const apps = applications(row.appr_num);
+  // Off the FDA network the internal hosts are unreachable, so the SPL link
+  // resolves to the public site instead of a link that cannot load.
+  const { capabilities } = useCapabilities();
+  return (
+    <div className="fdl-links">
+      <Link
+        className="fdl-link fdl-links__primary"
+        href={labelRoute(row.set_id)}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        View Label
+      </Link>
+      <span className="fdl-links__row">
+        <a
+          className="fdl-link"
+          href={fdaLabelSplDocUrl(row.set_id, targetDb, capabilities)}
+          target="_blank"
+          rel="noreferrer"
+          title="Open this SPL in the hosted FDALabel application"
+        >
+          FDALabel (SPL)
+        </a>
+      </span>
+      <span className="fdl-links__row">
+        <span className="fdl-links__source">DailyMed</span>
+        {' · '}
+        <a className="fdl-link" href={DAILYMED_SPL(row.set_id)} target="_blank" rel="noreferrer">
+          SPL
+        </a>
+        {' · '}
+        <a className="fdl-link" href={DAILYMED_PDF(row.set_id)} target="_blank" rel="noreferrer">
+          PDF
+        </a>
+      </span>
+      {apps.length > 0 ? (
+        <span className="fdl-links__row">
+          <span className="fdl-links__source">Drugs@FDA</span>{' '}
+          {apps.map((a) => (
+            <a
+              key={`daf-${a.number}`}
+              className="fdl-link fdl-links__num"
+              href={DRUGS_AT_FDA(a.number)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {a.number};
+            </a>
+          ))}
+        </span>
+      ) : null}
+      {apps.some((a) => a.obType) ? (
+        <span className="fdl-links__row">
+          <span className="fdl-links__source">Orange Book</span>{' '}
+          {apps
+            .filter((a) => a.obType)
+            .map((a) => (
+              <a
+                key={`ob-${a.number}`}
+                className="fdl-link fdl-links__num"
+                href={ORANGE_BOOK(a.obType as string, a.number)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {a.number};
+              </a>
+            ))}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * A horizontal scrollbar that rides the bottom of the viewport.
+ *
+ * The Expanded View is far wider than the screen, and a 50-row page is far
+ * taller — so the table's own scrollbar, pinned to its bottom edge, is off
+ * screen exactly when you need it. This proxies it: the native one is hidden
+ * (see .fdl-tablewrap in querybuilder.css) and this bar, `position: sticky;
+ * bottom: 0`, stays in reach the whole way down, settling into place when the
+ * end of the table finally scrolls into view.
+ *
+ * CSS handles the sticking; the only work here is mirroring scrollLeft in both
+ * directions and keeping the spacer the width of the real content.
+ */
+function StickyXScrollbar({
+  targetRef,
+  signature,
+}: {
+  targetRef: React.RefObject<HTMLDivElement | null>;
+  /** Changes whenever the table's layout could have changed, forcing a re-measure. */
+  signature: string;
+}) {
+  const barRef = useRef<HTMLDivElement | null>(null);
+  const [contentWidth, setContentWidth] = useState(0);
+  const [overflows, setOverflows] = useState(false);
+  // Guards the two onScroll handlers against echoing each other into a loop.
+  const syncing = useRef(false);
+
+  const measure = useCallback(() => {
+    const target = targetRef.current;
+    if (!target) return;
+    setContentWidth(target.scrollWidth);
+    setOverflows(target.scrollWidth > target.clientWidth + 1);
+  }, [targetRef]);
+
+  /*
+   * Measured from `signature` rather than only from a ResizeObserver. RO is the
+   * obvious tool here, but making it the sole trigger means the bar silently
+   * never appears anywhere RO is stubbed, throttled or absent — which is exactly
+   * what happens in some embedded webviews. The signature covers every case the
+   * app actually causes (view toggle, new page of rows), and RO below is left in
+   * as an enhancement for the ones it does not (font loading, column reflow).
+   */
+  useLayoutEffect(measure, [measure, signature]);
+
+  useEffect(() => {
+    const target = targetRef.current;
+    if (!target) return;
+
+    let observer: ResizeObserver | undefined;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(measure);
+      observer.observe(target);
+      const table = target.firstElementChild;
+      if (table) observer.observe(table);
+    }
+
+    const onTargetScroll = () => {
+      if (syncing.current) return;
+      syncing.current = true;
+      if (barRef.current) barRef.current.scrollLeft = target.scrollLeft;
+      syncing.current = false;
+    };
+    target.addEventListener('scroll', onTargetScroll, { passive: true });
+    window.addEventListener('resize', measure);
+
+    return () => {
+      observer?.disconnect();
+      target.removeEventListener('scroll', onTargetScroll);
+      window.removeEventListener('resize', measure);
+    };
+  }, [measure, targetRef]);
+
+  const onBarScroll = () => {
+    if (syncing.current) return;
+    syncing.current = true;
+    const target = targetRef.current;
+    if (target && barRef.current) target.scrollLeft = barRef.current.scrollLeft;
+    syncing.current = false;
+  };
+
+  if (!overflows) return null;
+
+  return (
+    <div
+      className="fdl-xbar"
+      ref={barRef}
+      onScroll={onBarScroll}
+      // It duplicates a control the table already has, so it is decorative to
+      // assistive tech — keyboard and screen-reader users scroll the region
+      // itself, which stays focusable and announced.
+      aria-hidden="true"
+    >
+      <div className="fdl-xbar__spacer" style={{ width: contentWidth }} />
+    </div>
+  );
+}
+
+/**
+ * What a cell can know beyond its own row. Currently just the queried
+ * database, which decides where the row's outbound FDALabel link points.
+ */
+export interface RowContext {
+  targetDb?: TargetDb;
+  onOpenText?: (label: string, value: string) => void;
+}
+
+export interface ColumnDef {
+  key: string;
+  header: string;
+  /** Sort token accepted by /api/labelquery/execute; omit to disable sorting. */
+  sort?: string;
+  render: (row: LabelRow, ctx: RowContext) => React.ReactNode;
+  strong?: boolean;
+  accent?: boolean;
+  /** Keep an optional database field out of the table until the user enables it. */
+  initiallyHidden?: boolean;
+}
+
+function CellValue({ label, value, onOpen }: { label: string; value: string; onOpen?: (label: string, value: string) => void }) {
+  const isLong = value.length > 72;
+  if (!isLong) return <span>{value}</span>;
+  return <button type="button" className="fdl-cell-overflow" onClick={(event) => { event.stopPropagation(); onOpen?.(label, value); }} aria-label={`View full ${label}`}>{value}</button>;
+}
+
+function textColumn(key: string, header: string, sort: string | undefined, value: (row: LabelRow) => string, flags: Partial<ColumnDef> = {}): ColumnDef {
+  return { key, header, sort, ...flags, render: (row, ctx) => <CellValue label={header} value={value(row)} onOpen={ctx.onOpenText} /> };
+}
+
+function DetailInspector({ row, onClose }: { row: LabelRow | null; onClose: () => void }) {
+  if (!row) return null;
+  const facts: Array<[string, string]> = [
+    ['Trade name', joined(row.product_names) || '—'],
+    ['Generic name', joined(row.generic_names) || '—'],
+    ['Active ingredients', joined(row.active_ingredients) || '—'],
+    ['Ingredient UNII', row.active_uniis || '—'],
+    ['NDC code', joined(row.ndc_codes) || '—'],
+    ['Application no.', joined(row.appr_num) || '—'],
+    ['Labeler', row.manufacturer || '—'],
+    ['Marketing category', joined(row.market_categories) || '—'],
+    ['Dosage form', joined(row.dosage_forms) || '—'],
+    ['Route', joined(row.routes) || '—'],
+    ['Pharmacologic class', joined(row.epc) || '—'],
+    ['SPL revised', (row.revised_date || '').replace(/-/g, '/') || '—'],
+  ];
+  return (
+    <aside className="fdl-detail-inspector" aria-label="Selected label details">
+      <header className="fdl-detail-inspector__head">
+        <button type="button" className="fdl-detail-inspector__close" onClick={onClose} aria-label="Close label details">×</button>
+        <span className="fdl-detail-inspector__eyebrow">Selected label</span>
+        <h2>{joined(row.product_names) || 'Unbranded Product'}</h2>
+        <p>{joined(row.generic_names)}</p>
+      </header>
+      <div className="fdl-detail-inspector__badges">
+        {row.doc_type ? <span className="fdl-badge">{row.doc_type}</span> : null}
+        {row.market_categories ? <span className="fdl-badge">{row.market_categories}</span> : null}
+        {row.is_rld ? <span className="fdl-badge">RLD</span> : null}
+      </div>
+      <dl className="fdl-detail-inspector__facts">
+        {facts.map(([label, value]) => <Fragment key={label}><dt>{label}</dt><dd>{value}</dd></Fragment>)}
+      </dl>
+      <footer className="fdl-detail-inspector__ids"><span>Set ID</span><code>{row.set_id}</code><span>SPL ID</span><code>{row.spl_id}</code></footer>
+    </aside>
+  );
+}
+
+const LINKS_COLUMN: ColumnDef = {
+  key: 'links',
+  header: 'Links',
+  render: (row, ctx) => <LinksCell row={row} targetDb={ctx.targetDb} />,
+};
+
+const TRADE_NAME: ColumnDef = {
+  key: 'trade',
+  header: 'Trade Name',
+  sort: 'product',
+  strong: true,
+  render: (row, ctx) => <CellValue label="Trade Name" value={joined(row.product_names)} onOpen={ctx.onOpenText} />,
+};
+
+const GENERIC_NAME: ColumnDef = {
+  key: 'generic',
+  header: 'Generic/Proper Name(s)',
+  sort: 'generic',
+  accent: true,
+  render: (row, ctx) => <CellValue label="Generic/Proper Name(s)" value={joined(row.generic_names)} onOpen={ctx.onOpenText} />,
+};
+
+const SPL_DATE: ColumnDef = {
+  key: 'revised',
+  header: 'Most Recent SPL Date (YYYY/MM/DD)',
+  sort: 'revised_date',
+  render: (row) => (row.revised_date || '').replace(/-/g, '/'),
+};
+
+const BASIC_COLUMNS: ColumnDef[] = [
+  LINKS_COLUMN,
+  textColumn('market', 'Marketing Category', 'market_category', (row) => joined(row.market_categories)),
+  textColumn('dosage', 'Dosage Form(s)', 'dosage_form', (row) => joined(row.dosage_forms)),
+  textColumn('route', 'Route(s) of Administration', 'route', (row) => joined(row.routes)),
+  TRADE_NAME,
+  GENERIC_NAME,
+  SPL_DATE,
+];
+
+const EXPANDED_COLUMNS: ColumnDef[] = [
+  LINKS_COLUMN,
+  { key: 'type', header: 'Labeling Type', sort: 'doc_type', render: (row) => row.doc_type || '' },
+  {
+    key: 'dosage',
+    header: 'Dosage Form(s)',
+    sort: 'dosage_form',
+    render: (row) => joined(row.dosage_forms),
+  },
+  {
+    key: 'route',
+    header: 'Route(s) of Administration',
+    sort: 'route',
+    render: (row) => joined(row.routes),
+  },
+  {
+    key: 'market',
+    header: 'Marketing Category',
+    sort: 'market_category',
+    render: (row) => joined(row.market_categories),
+  },
+  {
+    key: 'appl',
+    header: 'Application Number(s)',
+    sort: 'appr_num',
+    render: (row) => joined(row.appr_num),
+  },
+  TRADE_NAME,
+  GENERIC_NAME,
+  {
+    key: 'unii',
+    header: 'Active Ingredient UNII(s)',
+    sort: 'unii',
+    render: (row) =>
+      row.active_uniis ? (
+        <span className="fdl-unii">
+          {row.active_uniis.split(';').map((u) => (
+            <code key={u.trim()}>{u.trim()}</code>
+          ))}
+        </span>
+      ) : (
+        ''
+      ),
+  },
+  { key: 'labeler', header: 'Labeler', sort: 'manufacturer', render: (row) => row.manufacturer || '' },
+  {
+    key: 'epc',
+    header: 'Pharmacologic Class(es)',
+    sort: 'epc',
+    render: (row) => joined(row.epc),
+  },
+  SPL_DATE,
+  {
+    key: 'approval',
+    header: 'Initial Approval Year',
+    sort: 'approval_year',
+    render: (row) => row.initial_approval_year || '',
+  },
+  {
+    key: 'ingredients',
+    header: 'Active Ingredient(s)',
+    initiallyHidden: true,
+    render: (row) => joined(row.active_ingredients),
+  },
+  {
+    key: 'ndc',
+    header: 'NDC Code(s)',
+    initiallyHidden: true,
+    render: (row) => joined(row.ndc_codes),
+  },
+  {
+    key: 'ndc3',
+    header: 'NDC3 Code(s)',
+    initiallyHidden: true,
+    render: (row) => joined(row.ndc3_codes),
+  },
+  {
+    key: 'moiety',
+    header: 'Active Moiety',
+    initiallyHidden: true,
+    render: (row) => joined(row.active_moiety),
+  },
+  {
+    key: 'moiety-unii',
+    header: 'Active Moiety UNII(s)',
+    initiallyHidden: true,
+    render: (row) => joined(row.active_moiety_uniis),
+  },
+  {
+    key: 'rld',
+    header: 'Reference Listed Drug',
+    initiallyHidden: true,
+    render: (row) => (row.is_rld ? 'Yes (RLD)' : 'No'),
+  },
+  {
+    key: 'rs',
+    header: 'Reference Standard',
+    initiallyHidden: true,
+    render: (row) => (row.is_rs ? 'Yes (RS)' : 'No'),
+  },
+  {
+    key: 'set-id',
+    header: 'Set ID',
+    sort: 'set_id',
+    initiallyHidden: true,
+    render: (row) => row.set_id,
+  },
+  {
+    key: 'spl-id',
+    header: 'SPL ID',
+    sort: 'spl_id',
+    initiallyHidden: true,
+    render: (row) => row.spl_id,
+  },
+];
+
+export function ResultsTable({
+  rows,
+  view,
+  sortState,
+  onSort,
+  extraColumns,
+  targetDb,
+  controlsTargetId,
+}: {
+  rows: LabelRow[];
+  view: ResultView;
+  sortState: SortState;
+  onSort: (sort: string) => void;
+  /** Additional columns prepended before the standard column set. */
+  extraColumns?: ColumnDef[];
+  /**
+   * The database these rows came from. Only decides which hosted FDALabel
+   * deployment the per-row SPL link opens; omitted, links go to CDER-CBER.
+   */
+  targetDb?: TargetDb;
+  /** Optional host beside the view switch for table-level display controls. */
+  controlsTargetId?: string;
+}) {
+  const baseColumns = view === 'expanded' ? EXPANDED_COLUMNS : BASIC_COLUMNS;
+  const allColumns = extraColumns && extraColumns.length > 0
+    ? [...extraColumns, ...baseColumns]
+    : baseColumns;
+  const [hiddenColumns, setHiddenColumns] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      EXPANDED_COLUMNS.filter((column) => column.initiallyHidden).map((column) => [column.key, true]),
+    ),
+  );
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+  const [fullText, setFullText] = useState<{ label: string; value: string } | null>(null);
+  const [colPickerOpen, setColPickerOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  const visibleColumns = allColumns.filter((c) => !hiddenColumns[c.key]);
+  const selectedRow = rows.find((row) => (row.spl_id || row.set_id) === selectedRowId) || null;
+
+  const toggleColumn = (key: string) => {
+    setHiddenColumns((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const toggleRow = (id: string) => {
+    setExpandedRows((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const showAllColumns = () => {
+    setHiddenColumns({});
+  };
+
+  const columnControl = (
+      <div className="fdl-table-toolbar">
+        <div className="fdl-colpicker-wrap">
+          <button
+            type="button"
+            className="fdl-btn fdl-btn--quiet fdl-colpicker-btn"
+            onClick={() => setColPickerOpen((prev) => !prev)}
+            aria-expanded={colPickerOpen}
+          >
+            Columns ({visibleColumns.length}/{allColumns.length}) ▾
+          </button>
+          {colPickerOpen ? (
+            <div className="fdl-colpicker-dropdown">
+              <div className="fdl-colpicker-head">
+                <span>Toggle Columns</span>
+                <button type="button" className="fdl-link" onClick={showAllColumns}>
+                  Show All
+                </button>
+              </div>
+              <div className="fdl-colpicker-list">
+                {allColumns.map((c) => (
+                  <label key={c.key} className="fdl-colpicker-item">
+                    <input
+                      type="checkbox"
+                      checked={!hiddenColumns[c.key]}
+                      onChange={() => toggleColumn(c.key)}
+                    />
+                    <span>{c.header}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+  );
+  const controlsHost = typeof document !== 'undefined' && controlsTargetId
+    ? document.getElementById(controlsTargetId)
+    : null;
+
+  return (
+    <div className="fdl-results-container">
+      {controlsHost ? createPortal(columnControl, controlsHost) : columnControl}
+
+      <div className="fdl-tablescroll">
+        <StickyXScrollbar
+          targetRef={scrollRef}
+          signature={`${view}:${visibleColumns.length}:${rows.length}`}
+        />
+        <div className="fdl-tablewrap" ref={scrollRef}>
+          <table className="fdl-table">
+            <thead>
+              <tr>
+                <th style={{ width: '40px' }} aria-label="Expand detail"></th>
+                {visibleColumns.map((column) => {
+                  const active = column.sort && column.sort === sortState.sort;
+                  return (
+                    <th
+                      key={column.key}
+                      scope="col"
+                      aria-sort={
+                        active ? (sortState.dir === 'asc' ? 'ascending' : 'descending') : undefined
+                      }
+                    >
+                      {column.sort ? (
+                        <button
+                          type="button"
+                          className="fdl-th"
+                          onClick={() => onSort(column.sort as string)}
+                        >
+                          <span className="fdl-th__caret">
+                            {active ? (sortState.dir === 'asc' ? '▲' : '▼') : ''}
+                          </span>
+                          {column.header}
+                        </button>
+                      ) : (
+                        column.header
+                      )}
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => {
+                const rowId = row.spl_id || row.set_id;
+                const isExpanded = view === 'basic' && Boolean(expandedRows[rowId]);
+                return (
+                  <Fragment key={rowId}>
+                    <tr
+                      className={`fdl-tr ${isExpanded ? 'fdl-tr--expanded' : ''}`}
+                      onClick={() => view === 'expanded' ? setSelectedRowId(rowId) : toggleRow(rowId)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <td
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          view === 'expanded' ? setSelectedRowId(rowId) : toggleRow(rowId);
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className={`fdl-tr-expand-btn ${isExpanded ? 'active' : ''}`}
+                          title={isExpanded ? 'Collapse drug card' : 'Expand drug card'}
+                        >
+                          {view === 'expanded' ? ((selectedRowId === rowId) ? '●' : '›') : (isExpanded ? '▼' : '▶')}
+                        </button>
+                      </td>
+                      {visibleColumns.map((column) => (
+                        <td
+                          key={column.key}
+                          className={
+                            column.accent
+                              ? 'fdl-td--accent'
+                              : column.strong
+                                ? 'fdl-td--strong'
+                                : undefined
+                          }
+                        >
+                          {column.render(row, { targetDb, onOpenText: (label, value) => setFullText({ label, value }) })}
+                        </td>
+                      ))}
+                    </tr>
+                    {isExpanded ? (
+                      <tr className="fdl-card-detail-row">
+                        <td colSpan={visibleColumns.length + 1}>
+                          <div className="fdl-label-card">
+                            <div className="fdl-label-card__header">
+                              <div className="fdl-label-card__title">
+                                <span className="fdl-label-card__brand">
+                                  {joined(row.product_names) || 'Unbranded Product'}
+                                </span>
+                                {row.generic_names ? (
+                                  <span className="fdl-label-card__generic">
+                                    {' '}
+                                    ({joined(row.generic_names)})
+                                  </span>
+                                ) : null}
+                              </div>
+                              <div className="fdl-label-card__badges">
+                                {row.doc_type ? (
+                                  <span className="fdl-badge fdl-badge--type">{row.doc_type}</span>
+                                ) : null}
+                                {row.market_categories ? (
+                                  <span className="fdl-badge fdl-badge--market">
+                                    {row.market_categories}
+                                  </span>
+                                ) : null}
+                                {row.is_rld ? (
+                                  <span className="fdl-badge fdl-badge--rld">RLD</span>
+                                ) : null}
+                              </div>
+                            </div>
+
+                            <div className="fdl-label-card__grid">
+                              <section className="fdl-card-section">
+                                <h3 className="fdl-card-section__head">Product &amp; Composition</h3>
+                                <dl className="fdl-card-dl">
+                                  <dt>Ingredients</dt><dd>{joined(row.active_ingredients) || 'Not available'}</dd>
+                                  <dt>Ingredient UNIIs</dt><dd><DetailCodes value={row.active_uniis} /></dd>
+                                  {(row.active_moiety || row.active_moiety_uniis) && <>
+                                    <dt>Active moiety</dt><dd>{joined(row.active_moiety) || 'Not available'}</dd>
+                                    <dt>Moiety UNIIs</dt><dd><DetailCodes value={row.active_moiety_uniis} /></dd>
+                                  </>}
+                                  <dt>Dosage forms</dt><dd>{joined(row.dosage_forms) || 'Not available'}</dd>
+                                  <dt>Routes</dt><dd>{joined(row.routes) || 'Not available'}</dd>
+                                  <dt>Pharmacologic class</dt><dd>{joined(row.epc) || 'Not available'}</dd>
+                                </dl>
+                              </section>
+                              <section className="fdl-card-section">
+                                <h3 className="fdl-card-section__head">Regulatory &amp; Marketing</h3>
+                                <dl className="fdl-card-dl">
+                                  <dt>Application</dt><dd>{joined(row.appr_num) || 'Not available'}</dd>
+                                  <dt>Labeler / Manufacturer</dt><dd>{row.manufacturer || 'Not available'}</dd>
+                                  <dt>Marketing category</dt><dd>{joined(row.market_categories) || 'Not available'}</dd>
+                                  <dt>Initial approval</dt><dd>{row.initial_approval_year || 'Not available'}</dd>
+                                  <dt>RLD</dt><dd>{row.is_rld == null ? 'Not available' : row.is_rld ? 'Yes' : 'No'}</dd>
+                                </dl>
+                              </section>
+                              <section className="fdl-card-section fdl-card-section--ndc">
+                                <h3 className="fdl-card-section__head">NDC Codes</h3>
+                                <dl className="fdl-card-dl">
+                                  <dt>NDC</dt><dd><DetailCodes value={row.ndc_codes} /></dd>
+                                  <dt>NDC3 (3-segment)</dt><dd><DetailCodes value={row.ndc3_codes} /></dd>
+                                </dl>
+                              </section>
+                            </div>
+                            <footer className="fdl-label-card__record">
+                              <span className="fdl-label-card__record-title">Label record</span>
+                              <dl>
+                                <div><dt>Revised date</dt><dd>{row.revised_date || 'Not available'}</dd></div>
+                                <RecordIdentifier label="Set ID" value={row.set_id} />
+                                <RecordIdentifier label="SPL ID" value={row.spl_id} />
+                              </dl>
+                            </footer>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {view === 'expanded' ? <DetailInspector row={selectedRow} onClose={() => setSelectedRowId(null)} /> : null}
+      {fullText ? (
+        <div className="fdl-text-dialog-backdrop" role="presentation" onClick={() => setFullText(null)}>
+          <section className="fdl-text-dialog" role="dialog" aria-modal="true" aria-label={fullText.label} onClick={(event) => event.stopPropagation()}>
+            <header><div><span>Full field value</span><h2>{fullText.label}</h2></div><button type="button" onClick={() => setFullText(null)} aria-label="Close full text">×</button></header>
+            <pre>{fullText.value}</pre>
+            <footer><button type="button" className="fdl-btn fdl-btn--quiet" onClick={() => navigator.clipboard?.writeText(fullText.value)}>Copy text</button><button type="button" className="fdl-btn fdl-btn--search" onClick={() => setFullText(null)}>Close</button></footer>
+          </section>
+        </div>
+      ) : null}
+    </div>
+  );
+}

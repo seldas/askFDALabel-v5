@@ -1,0 +1,581 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer,
+  AreaChart,
+  Area
+  , BarChart, Bar
+} from 'recharts';
+import './analysis.css';
+import Modal from '../../../components/Modal';
+import './faers.css';
+import { useCapabilities } from '../../../platform/capabilities';
+import { ServiceWarning } from '../../../platform/ServiceWarning';
+
+interface LabelMatch {
+  section: string;
+  snippet: string;
+}
+
+interface AiMatch {
+  term: string;
+  found: boolean;
+  section?: string;
+  explanation: string;
+}
+
+interface EmergingAe {
+  term: string;
+  count: number;
+  recent_count: number;
+  in_all_time: boolean;
+  in_emerging: boolean;
+  soc: string;
+  hlt: string;
+  soc_abbrev: string;
+  label_matches: LabelMatch[];
+  ai_match?: AiMatch;
+}
+
+interface TrendPoint {
+  timestamp: number;
+  cumulative: number;
+  count?: number;
+  year?: number;
+}
+
+function EmergingAeAnalysis({ 
+  drugName, 
+  setId,
+  activeTab
+}: { 
+  drugName?: string, 
+  setId?: string,
+  activeTab: string
+}) {
+  const [loading, setLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [data, setData] = useState<EmergingAe[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [aiMinCount, setAiMinCount] = useState(10);
+  const [scope, setScope] = useState<'all' | 'recent'>('recent');
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [useCountThreshold, setUseCountThreshold] = useState(true);
+  const [emergingOnly, setEmergingOnly] = useState(true);
+  const [excludeExact, setExcludeExact] = useState(true);
+  const [skipAnalyzed, setSkipAnalyzed] = useState(false);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+
+  // Pagination & Filtering Logic
+  const [activeFilters, setActiveFilters] = useState<Set<'exact' | 'semantic' | 'not_found' | 'not_analyzed'>>(new Set(['exact', 'semantic', 'not_found', 'not_analyzed']));
+  const [selectedSocs, setSelectedSocs] = useState<Set<string> | null>(null);
+  const [termSearch, setTermSearch] = useState('');
+
+  // Trend State
+  const [selectedAe, setSelectedAe] = useState<EmergingAe | null>(null);
+  const [trendData, setTrendData] = useState<TrendPoint[]>([]);
+  const [trendLoading, setTrendLoading] = useState(false);
+  const [trendError, setTrendError] = useState<string | null>(null);
+  const [trendSubstitution, setTrendSubstitution] = useState<{ term: string; substitute: string } | null>(null);
+  const trendRequest = useRef(0);
+
+  const toggleFilter = (filter: 'exact' | 'semantic' | 'not_found' | 'not_analyzed') => {
+    setActiveFilters(prev => {
+        const next = new Set(prev);
+        if (next.has(filter)) {
+            if (next.size > 1) next.delete(filter); // Don't allow deselecting all
+        } else {
+            next.add(filter);
+        }
+        return next;
+    });
+  };
+
+  // Automated scan when tab is active
+  useEffect(() => {
+    if (activeTab === 'faers-view' && drugName && !data && !loading && !error) {
+        runAnalysis();
+    }
+  }, [activeTab, drugName, data, loading, error]);
+
+  // Reset to first page when data or itemsPerPage changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [data, itemsPerPage, scope, activeFilters, selectedSocs, termSearch]);
+
+  useEffect(() => {
+    if (selectedAe) {
+        fetchTrend(selectedAe.term);
+    }
+    return () => { trendRequest.current += 1; };
+  }, [selectedAe]);
+
+  const fetchTrend = async (term: string) => {
+    const requestId = ++trendRequest.current;
+    setTrendLoading(true);
+    setTrendError(null);
+    setTrendSubstitution(null);
+    try {
+        const resp = await fetch('/api/dashboard/faers/trends', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ drug_name: drugName, terms: [term], period: 'all' })
+        });
+        const json = await resp.json();
+        if (requestId !== trendRequest.current) return;
+        if (!resp.ok) throw new Error(json.message || json.error || 'FAERS trend retrieval failed.');
+        if (json.substitutions?.[term]) setTrendSubstitution({ term, substitute: json.substitutions[term] });
+        const rawPoints = json.trends[term] || [];
+
+        const years = new Map<number, number>();
+        rawPoints.forEach((p: { time: string; count: number }) => {
+            const year = Number(p.time.slice(0, 4));
+            years.set(year, (years.get(year) || 0) + p.count);
+        });
+        if (!years.size) { setTrendData([]); return; }
+        const currentYear = new Date().getFullYear();
+        const firstYear = Math.min(...years.keys());
+        let cumulative = 0;
+        const formatted: TrendPoint[] = [];
+        for (let year = firstYear; year <= currentYear; year++) {
+            const count = years.get(year) || 0;
+            cumulative += count;
+            formatted.push({ year, timestamp: new Date(year, 0, 1).getTime(), count, cumulative });
+        }
+        setTrendData(formatted);
+    } catch (e) {
+        if (requestId !== trendRequest.current) return;
+        console.error("Failed to fetch trend", e);
+        setTrendData([]);
+        setTrendError(e instanceof Error ? e.message : 'FAERS trend retrieval failed.');
+    } finally {
+        if (requestId === trendRequest.current) setTrendLoading(false);
+    }
+  };
+
+
+  const applyAiResults = (currentData: EmergingAe[], aiResults: AiMatch[]) => {
+    const updated = currentData.map(ae => {
+        const aiMatch = aiResults.find(r => r.term.toUpperCase() === ae.term.toUpperCase());
+        return { ...ae, ai_match: aiMatch || ae.ai_match };
+    });
+    setData(updated);
+  };
+
+  const runAnalysis = async () => {
+    if (!drugName) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const resp = await fetch('/api/dashboard/faers/emerging', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ drug_name: drugName, set_id: setId })
+      });
+      if (!resp.ok) {
+        const errJson = await resp.json();
+        throw new Error(errJson.message || errJson.error || 'Failed to fetch analysis');
+      }
+      const json = await resp.json();
+      
+      const aiResp = await fetch(`/api/dashboard/faers/ai_results?set_id=${setId}&drug_name=${encodeURIComponent(drugName || '')}`);
+      const aiJson = aiResp.ok ? await aiResp.json() : {};
+      applyAiResults(json.all_time, aiJson.results || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const runAiMatch = async () => {
+    if (!data || !setId || !drugName) return;
+    
+    const targetTerms = aiCandidates.map(ae => ({ term: ae.term, count: candidateCount(ae) }));
+    if (!targetTerms.length) return;
+    setAiModalOpen(false);
+    setError(null);
+    setAiLoading(true);
+    try {
+        const resp = await fetch('/api/dashboard/faers/ai_rematch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                set_id: setId,
+                drug_name: drugName,
+                terms: targetTerms,
+                min_count: useCountThreshold ? aiMinCount + 1 : 0
+            })
+        });
+        if (!resp.ok) {
+            const errJson = await resp.json();
+            throw new Error(errJson.error || 'AI rematch failed');
+        }
+        const json = await resp.json();
+        applyAiResults(data, json.results);
+
+    } catch (err: any) {
+        setError("AI Semantic Matching Error: " + err.message);
+    } finally {
+        setAiLoading(false);
+    }
+  };
+
+  const candidateCount = (ae: EmergingAe) => emergingOnly ? ae.recent_count : ae.count;
+  const aiCandidates = (data || []).filter(ae =>
+    (emergingOnly ? ae.in_emerging : ae.in_all_time) &&
+    (!useCountThreshold || candidateCount(ae) > aiMinCount) &&
+    (!excludeExact || ae.label_matches.length === 0) &&
+    (!skipAnalyzed || !ae.ai_match)
+  ).sort((a, b) => candidateCount(b) - candidateCount(a));
+
+  // Pagination & Filtering Logic
+  const socOptions = Array.from(new Set((data || []).map(ae => ae.soc && ae.soc !== 'N/A' ? ae.soc : 'Unmapped'))).sort((a, b) => a.localeCompare(b));
+  const filteredData = data ? data.filter(ae => {
+    if (scope === 'recent' ? !ae.in_emerging : !ae.in_all_time) return false;
+    if (!ae.term.toLocaleLowerCase().includes(termSearch.trim().toLocaleLowerCase())) return false;
+    const soc = ae.soc && ae.soc !== 'N/A' ? ae.soc : 'Unmapped';
+    if (selectedSocs !== null && !selectedSocs.has(soc)) return false;
+    const status = ae.label_matches?.length ? 'exact' : !ae.ai_match ? 'not_analyzed' : ae.ai_match.found ? 'semantic' : 'not_found';
+    return activeFilters.has(status);
+  }).sort((a, b) => scope === 'recent' ? b.recent_count - a.recent_count : b.count - a.count) : [];
+
+  const totalItems = filteredData.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
+
+  return (
+    <div className="chart-card full-width faers-analysis" style={{ marginTop: '0', borderTop: 'none', paddingTop: '0' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--fdl-canvas)', padding: '14px 20px', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--fdl-navy-950)' }}>FAERS Adverse Events &amp; Label Evidence{drugName ? ` · ${drugName}` : ''}</h3>
+        </div>
+        {loading && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="loader" style={{ width: '16px', height: '16px', borderWidth: '2px', borderTopColor: 'var(--fdl-blue-600)' }}></div>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-muted)' }}>Analyzing Reports...</span>
+            </div>
+        )}
+      </div>
+
+      <div className="faers-toolbar">
+        <div className="faers-toggle" role="group" aria-label="Adverse event reporting period">
+          <button aria-pressed={scope === 'all'} onClick={() => { setScope('all'); setSelectedAe(null); setTrendData([]); }}>All-time Top 200</button>
+          <button aria-pressed={scope === 'recent'} onClick={() => { setScope('recent'); setSelectedAe(null); setTrendData([]); }}>Recent 5 Years Top 200</button>
+        </div>
+        <button className="faers-button faers-button-primary" onClick={() => { setEmergingOnly(scope === 'recent'); setAiModalOpen(true); }} disabled={aiLoading || loading || !data || !setId}>
+          {aiLoading ? 'Analyzing AEs…' : 'Run Semantic Analysis'}
+        </button>
+      </div>
+      <p className="faers-description">
+        {scope === 'recent' ? 'Top 200 reactions by reports received in the last five years.' : 'Top 200 reactions by reports received across all available years.'}
+        {' '}Both counts are shown for each reaction. Exact matching checks label text; semantic AI checks synonyms and clinical context.
+      </p>
+      <Modal isOpen={aiModalOpen} onClose={() => setAiModalOpen(false)} title="Configure AI Semantic Analysis">
+        <div className="faers-ai-options">
+          <label><input type="checkbox" checked={useCountThreshold} onChange={e => setUseCountThreshold(e.target.checked)} /> Occurrence &gt;
+            <input aria-label="Occurrence threshold" type="number" min="0" step="1" disabled={!useCountThreshold} value={aiMinCount} onChange={e => setAiMinCount(Math.max(0, Math.floor(Number(e.target.value) || 0)))} />
+          </label>
+          <label><input type="checkbox" checked={emergingOnly} onChange={e => setEmergingOnly(e.target.checked)} /> Use recent five-year Top 200</label>
+          <label><input type="checkbox" checked={excludeExact} onChange={e => setExcludeExact(e.target.checked)} /> Exclude exact label matches</label>
+          <label><input type="checkbox" checked={skipAnalyzed} onChange={e => setSkipAnalyzed(e.target.checked)} /> Skip previously analyzed AEs</label>
+        </div>
+        <p className="faers-description">Occurrence uses {emergingOnly ? 'recent five-year' : 'all-time'} report counts. These options determine the submitted list independently of table match filters.</p>
+        <div aria-live="polite" className="faers-ai-preview">
+          <strong>{aiCandidates.length} AEs will be sent</strong>
+          {aiCandidates.length > 30 && <p className="faers-ai-warning">Too many AEs may degrade AI performance. Showing the first 30; all {aiCandidates.length} selected AEs will be sent. Increase the threshold or narrow the selection to reduce the list.</p>}
+          {aiCandidates.length === 0 ? <p>No AEs match these options.</p> : <ol>{aiCandidates.slice(0, 30).map(ae => <li key={ae.term}><span>{ae.term}</span><span>{candidateCount(ae).toLocaleString()} reports</span></li>)}</ol>}
+        </div>
+        <div className="faers-modal-actions">
+          <button className="faers-button" onClick={() => setAiModalOpen(false)}>Cancel</button>
+          <button className="faers-button faers-button-primary" disabled={!aiCandidates.length || aiLoading} onClick={runAiMatch}>Analyze {aiCandidates.length} AEs</button>
+        </div>
+      </Modal>
+
+      {error && (
+        <div style={{ backgroundColor: 'var(--fdl-red-050)', border: '1px solid var(--fdl-red-050)', color: 'var(--fdl-red)', padding: '10px 14px', borderRadius: 'var(--fdl-radius-sm, 2px)', marginBottom: '16px', marginTop: '16px', fontSize: '0.8rem' }}>
+          {error}
+          {!data && <button className="faers-button" style={{ marginLeft: 12 }} disabled={loading} onClick={runAnalysis}>Retry</button>}
+        </div>
+      )}
+
+      {data && (
+        <div className="table-container" style={{ marginTop: '0', overflowX: 'auto' }}>
+          <div className="faers-search-bar">
+            <label htmlFor="faers-term-search">Filter AE terms</label>
+            <input id="faers-term-search" type="search" value={termSearch} onChange={event => setTermSearch(event.target.value)} placeholder="Search terms, e.g. Crohn" />
+            <span aria-live="polite">{totalItems} matching {totalItems === 1 ? 'term' : 'terms'}</span>
+          </div>
+          <p className="faers-search-hint">Search filters the selected Top 200 list.</p>
+          <table className="coverage-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+            <thead>
+              <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--fdl-line)', background: 'var(--fdl-line-soft)' }}>
+                <th style={{ padding: '10px 12px', width: '22%' }}>AE (MedDRA PT)</th>
+                <th style={{ padding: '10px 12px' }}>All-time reports</th>
+                <th style={{ padding: '10px 12px' }}>Recent 5 years</th>
+                <th style={{ padding: '10px 12px', width: '18%' }}>
+                  <details className="faers-soc-filter">
+                    <summary>SOC Hierarchy{selectedSocs !== null ? ` (${selectedSocs.size})` : ''}</summary>
+                    <div className="faers-soc-menu">
+                      <div className="faers-soc-menu-header"><strong>Filter by primary SOC</strong></div>
+                      <div className="faers-soc-menu-header"><button type="button" onClick={() => setSelectedSocs(null)}>Select all</button><button type="button" onClick={() => setSelectedSocs(new Set())}>Unselect all</button></div>
+                      <div className="faers-soc-options">
+                        {socOptions.map(soc => <label key={soc}><input type="checkbox" checked={selectedSocs === null || selectedSocs.has(soc)} onChange={() => setSelectedSocs(previous => { const next = new Set(previous === null ? socOptions : previous); if (next.has(soc)) next.delete(soc); else next.add(soc); return next; })} /> <span>{soc}</span></label>)}
+                      </div>
+                      <small>Select categories to filter the table.</small>
+                    </div>
+                  </details>
+                </th>
+                <th style={{ padding: '10px 12px', width: '26%' }}>
+                  <details className="faers-soc-filter">
+                    <summary>Label Evidence</summary>
+                    <div className="faers-soc-menu">
+                      <strong>Filter by match status</strong>
+                      <div className="faers-soc-options">
+                        {([['exact', 'Exact match'], ['semantic', 'AI match'], ['not_found', 'Not found'], ['not_analyzed', 'Not analyzed']] as const).map(([value, label]) => <label key={value}><input type="checkbox" checked={activeFilters.has(value)} onChange={() => toggleFilter(value)} /> <span>{label}</span></label>)}
+                      </div>
+                    </div>
+                  </details>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedData.length > 0 ? paginatedData.map((ae, i) => (
+                <tr 
+                    key={i} 
+                    onClick={() => setSelectedAe(ae)}
+                    style={{ 
+                        borderBottom: '1px solid var(--fdl-line-soft)', 
+                        verticalAlign: 'top',
+                        cursor: 'pointer',
+                        backgroundColor: selectedAe?.term === ae.term ? 'var(--fdl-blue-050)' : 'transparent',
+                        transition: 'background-color 0.2s ease'
+                    }}
+                    onMouseOver={e => { if (selectedAe?.term !== ae.term) e.currentTarget.style.backgroundColor = 'var(--fdl-canvas)'; }}
+                    onMouseOut={e => { if (selectedAe?.term !== ae.term) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                >
+                  <td style={{ padding: '12px', fontWeight: 700, color: 'var(--fdl-navy-950)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {selectedAe?.term === ae.term && <span style={{ color: 'var(--fdl-blue-600)' }}>→</span>}
+                        {ae.term}
+                    </div>
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{ background: 'var(--fdl-line-soft)', padding: '2px 8px', borderRadius: '2px', fontWeight: 800, color: 'var(--fdl-ink-soft)', fontSize: '0.75rem' }}>
+                        {ae.count.toLocaleString()}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px', fontWeight: 700 }}>{ae.recent_count.toLocaleString()}</td>
+                  <td style={{ padding: '12px' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--fdl-ink-soft)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>{ae.soc && ae.soc !== 'N/A' ? ae.soc : 'Unmapped'}</div>
+                    {ae.hlt && ae.hlt !== 'N/A' && <div style={{ fontSize: '0.7rem', color: 'var(--fdl-muted)', fontWeight: 500, marginTop: '2px' }}>{ae.hlt}</div>}
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    {ae.label_matches?.length > 0 ? (
+                      <div className="faers-evidence">
+                        <strong>Exact match</strong>
+                        {ae.label_matches.map((match, index) => <div key={index} className="faers-evidence-detail"><strong>{match.section}</strong><p>{match.snippet}</p></div>)}
+                        {ae.ai_match && <details onClick={event => event.stopPropagation()}><summary>AI analysis</summary><p>{ae.ai_match.found ? `AI match${ae.ai_match.section ? ` · ${ae.ai_match.section}` : ''}` : 'Not found by AI'}: {ae.ai_match.explanation}</p></details>}
+                      </div>
+                    ) : ae.ai_match ? (
+                      <div className="faers-evidence">
+                        <strong>{ae.ai_match.found ? `AI match${ae.ai_match.section ? ` · ${ae.ai_match.section}` : ''}` : 'Not found'}</strong>
+                        <p>{ae.ai_match.explanation}</p>
+                      </div>
+                    ) : <span className="faers-evidence-muted">Not analyzed</span>}
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--fdl-muted)', fontStyle: 'italic' }}>
+                    No AE terms match the current search and filters.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', padding: '0 4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--fdl-muted)', fontWeight: 600 }}>Show:</label>
+                    <select 
+                        value={itemsPerPage} 
+                        onChange={(e) => setItemsPerPage(parseInt(e.target.value))}
+                        style={{ padding: '4px 8px', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.75rem', fontWeight: 600 }}
+                    >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                    </select>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <button 
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        style={{ 
+                            padding: '6px 12px', 
+                            borderRadius: '2px', 
+                            border: '1px solid var(--fdl-line)', 
+                            background: currentPage === 1 ? 'var(--fdl-canvas)' : 'white', 
+                            cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            color: currentPage === 1 ? 'var(--fdl-line)' : 'var(--fdl-ink-soft)'
+                        }}
+                    >
+                        Previous
+                    </button>
+                    
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-muted)' }}>
+                        Page {currentPage} of {totalPages}
+                    </span>
+
+                    <button 
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        style={{ 
+                            padding: '6px 12px', 
+                            borderRadius: '2px', 
+                            border: '1px solid var(--fdl-line)', 
+                            background: currentPage === totalPages ? 'var(--fdl-canvas)' : 'white', 
+                            cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            color: currentPage === totalPages ? 'var(--fdl-line)' : 'var(--fdl-ink-soft)'
+                        }}
+                    >
+                        Next
+                    </button>
+                </div>
+            </div>
+          )}
+          <div style={{ marginTop: '12px', fontSize: '0.7rem', color: 'var(--fdl-muted)', textAlign: 'right', fontWeight: 500 }}>
+            Analysis Engine: Hybrid exact-string + semantic-AI. Results cached in project database.
+          </div>
+
+          {/* Trend Chart Section */}
+          <div style={{ 
+              marginTop: '24px', 
+              padding: '20px', 
+              background: 'var(--fdl-surface, var(--fdl-paper))', 
+              borderRadius: 'var(--fdl-radius-sm, 2px)', 
+              border: '1px solid var(--fdl-line, var(--fdl-line))',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--fdl-ink)' }}>
+                    {selectedAe ? `Reporting history · ${selectedAe.term}` : 'Select an AE term above to view reporting history'}
+                </h4>
+                {selectedAe && (
+                    <div style={{ fontSize: '0.75rem', color: 'var(--fdl-muted)', fontWeight: 600 }}>
+                        Recent Five-year Reports: <span style={{ color: 'var(--fdl-blue-600)', fontWeight: 800 }}>{selectedAe.recent_count}</span>
+                    </div>
+                )}
+            </div>
+
+
+            <div style={{ height: '300px', width: '100%', position: 'relative' }}>
+                {trendLoading ? (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.8)', zIndex: 10 }}>
+                        <div className="loader"></div>
+                    </div>
+                ) : trendError ? <div className="faers-trend-empty" role="alert">{trendError}</div> : trendData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="colorCumulative" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="var(--fdl-blue-600)" stopOpacity={0.1}/>
+                                    <stop offset="95%" stopColor="var(--fdl-blue-600)" stopOpacity={0}/>
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fdl-line-soft)" />
+                            <XAxis 
+                                dataKey="year"
+                                fontSize={11} 
+                                tickLine={false} 
+                                axisLine={false} 
+                                tick={{ fill: 'var(--fdl-muted)' }}
+                                minTickGap={30}
+                            />
+                            <YAxis 
+                                fontSize={11} 
+                                tickLine={false} 
+                                axisLine={false} 
+                                tick={{ fill: 'var(--fdl-muted)' }}
+                            />
+                            <Tooltip 
+                                contentStyle={{ borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line, #e2e8f0)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)' }}
+                                itemStyle={{ fontWeight: 700, fontSize: '0.85rem' }}
+                            />
+                            <Bar dataKey="count" fill="var(--fdl-blue-600)" name="Annual reports" maxBarSize={38} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                ) : (
+                    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--fdl-muted)', background: 'var(--fdl-canvas)', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px dashed var(--fdl-line)' }}>
+                        <span style={{ fontSize: '2rem', marginBottom: '8px' }}>📈</span>
+                        <p style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                            {selectedAe ? 'No trend data available for this term.' : 'Click a row in the table above to analyze its growth.'}
+                        </p>
+                    </div>
+                )}
+            </div>
+            <p className="faers-description">Reports by receipt year; the current year is incomplete. FAERS reports do not establish incidence or causality.</p>
+            {selectedAe && trendSubstitution?.term === selectedAe.term && <p className="faers-description" role="status">OpenFDA was queried using the substitute term “{trendSubstitution.substitute}”. Results may not accurately represent “{trendSubstitution.term}”.</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function FaersView({ 
+  activeTab, 
+  drugName,
+  setId
+}: { 
+  activeTab: string;
+  drugName?: string;
+  setId?: string;
+}) {
+  const { capabilities } = useCapabilities();
+  const status = capabilities.externalServices?.openfda?.status;
+  const unavailable = status === 'unavailable';
+  const [saved, setSaved] = useState<{ results?: AiMatch[]; timestamp?: string } | null>(null);
+  const [savedError, setSavedError] = useState('');
+  useEffect(() => {
+    if (!unavailable || !setId || !drugName || activeTab !== 'faers-view') return;
+    let cancelled = false;
+    setSaved(null);
+    setSavedError('');
+    fetch(`/api/dashboard/faers/ai_results?set_id=${encodeURIComponent(setId)}&drug_name=${encodeURIComponent(drugName)}`)
+      .then(response => { if (!response.ok) throw new Error('Could not load saved analysis.'); return response.json(); })
+      .then(result => { if (!cancelled) setSaved(result); })
+      .catch(error => { if (!cancelled) setSavedError(error.message); });
+    return () => { cancelled = true; };
+  }, [unavailable, setId, drugName, activeTab]);
+  return (
+    <div id="faers-view" className={`tab-content ${activeTab === 'faers-view' ? 'active' : ''}`} style={{ display: activeTab === 'faers-view' ? 'block' : 'none' }}>
+      <ServiceWarning toolId="label-faers" />
+      {!status ? <p>Checking server connectivity to OpenFDA…</p> : unavailable ? <section>
+        <h3>Saved semantic analysis</h3>
+        {saved?.timestamp && <p>Generated: {new Date(saved.timestamp).toLocaleString()}. Saved results do not reflect a new FAERS retrieval.</p>}
+        {savedError ? <p role="alert">{savedError}</p> : !saved ? <p>Loading saved results…</p> : !saved.results?.length ? <p>No saved semantic analysis is available for this product.</p> :
+          <table><thead><tr><th>Term</th><th>Label match</th><th>Explanation</th></tr></thead><tbody>{saved.results.map((result, i) => <tr key={`${result.term}-${i}`}><td>{result.term}</td><td>{result.found ? 'Yes' : 'No'}</td><td>{result.explanation}</td></tr>)}</tbody></table>}
+      </section> : <EmergingAeAnalysis drugName={drugName} setId={setId} activeTab={activeTab} />}
+    </div>
+  );
+}

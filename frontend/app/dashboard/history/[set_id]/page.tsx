@@ -1,0 +1,574 @@
+'use client';
+
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Header from '../../../components/Header';
+import Footer from '../../../components/Footer';
+import '../../../globals.css';
+import styles from '../../HistoryTrackPage.module.css';
+import { withAppBase, withApiBase } from '../../../utils/appPaths';
+
+interface HistoryRecord {
+    spl_id: string;
+    set_id: string;
+    product_names: string;
+    generic_names: string;
+    revised_date: string;
+    version_number: number | null;
+    parent_spl_id: string | null;
+    order_uncertain: boolean;
+    is_latest: boolean;
+    has_analysis: boolean;
+    executive_summary: string | null;
+    is_regulatory_notable: boolean;
+    last_analyzed_at: string | null;
+}
+
+interface DiffItem {
+    key: string;
+    title: string;
+    diff_new: string;
+    diff_old: string;
+    is_addition: boolean;
+    is_deletion: boolean;
+}
+
+const HistoryTrackPage = () => {
+    const params = useParams();
+    const set_id = params.set_id as string;
+    const router = useRouter();
+
+    const [history, setHistory] = useState<HistoryRecord[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isDiffLoading, setIsDiffLoading] = useState(false);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [selectedSplId, setSelectedSplId] = useState<string | null>(null);
+    const [baselineSelection, setBaselineSelection] = useState<{ current: string; previous: string } | null>(null);
+    const [pairSummary, setPairSummary] = useState<{ pair: string; text: string } | null>(null);
+    const activePairRef = useRef('');
+    const analysisController = useRef<AbortController | null>(null);
+    const [diffResults, setDiffResults] = useState<DiffItem[]>([]);
+    const [diffError, setDiffError] = useState<string | null>(null);
+    const [expandedSectionKey, setExpandedSectionKey] = useState<string | null>(null);
+    const [showFullContentKeys, setShowFullContentKeys] = useState<Record<string, boolean>>({});
+    const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
+
+    const toggleSection = (key: string) => {
+        setExpandedSectionKey(expandedSectionKey === key ? null : key);
+    };
+
+    const toggleFullContent = (key: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setShowFullContentKeys(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    const fetchHistory = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const res = await fetch(withApiBase(`/api/dashboard/history/${set_id}`));
+            const data = await res.json();
+            if (data.results) {
+                setHistory(data.results);
+                setSelectedSplId(current => current || data.results[0]?.spl_id || null);
+            } else if (data.error) {
+                setError(data.error);
+            }
+        } catch (err) {
+            console.error("History fetch error", err);
+            setError("Failed to load version history.");
+        } finally {
+            setIsLoading(false);
+        }
+    }, [set_id]);
+
+    // Fetch lineage
+    useEffect(() => {
+        if (set_id) fetchHistory();
+    }, [set_id, fetchHistory]);
+
+    const handleAnalyze = async () => {
+        if (!selectedSplId || !previousRecord) return;
+
+        const pair = `${selectedSplId}/${previousRecord.spl_id}`;
+        const controller = new AbortController();
+        analysisController.current = controller;
+        setIsAnalyzing(true);
+        try {
+            const res = await fetch(withApiBase('/api/dashboard/history/analyze'), {
+                method: 'POST',
+                signal: controller.signal,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    current_spl_id: selectedSplId,
+                    previous_spl_id: previousRecord.spl_id,
+                    force_refresh: true
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                if (activePairRef.current === pair && !controller.signal.aborted) {
+                    setPairSummary({ pair, text: data.analysis_json.executive_summary });
+                }
+            } else if (activePairRef.current === pair && !controller.signal.aborted) {
+                alert("Analysis failed: " + (data.error || "Unknown error"));
+            }
+        } catch (err) {
+            if (controller.signal.aborted || activePairRef.current !== pair) return;
+            console.error("Analysis trigger error", err);
+            alert("Failed to start analysis.");
+        } finally {
+            if (analysisController.current === controller) setIsAnalyzing(false);
+        }
+    };
+
+    const groupedData = useMemo(() => {
+        const bySetId: Record<string, HistoryRecord[]> = {};
+        const allDatesSet = new Set<string>();
+
+        history.forEach(h => {
+            if (!bySetId[h.set_id]) bySetId[h.set_id] = [];
+            bySetId[h.set_id].push(h);
+            allDatesSet.add(h.revised_date);
+        });
+
+        Object.values(bySetId).forEach(list => {
+            list.sort((a, b) => (b.revised_date || '').localeCompare(a.revised_date || '') || (b.version_number || 0) - (a.version_number || 0) || a.spl_id.localeCompare(b.spl_id));
+        });
+
+        const sortedDates = Array.from(allDatesSet).sort((a, b) => 
+            new Date(a).getTime() - new Date(b).getTime()
+        );
+
+        return { bySetId, sortedDates };
+    }, [history]);
+
+    const activeRecord = useMemo(() => 
+        history.find(h => h.spl_id === selectedSplId), 
+    [history, selectedSplId]);
+
+    const earlierRecords = useMemo(() => {
+        if (!activeRecord) return [];
+        return (groupedData.bySetId[activeRecord.set_id] || []).filter(record => {
+            if (record.spl_id === activeRecord.spl_id) return false;
+            if (record.spl_id === activeRecord.parent_spl_id) return true;
+            // Do not infer ordering from the SPL UUID when dates/versions are ambiguous.
+            if (!record.revised_date || !activeRecord.revised_date) return false;
+            if (record.revised_date !== activeRecord.revised_date) {
+                return record.revised_date < activeRecord.revised_date;
+            }
+            return !record.order_uncertain && !activeRecord.order_uncertain
+                && (record.version_number || 0) > 0
+                && (record.version_number || 0) < (activeRecord.version_number || 0);
+        });
+    }, [groupedData, activeRecord]);
+
+    const previousRecord = earlierRecords.find(record => record.spl_id === (
+        baselineSelection?.current === selectedSplId
+            ? baselineSelection.previous
+            : activeRecord?.parent_spl_id
+    )) || null;
+    const pairKey = previousRecord ? `${selectedSplId}/${previousRecord.spl_id}` : '';
+    activePairRef.current = pairKey;
+
+    // Each comparison owns its requests; a late response cannot replace a newer pair.
+    useEffect(() => {
+        const controller = new AbortController();
+        analysisController.current?.abort();
+        analysisController.current = null;
+        setIsAnalyzing(false);
+        setPairSummary(null);
+        setDiffResults([]);
+        setDiffError(null);
+        setExpandedSectionKey(null);
+        setShowFullContentKeys({});
+        setIsDiffLoading(Boolean(pairKey));
+        if (!pairKey) return () => controller.abort();
+
+        const fetchDiff = async () => {
+            try {
+                const res = await fetch(`/api/dashboard/history/diff/${pairKey}`, { signal: controller.signal });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || `XML comparison failed (${res.status})`);
+                if (!controller.signal.aborted) setDiffResults(data.diff || []);
+            } catch (err) {
+                if (!controller.signal.aborted) setDiffError(err instanceof Error ? err.message : 'Failed to compare the SPL XML documents.');
+            } finally {
+                if (!controller.signal.aborted) setIsDiffLoading(false);
+            }
+        };
+        const fetchSummary = async () => {
+            try {
+                const res = await fetch(`/api/dashboard/history/analysis/${selectedSplId}?previous_spl_id=${previousRecord?.spl_id}`, { signal: controller.signal });
+                const data = await res.json();
+                if (res.ok && data.found && !controller.signal.aborted && !analysisController.current) {
+                    setPairSummary({ pair: pairKey, text: data.analysis.executive_summary });
+                }
+            } catch (err) {
+                if (!controller.signal.aborted) console.error('Summary fetch error', err);
+            }
+        };
+        void fetchDiff();
+        void fetchSummary();
+        return () => { controller.abort(); analysisController.current?.abort(); };
+    }, [pairKey, selectedSplId, previousRecord?.spl_id]);
+
+    if (isLoading) {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+                <Header />
+                <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="loader"></div>
+                </main>
+                <Footer />
+            </div>
+        );
+    }
+
+    if (error || history.length === 0) {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+                <Header />
+                <main style={{ flex: 1, padding: '40px', textAlign: 'center' }}>
+                    <div style={{ maxWidth: '600px', margin: '8px auto', padding: '40px', backgroundColor: '#fff', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)', boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))' }}>
+                        <h2 style={{ color: '#ef4444', marginBottom: '10px' }}>History Not Found</h2>
+                        <p style={{ color: 'var(--fdl-muted, #5e6e7c)' }}>{error || "No version history exists for this Set-ID in the local archive."}</p>
+                        <button 
+                            onClick={() => router.back()}
+                            style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: 'var(--fdl-navy-800, #12375b)', color: '#fff', border: 'none', borderRadius: 'var(--fdl-radius-sm, 2px)', cursor: 'pointer' }}
+                        >
+                            Go Back
+                        </button>
+                    </div>
+                </main>
+                <Footer />
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: 'var(--fdl-canvas, #f3f6f8)', overflow: 'hidden' }}>
+            <Header />
+
+            <div style={{ display: 'flex', flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
+                {/* MAIN CONTENT AREA */}
+                <main style={{ flex: 1, backgroundColor: '#fff', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ 
+                        padding: '15px 40px', 
+                        borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)', 
+                        display: 'flex', 
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        position: 'sticky',
+                        top: 0,
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        zIndex: 10
+                    }}>
+                        <div>
+                            <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)', margin: 0 }}>
+                                {history[0].product_names?.split(';')[0]} - History
+                            </h1>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--fdl-muted, #5e6e7c)', marginTop: '2px' }}>
+                                Comparing <strong>SPL version {activeRecord?.version_number ?? "unknown"}</strong> ({activeRecord?.revised_date})
+                                {previousRecord ? (
+                                    <> vs <strong>SPL version {previousRecord.version_number ?? "unknown"}</strong> ({previousRecord.revised_date})</>
+                                ) : (
+                                    <> (No verified predecessor)</>
+                                )}
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <label style={{ fontSize: '0.8rem', color: 'var(--fdl-ink-soft, #273843)' }}>
+                                Compare with{' '}
+                                <select
+                                    aria-label="Compare with an earlier label version"
+                                    value={previousRecord?.spl_id || ''}
+                                    disabled={earlierRecords.length === 0}
+                                    onChange={event => setBaselineSelection({ current: selectedSplId!, previous: event.target.value })}
+                                    style={{ padding: '6px 10px', border: '1px solid var(--fdl-line, #b8c8d7)', borderRadius: 'var(--fdl-radius-sm, 2px)', backgroundColor: '#fff', color: 'var(--fdl-ink, #132332)', maxWidth: '300px' }}
+                                >
+                                    {!previousRecord && <option value="" disabled>{earlierRecords.length ? 'Select an earlier version' : 'No earlier version'}</option>}
+                                    {earlierRecords.map(record => (
+                                        <option key={record.spl_id} value={record.spl_id}>
+                                            SPL {record.version_number ?? '?'} · {record.revised_date || 'Unknown date'} · {record.spl_id.slice(0, 8)}{record.spl_id === activeRecord?.parent_spl_id ? ' (Previous version)' : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            <button 
+                                onClick={() => window.open(withAppBase(`/dashboard/label/${activeRecord?.set_id}?spl_id=${activeRecord?.spl_id}`), '_blank')}
+                                style={{ padding: '6px 14px', backgroundColor: '#fff', color: 'var(--fdl-ink-soft, #273843)', border: '1px solid var(--fdl-line, #b8c8d7)', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
+                            >
+                                View Label
+                            </button>
+                            <a
+                                href={previousRecord
+                                    ? `/labelcomp?set_ids=${previousRecord.set_id}&set_ids=${activeRecord?.set_id}&spl_ids=${previousRecord.spl_id}&spl_ids=${activeRecord?.spl_id}`
+                                    : `/labelcomp?set_ids=${activeRecord?.set_id}&spl_ids=${activeRecord?.spl_id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ padding: '6px 14px', backgroundColor: '#fff', color: 'var(--fdl-ink-soft, #273843)', border: '1px solid var(--fdl-line, #b8c8d7)', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 600, fontSize: '0.8rem', textDecoration: 'none' }}
+                            >
+                                LabelComp ↗
+                            </a>
+                            <button 
+                                onClick={handleAnalyze}
+                                disabled={isAnalyzing || !previousRecord || isDiffLoading || !!diffError || diffResults.length === 0}
+                                style={{ 
+                                    padding: '6px 14px', 
+                                    backgroundColor: (isAnalyzing || !previousRecord || isDiffLoading || !!diffError || diffResults.length === 0) ? '#94a3b8' : 'var(--fdl-navy-800, #12375b)',
+                                    color: '#fff', 
+                                    border: 'none', 
+                                    borderRadius: 'var(--fdl-radius-sm, 2px)', 
+                                    fontWeight: 600, 
+                                    fontSize: '0.8rem', 
+                                    cursor: (isAnalyzing || !previousRecord || isDiffLoading || !!diffError || diffResults.length === 0) ? 'not-allowed' : 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}
+                            >
+                                {isAnalyzing ? 'Analyzing...' : 'Analyze Changes'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style={{ padding: '30px 40px' }}>
+                        {pairSummary?.pair === pairKey && pairSummary.text && (
+                            <div style={{ 
+                                backgroundColor: '#fffbeb', 
+                                border: '1px solid #fde68a', 
+                                borderRadius: 'var(--fdl-radius-sm, 2px)', 
+                                padding: '20px',
+                                marginBottom: '25px'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                    <span style={{ fontSize: '1.1rem' }}>✨</span>
+                                    <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                                        AI Change Summary
+                                    </h3>
+                                </div>
+                                <p style={{ color: '#92400e', lineHeight: 1.5, fontSize: '0.9rem', marginBottom: '15px' }}>
+                                    {pairSummary.text}
+                                </p>
+
+                            </div>
+                        )}
+
+                        {!previousRecord ? (
+                            <div style={{ padding: '80px 0', textAlign: 'center' }}>
+                                <div style={{ fontSize: '2.5rem', marginBottom: '15px' }}>🚀</div>
+                                <h2 style={{ color: '#1e293b', fontSize: '1.1rem' }}>No verified predecessor</h2>
+                                <p style={{ color: '#64748b', maxWidth: '400px', margin: '8px auto', fontSize: '0.9rem' }}>
+                                    Select an earlier version above to compare. If none is available, this is the earliest stored SPL or its revision order is uncertain.
+                                </p>
+                            </div>
+                        ) : isDiffLoading ? (
+                            <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
+                                <div className="loader"></div>
+                            </div>
+                        ) : diffError ? (
+                            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#991b1b' }}>
+                                <h3 style={{ fontSize: '1rem' }}>Could not compare these SPL versions</h3>
+                                <p style={{ fontSize: '0.9rem', maxWidth: '520px', margin: '8px auto' }}>{diffError}</p>
+                            </div>
+                        ) : diffResults.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '80px 0', color: '#64748b' }}>
+                                <div style={{ fontSize: '2.5rem', marginBottom: '15px' }}>ℹ️</div>
+                                <h3 style={{ fontSize: '1rem', color: '#1e293b' }}>No XML changes identified</h3>
+                                <p style={{ fontSize: '0.9rem', maxWidth: '400px', margin: '8px auto' }}>
+                                    The complete SPL XML documents match after XML formatting normalization, including their image and media fingerprints.
+                                </p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ marginBottom: '15px', fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    SPL XML Change Blocks ({diffResults.length})
+                                </div>
+                                {diffResults.map((item) => {
+                                    const isExpanded = expandedSectionKey === item.key;
+                                    const showFull = showFullContentKeys[item.key] || false;
+                                    const isVeryLong = item.diff_new.length > 2000 || item.diff_old.length > 2000;
+
+                                    return (
+                                        <div key={item.key} className={styles.accordionItem}>
+                                            <div className={styles.accordionHeader} onClick={() => toggleSection(item.key)}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                    <span style={{ 
+                                                        transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', 
+                                                        transition: 'transform 0.2s',
+                                                        fontSize: '0.7rem',
+                                                        color: '#94a3b8'
+                                                    }}>▶</span>
+                                                    <h3 className={styles.accordionTitle}>{item.title}</h3>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                    {item.is_addition && <span style={{ fontSize: '0.6rem', padding: '2px 6px', backgroundColor: '#dcfce7', color: '#166534', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 800 }}>NEW</span>}
+                                                    {item.is_deletion && <span style={{ fontSize: '0.6rem', padding: '2px 6px', backgroundColor: '#fee2e2', color: '#991b1b', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 800 }}>REMOVED</span>}
+                                                    {!item.is_addition && !item.is_deletion && <span style={{ fontSize: '0.6rem', padding: '2px 6px', backgroundColor: '#f1f5f9', color: '#64748b', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 800 }}>CHANGED</span>}
+                                                </div>
+                                            </div>
+
+                                            <div className={`${styles.accordionContent} ${isExpanded ? styles.accordionContentExpanded : ''}`}>
+                                                <div className={styles.diffGrid}>
+                                                    {/* OLD VERSION PANE */}
+                                                    <div className={styles.diffPane}>
+                                                        <div className={styles.paneHeader}>BASELINE (SPL version {previousRecord?.version_number ?? "unknown"})</div>
+                                                        <div className={`${styles.longContentContainer} ${showFull ? styles.contentExpanded : ''}`}>
+                                                            <div 
+                                                                className={`diff-content ${styles.diffContainer}`}
+                                                                style={{ fontSize: '0.85rem', lineHeight: 1.6, color: '#64748b' }}
+                                                                dangerouslySetInnerHTML={{ __html: item.diff_old || '<i style="color: #cbd5e1">Empty</i>' }}
+                                                            />
+                                                            {isVeryLong && !showFull && <div className={styles.showMoreOverlay}></div>}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* NEW VERSION PANE */}
+                                                    <div className={styles.diffPane}>
+                                                        <div className={styles.paneHeader}>CURRENT (SPL version {activeRecord?.version_number ?? "unknown"})</div>
+                                                        <div className={`${styles.longContentContainer} ${showFull ? styles.contentExpanded : ''}`}>
+                                                            <div 
+                                                                className={`diff-content ${styles.diffContainer}`}
+                                                                style={{ fontSize: '0.85rem', lineHeight: 1.6, color: '#0f172a' }}
+                                                                dangerouslySetInnerHTML={{ __html: item.diff_new || '<i style="color: #cbd5e1">Empty</i>' }}
+                                                            />
+                                                            {isVeryLong && !showFull && (
+                                                                <div className={styles.showMoreOverlay}>
+                                                                    <button className={styles.showMoreButton} onClick={(e) => toggleFullContent(item.key, e)}>
+                                                                        Show Full Differences
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {showFull && (
+                                                    <div style={{ padding: '10px 20px', borderTop: '1px solid #f1f5f9', textAlign: 'center', backgroundColor: '#f8fafc' }}>
+                                                        <button className={styles.showMoreButton} onClick={(e) => toggleFullContent(item.key, e)}>
+                                                            Collapse Section
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </main>
+
+                {/* BOTTOM TIMELINE */}
+                <div style={{ 
+                    height: isTimelineCollapsed ? '45px' : '200px', 
+                    backgroundColor: '#fff', 
+                    borderTop: '1px solid #e2e8f0',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    zIndex: 20,
+                    transition: 'height 0.3s ease'
+                }}>
+                    <div style={{ 
+                        padding: '10px 20px', 
+                        borderBottom: '1px solid #f1f5f9', 
+                        display: 'flex', 
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        cursor: 'pointer'
+                    }} onClick={() => setIsTimelineCollapsed(!isTimelineCollapsed)}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ transform: isTimelineCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.3s' }}>▲</span>
+                            Version History Timeline
+                        </span>
+                        {!isTimelineCollapsed && (
+                            <div style={{ display: 'flex', gap: '15px', fontSize: '0.75rem', color: '#94a3b8' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', border: '2px solid #cbd5e1' }}></div> Historical</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#1e40af' }}></div> Selected</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }}></div> Current</div>
+                            </div>
+                        )}
+                        {isTimelineCollapsed && (
+                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                Selected: <strong>SPL version {activeRecord?.version_number ?? "unknown"}</strong> ({activeRecord?.revised_date})
+                            </div>
+                        )}
+                    </div>
+
+                    {!isTimelineCollapsed && (
+                        <div style={{ flex: 1, overflow: 'auto', padding: '0 20px' }}>
+                            <div style={{ minWidth: 'max-content', padding: '20px 0' }}>
+                                <table style={{ borderCollapse: 'separate', borderSpacing: '0 12px' }}>
+                                    <thead>
+                                        <tr>
+                                            <th style={{ minWidth: '150px', textAlign: 'left', padding: '0 20px', fontSize: '0.75rem', color: '#94a3b8' }}>Product</th>
+                                            {groupedData.sortedDates.map(date => (
+                                                <th key={date} style={{ minWidth: '120px', textAlign: 'center', padding: '0 10px' }}>
+                                                    <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>{date}</div>
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {Object.keys(groupedData.bySetId).map(setId => (
+                                            <tr key={setId}>
+                                                <td style={{ padding: '0 20px', verticalAlign: 'middle' }}>
+                                                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e293b', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {groupedData.bySetId[setId][0].product_names?.split(';')[0]}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>
+                                                        {setId.slice(0, 8)}...
+                                                    </div>
+                                                </td>
+                                                {groupedData.sortedDates.map(date => {
+                                                    const records = groupedData.bySetId[setId].filter(r => r.revised_date === date);
+                                                    return (
+                                                        <td key={date} style={{ position: 'relative', padding: '0 10px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                                            <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: '2px', backgroundColor: '#f1f5f9', zIndex: 1 }}></div>
+                                                            {records.map(record => {
+                                                                const isSelected = record.spl_id === selectedSplId;
+                                                                return <div key={record.spl_id}
+                                                                    onClick={() => { setBaselineSelection(null); setSelectedSplId(record.spl_id); }}
+                                                                    style={{
+                                                                        position: 'relative',
+                                                                        zIndex: 5,
+                                                                        minWidth: '64px',
+                                                                        padding: '0 6px',
+                                                                        height: '24px',
+                                                                        borderRadius: 'var(--fdl-radius-sm, 2px)',
+                                                                        backgroundColor: isSelected ? 'var(--fdl-navy-800, #12375b)' : (record.is_latest ? '#10b981' : '#fff'),
+                                                                        border: `2px solid ${isSelected ? 'var(--fdl-navy-800, #12375b)' : (record.is_latest ? '#10b981' : 'var(--fdl-line, #b8c8d7)')}`,
+                                                                        margin: '8px auto',
+                                                                        cursor: 'pointer',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        transition: 'transform 0.2s'
+                                                                    }}
+                                                                    title={`SPL version ${record.version_number ?? "unknown"} · ${record.revised_date} · ${record.spl_id}${record.order_uncertain ? " · Order uncertain" : ""}`}
+                                                                >
+                                                                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: isSelected || record.is_latest ? '#fff' : '#64748b' }}>
+                                                                        SPL {record.version_number ?? "?"}{record.order_uncertain ? " ⚠" : ""}
+                                                                    </span>
+                                                                </div>;
+                                                            })}
+                                                        </td>
+                                                    );
+                                                })}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <Footer />
+        </div>
+    );
+};
+
+export default HistoryTrackPage;

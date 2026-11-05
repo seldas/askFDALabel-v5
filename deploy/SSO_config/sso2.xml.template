@@ -1,0 +1,29 @@
+<!-- Template FDA SAML SSO2 IdP Metadata. Replace with your actual IdP metadata in production. -->
+<md:EntityDescriptor ID="tY5zDqZlDzJX.iteiLOSQfuZ8Og" cacheDuration="PT1440M" entityID="http://sso.example.com" xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata">
+<md:IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+<md:KeyDescriptor use="signing">
+<ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+<ds:X509Data>
+<ds:X509Certificate>
+MIIDwzCCAqugAwIBAgIGAZy/aoipMA0GCSqGSIb3DQEBCwUAMHYxCzAJBgNVBAYT
+AlVTMREwDwYDVQQIEwhNYXJ5bGFuZDEWMBQGA1UEBxMNU2lsdmVyIFNwcmluZzEl
+MCMGA1UEChMcRm9vZCBhbmQgRHJ1ZyBBZG1pbmlzdHJhdGlvbjEVMBMGA1UEAxMM
+c3NvMi5mZGEuZ292MB4XDTI2MDMwNTE5MTIzNloXDTI4MDMwNDE5MTIzNlowdjEL
+MAkGA1UEBhMCVVMxETAPBgNVBAgTCE1hcnlsYW5kMRYwFAYDVQQHEw1TaWx2ZXIg
+U3ByaW5nMSUwIwYDVQQKExxGb29kIGFuZCBEcnVnIEFkbWluaXN0cmF0aW9uMRUw
+EwYDVQQDEwxzc28yLmZkYS5nb3Y=
+</ds:X509Certificate>
+</ds:X509Data>
+</ds:KeyInfo>
+</md:KeyDescriptor>
+<md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://sso.example.com/idp/SSO.saml2"/>
+<md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://sso.example.com/idp/SSO.saml2"/>
+</md:IDPSSODescriptor>
+<md:ContactPerson contactType="administrative">
+<md:Company>Food and Drug Administration</md:Company>
+<md:GivenName>SSO</md:GivenName>
+<md:SurName>Administrator</md:SurName>
+<md:EmailAddress>sso-admin@example.com</md:EmailAddress>
+<md:TelephoneNumber>555-0100</md:TelephoneNumber>
+</md:ContactPerson>
+</md:EntityDescriptor>

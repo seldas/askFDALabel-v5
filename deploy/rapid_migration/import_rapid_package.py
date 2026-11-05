@@ -1,0 +1,306 @@
+#!/usr/bin/env python3
+"""
+RAPID Migration Package Importer
+
+Loads Docker images from saved tar archives and extracts config/project files
+and (optionally) data.zip into the destination folder to overwrite existing files.
+
+Usage:
+    python import_rapid_package.py [--include-data] [--source-dir SOURCE_DIR] [--target-dir TARGET_DIR] [--skip-images]
+"""
+
+import os
+import sys
+import argparse
+import subprocess
+import zipfile
+import json
+import shutil
+from package_utils import sha256, safe_target, validate_zip, unlink_if_exists
+from pathlib import Path
+
+# Base paths
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parents[1] if (SCRIPT_DIR.name == "rapid_migration" and SCRIPT_DIR.parent.name == "deploy") else SCRIPT_DIR.parent
+
+def run_cmd(cmd, cwd=REPO_ROOT, check=True):
+    """Executes a subprocess command with clear logging."""
+    cmd_str = " ".join(cmd) if isinstance(cmd, list) else cmd
+    print(f"[RUN] {cmd_str}")
+    res = subprocess.run(cmd, cwd=cwd, check=False)
+    if check and res.returncode != 0:
+        print(f"[ERROR] Command failed with exit code {res.returncode}")
+        sys.exit(res.returncode)
+    return res.returncode == 0
+
+def load_docker_images(source_dir, manifest):
+    """Loads docker images from individual tar.gz or tar archives in source_dir."""
+    print("\n--- Loading Docker Images ---")
+    unique_archives = [safe_target(source_dir, item["archive"]) for item in manifest["images"]]
+
+    for archive_path in unique_archives:
+        print(f"[LOAD] Loading Docker image from: {archive_path.name}...")
+        run_cmd(["docker", "load", "-i", str(archive_path)])
+    for item in manifest["images"]:
+        result = subprocess.run(["docker", "image", "inspect", item["tag"], "--format", "{{.Id}}"],
+                                check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        if result.stdout.strip() != item["id"]:
+            raise ValueError(f"Loaded image ID does not match manifest: {item['tag']}")
+    print("[SUCCESS] All Docker images loaded and verified successfully.")
+
+def fix_directory_ownership(dest_dir):
+    """
+    Ensures dest_dir (and subdirectories like data/) are writable by the current user.
+    If files or folders are owned by root from previous Docker runs, repairs
+    ownership using an ephemeral Docker container with the current user's UID/GID.
+    """
+    if os.name == "nt":
+        return
+    try:
+        uid = os.getuid()
+        gid = os.getgid()
+        if uid == 0:
+            return
+
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        needs_fix = False
+        for check_path in [dest_dir, dest_dir / "data", dest_dir / "backend", dest_dir / "frontend"]:
+            if check_path.exists():
+                if not os.access(check_path, os.W_OK):
+                    needs_fix = True
+                    break
+                test_file = check_path / f".perm_test_{os.getpid()}"
+                try:
+                    test_file.touch()
+                    unlink_if_exists(test_file)
+                except (PermissionError, OSError):
+                    needs_fix = True
+                    break
+
+        if needs_fix:
+            print(f"[INFO] Detected root-owned files or restricted permissions in {dest_dir}. Auto-repairing via Docker...")
+            for img in ["fdalabel-v3-backend:latest", "fdalabel-v3-redis:latest", "alpine:latest"]:
+                res = subprocess.run(
+                    ["docker", "run", "--rm", "-v", f"{dest_dir}:/work", "-w", "/work",
+                     img, "chown", "-R", f"{uid}:{gid}", "/work"],
+                    check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+                if res.returncode == 0:
+                    print("[SUCCESS] Fixed directory ownership in target destination.")
+                    break
+    except Exception as e:
+        print(f"[WARN] Directory ownership auto-repair check skipped: {e}")
+
+def unzip_archive(zip_path, dest_dir, exclude_filenames=None):
+    """Unzips a zip file into dest_dir, overwriting existing files except excluded ones (such as .env)."""
+    if not zip_path.exists():
+        print(f"[ERROR] Zip archive not found: {zip_path}")
+        sys.exit(1)
+
+    validate_zip(zip_path, dest_dir)
+    fix_directory_ownership(dest_dir)
+
+    exclude_set = set(exclude_filenames or [".env"])
+    exclude_set.add(".env")
+    print(f"[UNZIP] Extracting {zip_path.name} to {dest_dir} (overwriting existing files, protecting .env)...")
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        for member in zf.infolist():
+            member_name = Path(member.filename.replace("\\", "/")).name
+            if member.filename.replace("\\", "/").startswith("data/config/"):
+                print(f"  - Skipped target runtime configuration: {member.filename}")
+                continue
+            # Skip excluded files (such as .env to protect environment settings)
+            if member.filename in exclude_set or member_name in exclude_set or member_name == ".env":
+                print(f"  - Skipped protected file: {member.filename}")
+                continue
+
+            # Extra safeguard: never overwrite an existing .env file
+            target_path = safe_target(dest_dir, member.filename)
+            if target_path.name == ".env" and target_path.exists():
+                print(f"  - Preserved existing file from overwrite: {target_path}")
+                continue
+
+            # Extract member explicitly to support overwrite
+            if member.is_dir():
+                target_path.mkdir(parents=True, exist_ok=True)
+            else:
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                if target_path.exists():
+                    try:
+                        os.chmod(target_path, 0o666)
+                    except Exception:
+                        pass
+                try:
+                    with zf.open(member) as source, open(target_path, "wb") as target:
+                        shutil.copyfileobj(source, target, length=1024 * 1024)
+                except PermissionError:
+                    # Attempt unlink or Docker permission repair and retry once
+                    try:
+                        unlink_if_exists(target_path)
+                        with zf.open(member) as source, open(target_path, "wb") as target:
+                            shutil.copyfileobj(source, target, length=1024 * 1024)
+                    except PermissionError:
+                        fix_directory_ownership(dest_dir)
+                        if target_path.exists():
+                            try:
+                                unlink_if_exists(target_path)
+                            except Exception:
+                                pass
+                        with zf.open(member) as source, open(target_path, "wb") as target:
+                            shutil.copyfileobj(source, target, length=1024 * 1024)
+
+                print(f"  + Extracted: {member.filename}")
+
+def report_sso_setup(target_dir):
+    """Report SSO setup still needed without changing the target's environment."""
+    required_files = [
+        "deploy/sso_config.py",
+        "deploy/nginx_config.py",
+        "deploy/SSO_config/sso2.xml",
+        "deploy/SSO_config/sso3-metadata.xml",
+        "deploy/SSO_config/rapid_saml_acs.conf",
+    ]
+    missing_files = [name for name in required_files if not (target_dir / name).is_file()]
+    if missing_files:
+        print("[WARNING] RAPID SSO files missing: " + ", ".join(missing_files))
+        print("          Re-export the package using the updated exporter before starting RAPID.")
+
+    env_path = target_dir / ".env"
+    if env_path.exists():
+        values = {}
+        for raw_line in env_path.read_text(encoding="utf-8-sig").splitlines():
+            line = raw_line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                values[key.strip()] = value.strip().strip('\"\'')
+        required_values = ("FDA_SAML_ENTITY_ID", "FDA_SAML_ACS_URL", "FDA_SAML_ACS_PATH")
+        missing_values = [key for key in required_values if not values.get(key)]
+        if missing_values:
+            print("[NOTICE] Existing .env needs FDA SSO settings: " + ", ".join(missing_values))
+            print("         Merge the SAML section from .env.rapid.template; preserve existing credentials.")
+
+    print("[NOTICE] RAPID starts bundled nginx with an ACS route generated from the FDA registration settings.")
+    print("         Configure RAPID_NGINX_CERT_FILE/RAPID_NGINX_KEY_FILE (default: deploy/nginx/certs/rapid/cert.pem and key.pem).")
+    print("         Provision RAPID TLS files separately; packages/images exclude nginx certificates and private keys.")
+    print("         Alternatively terminate HTTPS upstream, preserving Host and X-Forwarded-Proto.")
+    print("         Only with --no-nginx: apply deploy/SSO_config/rapid_saml_acs.conf to your external nginx configuration.")
+    print("         Keep the SP Entity ID and ACS URL exactly as registered with FDA.")
+    print("         RAPID uses FDA SSO; no Keycloak container or test credentials are required.")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Import Docker images and migration packages for RAPID deployment.")
+    parser.add_argument("--include-data", action="store_true", default=False,
+                        help="Unzip data.zip to overwrite data/ directory. Default is False.")
+    parser.add_argument("--source-dir", default=str(SCRIPT_DIR),
+                        help="Source directory containing archives (default: deploy/rapid_migration).")
+    parser.add_argument("--target-dir", default=str(REPO_ROOT),
+                        help="Destination directory to extract files into (default: project root).")
+    parser.add_argument("--verify-only", action="store_true",
+                        help="Validate release files without loading images or writing target files.")
+    parser.add_argument("--skip-images", action="store_true", default=False,
+                        help="Skip loading Docker images.")
+
+    args = parser.parse_args()
+    source_dir = Path(args.source_dir).resolve()
+    target_dir = Path(args.target_dir).resolve()
+
+    print(f"==================================================")
+    print(f" RAPID Migration Package Importer")
+    print(f"  Source Dir:   {source_dir}")
+    print(f"  Target Dir:   {target_dir}")
+    print(f"  Include Data: {args.include_data}")
+    print(f"  Skip Images:  {args.skip_images}")
+    print(f"==================================================")
+
+    # Validate the complete release before loading images or overwriting files.
+    manifest_path = source_dir / "manifest.json"
+    if not manifest_path.is_file():
+        parser.error("manifest.json is required. Re-export this release with the updated exporter.")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("format_version") != 1:
+        parser.error("Unsupported migration manifest version.")
+    required_tags = {f"fdalabel-v3-{name}:latest" for name in ("backend", "frontend", "redis", "nginx")}
+    images = manifest.get("images", [])
+    if not required_tags.issubset({item["tag"] for item in images}):
+        parser.error("Release is missing required RAPID images.")
+    if len({item["tag"] for item in images}) != len(images):
+        parser.error("Duplicate image tags in manifest.")
+    files = manifest.get("files", {})
+    required_files = {item["archive"] for item in images} | {"rapid_files.zip"}
+    if args.include_data:
+        required_files.add("data.zip")
+    if not required_files.issubset(files):
+        parser.error("Manifest is missing required artifacts.")
+    for name, info in files.items():
+        path = safe_target(source_dir, name)
+        if not path.is_file() or path.stat().st_size != info["size"] or sha256(path) != info["sha256"]:
+            parser.error(f"Missing or damaged release artifact: {name}")
+    validate_zip(source_dir / "rapid_files.zip", target_dir)
+    with zipfile.ZipFile(source_dir / "rapid_files.zip") as archive:
+        required_runtime = {"start_server.py", "deploy/sso_config.py", "deploy/nginx_config.py",
+                            "deploy/SSO_config/sso2.xml", "deploy/SSO_config/sso3-metadata.xml",
+                            "deploy/rapid_migration/package_utils.py"}
+        if not required_runtime.issubset(archive.namelist()):
+            parser.error("Configuration archive is missing required runtime files.")
+    if args.include_data:
+        validate_zip(source_dir / "data.zip", target_dir)
+    print(f"[OK] Release {manifest['release_id']} passed preflight validation.")
+
+    if args.verify_only:
+        return
+
+    # 1. Load Docker Images
+    if not args.skip_images:
+        load_docker_images(source_dir, manifest)
+    else:
+        print("[INFO] Skipping Docker image load (--skip-images flag set).")
+
+    # 2. Extract Config & Mounted Files (protect .env)
+    rapid_files_zip = source_dir / "rapid_files.zip"
+    if rapid_files_zip.exists():
+        unzip_archive(rapid_files_zip, target_dir, exclude_filenames=[".env"])
+    else:
+        print(f"[WARNING] {rapid_files_zip.name} not found. Skipping file extraction.")
+
+    # 3. Extract Data (if requested)
+    if args.include_data:
+        data_zip = source_dir / "data.zip"
+        if data_zip.exists():
+            unzip_archive(data_zip, target_dir, exclude_filenames=[".env", "env_settings.json"])
+        else:
+            print(f"[ERROR] {data_zip.name} not found in {source_dir}.")
+            sys.exit(1)
+    else:
+        print("\n[INFO] Data extraction skipped (use --include-data to unpack data.zip).")
+
+    # 4. Check for .env file existence
+    target_env = target_dir / ".env"
+    if not target_env.exists():
+        rapid_template = target_dir / ".env.rapid.template"
+        std_template = target_dir / ".env.template"
+        print("\n[NOTICE] .env file not found in target directory.")
+        if rapid_template.exists():
+            print(f"         For RAPID environment, copy: cp .env.rapid.template .env")
+        elif std_template.exists():
+            print(f"         Copy template: cp .env.template .env")
+        else:
+            print("         Please create and configure your .env file before starting the server.")
+    else:
+        print(f"\n[INFO] Preserved existing .env configuration ({target_env}).")
+
+    report_sso_setup(target_dir)
+
+    print("\n==================================================")
+    print("[COMPLETE] Migration import finished successfully!")
+    print("Next steps:")
+    print("  1. Configure .env: copy .env.rapid.template only for a new deployment; otherwise merge missing settings.")
+    print("  2. (If new DB) Restore DB:    python deploy/rapid_migration/restore_db.py")
+    print("  3. Configure RAPID nginx TLS paths, or upstream TLS termination.")
+    print("  4. Launch RAPID Server:       python start_server.py --runtime docker --rapid")
+    print("==================================================")
+
+if __name__ == "__main__":
+    main()

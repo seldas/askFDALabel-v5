@@ -1,0 +1,37 @@
+:root {
+  /* Federal-scientific color roles */
+  --fdl-navy-950: #071f3d;
+  --fdl-navy-800: #12375b;
+  --fdl-blue-700: #0759a5;
+  --fdl-blue-600: #0071bc;
+  --fdl-blue-100: #dcecf8;
+  --fdl-blue-050: #edf4fa;
+  --fdl-paper: #ffffff;
+  --fdl-canvas: #f3f6f8;
+  --fdl-ink: #132332;
+  --fdl-ink-soft: #273843;
+  --fdl-muted: #5e6e7c;
+  --fdl-line: #b8c8d7;
+  --fdl-line-soft: #d7e0e7;
+  --fdl-red: #b50909;
+  --fdl-red-050: #fff1f1;
+  --fdl-green: #2d7a4c;
+  --fdl-green-050: #edf7f0;
+  --fdl-amber: #8a5700;
+  --fdl-amber-050: #fff8e6;
+
+  /* Layout and type */
+  --fdl-font-ui: var(--font-inter), "Segoe UI", Arial, sans-serif;
+  --fdl-font-mono: var(--font-geist-mono), "Cascadia Mono", Consolas, monospace;
+  --fdl-font-evidence: Georgia, "Times New Roman", serif;
+  --fdl-header-height: 72px;
+  --fdl-page-max: 1440px;
+  --fdl-space-1: 0.25rem;
+  --fdl-space-2: 0.5rem;
+  --fdl-space-3: 0.75rem;
+  --fdl-space-4: 1rem;
+  --fdl-space-5: 1.5rem;
+  --fdl-space-6: 2rem;
+  --fdl-space-7: 3rem;
+  --fdl-space-8: 4rem;
+}

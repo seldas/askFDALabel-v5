@@ -1,0 +1,303 @@
+'use client';
+
+/*
+ * askFDALabel v5 — tool launcher.
+ *
+ * Renders the tools that apply to a given context. This is the component that
+ * makes the platform "direct the user to the right tool": give it a label, a
+ * project, or nothing at all, and it offers what is reachable from there.
+ *
+ * Two shapes:
+ *   variant="cards"  the tool directory and context landing pages
+ *   variant="strip"  a compact row, used as the label workspace tab bar
+ */
+
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { useMemo } from 'react';
+import { useCapabilities, type Capabilities } from './capabilities';
+import { useUser } from '../context/UserContext';
+import { ToolIcon } from './icons';
+import { Badge, Grid, Tabs } from './primitives';
+import { contextKinds, labelRoute, type ContextKind, type LaunchContext } from './context';
+import {
+  TOOLS,
+  TOOL_GROUP_LABELS,
+  type Requirement,
+  type ToolDef,
+  type ToolGroup,
+} from './registry';
+import './toolLauncher.css';
+import { ServiceWarning, toolServiceState } from './ServiceWarning';
+
+function meetsRequirement(req: Requirement, caps: Capabilities): boolean {
+  switch (req) {
+    case 'nonRapid':
+      return caps.isRapid === false;
+    case 'internal':
+      return caps.isInternal;
+    case 'fdaAccessible':
+      return caps.fdaAccessible;
+    case 'cderAccessible':
+      return caps.cderAccessible;
+    case 'localQuery':
+      return caps.allowLocalQuery;
+    default:
+      return true;
+  }
+}
+
+/**
+ * What the *account* is allowed to reach, as opposed to what the deployment
+ * can reach. Omitted means "nothing gated", which is the safe default for a
+ * tool carrying a featureKey — better to hide briefly while the session loads
+ * than to offer a tool the API will refuse.
+ */
+export interface ToolAccess {
+  permissions?: Record<string, boolean>;
+}
+
+export function isToolAvailable(
+  tool: ToolDef,
+  ctx: LaunchContext,
+  caps: Capabilities,
+  access?: ToolAccess,
+): boolean {
+  if (tool.enabled === false) return false;
+  if (tool.featureKey && !access?.permissions?.[tool.featureKey]) return false;
+  const kinds = contextKinds(ctx);
+  if (!tool.contexts.some((kind) => kinds.includes(kind))) return false;
+  if (tool.applies && !tool.applies(ctx)) return false;
+  return (tool.requires ?? []).every((req) => meetsRequirement(req, caps));
+}
+
+/** Reads the current account's per-feature verdicts from the session. */
+export function useToolAccess(): ToolAccess {
+  const { session } = useUser();
+  return useMemo(
+    () => ({ permissions: session?.permissions }),
+    [session?.permissions],
+  );
+}
+
+/** Tools reachable from `ctx`, optionally filtered to specific ids or groups. */
+export function useAvailableTools(
+  ctx: LaunchContext,
+  opts?: {
+    include?: string[];
+    exclude?: string[];
+    groups?: ToolGroup[];
+    matchContexts?: ContextKind[];
+  },
+): ToolDef[] {
+  const { capabilities } = useCapabilities();
+  const access = useToolAccess();
+  const { include, exclude, groups, matchContexts } = opts ?? {};
+
+  return useMemo(() => {
+    return TOOLS.filter((tool) => {
+      if (include && !include.includes(tool.id)) return false;
+      if (exclude?.includes(tool.id)) return false;
+      if (groups && !groups.includes(tool.group)) return false;
+      if (matchContexts && !tool.contexts.some((k) => matchContexts.includes(k))) {
+        return false;
+      }
+      return isToolAvailable(tool, ctx, capabilities, access);
+    });
+  }, [ctx, capabilities, access, include, exclude, groups, matchContexts]);
+}
+
+/**
+ * Tools offered by the label workspace's Toolbox tab.
+ *
+ * The same catalog the navigation and the tool directory read, narrowed to the
+ * label context -- so a tool added to the registry appears here with no further
+ * change, and one gated away from the account disappears from here too. The
+ * reader is excluded because it is the view the toolbox is rendered beside.
+ */
+const TOOLBOX_OPTS = { matchContexts: ['label'] as ContextKind[] };
+
+export function useToolboxTools(ctx: LaunchContext): ToolDef[] {
+  const tools = useAvailableTools(ctx, TOOLBOX_OPTS);
+  return useMemo(() => tools.filter((tool) => !tool.hideInToolbox), [tools]);
+}
+
+function ToolAnchor({
+  tool,
+  href,
+  className,
+  children,
+  ...rest
+}: {
+  tool: ToolDef;
+  href: string;
+  className?: string;
+  children: React.ReactNode;
+} & React.AnchorHTMLAttributes<HTMLAnchorElement>) {
+  const { capabilities } = useCapabilities();
+  const state = toolServiceState(tool, capabilities);
+  if (state.disabled) {
+    return <span className={className} role="group" title={state.message} tabIndex={0}>
+      <span aria-disabled="true">{children}</span>
+      {tool.id === 'label-faers' && <Link href={href}>View saved results</Link>}
+    </span>;
+  }
+  if (tool.kind === 'external') {
+    return (
+      <a
+        href={href}
+        className={className}
+        target={tool.target ?? '_blank'}
+        rel="noopener noreferrer"
+        {...rest}
+      >
+        {children}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={href} className={className} target={tool.target} {...rest}>
+      {children}
+    </Link>
+  );
+}
+
+function ToolCard({ tool, ctx }: { tool: ToolDef; ctx: LaunchContext }) {
+  return (
+    <ToolAnchor tool={tool} href={tool.href(ctx)} className="afl-tool-card">
+      <span className="afl-tool-card__icon" aria-hidden="true">
+        <ToolIcon id={tool.iconId} size={22} />
+      </span>
+      <span className="afl-tool-card__body">
+        <span className="afl-tool-card__title">
+          {tool.name}
+          <ServiceWarning toolId={tool.id} compact />
+          {tool.kind === 'external' ? (
+            <span className="afl-tool-card__external" title="Opens in a new tab">
+              <ToolIcon id="external" size={13} />
+            </span>
+          ) : null}
+        </span>
+        <span className="afl-tool-card__blurb">{tool.blurb}</span>
+      </span>
+    </ToolAnchor>
+  );
+}
+
+export interface ToolLauncherProps {
+  context: LaunchContext;
+  variant?: 'cards' | 'strip';
+  include?: string[];
+  exclude?: string[];
+  groups?: ToolGroup[];
+  matchContexts?: ContextKind[];
+  grouped?: boolean;
+  activeToolId?: string;
+  emptyState?: React.ReactNode;
+  'aria-label'?: string;
+}
+
+export function ToolLauncher({
+  context,
+  variant = 'cards',
+  include,
+  exclude,
+  groups,
+  matchContexts,
+  grouped = false,
+  activeToolId,
+  emptyState = null,
+  'aria-label': ariaLabel = 'Tools',
+}: ToolLauncherProps) {
+  const tools = useAvailableTools(context, { include, exclude, groups, matchContexts });
+
+  if (tools.length === 0) return <>{emptyState}</>;
+
+  if (variant === 'strip') {
+    return (
+      <Tabs label={ariaLabel} className="afl-tool-strip">
+        {tools.map((tool) => (
+          <ToolAnchor
+            key={tool.id}
+            tool={tool}
+            href={tool.href(context)}
+            className="afl-tab"
+            role="tab"
+            aria-selected={tool.id === activeToolId}
+          >
+            <ToolIcon id={tool.iconId} size={15} />
+            {tool.name}
+            <ServiceWarning toolId={tool.id} compact />
+          </ToolAnchor>
+        ))}
+      </Tabs>
+    );
+  }
+
+  if (!grouped) {
+    return (
+      <Grid min="260px" aria-label={ariaLabel}>
+        {tools.map((tool) => (
+          <ToolCard key={tool.id} tool={tool} ctx={context} />
+        ))}
+      </Grid>
+    );
+  }
+
+  const order: ToolGroup[] = ['discover', 'analyze', 'manage', 'validate', 'reference'];
+  const byGroup = order
+    .map((group) => ({ group, items: tools.filter((tool) => tool.group === group) }))
+    .filter((entry) => entry.items.length > 0);
+
+  return (
+    <div className="afl-tool-groups">
+      {byGroup.map(({ group, items }) => (
+        <section key={group}>
+          <h3 className="afl-tool-groups__heading">{TOOL_GROUP_LABELS[group]}</h3>
+          <Grid min="260px">
+            {items.map((tool) => (
+              <ToolCard key={tool.id} tool={tool} ctx={context} />
+            ))}
+          </Grid>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+export function LabelToolStrip({
+  setId,
+  activeToolId,
+}: {
+  setId: string;
+  activeToolId?: string;
+}) {
+  const searchParams = useSearchParams();
+  const isToolbox = searchParams?.get('view') === 'toolbox';
+
+  return (
+    <Tabs label="Label workspace navigation" className="afl-tool-strip">
+      <Link
+        href={labelRoute(setId)}
+        className="afl-tab"
+        role="tab"
+        aria-selected={!isToolbox}
+      >
+        <ToolIcon id="document" size={15} />
+        Label View
+      </Link>
+      <Link
+        href={`${labelRoute(setId)}?view=toolbox`}
+        className="afl-tab"
+        role="tab"
+        aria-selected={isToolbox}
+      >
+        <ToolIcon id="wrench" size={15} />
+        Toolbox
+      </Link>
+    </Tabs>
+  );
+}
+
+export default ToolLauncher;
