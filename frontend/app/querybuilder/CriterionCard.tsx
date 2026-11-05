@@ -439,8 +439,16 @@ export function CriterionCard({
               <Select
                 ariaLabel="Field scope"
                 value={v.field || 'any'}
-                disabled={Boolean(v.entityNamesResolved)}
-                onChange={(field) => set({ field })}
+                disabled={Boolean(v.entityNamesResolved && (!v.field || v.field === 'any'))}
+                onChange={(field) => set({
+                  field,
+                  candidateNames: undefined,
+                  entityNamesResolved: false,
+                  entityCandidateNames: undefined,
+                  entityCandidateDetails: undefined,
+                  entityOriginalNames: undefined,
+                  entityExcludedNames: [],
+                })}
                 options={[
                   { value: 'any', label: 'All Product Identifiers' },
                   { value: 'trade', label: 'Trade / Brand Name' },
@@ -557,6 +565,14 @@ export function CriterionCard({
             <p className="fdl-note">
               {v.entityNamesResolved ? (
                 'Each selected name badge is matched as an exact product or generic name. Remove a badge to exclude it, or use Clear all to remove this criterion.'
+              ) : (v.field && v.field !== 'any') ? (
+                isExact ? (
+                  `Search will match ${v.field === 'trade' ? 'brand name' : v.field === 'generic' ? 'generic name' : 'active ingredient'} exactly (no mapping to related ingredients).`
+                ) : isStartsWith ? (
+                  `Search will match products starting with this ${v.field === 'trade' ? 'brand name' : v.field === 'generic' ? 'generic name' : 'active ingredient'}.`
+                ) : (
+                  `Search will match products containing this ${v.field === 'trade' ? 'brand name' : v.field === 'generic' ? 'generic name' : 'active ingredient'} (no mapping to other ingredients).`
+                )
               ) : isExact ? (
                 v.verified !== false ? (
                   'Standardized product name is confirmed. Exact match index scan will be used.'

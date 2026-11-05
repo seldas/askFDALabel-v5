@@ -333,6 +333,22 @@ def _entity_expansions(query, target_db, translate_intent=None):
             # dose combination) must remain independent contains predicates;
             # exact-name expansion would exclude the combination products.
             product_op = value.get('op', 'equals') if ctype == 'productName' else None
+            product_field = value.get('field') or 'any'
+            is_specific_field = product_field in ('trade', 'generic', 'unii')
+
+            if ctype == 'productName' and is_specific_field:
+                # When a specific field (Brand Name, Generic Name, or Active Ingredient)
+                # is selected, search defaults to direct/exact field matching:
+                # it must NEVER map to active ingredients or expand to related drug products,
+                # regardless of whether the global Exact Match checkbox is checked,
+                # and regardless of whether the operator is 'equals' or 'contains'.
+                value['entityNamesResolved'] = False
+                value.pop('candidateNames', None)
+                value.pop('entityCandidateNames', None)
+                value.pop('entityCandidateDetails', None)
+                value.pop('entityExpansionApplied', None)
+                continue
+
             probe_flexible_name = (
                 bool(translate_intent)
                 and not exact_match
@@ -956,6 +972,18 @@ def suggest_product_name():
                         LENGTH(NORMD_GENERIC_NAME), NORMD_GENERIC_NAME
                     FETCH NEXT 40 ROWS ONLY
                 """
+            elif field == 'unii':
+                ingr_match = search.match('ACT_INGR_NAMES', pattern)
+                sql = f"""
+                    SELECT DISTINCT ACT_INGR_NAMES AS VALUE FROM druglabel.DGV_SUM_SPL
+                    WHERE {ingr_match} AND ACT_INGR_NAMES IS NOT NULL
+                    ORDER BY 
+                        CASE WHEN UPPER(ACT_INGR_NAMES) = :exact_q THEN 1 
+                             WHEN UPPER(ACT_INGR_NAMES) LIKE :prefix_p THEN 2 
+                             ELSE 3 END, 
+                        LENGTH(ACT_INGR_NAMES), ACT_INGR_NAMES
+                    FETCH NEXT 40 ROWS ONLY
+                """
             else:
                 sql = f"""
                     WITH candidates AS (
@@ -982,8 +1010,10 @@ def suggest_product_name():
                 col_sql = "s.product_names"
             elif field == 'generic':
                 col_sql = "s.generic_names"
+            elif field == 'unii':
+                col_sql = "s.active_ingredients"
             else:
-                col_sql = "COALESCE(s.product_names, '') || '; ' || COALESCE(s.generic_names, '')"
+                col_sql = "COALESCE(s.product_names, '') || '; ' || COALESCE(s.generic_names, '') || '; ' || COALESCE(s.active_ingredients, '')"
 
             search = NameSearchParams({'q': q, 'pattern': pattern})
             source_match = search.match(col_sql, pattern)

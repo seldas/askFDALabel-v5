@@ -86,6 +86,16 @@ export function QueryPanel({
       criteria: group.criteria.map((criterion) => {
         const value = { ...criterion.value } as Record<string, any>;
         if (criterion.type === 'productName') {
+          // If a specific field is chosen (trade, generic, unii),
+          // keep direct field matching without active ingredient expansion.
+          if (value.field && value.field !== 'any') {
+            value.entityNamesResolved = false;
+            delete value.candidateNames;
+            delete value.entityCandidateNames;
+            delete value.entityCandidateDetails;
+            delete value.entityExpansionApplied;
+            return { ...criterion, value };
+          }
           const original = Array.isArray(value.entityOriginalNames)
             ? value.entityOriginalNames
             : String(value.text || '').split(/[;,\n]/).map((name: string) => name.trim()).filter(Boolean);

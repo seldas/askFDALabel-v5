@@ -312,15 +312,19 @@ def _c_product_name(criterion, bag, warnings):
     columns = _PRODUCT_NAME_COLUMNS.get(field) or _PRODUCT_NAME_COLUMNS['any']
 
     if op == 'equals':
-        patterns = terms[:]
+        clauses = [
+            f"EXISTS (SELECT 1 FROM unnest(string_to_array(COALESCE({col}, ''), ';')) AS names(entity_name) "
+            f"WHERE UPPER(TRIM(names.entity_name)) = {bag.add(term.upper())})"
+            for col in columns for term in terms
+        ]
+        return '(' + ' OR '.join(clauses) + ')'
     elif op == 'startsWith':
         patterns = [f'{t}%' for t in terms]
     else:
         patterns = [f'%{t}%' for t in terms]
 
-    # Exact name criteria keep their literal spelling; flexible searches allow
-    # a space wherever the name has a hyphen (and vice versa).
-    clauses = [name_match_sql(f"COALESCE({col}, '')" if op == 'notContains' else col, pattern, bag.add, exact=(op == 'equals'))
+    # Flexible searches allow a space wherever the name has a hyphen (and vice versa).
+    clauses = [name_match_sql(f"COALESCE({col}, '')" if op == 'notContains' else col, pattern, bag.add, exact=False)
                for col in columns for pattern in patterns]
     match = '(' + ' OR '.join(clauses) + ')'
     return f'NOT {match}' if op == 'notContains' else match
