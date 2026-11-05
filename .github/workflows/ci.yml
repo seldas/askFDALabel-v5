@@ -1,0 +1,93 @@
+name: CI Quality & Security Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security-audit:
+    name: Secret & Sensitive Info Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: TruffleHog Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+
+      - name: Custom Compliance Pattern Scan
+        run: |
+          echo "Scanning for internal domain names and hardcoded credentials..."
+          FORBIDDEN_PATTERNS=(
+            'ncshpcgpu01\.fda\.gov'
+            'ncsvmscidevl03\.fda\.gov'
+            '1986414'
+            'deploy/data_transfer/MedDRA_latest'
+          )
+          FAIL=0
+          for pattern in "${FORBIDDEN_PATTERNS[@]}"; do
+            MATCHES=$(grep -rnE "$pattern" . \
+              --exclude-dir={.git,node_modules,.next,venv,__pycache__} \
+              --exclude={.github/workflows/ci.yml} || true)
+            if [ -n "$MATCHES" ]; then
+              echo "::error::Found forbidden internal pattern/credential: '$pattern'"
+              echo "$MATCHES"
+              FAIL=1
+            fi
+          done
+          if [ $FAIL -ne 0 ]; then
+            echo "Security compliance check failed. Please remove the above internal references or sensitive strings."
+            exit 1
+          fi
+          echo "No forbidden internal patterns found."
+
+  backend-check:
+    name: Backend Syntax & Imports Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install Core Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Check Python Syntax Across Repository
+        run: |
+          python -m compileall -q backend/ deploy/
+
+  frontend-check:
+    name: Frontend TypeScript Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run TypeScript Type Check
+        working-directory: frontend
+        run: npm run lint
