@@ -330,6 +330,13 @@ def _c_product_name(criterion, bag, warnings):
     return f'NOT {match}' if op == 'notContains' else match
 
 
+def _c_repacker(criterion, bag, warnings):
+    mode = (criterion.get('mode') or '').strip().lower()
+    if mode in ('exclude', 'remove', 'no_repack', 'remove_repacker'):
+        return "(s.market_categories NOT ILIKE '%repack%' AND s.market_categories NOT ILIKE '%relabel%')"
+    return None
+
+
 def _c_full_text(criterion, bag, warnings):
     if (criterion.get('text') or '').strip():
         warnings.append('Full-text search is disabled for the local database.')
@@ -578,6 +585,8 @@ def _compile_criterion(criterion, bag, warnings, expand_meddra, capabilities):
         return _c_oracle_only(value, warnings, 'DEA schedule search', 'values')
     if ctype == 'activeMoiety':
         return _c_oracle_only(value, warnings, 'Active moiety search', 'terms')
+    if ctype == 'repacker':
+        return _c_repacker(value, bag, warnings)
 
     raise QueryCompileError(f'Unknown criterion type: {ctype!r}')
 

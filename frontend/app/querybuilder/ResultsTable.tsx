@@ -75,6 +75,7 @@ export interface QueryFacets {
   dosageForms?: FacetItem[];
   pharmClasses?: FacetItem[];
   deaSchedule?: FacetItem[];
+  repacker?: FacetItem[];
 }
 
 export interface ResultSet {

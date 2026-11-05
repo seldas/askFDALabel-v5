@@ -77,6 +77,7 @@ export default function SidebarFilters({
     labelingFormat: true,
     applicationType: true,
     rldFilter: true,
+    repacker: true,
     marketStatus: false,
     route: true,
     dosageForm: false,
@@ -200,6 +201,9 @@ export default function SidebarFilters({
 
   const deaCrit = getCriterion('deaSchedule');
   const deaValues: string[] = Array.isArray(deaCrit?.value?.values) ? (deaCrit.value.values as string[]) : [];
+
+  const repackerCrit = getCriterion('repacker');
+  const repackerMode: string = typeof repackerCrit?.value?.mode === 'string' ? repackerCrit.value.mode : 'all';
 
   // Filter 0-count items PubMed style
   const hasFacets = Boolean(facets && Object.keys(facets).length > 0);
@@ -634,6 +638,57 @@ export default function SidebarFilters({
             )}
           </div>
         )}
+
+        {/* 3c. Repacker / Relabeler Filter */}
+        <div className={`fdl-filter-group ${openSections.repacker ? 'is-open' : ''}`}>
+          <button
+            type="button"
+            className="fdl-filter-group__header"
+            onClick={() => toggleAccordion('repacker')}
+          >
+            <span className="fdl-filter-group__name">Repacker / Relabeler</span>
+            <span className="fdl-filter-group__right">
+              {repackerMode !== 'all' && (
+                <span className="fdl-filter-group__count">1</span>
+              )}
+              <span className="fdl-filter-group__arrow">
+                {openSections.repacker ? '▾' : '▸'}
+              </span>
+            </span>
+          </button>
+
+          {openSections.repacker && (
+            <div className="fdl-filter-group__body">
+              <div className="fdl-radio-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[
+                  { id: 'all', label: 'All', count: totalResults },
+                  {
+                    id: 'exclude',
+                    label: 'Remove relabeler/repacker',
+                    count: getFacetCount('repacker', 'exclude'),
+                  },
+                ].map((opt) => (
+                  <label key={opt.id} className="fdl-radio-label">
+                    <input
+                      type="radio"
+                      name="repackerOption"
+                      checked={repackerMode === opt.id}
+                      onChange={() =>
+                        updateCriterion('repacker', (prev) => ({ ...prev, mode: opt.id }))
+                      }
+                    />
+                    <span>{opt.label}</span>
+                    {hasFacets && isCounted('repacker') && opt.count !== undefined && (
+                      <span className={`fdl-facet-count${opt.count === 0 ? ' fdl-facet-count--zero' : ''}`}>
+                        ({opt.count.toLocaleString()})
+                      </span>
+                    )}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* 4. Market Status */}
         {(statusPicks.length > 0 || msMin || msMax) && (

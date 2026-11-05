@@ -74,6 +74,10 @@ FACET_SCALARS = [
     ('marketStatus', 'status_otc', 'OTC', 'OTC',
      "doc_type ILIKE '%%otc%%'",
      "UPPER(m.DOCUMENT_TYPE) LIKE '%OTC%'"),
+
+    ('repacker', 'exclude', 'exclude', 'Remove relabeler/repacker',
+     "(market_categories NOT ILIKE '%%repack%%' AND market_categories NOT ILIKE '%%relabel%%')",
+     "NOT EXISTS (SELECT 1 FROM druglabel.DGV_SPL_PROD rp WHERE rp.SPL_ID = m.SPL_ID AND TRIM(rp.EQUIV_TO_NDC_CODE) IS NOT NULL)"),
 ]
 
 # Categories whose values are data rather than a fixed list. Ordered by count
@@ -108,6 +112,7 @@ CATEGORY_CRITERION = {
     'dosageForms': ('dosageForm', ('values',)),
     'pharmClasses': ('pharmClass', ('terms',)),
     'deaSchedule': ('deaSchedule', ('values',)),
+    'repacker': ('repacker', ('mode',)),
 }
 
 # Every key of CATEGORY_CRITERION has to be listed in the frontend's

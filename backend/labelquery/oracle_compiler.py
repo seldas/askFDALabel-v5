@@ -482,6 +482,16 @@ def _compile_market_status(value, bag, alias='s'):
     return '(' + ' AND '.join(res) + ')'
 
 
+def _compile_repacker(value, bag, alias='s'):
+    mode = (value.get('mode') or '').strip().lower()
+    if mode in ('exclude', 'remove', 'no_repack', 'remove_repacker'):
+        return (
+            f"NOT EXISTS (SELECT 1 FROM druglabel.DGV_SPL_PROD rp "
+            f"WHERE rp.SPL_ID = {alias}.SPL_ID AND TRIM(rp.EQUIV_TO_NDC_CODE) IS NOT NULL)"
+        )
+    return None
+
+
 def _meddra_selection(value):
     """
     The PTs, the LLTs and the LLTs to leave out, from either shape of the
@@ -988,6 +998,9 @@ def compile_oracle_predicates(query, expand_meddra=None, capabilities=None,
             elif ctype == 'identifier':
                 c = _compile_identifier(cval, bag)
                 if c: group_relational.append(c)
+            elif ctype == 'repacker':
+                c = _compile_repacker(cval, bag, alias='s')
+                if c: group_relational.append(c)
             else:
                 warnings.append(f'Unsupported criterion "{ctype}" was ignored.')
 
@@ -1050,6 +1063,7 @@ _CATEGORY_COMPILERS = {
     'routes': lambda cval, bag, base_table: _compile_route(cval, bag, alias='m'),
     'dosageForms': lambda cval, bag, base_table: _compile_dosage_form(cval, bag, alias='m'),
     'pharmClasses': lambda cval, bag, base_table: _compile_pharm_class(cval, bag, alias='m'),
+    'repacker': lambda cval, bag, base_table: _compile_repacker(cval, bag, alias='m'),
 }
 
 

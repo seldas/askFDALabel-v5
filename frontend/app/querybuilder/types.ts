@@ -22,7 +22,8 @@ export type CriterionType =
   | 'deaSchedule'
   | 'activeMoiety'
   | 'pharmClass'
-  | 'identifier';
+  | 'identifier'
+  | 'repacker';
 
 export type CriterionValue = Record<string, unknown>;
 
@@ -252,6 +253,12 @@ export const CRITERION_DEFS: Record<CriterionType, CriterionDef> = {
       uniiCode: '',
       uniiTarget: 'active',
     }),
+  },
+  repacker: {
+    type: 'repacker',
+    title: 'Repacker / Relabeler',
+    shortTitle: 'Repacker / Relabeler',
+    defaultValue: () => ({ mode: 'all' }),
   },
 };
 
@@ -502,6 +509,8 @@ export function isCriterionEmpty(c: Criterion): boolean {
     case 'dosageForm':
     case 'deaSchedule':
       return !(v.values?.length > 0);
+    case 'repacker':
+      return !v.mode || v.mode === 'all';
     case 'labelingType':
       return !(v.values?.length > 0) && (!v.plr || v.plr === 'all');
     case 'applicationType':
@@ -551,6 +560,7 @@ const FACET_FILTER_FIELDS: Partial<Record<CriterionType, string[]>> = {
   dosageForm: ['values'],
   pharmClass: ['terms'],
   deaSchedule: ['values'],
+  repacker: ['mode'],
 };
 
 /**
