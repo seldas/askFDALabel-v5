@@ -1,6 +1,6 @@
 # AskFDALabel Documentation Hub
 
-Welcome to the central technical documentation repository for **AskFDALabel v5**. This documentation suite covers the system architecture, domain feature modules, and deployment runbooks.
+Welcome to the central technical documentation repository for **AskFDALabel v5**. This documentation suite covers the system architecture, domain feature modules, deployment runbooks, and historical archives.
 
 ---
 
@@ -10,7 +10,8 @@ Welcome to the central technical documentation repository for **AskFDALabel v5**
 documents/
 ├── architecture/           # Core System & Software Architecture
 ├── modules/                # Feature Modules & Clinical Intelligence Tools
-└── operations/             # Operations, Deployment & Administration
+├── operations/             # Operations, Deployment & Administration
+└── archived/               # Historical & Superseded Architectural Records
 ```
 
 ---
@@ -33,6 +34,7 @@ documents/
 - **[DrugTox: Toxicology Intelligence](file:///d:/Coding/askFDALabel_v5/documents/modules/drugtox.md)**: DILI Rule-of-Two assessment, cardiotoxicity (DICT), renal injury (DIRI), chemical structure visualization, and FAERS signals.
 - **[Medical Device Intelligence](file:///d:/Coding/askFDALabel_v5/documents/modules/device_intelligence.md)**: openFDA 510(k), PMA, recall enforcement, and MAUDE adverse event reports.
 - **[Label Query Builder & Local Query Workspace](file:///d:/Coding/askFDALabel_v5/documents/modules/local_query_builder.md)**: 13-type criteria catalog, database scopes, entity expansion, Quick search, portable query codes, and external AI imports.
+- **[WebTest Validation Suite](file:///d:/Coding/askFDALabel_v5/documents/modules/webtest_validation.md)**: Automated regression testing comparing local engine results against official FDA web services.
 
 ---
 
@@ -43,3 +45,10 @@ documents/
 - **[RAPID Migration System](file:///d:/Coding/askFDALabel_v5/documents/operations/rapid_migration_guide.md)**: Package exporter, importer, database dumping, and zero-downtime restoration.
 - **[Database Initialization](file:///d:/Coding/askFDALabel_v5/documents/operations/database_initialization.md)**: Numbered database scripts (`db_02` to `db_12`) and external reference data ingestion.
 - **[Oracle FDALabel & MedDRA Reference](file:///d:/Coding/askFDALabel_v5/documents/operations/oracle_fdalabel_reference.md)**: Technical schema dictionary and criteria category mapping for internal Oracle FDALabel.
+
+---
+
+### 4. Historical & Superseded
+- **[Archived Index](file:///d:/Coding/askFDALabel_v5/documents/archived/README.md)**: Inventory of deprecated architectures and historical development notes.
+- **[Full-Text Search & Vector Pipeline](file:///d:/Coding/askFDALabel_v5/documents/archived/full_text_and_vector_search.md)**: Why `spl_sections` TSVECTOR and agentic vector search were removed.
+- **[Legacy SQLite Architecture](file:///d:/Coding/askFDALabel_v5/documents/archived/legacy_sqlite_architecture.md)**: Early proof-of-concept SQLite database (`afd.db`) notes.

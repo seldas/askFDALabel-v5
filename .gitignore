@@ -90,3 +90,21 @@ deploy/data_transfer/*.docx
 
 # Versioned offline migration bundles
 deploy/rapid_migration/releases/
+
+# Local development, inspection, and cleanup scripts
+backend/check_queries.py
+backend/cleanup_db.py
+backend/cleanup_tasks.py
+backend/inspect_db.py
+backend/inspect_db2.py
+backend/reset_drugtox.py
+backend/update_versions.py
+backend/database/scripts/import_archive_labels.py
+backend/drugtox/prev_code/
+data/sync_schema.py
+patch_export.py
+frontend/clean_changed.py
+
+# Local development-only notes and archived styles
+documents/elsa_openai.md
+frontend/style-archive/
