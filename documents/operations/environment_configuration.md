@@ -55,7 +55,7 @@ Templates are provided at:
 ### 2.5 Oracle FDALabel Connectivity (Optional)
 | Variable | Description | Default / Example |
 |---|---|---|
-| `FDALabel_HOST` | Oracle database host. | `ncsvmscidevl03.fda.gov` |
+| `FDALabel_HOST` | Oracle database host. | `oracle-dev.example.com` |
 | `FDALabel_PORT` | Oracle database port. | `1521` |
 | `FDALabel_SERVICE`| Oracle service name / SID. | `scidevl3` |
 | `FDALabel_USER` | Oracle database username. | `lwu` |

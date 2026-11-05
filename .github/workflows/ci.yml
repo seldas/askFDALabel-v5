@@ -25,17 +25,17 @@ jobs:
       - name: Custom Compliance Pattern Scan
         run: |
           echo "Scanning for internal domain names and hardcoded credentials..."
-          FORBIDDEN_PATTERNS=(
-            'ncshpcgpu01\.fda\.gov'
-            'ncsvmscidevl03\.fda\.gov'
-            '1986414'
-            'deploy/data_transfer/MedDRA_latest'
-          )
+          # Match forbidden strings without writing the plain literals in this yaml file
+          P1=$(echo "bmNzaHBjZ3B1MDEuZmRhLmdvdg==" | base64 -d)
+          P2=$(echo "bmNzdk1zY2lkZXZsMDMuZmRhLmdvdg==" | base64 -d)
+          P3=$(echo "MTk4NjQxNA==" | base64 -d)
+          P4=$(echo "ZGVwbG95L2RhdGFfdHJhbnNmZXIvTWVkRFJBX2xhdGVzdA==" | base64 -d)
+
+          FORBIDDEN_PATTERNS=("$P1" "$P2" "$P3" "$P4")
           FAIL=0
           for pattern in "${FORBIDDEN_PATTERNS[@]}"; do
-            MATCHES=$(grep -rnE "$pattern" . \
-              --exclude-dir={.git,node_modules,.next,venv,__pycache__} \
-              --exclude={.github/workflows/ci.yml} || true)
+            MATCHES=$(grep -rnF "$pattern" . \
+              --exclude-dir={.git,node_modules,.next,venv,__pycache__} || true)
             if [ -n "$MATCHES" ]; then
               echo "::error::Found forbidden internal pattern/credential: '$pattern'"
               echo "$MATCHES"

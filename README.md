@@ -193,7 +193,7 @@ python backend/database/scripts/db_04_import_orange_book.py
 # 4. Import Established Pharmacologic Class (EPC) indexing
 python backend/database/scripts/db_05_import_epc_indexing.py
 
-# 5. Create default administrator account (admin / 1986414)
+# 5. Create default administrator account (admin / AdminPass123!)
 python backend/database/scripts/db_06_create_admin.py
 
 # 6. Ingest SPL label packages from storage

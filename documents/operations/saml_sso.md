@@ -30,7 +30,7 @@ Run `python start_server.py --runtime docker --mode dev --build`. Open
 `http://localhost:8841/fdalabel-v3/` and select **Sign in with Test SSO (Keycloak)**.
 Keycloak is at `http://localhost:8843`. The starter prints the credentials file
 path (`data/keycloak/<profile>/credentials.json`). The default application test
-login is **leihong / 1986414**, configurable through `KEYCLOAK_TEST_USERNAME` and
+login is **testuser / TestPassword123!**, configurable through `KEYCLOAK_TEST_USERNAME` and
 `KEYCLOAK_TEST_PASSWORD` in `.env`. These settings apply to local/HPC Keycloak
 only and do not affect rapid/FDA SSO. The separate randomly generated admin
 credentials open Keycloak's console in the `master` realm; `sso-admin` is not an
@@ -43,15 +43,15 @@ Keep the same browser hostname throughout login (do not alternate localhost and
 Docker `--mode prod` now derives its default public host from `API_SERVER_HOST`
 (falling back to `NEXT_PUBLIC_API_SERVER_HOST`). A matching `NEXT_PUBLIC_WIDGET_HOST`
 provides the public scheme and port, including upstream HTTPS termination.
-With the repository's HPC settings this produces `https://ncshpcgpu01.fda.gov`
-and Keycloak at `https://ncshpcgpu01.fda.gov/sso`. Docker dev keeps localhost by
+With the repository's HPC settings this produces `https://saml.example.com`
+and Keycloak at `https://saml.example.com/sso`. Docker dev keeps localhost by
 default. An explicit `SSO_PUBLIC_ORIGIN` always overrides those Keycloak defaults;
 remove a leftover localhost override when deploying to HPC.
 
 Set the origin to the exact address used by browsers, for example:
 
 ```
-SSO_PUBLIC_ORIGIN=https://ncshpcgpu01.fda.gov
+SSO_PUBLIC_ORIGIN=https://saml.example.com
 KEYCLOAK_PUBLIC_URL=
 KEYCLOAK_SP_ENTITY_ID=
 ```
@@ -60,7 +60,7 @@ Run `python start_server.py --runtime apptainer --mode prod --build` (or Docker
 on hosts using that runtime). With the bundled nginx, Keycloak is served at
 `<origin>/sso`. Apptainer listens on HTTP 8080 / HTTPS 8443, so an origin without
 a port requires an upstream proxy forwarding to those ports. Alternatively set
-the origin to `https://ncshpcgpu01.fda.gov:8443` when visiting nginx directly.
+the origin to `https://saml.example.com:8443` when visiting nginx directly.
 Configure trusted TLS certificates under `deploy/nginx/cert.pem` and `key.pem`,
 or terminate TLS at the upstream proxy. The upstream must preserve Host and
 X-Forwarded-Proto and forward both the app/API paths and `/sso/`.

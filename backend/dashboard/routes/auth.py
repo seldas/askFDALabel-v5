@@ -173,14 +173,14 @@ def session():
             'env_vllm_model': os.getenv("LLM_MODEL", ""),
             'env_ollama_url': os.getenv("OLLAMA_URL", ""),
             'has_gemini_key': False if is_internal else bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
-            'api_server_host': os.getenv("API_SERVER_HOST") or os.getenv("DEV_SERVER_HOST") or "ncshpcgpu01.fda.gov",
+            'api_server_host': os.getenv("API_SERVER_HOST") or os.getenv("DEV_SERVER_HOST") or "localhost",
             'allowed_ai_providers': allowed_providers
         })
     return jsonify({
         **public_config(),
         'is_authenticated': False,
         'is_internal': is_internal,
-        'api_server_host': os.getenv("API_SERVER_HOST") or os.getenv("DEV_SERVER_HOST") or "ncshpcgpu01.fda.gov",
+        'api_server_host': os.getenv("API_SERVER_HOST") or os.getenv("DEV_SERVER_HOST") or "localhost",
         'allowed_ai_providers': allowed_providers
     })
 

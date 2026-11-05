@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-TARGET_NODE="ncshpcgpu01"
+TARGET_NODE="${TARGET_NODE:-localhost}"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
 # These can be adjusted by the submitting user without changing the script.

@@ -54,7 +54,7 @@ const nextConfig: NextConfig = {
     return rewrites;
   },
   devIndicators: false,
-  allowedDevOrigins: ["ncshpcgpu01", "elsa.fda.gov", "localhost", "ncshpc400"],
+  allowedDevOrigins: ["elsa.fda.gov", "localhost", "ncshpc400"],
   async headers() {
     return [
       {

@@ -68,7 +68,7 @@ def resolve_sso(env, mode, rapid=False, nginx=False, runtime='docker', sso_provi
             'KEYCLOAK_PUBLIC_URL': public,
             'KEYCLOAK_RELATIVE_PATH': relative,
             'KEYCLOAK_TEST_USERNAME': env.get('KEYCLOAK_TEST_USERNAME') or 'leihong',
-            'KEYCLOAK_TEST_PASSWORD': env.get('KEYCLOAK_TEST_PASSWORD') or '1986414',
+            'KEYCLOAK_TEST_PASSWORD': env.get('KEYCLOAK_TEST_PASSWORD') or 'TestPassword123!',
             'SAML_IDP_METADATA_URL': internal + '/realms/askfdalabel/protocol/saml/descriptor',
             'SAML_IDP_ENTITY_ID': public + '/realms/askfdalabel',
         })
