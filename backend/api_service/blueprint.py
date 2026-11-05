@@ -26,6 +26,7 @@ try:
 except ImportError:
     import xml.etree.ElementTree as ET
 
+from dashboard.config import Config
 from dashboard.services.fdalabel_db import FDALabelDBService
 from database import db, User, LabelPvProfile, utc_now
 from labelquery.oracle_compiler import (

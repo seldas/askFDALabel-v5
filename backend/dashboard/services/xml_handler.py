@@ -5,6 +5,7 @@ except ImportError:
 import logging
 import re
 from datetime import datetime
+from dashboard.config import Config
 from dashboard.utils import extract_numeric_section_id, clean_spl_text
 
 logger = logging.getLogger(__name__)

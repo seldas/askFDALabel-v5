@@ -6,6 +6,7 @@ import threading
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import current_app
+from dashboard.config import Config
 from dashboard.services.name_matching import NameSearchParams
 
 # Graceful import for oracledb
