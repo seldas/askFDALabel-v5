@@ -201,10 +201,7 @@ function HomePage() {
 
   const runSearch = useCallback((searchQuery: LabelQuery = query, searchPrefilters: PreFilter[] = prefilters, searchTargetDb: TargetDb = targetDb) => {
     setError(null);
-    if (hasUnverifiedProductNames(searchQuery)) {
-      setError('Confirm all product names, MedDRA terms, and pharmacologic classes before searching.');
-      return;
-    }
+    // Unverified criteria do not hard-block execution; they execute as literal terms.
     try {
       /* Ticked pre-filters are folded in only here, on the way out. They land
        * as ordinary categorical criteria, so the results sidebar shows them
@@ -291,7 +288,7 @@ function HomePage() {
   const hasUnverified = hasUnverifiedProductNames(query);
   const hasCommonFullText = hasInvalidCommonFullText(query);
   const hasHigherMeddra = hasInvalidMeddraLevel(query);
-  const hasBlockers = hasUnverified || hasCommonFullText || hasHigherMeddra;
+  const hasBlockers = hasCommonFullText || hasHigherMeddra;
 
   const actionBar = (position: 'top' | 'bottom') => (
     <div className={position === 'top' ? 'fdl-actions' : 'fdl-actions fdl-actions--bottom'}>

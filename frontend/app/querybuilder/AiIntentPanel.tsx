@@ -268,10 +268,9 @@ export function AiIntentPanel({
       onQuery(translatedQuery);
       onPrefiltersChange(translatedPrefilters);
       const needsConfirmation = hasUnverifiedCriteria(translatedQuery);
-      const review = reviewBeforeSearch || needsConfirmation;
-      if (needsConfirmation) setReviewBeforeSearch(true);
+      const review = reviewBeforeSearch;
       setNotes(needsConfirmation
-        ? ['Please confirm the suggested terms before searching.', ...(json.notes || [])]
+        ? ['Notice: Some suggested terms are not yet confirmed in the vocabulary.', ...(json.notes || [])]
         : json.notes || []);
       if (review) onReviewReady();
       setProcessedIntent(trimmed);
