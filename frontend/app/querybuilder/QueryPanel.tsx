@@ -177,9 +177,6 @@ export function QueryPanel({
               const stepNumber = secIdx + 1;
               const secKey = `${group.uid}_${sec.id}`;
               const isTextUnavailable = sec.id === 'textMatch' && targetDb === 'local';
-              const isCollapsed = isTextUnavailable
-                ? (collapsedSections[secKey] ?? true)
-                : Boolean(collapsedSections[secKey]);
 
               // Filter criteria belonging to this section
               const sectionCriteria = group.criteria.filter(
@@ -190,6 +187,12 @@ export function QueryPanel({
 
               // Count active (non-empty) criteria in this section
               const activeCount = sectionCriteria.filter((c) => !isCriterionEmpty(c)).length;
+
+              // Collapse if unavailable, or if optional/no active criteria in this section
+              const isOptional = sectionCriteria.length === 0;
+              const hasNoActive = activeCount === 0;
+              const defaultCollapsed = isTextUnavailable || isOptional || (group.criteria.some((c) => !isCriterionEmpty(c)) && hasNoActive);
+              const isCollapsed = collapsedSections[secKey] ?? defaultCollapsed;
 
               // Check if any text search criterion in this section or group uses Advanced mode
               const hasAdvancedSearch = group.criteria.some(
@@ -205,14 +208,14 @@ export function QueryPanel({
                 >
                   <header
                     className="fdl-step-header"
-                    onClick={() => toggleSection(secKey, isTextUnavailable)}
+                    onClick={() => toggleSection(secKey, defaultCollapsed)}
                     role="button"
                     tabIndex={0}
                     style={{ cursor: 'pointer' }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        toggleSection(secKey, isTextUnavailable);
+                        toggleSection(secKey, defaultCollapsed);
                       }
                     }}
                   >
