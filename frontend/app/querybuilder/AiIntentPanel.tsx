@@ -188,6 +188,7 @@ export function AiIntentPanel({
     setNotes([]);
     setWarnings([]);
     setError(null);
+    setIsFolded(false);
   }, [resetVersion]);
 
   useEffect(() => {

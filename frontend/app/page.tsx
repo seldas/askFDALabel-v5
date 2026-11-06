@@ -357,27 +357,7 @@ function HomePage() {
       <button type="button" className="fdl-link" onClick={restoreLast} disabled={!hasSaved}>
         Restore Last Query
       </button>
-      <button
-        type="button"
-        className="fdl-btn fdl-btn--search"
-        onClick={() => {
-          if (hasPendingAiInput) { setPendingInputDialog(true); return; }
-          runSearch();
-        }}
-        disabled={hasBlockers}
-        style={hasBlockers ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
-        title={
-          hasUnverified
-            ? 'Please confirm all product names, MedDRA terms, and pharmacologic classes by selecting from standard suggestions'
-            : hasCommonFullText
-            ? 'Full-text search for common/generic words is restricted to prevent slow queries'
-            : hasHigherMeddra
-            ? 'MedDRA searches above Preferred Term (PT) level are disabled'
-            : undefined
-        }
-      >
-        Search Labels »
-      </button>
+      
     </div>
   );
 
