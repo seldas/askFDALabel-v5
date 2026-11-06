@@ -66,16 +66,16 @@ export function createAnnotationBadge(
   if (id) badge.setAttribute('data-id', String(id));
 
   let iconSymbol = '&#128172;';
-  let headerTitle = '<span>&#10024;</span> AI INSIGHT';
+  let headerTitle = '<span>&#10024;</span> LLM INSIGHT';
 
   if (matchType === 'yes') {
     badge.classList.add('match-yes');
     iconSymbol = '&#10003;';
-    headerTitle = '<span>&#9989;</span> AI CONFIRMED';
+    headerTitle = '<span>&#9989;</span> LLM CONFIRMED';
   } else if (matchType === 'probable') {
     badge.classList.add('match-probable');
     iconSymbol = '?';
-    headerTitle = '<span>&#9888;</span> AI PROBABLE';
+    headerTitle = '<span>&#9888;</span> LLM PROBABLE';
   }
 
   badge.innerHTML = iconSymbol;

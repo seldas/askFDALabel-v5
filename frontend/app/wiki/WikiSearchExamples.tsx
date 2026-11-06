@@ -5,7 +5,7 @@ import { useState } from 'react';
 export function SearchWorkflow() {
   const steps = [
     ['Define the question', 'Identify the product set and the evidence you need.'],
-    ['Build criteria', 'Enter conditions manually or review an AI draft.'],
+    ['Build criteria', 'Enter conditions manually or review an LLM draft.'],
     ['Inspect matches', 'Check scope, selected entities, and result filters.'],
     ['Read labeling', 'Confirm the version and examine the original passage.'],
     ['Choose an analysis', 'Use a Toolbox tool when the next question requires it.'],

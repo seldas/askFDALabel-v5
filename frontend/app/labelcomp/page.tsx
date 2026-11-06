@@ -856,7 +856,7 @@ function LabelCompContent() {
                   <div style={{ width: '32px', height: '32px', backgroundColor: 'var(--fdl-blue-100)', borderRadius: 'var(--fdl-radius-sm, 2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fdl-navy-800)' }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a4 4 0 0 0-4-4H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a4 4 0 0 1 4-4h6z"></path></svg>
                   </div>
-                  <span style={{ fontWeight: 800, color: 'var(--fdl-ink, #132332)', fontSize: '1.05rem', letterSpacing: '-0.01em' }}>AI Comparison Insight</span>
+                  <span style={{ fontWeight: 800, color: 'var(--fdl-ink, #132332)', fontSize: '1.05rem', letterSpacing: '-0.01em' }}>LLM Comparison Insight</span>
                </div>
                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-blue-700)' }}>{aiSummaryCollapsed ? 'SHOW ANALYSIS' : 'HIDE ANALYSIS'}</span>
@@ -872,7 +872,7 @@ function LabelCompContent() {
                       <p style={{ color: 'var(--fdl-muted, #5e6e7c)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
                         {session?.is_authenticated
                           ? 'Perform a multi-label cognitive analysis to extract key regulatory and clinical differences.'
-                          : 'Please sign in to generate high-fidelity AI comparison summaries.'}
+                          : 'Please sign in to generate high-fidelity LLM comparison summaries.'}
                       </p>
                       {session?.is_authenticated && (
                         <Button
@@ -1141,7 +1141,7 @@ function LabelCompContent() {
                     <div>
                       <h4 style={{ margin: '0 0 6px 0', fontSize: '1rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)' }}>Compare & Extract Insights</h4>
                       <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--fdl-muted, #5e6e7c)', lineHeight: 1.6, fontWeight: 500 }}>
-                        Launch the analysis to explore aligned section diffs, filter by severity gaps, run multi-label AI clinical summaries, and export reports.
+                        Launch the analysis to explore aligned section diffs, filter by severity gaps, run multi-label LLM clinical summaries, and export reports.
                       </p>
                     </div>
                   </div>

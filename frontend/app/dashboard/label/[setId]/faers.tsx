@@ -220,13 +220,13 @@ function EmergingAeAnalysis({
         });
         if (!resp.ok) {
             const errJson = await resp.json();
-            throw new Error(errJson.error || 'AI rematch failed');
+            throw new Error(errJson.error || 'LLM rematch failed');
         }
         const json = await resp.json();
         applyAiResults(data, json.results);
 
     } catch (err: any) {
-        setError("AI Semantic Matching Error: " + err.message);
+        setError("LLM Semantic Matching Error: " + err.message);
     } finally {
         setAiLoading(false);
     }
@@ -281,9 +281,9 @@ function EmergingAeAnalysis({
       </div>
       <p className="faers-description">
         {scope === 'recent' ? 'Top 200 reactions by reports received in the last five years.' : 'Top 200 reactions by reports received across all available years.'}
-        {' '}Both counts are shown for each reaction. Exact matching checks label text; semantic AI checks synonyms and clinical context.
+        {' '}Both counts are shown for each reaction. Exact matching checks label text; semantic LLM checks synonyms and clinical context.
       </p>
-      <Modal isOpen={aiModalOpen} onClose={() => setAiModalOpen(false)} title="Configure AI Semantic Analysis">
+      <Modal isOpen={aiModalOpen} onClose={() => setAiModalOpen(false)} title="Configure LLM Semantic Analysis">
         <div className="faers-ai-options">
           <label><input type="checkbox" checked={useCountThreshold} onChange={e => setUseCountThreshold(e.target.checked)} /> Occurrence &gt;
             <input aria-label="Occurrence threshold" type="number" min="0" step="1" disabled={!useCountThreshold} value={aiMinCount} onChange={e => setAiMinCount(Math.max(0, Math.floor(Number(e.target.value) || 0)))} />
@@ -295,7 +295,7 @@ function EmergingAeAnalysis({
         <p className="faers-description">Occurrence uses {emergingOnly ? 'recent five-year' : 'all-time'} report counts. These options determine the submitted list independently of table match filters.</p>
         <div aria-live="polite" className="faers-ai-preview">
           <strong>{aiCandidates.length} AEs will be sent</strong>
-          {aiCandidates.length > 30 && <p className="faers-ai-warning">Too many AEs may degrade AI performance. Showing the first 30; all {aiCandidates.length} selected AEs will be sent. Increase the threshold or narrow the selection to reduce the list.</p>}
+          {aiCandidates.length > 30 && <p className="faers-ai-warning">Too many AEs may degrade LLM performance. Showing the first 30; all {aiCandidates.length} selected AEs will be sent. Increase the threshold or narrow the selection to reduce the list.</p>}
           {aiCandidates.length === 0 ? <p>No AEs match these options.</p> : <ol>{aiCandidates.slice(0, 30).map(ae => <li key={ae.term}><span>{ae.term}</span><span>{candidateCount(ae).toLocaleString()} reports</span></li>)}</ol>}
         </div>
         <div className="faers-modal-actions">
@@ -344,7 +344,7 @@ function EmergingAeAnalysis({
                     <div className="faers-soc-menu">
                       <strong>Filter by match status</strong>
                       <div className="faers-soc-options">
-                        {([['exact', 'Exact match'], ['semantic', 'AI match'], ['not_found', 'Not found'], ['not_analyzed', 'Not analyzed']] as const).map(([value, label]) => <label key={value}><input type="checkbox" checked={activeFilters.has(value)} onChange={() => toggleFilter(value)} /> <span>{label}</span></label>)}
+                        {([['exact', 'Exact match'], ['semantic', 'LLM match'], ['not_found', 'Not found'], ['not_analyzed', 'Not analyzed']] as const).map(([value, label]) => <label key={value}><input type="checkbox" checked={activeFilters.has(value)} onChange={() => toggleFilter(value)} /> <span>{label}</span></label>)}
                       </div>
                     </div>
                   </details>
@@ -387,11 +387,11 @@ function EmergingAeAnalysis({
                       <div className="faers-evidence">
                         <strong>Exact match</strong>
                         {ae.label_matches.map((match, index) => <div key={index} className="faers-evidence-detail"><strong>{match.section}</strong><p>{match.snippet}</p></div>)}
-                        {ae.ai_match && <details onClick={event => event.stopPropagation()}><summary>AI analysis</summary><p>{ae.ai_match.found ? `AI match${ae.ai_match.section ? ` · ${ae.ai_match.section}` : ''}` : 'Not found by AI'}: {ae.ai_match.explanation}</p></details>}
+                        {ae.ai_match && <details onClick={event => event.stopPropagation()}><summary>LLM analysis</summary><p>{ae.ai_match.found ? `LLM match${ae.ai_match.section ? ` · ${ae.ai_match.section}` : ''}` : 'Not found by LLM'}: {ae.ai_match.explanation}</p></details>}
                       </div>
                     ) : ae.ai_match ? (
                       <div className="faers-evidence">
-                        <strong>{ae.ai_match.found ? `AI match${ae.ai_match.section ? ` · ${ae.ai_match.section}` : ''}` : 'Not found'}</strong>
+                        <strong>{ae.ai_match.found ? `LLM match${ae.ai_match.section ? ` · ${ae.ai_match.section}` : ''}` : 'Not found'}</strong>
                         <p>{ae.ai_match.explanation}</p>
                       </div>
                     ) : <span className="faers-evidence-muted">Not analyzed</span>}
@@ -465,7 +465,7 @@ function EmergingAeAnalysis({
             </div>
           )}
           <div style={{ marginTop: '12px', fontSize: '0.7rem', color: 'var(--fdl-muted)', textAlign: 'right', fontWeight: 500 }}>
-            Analysis Engine: Hybrid exact-string + semantic-AI. Results cached in project database.
+            Analysis Engine: Hybrid exact-string + semantic-LLM. Results cached in project database.
           </div>
 
           {/* Trend Chart Section */}

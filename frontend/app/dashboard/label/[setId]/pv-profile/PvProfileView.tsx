@@ -570,7 +570,7 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
   // Dynamic progress stage during AI analysis
   const getProgressStage = (sec: number) => {
     if (sec < 6) return 'Scanning safety sections & matching MedDRA dictionary keywords...';
-    if (sec < 25) return 'Calling clinical AI engine to evaluate incidence rates & safety warnings...';
+    if (sec < 25) return 'Calling clinical LLM engine to evaluate incidence rates & safety warnings...';
     if (sec < 60) return 'Structuring drug vs. placebo frequencies and identifying non-standard terms...';
     if (sec < 120) return 'Grounding standard MedDRA Preferred Terms (PT) & primary Organ Classes (SOC)...';
     return 'Finalizing multi-section adverse event consolidation & severity tier rankings...';
@@ -609,7 +609,7 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
               <span><strong>Status:</strong> {getProgressStage(elapsedSeconds)}</span>
             </div>
             <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '0.6rem', lineHeight: 1.4 }}>
-              * Extraction time depends on the active AI model and label length. Fast models take ~15–30s, while deep clinical reasoning models may take <strong>3 to 5 minutes</strong>. The completed profile will be cached in the database for instant retrieval.
+              * Extraction time depends on the active LLM model and label length. Fast models take ~15–30s, while deep clinical reasoning models may take <strong>3 to 5 minutes</strong>. The completed profile will be cached in the database for instant retrieval.
             </div>
           </div>
         </div>
@@ -647,10 +647,10 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
           </h3>
           <p style={{ margin: '0 auto 1.25rem auto', color: '#64748b', fontSize: '0.875rem', maxWidth: '560px' }}>
             Generate a SIDER 4.1-style Adverse Event & Safety Profile for <strong>{data.brand_name || data.generic_name}</strong>.
-            The AI engine will harvest Boxed Warnings, Warnings & Precautions, and Clinical Trial tables to structure drug vs. placebo incidence rates.
+            The LLM engine will harvest Boxed Warnings, Warnings & Precautions, and Clinical Trial tables to structure drug vs. placebo incidence rates.
           </p>
           <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '1.25rem' }}>
-            (Note: Depending on the configured AI model, full analysis may take between 30 seconds and 3–5 minutes)
+            (Note: Depending on the configured LLM model, full analysis may take between 30 seconds and 3–5 minutes)
           </div>
 
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
@@ -1112,7 +1112,7 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                             <div className="pv-term-name">
                               <span>{item.meddra_pt}</span>
                               {item.is_mapped && (
-                                <span className="pv-badge-mapped" title={`AI normalized non-standard term "${item.term}" to MedDRA PT "${item.meddra_pt}"`}>
+                                <span className="pv-badge-mapped" title={`LLM normalized non-standard term "${item.term}" to MedDRA PT "${item.meddra_pt}"`}>
                                   Mapped
                                 </span>
                               )}
@@ -1217,7 +1217,7 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
           {showLeftovers && (
             <div style={{ marginTop: '0.65rem' }}>
               <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.76rem', color: '#64748b' }}>
-                The following terms matched the MedDRA dictionary in the safety sections but were evaluated as background indications, baseline context, or non-AE descriptions by clinical AI. Reviewers can verify or tag missing items:
+                The following terms matched the MedDRA dictionary in the safety sections but were evaluated as background indications, baseline context, or non-AE descriptions by clinical LLM. Reviewers can verify or tag missing items:
               </p>
 
               <div style={{ marginBottom: '0.5rem', maxWidth: '260px' }}>
@@ -1333,7 +1333,7 @@ export default function PvProfileView({ setId, splId }: { setId: string; splId?:
                 )}
                 {activeDrawerItem.is_mapped && (
                   <p style={{ margin: '0.2rem 0', fontSize: '0.825rem', color: '#7e22ce' }}>
-                    <strong>Original Text Mention:</strong> "{activeDrawerItem.term}" (AI standardized to {activeDrawerItem.meddra_pt})
+                    <strong>Original Text Mention:</strong> "{activeDrawerItem.term}" (LLM standardized to {activeDrawerItem.meddra_pt})
                   </p>
                 )}
               </div>

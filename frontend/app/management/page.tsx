@@ -822,7 +822,7 @@ export default function ManagementPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setUserModelError(data.error || 'Failed to update user AI model');
+        setUserModelError(data.error || 'Failed to update user LLM model');
         return false;
       }
       setEditingUserModelId(null);
@@ -832,7 +832,7 @@ export default function ManagementPage() {
       return true;
     } catch (err) {
       console.error('Update user AI model error', err);
-      setUserModelError('Error updating user AI model. Please try again.');
+      setUserModelError('Error updating user LLM model. Please try again.');
       return false;
     } finally {
       setSavingUserModel(false);
@@ -1147,7 +1147,7 @@ export default function ManagementPage() {
                   <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
                   <line x1="12" y1="22.08" x2="12" y2="12"></line>
                 </svg>
-                AI Settings
+                LLM Settings
               </button>
             )}
             <button
@@ -1436,7 +1436,7 @@ export default function ManagementPage() {
                                   borderColor: user.can_comment !== false ? '#86efac' : '#fca5a5',
                                   cursor: session?.is_admin ? 'pointer' : 'default',
                                 }}
-                                title={session?.is_admin ? "Click to toggle commenting, annotations & AI notes permission" : undefined}
+                                title={session?.is_admin ? "Click to toggle commenting, annotations & LLM notes permission" : undefined}
                               >
                                 {user.can_comment !== false ? '✓ Enabled' : '✕ Disabled'}
                               </button>
@@ -2153,7 +2153,7 @@ else:
             {activeTab === 'tokens' && (
               <section className="mgmt-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                  <h2 className="section-title" style={{ margin: 0 }}>{session?.is_admin ? 'Global AI Action History' : 'My AI Action History'}</h2>
+                  <h2 className="section-title" style={{ margin: 0 }}>{session?.is_admin ? 'Global LLM Action History' : 'My LLM Action History'}</h2>
                   {session?.is_admin && (
                     <button 
                       className="btn-primary" 
@@ -2579,7 +2579,7 @@ else:
                     { id: 'orangebook', name: 'Orange Book', desc: 'Approved Drug Products with Therapeutic Equivalence Evaluations' },
                     { id: 'epc', name: 'Pharmacologic Class Indexing', desc: 'Import EPC, MoA, and physiologic-effect indexing records' },
                     { id: 'drugtox', name: 'AskDrugTox', desc: 'Import the current AskDrugTox Excel update' },
-                    { id: 'generate_drugtox', name: 'Generate DrugTox (AI)', desc: 'Dynamically generate DILI/DICT/DIRI for recently updated single-ingredient human Rx labels' },
+                    { id: 'generate_drugtox', name: 'Generate DrugTox (LLM)', desc: 'Dynamically generate DILI/DICT/DIRI for recently updated single-ingredient human Rx labels' },
                     { id: 'meddra', name: 'MedDRA', desc: 'Dictionary (SOC, HLT, etc.)' }
                   ].map(item => (
                     <div key={item.id} className="update-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
@@ -3028,10 +3028,10 @@ else:
               {session?.is_admin && (
                 <div style={{ background: 'var(--fdl-canvas)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
                   <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink)', marginBottom: '0.35rem' }}>
-                    Comments, Annotations & AI Notes Permission
+                    Comments, Annotations & LLM Notes Permission
                   </div>
                   <p style={{ fontSize: '0.78rem', color: 'var(--fdl-canvas0)', margin: '0 0 0.75rem 0', lineHeight: 1.4 }}>
-                    Controls whether this user can post comments & justifications in visual compare, create label highlights/notes, and save AI notes.
+                    Controls whether this user can post comments & justifications in visual compare, create label highlights/notes, and save LLM notes.
                   </p>
                   <button
                     type="button"

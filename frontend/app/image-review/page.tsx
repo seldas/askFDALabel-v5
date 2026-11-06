@@ -601,7 +601,7 @@ function Workbench() {
                 <span>
                   {review.findings.length}{' '}
                   {mode === 'consistency' ? 'discrepancies detected' : 'findings'} ·{' '}
-                  {review.cached ? 'Saved analysis' : 'AI analysis'}
+                  {review.cached ? 'Saved analysis' : 'LLM analysis'}
                 </span>
               )}
             </header>
@@ -767,7 +767,7 @@ function Workbench() {
             onChange={onCartonChange} onBusy={setExtracting} />
         </div>}
         <p className="ivr-footnote">
-          Review signals require human confirmation. Highlight locations are AI estimates; missing information does not guarantee absence of conflict.
+          Review signals require human confirmation. Highlight locations are LLM estimates; missing information does not guarantee absence of conflict.
         </p>
         </div>
       </main>

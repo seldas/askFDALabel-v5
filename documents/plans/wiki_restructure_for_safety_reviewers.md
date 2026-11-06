@@ -29,7 +29,7 @@ Wiki 是产品知识库，帮助 drug safety scientist / reviewer 完成审查�
 |---|---|---|
 | 任务步骤、输入选择、界面操作、导出 | 保留并重写成工作流 | 仅保留必要的实现说明 |
 | 数据来源、范围、版本、频率与证据语境 | 重点补充 | 可以记录数据导入实现 |
-| AI 提取、术语匹配、比较与筛查的方法及限制 | 用 scientist 能理解的语言解释 | 保留算法实现与代码引用 |
+| LLM 提取、术语匹配、比较与筛查的方法及限制 | 用 scientist 能理解的语言解释 | 保留算法实现与代码引用 |
 | 账号权限、某工具为何不可见、任务等待与失败 | 解释用户能采取的行动 | 权限配置、服务排障放运维文档 |
 | Python、React、Flask、数据库表、索引、API 路由 | 不进入 Wiki 正文 | `documents/architecture/`、`documents/operations/` |
 | Docker、Celery、nginx、环境变量、部署步骤、日志命令 | 不进入 Wiki 正文 | 仓库运维文档 |
@@ -45,7 +45,7 @@ Wiki 是产品知识库，帮助 drug safety scientist / reviewer 完成审查�
 - `frontend/app/wiki/page.tsx`：导航、搜索、文章选择和阅读布局。
 - `frontend/app/wiki/wikiData.tsx`：完整 28 个现有主题。
 - `frontend/app/platform/registry.ts`、`ToolLauncher.tsx`：工具名称、上下文、启用状态与权限过滤。
-- Label View、Toolbox、AI Preferences、ChemSearch、FAERS、LabelingAE、PV Profile/QC 的相关界面及服务实现。
+- Label View、Toolbox、LLM Preferences、ChemSearch、FAERS、LabelingAE、PV Profile/QC 的相关界面及服务实现。
 - `documents/` 的架构、模块和运维说明，作为候选资料，而不是事实来源的最终裁定。
 
 后续写作证据顺序：实际可操作界面及当前实现 → 用于说明科学方法的原始/权威来源 → 已核对的模块文档 → 旧 Wiki。代码能说明系统做了什么，不能单独证明临床有效性、科学准确性或监管合规。
@@ -68,7 +68,7 @@ Wiki 是产品知识库，帮助 drug safety scientist / reviewer 完成审查�
 |---|---|---|
 | Guest 被描述为可执行全部分析工具 | 实际使用 feature gate 与部署条件过滤 | 不承诺“全部工具可用”；说明权限与个人状态保存的限制 |
 | 搜索被描述为返回全部获批产品、全部等效仿制药 | 搜索匹配不等于穷尽数据，也不等于治疗等效性判断 | 分开解释匹配、数据库覆盖、审批/市场类别与等效性，删除过度承诺 |
-| 自然语言回答与可复现检索容易混淆 | 现有对话与 Query Builder 是不同入口 | 说明何时只是 AI 回答，何时产生条件并实际查询；要求检查范围和筛选条件 |
+| 自然语言回答与可复现检索容易混淆 | 现有对话与 Query Builder 是不同入口 | 说明何时只是 LLM 回答，何时产生条件并实际查询；要求检查范围和筛选条件 |
 | Label View 被统一描述为 PLR、日期被直接称为正式修订日期 | 现有产品存在不同格式、状态和版本字段 | 单独解释显示字段，不能把所有日期视为同一监管事件 |
 | AE viewer 宣称版式“exactly as submitted” | 当前 Section View 不复现原发布者完整样式和图片 | 改成准确说明保留/未保留的结构、定位方式与回到来源核查的方法 |
 | MedDRA 色彩被解释为层级颜色 | 现有 reader 与 LabelingAE 有不同高亮/标注机制 | 按实际界面图例说明，不混同 SOC 色彩、术语层级与风险等级 |
@@ -92,7 +92,7 @@ Wiki 是产品知识库，帮助 drug safety scientist / reviewer 完成审查�
 - 主入口：**Complete a review task**、**Understand data & results**。
 - 五条精选任务：找对 labeling；核查一个安全性术语；比较历史修订；建立同类产品审查集合；检查包装/标签一致性。
 - 一个短的 First review 路径：确认对象和版本 → 定位原文证据 → 选择分析 → 核对结果 → 保存来源。
-- 常见问题捷径：工具为何不可见、没有匹配是否意味着不存在、AI 结果如何核查、历史版本为何不可用。
+- 常见问题捷径：工具为何不可见、没有匹配是否意味着不存在、LLM 结果如何核查、历史版本为何不可用。
 - 不放技术栈、架构图、部署指令、内部服务地址或 developer onboarding。
 
 ### A. Complete a review task（使用指南）
@@ -100,7 +100,7 @@ Wiki 是产品知识库，帮助 drug safety scientist / reviewer 完成审查�
 | 分组 | 文章方向 |
 |---|---|
 | 开始审查 | 账号与可用功能；第一次 labeling review；如何选择合适工具 |
-| 找到正确审查对象 | 名称/NDC/申请号检索；结构化查询；AI 生成条件及检查；查询代码与复现 |
+| 找到正确审查对象 | 名称/NDC/申请号检索；结构化查询；LLM 生成条件及检查；查询代码与复现 |
 | 阅读与记录证据 | Label View；原文章节/表格；Toolbox Cards/Table；Notes/项目；导出及来源记录 |
 | 组织安全性证据 | FAERS；PV Profile 与 QC；LabelingAE；Examine；DILI/DICT/DIRI/PGx 的选择与使用 |
 | 比较与追踪 | 版本历史；FDA Application Profile；LabelComp；Deep Dive；包装/图像审查 |
@@ -117,7 +117,7 @@ Wiki 是产品知识库，帮助 drug safety scientist / reviewer 完成审查�
 | 查询与覆盖 | 名称匹配、Exact match、实体扩展；章节范围；Local/内网差异；结果总数与筛选后总数；无匹配的解释 |
 | 安全性术语与证据语境 | AE/ADR、PT/LLT/SOC；高亮和提取的区别；标注对齐；否定、适应证、基础疾病和上下文 |
 | 频率与不同证据来源 | labeling 中试验数据、上市后描述与 FAERS 输出的区别；原文分母/人群/剂量/比较组；不要混用不同来源的数字 |
-| AI 与质量核查 | 原文、提取、计算和 AI 总结分别是什么；PV QC 实际检查范围；引用与原文核对；不确定和部分结果 |
+| LLM 与质量核查 | 原文、提取、计算和 LLM 总结分别是什么；PV QC 实际检查范围；引用与原文核对；不确定和部分结果 |
 | 比较与筛查 | 文本变化与科学意义；跨产品可比性；结构相似性指标；器官毒性/PGx 输出；RO2 输入与适用范围 |
 | 可追溯与复现 | 保存查询条件、数据库范围、版本标识、筛选状态、结果时间、模型信息及 reviewer 判断；注明产品当前未提供的元数据 |
 
@@ -130,14 +130,14 @@ Wiki 是产品知识库，帮助 drug safety scientist / reviewer 完成审查�
 | `1-1-account-login` | 重写 | 开始审查；真实账号/Guest/SSO/权限差异，删除绝对可用性承诺 |
 | `1-2-personal-dashboard` | 合并重写 | 阅读与记录证据；与 `4-2` 统一项目、收藏、Notes 的术语和实际能力 |
 | `2-1-quick-search` | 拆分 | 操作：找到正确对象；方法：标识符、覆盖和匹配，去除“全部获批/等效”承诺 |
-| `2-2-plain-language-search` | 拆分重写 | 操作：选择对话或 AI Query Builder；方法：AI 回答与数据库检索的区别 |
+| `2-2-plain-language-search` | 拆分重写 | 操作：选择对话或 LLM Query Builder；方法：LLM 回答与数据库检索的区别 |
 | `2-3-reading-label` | 扩写 | 当前 reader、工具栏、进度、详情折叠、文档格式及版本核查 |
 | `3-1-qb-market-filters` | 保留校正 | 结构化查询；解释实际市场类别选项，不将类别直接等同于审批结论 |
 | `3-2-qb-dosage-routes` | 保留校正 | 结构化查询；route/dosage/EPC 与匹配范围 |
 | `3-3-qb-safety-sections` | 拆分 | 操作：限定章节；方法：可查范围与数据源差异 |
-| `3-4-ai-quick-search` | 保留扩写 | AI 生成条件、review 条件与直接搜索的区别 |
+| `3-4-ai-quick-search` | 保留扩写 | LLM 生成条件、review 条件与直接搜索的区别 |
 | `3-5-portable-query-codes` | 保留简化 | 复现工作流；保留导入/分享和访问范围限制，移走实现细节 |
-| `3-6-external-ai-query` | 合并为进阶指南 | 导入外部 AI 条件；只讲兼容输入和核查，不教配置外部服务 |
+| `3-6-external-ai-query` | 合并为进阶指南 | 导入外部 LLM 条件；只讲兼容输入和核查，不教配置外部服务 |
 | `3-7-scope-and-expansion` | 拆分为核心方法 | 范围、匹配、术语扩展；提供与查询步骤的双向链接 |
 | `3-8-result-filters` | 保留扩写 | 结果筛选与可追溯；统一总数、过滤、导出范围描述 |
 | `4-1-export-excel` | 重写 | 逐界面核实导出字段和范围；不承诺每个表导出相同内容 |
@@ -148,7 +148,7 @@ Wiki 是产品知识库，帮助 drug safety scientist / reviewer 完成审查�
 | `6-2-pv-qc-audit` | 重点重写 | 术语审计、候选遗漏与引用核查；说明 QC flags 和 reviewer 复核，不承诺全面规则验证 |
 | `7-1-labelcomp-rld` | 拆分 | 选择对象与版本；RLD/RS/产品差异的解释另设方法说明并核对正式定义 |
 | `7-2-labelcomp-history` | 保留扩写 | 对齐版本、日期和可用原文；连接历史追踪与申请档案 |
-| `7-3-labelcomp-ai-summary` | 拆分重写 | 启动总结与核查步骤；方法说明原始 diff 与 AI 解释的边界 |
+| `7-3-labelcomp-ai-summary` | 拆分重写 | 启动总结与核查步骤；方法说明原始 diff 与 LLM 解释的边界 |
 | `7-4-labeling-visual-review` | 独立成组 | artwork/confusion/consistency 三种目的；输入、关联确认、概览/详细、坐标及人工确认 |
 | `8-1-drugtox-overview` | 拆分 | 分开说明参考资源、DILI/DICT/DIRI agents 及其证据用途，补 PGx，不混称统一验证模型 |
 | `8-2-dili-ro2` | 重写并科学核验 | 实际剂量/结构输入、阈值来源与单位；筛查与个体因果判断的边界 |
@@ -165,9 +165,9 @@ Wiki 是产品知识库，帮助 drug safety scientist / reviewer 完成审查�
 - First review：从审查问题到可追溯原文证据的一条完整路径。
 - 工具选择矩阵：审查目标 → 所需输入 → 推荐工具 → 输出 → 下一步核查。
 - 数据库范围、标识符、版本与日期：在开始分析前确认对象。
-- 原文、提取、匹配、计算、AI 总结的区别；界面标签不能被误读为同一种证据。
+- 原文、提取、匹配、计算、LLM 总结的区别；界面标签不能被误读为同一种证据。
 - 当前 Toolbox Cards/Table、搜索/分类/收藏，以及为什么某工具不可见。
-- AI Preferences：个人模型偏好、系统默认、可选模型由环境决定；不放 URL/API key/环境变量教程。
+- LLM Preferences：个人模型偏好、系统默认、可选模型由环境决定；不放 URL/API key/环境变量教程。
 - 结果等待、失败和部分完成：如何查看状态、保留已有输出、何时重试或联系支持。
 
 优先级 P1：
@@ -230,7 +230,7 @@ Wiki 是产品知识库，帮助 drug safety scientist / reviewer 完成审查�
 | 1：纠错与内容蓝图 | 为 28 个旧主题分配新文章；列 claim/source 清单；核实禁用工具、科学引用和支持地址 | 每个旧主题有去向；P0 风险表述有明确替代文案 |
 | 2：代表文章试写 | First review、PV Profile/QC、版本比较：各完成指南与方法配对 | reviewer 能从步骤跳到原理，再回到核查动作；无工程实现正文 |
 | 3：阅读框架 | 首页、双路径、文章地址、搜索、相关链接、产品一致样式 | 正确的分享/返回/刷新/搜索行为；无上下文的专属工具链接不失效 |
-| 4：核心内容迁移 | 搜索、阅读、Toolbox、AI、FAERS、术语、导出与复现；下线 Device 入口 | 当前主要 reviewer 工作流均有指南与结果解释 |
+| 4：核心内容迁移 | 搜索、阅读、Toolbox、LLM、FAERS、术语、导出与复现；下线 Device 入口 | 当前主要 reviewer 工作流均有指南与结果解释 |
 | 5：专业专题与验收 | 补齐器官毒性、PGx、RO2、ChemSearch、图像审查、Deep Dive 等 | 内容逐项对照当前 UI/实现和正式方法来源完成核验 |
 
 实施时可以按主题纵向交付，不必等全部文章完成才提供第一版；未完成的文章不显示为已有能力。
@@ -241,7 +241,7 @@ Wiki 是产品知识库，帮助 drug safety scientist / reviewer 完成审查�
 
 1. 第一次使用：从首页找到一份 labeling，确认对象/版本并定位一条原文证据，知道如何保存来源。
 2. 安全性术语核查：分清原文、高亮与提取结果；能找到方法说明并说明下一步如何核对。
-3. 历史修订比较：选择对应版本，理解文本变化与 AI 总结的不同，保留版本标识。
+3. 历史修订比较：选择对应版本，理解文本变化与 LLM 总结的不同，保留版本标识。
 4. FAERS/PV 阅读：知道应该核查哪些来源、上下文与数字，而不是只抄摘要。
 5. 工具不可见或分析未完成：找到用户可以采取的行动，不需要理解服务部署。
 6. 返回某篇文章：分享链接、刷新和浏览器返回后仍到达正确主题。

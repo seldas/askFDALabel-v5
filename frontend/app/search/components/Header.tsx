@@ -143,7 +143,7 @@ const Header: React.FC = () => {
 
         <Link href="/search" className="hp-nav-item hp-nav-item-flagship">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><path d="M11 8a2 2 0 0 0-2 2"></path></svg>
-          AI Chat
+          LLM Chat
         </Link>
 
         <Link href="/dashboard" className="hp-nav-item">
@@ -206,7 +206,7 @@ const Header: React.FC = () => {
               alignItems: 'center',
               gap: '6px'
             }} title={!session?.is_admin ? "this model is selected by the admin" : undefined}>
-              <span style={{ opacity: 0.7 }}>AI:</span>
+              <span style={{ opacity: 0.7 }}>LLM:</span>
               <span style={{ fontWeight: 700 }}>{session.ai_provider?.toUpperCase()}</span>
             </div>
 

@@ -432,10 +432,10 @@ function HomePage() {
       {pendingInputDialog && (
         <div className="fdl-confirm-backdrop" onClick={() => setPendingInputDialog(false)}>
           <div className="fdl-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="pending-input-title" aria-describedby="pending-input-description" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === 'Escape') setPendingInputDialog(false); }}>
-            <h2 id="pending-input-title">AI input not yet applied</h2>
-            <p id="pending-input-description">The text in AI Search Assistant has not been applied. Continue with the currently configured criteria and filters?</p>
+            <h2 id="pending-input-title">LLM input not yet applied</h2>
+            <p id="pending-input-description">The text in LLM Search Assistant has not been applied. Continue with the currently configured criteria and filters?</p>
             <div className="fdl-confirm-actions">
-              <button type="button" className="fdl-btn fdl-btn--quiet" autoFocus onClick={() => setPendingInputDialog(false)}>Return to AI Search Assistant</button>
+              <button type="button" className="fdl-btn fdl-btn--quiet" autoFocus onClick={() => setPendingInputDialog(false)}>Return to LLM Search Assistant</button>
               <button type="button" className="fdl-btn fdl-btn--search" onClick={() => { setPendingInputDialog(false); runSearch(); }}>Search current criteria</button>
             </div>
           </div>

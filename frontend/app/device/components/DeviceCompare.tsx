@@ -45,7 +45,7 @@ export default function DeviceCompare({ device1, device2, onClose }: DeviceCompa
 
   if (loading) return (
     <div style={{ padding: '3rem', textAlign: 'center', backgroundColor: 'var(--fdl-paper, #ffffff)', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)', borderTop: '3px solid var(--fdl-navy-800, #12375b)', fontWeight: 700, color: 'var(--fdl-blue-700, #0759a5)' }}>
-      Comparing Indications for Use using AI...
+      Comparing Indications for Use using LLM...
     </div>
   );
 
@@ -107,7 +107,7 @@ export default function DeviceCompare({ device1, device2, onClose }: DeviceCompa
                   <h1>IFU Comparison Report</h1>
                   <p><strong>${device1.name} (${device1.id})</strong> vs. <strong>${device2.name} (${device2.id})</strong></p>
                   <div class="summary">
-                    <h2>AI Summary of Differences</h2>
+                    <h2>LLM Summary of Differences</h2>
                     ${data.comparison}
                   </div>
                   <hr/>
@@ -157,7 +157,7 @@ export default function DeviceCompare({ device1, device2, onClose }: DeviceCompa
       </div>
 
       <div style={{ backgroundColor: 'var(--fdl-canvas, #f3f6f8)', padding: '1.25rem 1.5rem', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line-soft, #d7e0e7)', marginBottom: '1.5rem' }}>
-        <h3 style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--fdl-muted, #5e6e7c)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>AI Summary of Differences</h3>
+        <h3 style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--fdl-muted, #5e6e7c)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>LLM Summary of Differences</h3>
         <div 
           style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--fdl-ink, #132332)' }}
           dangerouslySetInnerHTML={{ __html: data.comparison }}

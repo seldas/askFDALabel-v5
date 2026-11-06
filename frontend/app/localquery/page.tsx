@@ -325,7 +325,7 @@ const LocalQueryContent = () => {
                                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                                 <path d="M11 8a2 2 0 0 0-2 2"></path>
                             </svg>
-                            Try Conversational AI Chat
+                            Try Conversational LLM Chat
                         </Link>
                     </div>
                 </div>

@@ -72,7 +72,7 @@ const ThinkingMessage = ({ status }: { status: string }) => {
       <div className="message-content">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div className="loading-spinner-small"></div>
-          <span style={{ fontStyle: 'italic', color: '#64748b' }}>{status || "AI is thinking..."}</span>
+          <span style={{ fontStyle: 'italic', color: '#64748b' }}>{status || "LLM is thinking..."}</span>
         </div>
       </div>
     </div>
@@ -173,7 +173,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onSearch }) => {
         });
         const chatData = await chatRes.json();
         if (!chatRes.ok) {
-          throw new Error(chatData.error || `AI search failed (${chatRes.status})`);
+          throw new Error(chatData.error || `LLM search failed (${chatRes.status})`);
         }
         setChatHistory(prev => [...prev, { role: 'assistant' as const, content: chatData.response_text }]);
         setIsLoading(false);
@@ -210,7 +210,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ onSearch }) => {
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || `AI search failed (${response.status})`);
+        throw new Error(result.error || `LLM search failed (${response.status})`);
       }
       setChatHistory(prev => [...prev, { role: 'assistant' as const, content: result.response_text }]);
       setIsLoading(false);

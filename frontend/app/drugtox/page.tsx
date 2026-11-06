@@ -631,7 +631,7 @@ export default function DrugToxPage() {
             askDrugTox
           </Typography>
           <Typography variant="h6" className="hero-subtitle-animated" color="text.secondary" sx={{ fontWeight: 400, opacity: 0.8, mb: 4 }}>
-            Agentic AI System for Drug Toxicity Classification
+            Agentic LLM System for Drug Toxicity Classification
           </Typography>
 
           <Paper sx={{ display: 'flex', alignItems: 'center', width: '100%', maxWidth: 900, p: 1, border: '1px solid var(--fdl-line, #b8c8d7)', borderRadius: 'var(--fdl-radius-sm, 2px)', boxShadow: 'var(--fdl-elevation-1, 0 1px 3px rgba(7, 31, 61, 0.06))' }}>
@@ -998,7 +998,7 @@ export default function DrugToxPage() {
                                       { label: 'Application No.', value: detail.Application_Number || '—' },
                                       { label: 'Routes', value: detail.Routes || '—' },
                                       { label: 'Dosage Form', value: detail.Dosage_Form || '—' },
-                                      { label: 'AI Model', value: (detail as any).AI_Model || '—' },
+                                      { label: 'LLM Model', value: (detail as any).AI_Model || '—' },
                                       { label: 'Assessment Date', value: (detail as any).Assessment_Date || '—' },
                                     ] as {label: string; value: string}[]).map(({ label, value }) => (
                                       <Box key={label}>
@@ -1036,7 +1036,7 @@ export default function DrugToxPage() {
                                       border: '1px dashed var(--fdl-line, #b8c8d7)'
                                     }}>
                                       <Typography variant="body2" sx={{ color: 'var(--fdl-ink-soft, #273843)', fontWeight: 700, textAlign: 'center' }}>
-                                        This drug has not yet been assessed by the AI system.
+                                        This drug has not yet been assessed by the LLM system.
                                       </Typography>
                                       <Typography variant="caption" sx={{ color: 'var(--fdl-muted, #5e6e7c)', textAlign: 'center' }}>
                                         Use &ldquo;View in Detail&rdquo; to open the label page, or check back after the next generation run.

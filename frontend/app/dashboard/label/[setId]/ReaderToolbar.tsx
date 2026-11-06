@@ -137,7 +137,7 @@ export default function ReaderToolbar({ title, date, status, tocCollapsed, onTog
           </button>
           <button id="chat-bubble" type="button" className="label-tool-btn label-tool-chat" aria-pressed={chatOpen} onClick={onToggleChat}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-            AI Chat
+            LLM Chat
           </button>
         </div>
         <div className="afl-reader-toolbar__inline">{actions.slice(0, visibleCount).map(action)}</div>

@@ -232,10 +232,10 @@ export function AiIntentPanel({
         onImportQuery(saved, !review);
         if (review) onReviewReady();
         setProcessedIntent(trimmed);
-        setActivePrompt('Imported from external AI');
+        setActivePrompt('Imported from external LLM');
         setIsFolded(true);
         setNotes([
-          'External AI query imported. Drug names, MedDRA terms, and pharmacologic classes still require vocabulary confirmation.',
+          'External LLM query imported. Drug names, MedDRA terms, and pharmacologic classes still require vocabulary confirmation.',
           ...saved.notes,
           ...saved.unsupported.map(item => `Warning: unsupported condition — ${item}. Review before searching.`),
         ]);
@@ -320,7 +320,7 @@ export function AiIntentPanel({
             <div className="fdl-ai__icon">
               <AssistantIcon size={16} />
             </div>
-            <h2 className="fdl-ai__title">AI Search Assistant</h2>
+            <h2 className="fdl-ai__title">LLM Search Assistant</h2>
           </div>
           {!isFolded && (
             <p className="fdl-ai__lede">
@@ -350,7 +350,7 @@ export function AiIntentPanel({
               rows={2}
               value={intent}
               disabled={disabled || busy}
-              placeholder="Describe a search, paste SET-IDs, or paste a query code / external AI query to restore criteria..."
+              placeholder="Describe a search, paste SET-IDs, or paste a query code / external LLM query to restore criteria..."
               onChange={(e) => setIntent(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -485,12 +485,12 @@ export function AiIntentPanel({
                   setTimeout(() => URL.revokeObjectURL(url), 1000);
                 }}
               >
-                Download External AI Instructions
+                Download External LLM Instructions
               </button>
               <span className="fdl-ai__quick-search-info" tabIndex={0} aria-describedby="external-ai-instructions-tooltip">
                 <InfoIcon />
                 <span id="external-ai-instructions-tooltip" role="tooltip" className="fdl-ai__quick-search-tooltip">
-                  Download instructions for Elsa, Gemini, or other AI chat tools. Paste the generated query response here to restore criteria.
+                  Download instructions for Elsa, Gemini, or other LLM chat tools. Paste the generated query response here to restore criteria.
                 </span>
               </span>
             </div>

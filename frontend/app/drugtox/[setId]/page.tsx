@@ -135,7 +135,7 @@ const AGENT_CONFIGS: Record<string, { name: string; title: string; color: string
     title: 'Drug-Induced Liver Injury (DILI) Safety Assessment',
     color: '#0891b2',
     icon: '🧪',
-    instructions: 'DILI Agent leverages advanced AI to analyze official FDA prescribing labels for hepatotoxicity signals. It evaluates risk concern levels (Most, Less, or No DILI Concern), ALT/AST liver enzyme elevation patterns, serum bilirubin monitoring thresholds, clinical liver toxicity warnings, and historical DILI database classifications.'
+    instructions: 'DILI Agent leverages advanced LLM to analyze official FDA prescribing labels for hepatotoxicity signals. It evaluates risk concern levels (Most, Less, or No DILI Concern), ALT/AST liver enzyme elevation patterns, serum bilirubin monitoring thresholds, clinical liver toxicity warnings, and historical DILI database classifications.'
   },
   dict: {
     name: 'DICT Agent',
@@ -422,7 +422,7 @@ export default function DrugToxDetailPage() {
                         {reportData[activeTox] === "Failed to generate report." ? (
                           <Box sx={{ mb: 4, p: 3, borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid #fca5a5', backgroundColor: '#fef2f2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Typography sx={{ color: '#991b1b', fontWeight: 600 }}>
-                              Generation Failed. The AI model could not produce a valid assessment.
+                              Generation Failed. The LLM model could not produce a valid assessment.
                             </Typography>
                             <Button 
                               variant="outlined" 
@@ -486,7 +486,7 @@ export default function DrugToxDetailPage() {
                             {rawReportData[activeTox] && (
                               <Box sx={{ mt: 2 }}>
                                 <Button size="small" onClick={() => setShowRaw(prev => ({ ...prev, [activeTox!]: !prev[activeTox!] }))}>
-                                  {showRaw[activeTox] ? 'Hide Raw AI Output' : 'View Raw AI Output (Debug)'}
+                                  {showRaw[activeTox] ? 'Hide Raw LLM Output' : 'View Raw LLM Output (Debug)'}
                                 </Button>
                                 {showRaw[activeTox] && (
                                   <Box sx={{ mt: 2, p: 2, backgroundColor: 'var(--fdl-navy-950, #071f3d)', color: 'var(--fdl-canvas, #f3f6f8)', borderRadius: 'var(--fdl-radius-sm, 2px)', fontSize: '0.85rem', fontFamily: 'monospace', whiteSpace: 'pre-wrap', maxHeight: '400px', overflowY: 'auto' }}>

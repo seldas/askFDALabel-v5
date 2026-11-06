@@ -284,7 +284,7 @@ export default function Ro2ToolPage() {
             detail={
               dose?.max_daily_dose_mg != null
                 ? `${dose.max_daily_dose_mg} mg/day`
-                : doseStatus === 'pending' ? 'reading the label with AI — usually 5–20s' : undefined
+                : doseStatus === 'pending' ? 'reading the label with LLM — usually 5–20s' : undefined
             }
             seconds={elapsed}
           />
@@ -345,7 +345,7 @@ export default function Ro2ToolPage() {
             </div>
             {doseStatus === 'pending' && (
               <div style={{ color: '#64748b', fontSize: '0.86rem', marginBottom: '4px' }}>
-                Reading the label with AI — you can type a dose now rather than wait.
+                Reading the label with LLM — you can type a dose now rather than wait.
               </div>
             )}
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', margin: '8px 0' }}>
@@ -393,7 +393,7 @@ export default function Ro2ToolPage() {
                 <span style={{ color: '#0f172a', fontWeight: 600 }}>Entered by you.</span>
               ) : dose?.max_daily_dose_mg != null ? (
                 <>
-                  Read from the label by AI
+                  Read from the label by LLM
                   {dose.dose_basis ? ` (${dose.dose_basis})` : ''}
                   {dose.dose_confidence ? `, ${dose.dose_confidence} confidence` : ''}.
                   {' '}Check it against the quote below.

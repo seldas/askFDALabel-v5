@@ -251,7 +251,7 @@ export default function NotesModal({ isOpen, onClose, setId }: NotesModalProps) 
                 No notes or highlights yet
               </div>
               <p style={{ fontSize: '0.88rem', margin: '6px 0 0 0', maxWidth: '360px', marginInline: 'auto' }}>
-                Select text in the label to add highlights or comments, or ask the AI assistant questions to pin
+                Select text in the label to add highlights or comments, or ask the LLM assistant questions to pin
                 insights to document sections.
               </p>
             </div>

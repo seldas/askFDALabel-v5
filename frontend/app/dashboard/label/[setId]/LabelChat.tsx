@@ -132,7 +132,7 @@ export default function LabelChat({
       annotateDocument(userInput, aiResponseText, keywords, setId, canComment);
     } catch (err) {
       console.error('Error sending chat message:', err);
-      addMessages([{ role: 'model', content: 'Error: Could not connect to the AI assistant.' }]);
+      addMessages([{ role: 'model', content: 'Error: Could not connect to the LLM assistant.' }]);
     } finally {
       setIsLoading(false);
     }
@@ -149,7 +149,7 @@ export default function LabelChat({
     >
       {/* Header */}
       <div className="chat-header" id="chat-header">
-        <h3>AI Assistant</h3>
+        <h3>LLM Assistant</h3>
         <div className="chat-header-buttons" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
             type="button"
@@ -239,7 +239,7 @@ export default function LabelChat({
           <div className="message message-ai message-greeting">
             <div className="message-content">
               <p>
-                Hello! I am your AI assistant for <strong>{drugName || 'this FDA label'}</strong>. Ask me
+                Hello! I am your LLM assistant for <strong>{drugName || 'this FDA label'}</strong>. Ask me
                 about indications, dosage, contraindications, adverse reactions, or drug interactions.
               </p>
             </div>

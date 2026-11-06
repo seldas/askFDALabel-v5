@@ -349,7 +349,7 @@ const HistoryTrackPage = () => {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                                     <span style={{ fontSize: '1.1rem' }}>✨</span>
                                     <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                                        AI Change Summary
+                                        LLM Change Summary
                                     </h3>
                                 </div>
                                 <p style={{ color: '#92400e', lineHeight: 1.5, fontSize: '0.9rem', marginBottom: '15px' }}>

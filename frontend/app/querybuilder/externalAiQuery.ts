@@ -22,20 +22,20 @@ export interface ExternalQuery extends SavedQuery { notes: string[]; unsupported
 export function parseExternalQuery(text: string): ExternalQuery {
   const start = text.indexOf(EXTERNAL_QUERY_START);
   const end = text.indexOf(EXTERNAL_QUERY_END, start + EXTERNAL_QUERY_START.length);
-  if (start < 0 || end < 0) throw new Error('Paste the complete external AI response, including BEGIN and END FDALABEL QUERY V1 markers.');
+  if (start < 0 || end < 0) throw new Error('Paste the complete external LLM response, including BEGIN and END FDALABEL QUERY V1 markers.');
   let data;
   try {
     data = JSON.parse(text.slice(start + EXTERNAL_QUERY_START.length, end).trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, ''));
-  } catch { throw new Error('The external AI query contains invalid JSON. Ask the model to correct its response using the downloaded instructions.'); }
+  } catch { throw new Error('The external LLM query contains invalid JSON. Ask the model to correct its response using the downloaded instructions.'); }
   if (data.version !== 1 || !['local', 'oracle', 'oracle_all'].includes(data.targetDb)
     || !Array.isArray(data.query?.groups) || !data.query.groups.length || typeof data.query.exactMatch !== 'boolean') {
-    throw new Error('The external AI response has an unsupported query format or database scope.');
+    throw new Error('The external LLM response has an unsupported query format or database scope.');
   }
   for (const field of ['notes', 'unsupported']) {
-    if (!Array.isArray(data[field]) || !data[field].every((item: unknown) => typeof item === 'string')) throw new Error(`Invalid ${field} list in the external AI query.`);
+    if (!Array.isArray(data[field]) || !data[field].every((item: unknown) => typeof item === 'string')) throw new Error(`Invalid ${field} list in the external LLM query.`);
   }
   for (const group of data.query.groups) {
-    if (!Array.isArray(group.criteria) || !group.criteria.length) throw new Error('External AI queries must contain nonempty criteria groups.');
+    if (!Array.isArray(group.criteria) || !group.criteria.length) throw new Error('External LLM queries must contain nonempty criteria groups.');
     for (const criterion of group.criteria) {
       const type = criterion.type as CriterionType;
       if (!Object.prototype.hasOwnProperty.call(CRITERION_DEFS, type)) throw new Error(`Unsupported criterion: ${type}.`);
@@ -74,7 +74,7 @@ export function externalAiInstructions(targetDb: TargetDb, options: OptionLists,
   const templates = Object.values(CRITERION_DEFS)
     .filter(def => targetDb !== 'local' || !LOCAL_UNSUPPORTED.includes(def.type))
     .map(def => ({ type: def.type, value: def.defaultValue() }));
-  return `FDALabel external AI query instructions — protocol V1
+  return `FDALabel external LLM query instructions — protocol V1
 
 You help the user translate a labeling search request into FDALabel query criteria. Ask for the user's search request if none is provided. Ask a clarifying question when AND/OR relationships or the desired scope are ambiguous. Do not claim to have searched FDALabel or provide fabricated results.
 
@@ -99,6 +99,6 @@ ${EXTERNAL_QUERY_START}
 ${JSON.stringify({version:1,targetDb,query:{exactMatch,groups:[{criteria:[{type:'productName',value:{field:'any',op:'equals',text:'metformin',verified:false}}]}]},notes:[],unsupported:[]},null,2)}
 ${EXTERNAL_QUERY_END}
 
-The user will paste your complete output into the AI Search Assistant. The application parses it as data and restores the criteria; it does not execute your text as code.
+The user will paste your complete output into the LLM Search Assistant. The application parses it as data and restores the criteria; it does not execute your text as code.
 `;
 }

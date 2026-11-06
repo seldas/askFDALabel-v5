@@ -194,7 +194,7 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
     const isThisRefining = isRefining && loadingStatus.includes(productName);
     
     const handleRefineClick = () => {
-      if (window.confirm(`Are you sure you want to refine the AI's last response using the document for ${productName}?`)) {
+      if (window.confirm(`Are you sure you want to refine the LLM's last response using the document for ${productName}?`)) {
         refineResponseWithLabel(setId, productName);
       }
     };
@@ -1256,7 +1256,7 @@ const Results: React.FC<ResultsProps> = ({ hasSearched }) => {
           }}>
             <span style={{ fontSize: '1.2rem' }}>💡</span>
             <div style={{ fontSize: '0.85rem', color: 'var(--fdl-navy-800, #12375b)', lineHeight: 1.4 }}>
-              <strong>Pro Tip:</strong> Click the <strong>🔍📄 Document Refinement</strong> icon on any result to refine the AI's last response using that specific labeling as a primary reference.
+              <strong>Pro Tip:</strong> Click the <strong>🔍📄 Document Refinement</strong> icon on any result to refine the LLM's last response using that specific labeling as a primary reference.
             </div>
           </div>
         </>

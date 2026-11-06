@@ -46,14 +46,14 @@ export default function AiPreferences() {
       const result = await res.json();
       if (!res.ok || !result.success) throw new Error(result.error || 'Could not save preferences.');
       await refreshSession();
-      setMessage('Saved. Your next AI request will use these preferences.');
+      setMessage('Saved. Your next LLM request will use these preferences.');
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not save preferences.'); }
     finally { setSaving(false); }
   };
   return (
     <section id="ai-settings" className="mgmt-card ai-preferences">
-      <h2 className="section-title">AI Preferences</h2>
-      <p>Choose the model for your account. Changes apply to your next AI request.</p>
+      <h2 className="section-title">LLM Preferences</h2>
+      <p>Choose the model for your account. Changes apply to your next LLM request.</p>
       <div className="ai-preferences__current">
         <span>Currently used</span>
         <strong>{names[session?.ai_provider || ''] || session?.ai_provider}</strong>

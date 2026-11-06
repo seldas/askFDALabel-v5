@@ -236,7 +236,7 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
           Task-Specific Summarization
         </h2>
         <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: 'var(--fdl-muted)', lineHeight: 1.5 }}>
-          Select a pre-defined or custom task question and the AI will analyze the labeling document to generate a structured task summary.
+          Select a pre-defined or custom task question and the LLM will analyze the labeling document to generate a structured task summary.
         </p>
       </div>
       <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', flexWrap: 'wrap' as const, marginBottom: '16px' }}>
@@ -326,7 +326,7 @@ function ClinicalQueryEngine({ setId }: { setId: string }) {
               id="examine-refresh-btn"
               onClick={() => handleRun(true)}
               disabled={loading}
-              title="Force a fresh AI generation (bypass cache)"
+              title="Force a fresh LLM generation (bypass cache)"
               style={{
                 padding: '8px 12px', background: 'var(--fdl-surface, #ffffff)', color: 'var(--fdl-text, var(--fdl-ink-soft))',
                 border: '1px solid var(--fdl-line, var(--fdl-line))', borderRadius: 'var(--fdl-radius-sm, 2px)', fontWeight: 700,

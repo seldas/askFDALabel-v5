@@ -234,7 +234,7 @@ export default function AEReportPage() {
                   gap: '6px'
                 }}
               >
-                <span>🤖</span> JSON for AI
+                <span>🤖</span> JSON for LLM
               </button>
 
               <button 

@@ -41,7 +41,7 @@ const CONTENT: WikiArticle[] = [
     'In Label View, expand Label details when needed and use Contents to locate the relevant section. Read surrounding paragraphs, tables, and footnotes.',
     'Open Toolbox and choose an analysis suited to the question. Keep the original document available while examining extracted or generated output.',
     'Record the finding, the source passage and version, any uncertainty, and your next verification step. Save notes or export the relevant evidence where available.',
-  ], ['Check that the quoted passage supports the observation in its original context.', 'Distinguish your interpretation from source text and AI-generated suggestions.'], ['versions', 'evidence-types', 'toolbox-guide', 'review-record'], home),
+  ], ['Check that the quoted passage supports the observation in its original context.', 'Distinguish your interpretation from source text and LLM-generated suggestions.'], ['versions', 'evidence-types', 'toolbox-guide', 'review-record'], home),
   {
     id: 'account-access', path: 'guides', group: 'Account & preferences',
     title: 'Sign in and sign out', summary: 'Use your own account for personal review work.',
@@ -76,20 +76,20 @@ const CONTENT: WikiArticle[] = [
   },
   {
     id: 'ai-preferences', path: 'guides', group: 'Account & preferences',
-    title: 'Choose your AI model', summary: 'Set the model for your next AI request.',
-    tags: ['AI', 'model', 'ELSA', 'Llama-4', 'Muse', 'Gemini', 'system default'],
+    title: 'Choose your LLM model', summary: 'Set the model for your next LLM request.',
+    tags: ['LLM', 'model', 'ELSA', 'Llama-4', 'Muse', 'Gemini', 'system default'],
     related: ['ai-usage', 'availability', 'waiting-results'],
-    action: { href: '/management?tab=ai', label: 'Open AI Preferences' },
+    action: { href: '/management?tab=ai', label: 'Open LLM Preferences' },
     sections: [
-      { heading: 'Change the model', steps: ['Open the account menu and choose AI preferences.', 'Select an available model.', 'Click Save preferences. Check the current model shown on the page.'], paragraphs: ['Your choice applies to your account’s next AI requests.'] },
+      { heading: 'Change the model', steps: ['Open the account menu and choose LLM preferences.', 'Select an available model.', 'Click Save preferences. Check the current model shown on the page.'], paragraphs: ['Your choice applies to your account’s next LLM requests.'] },
       { heading: 'Follow the system default', paragraphs: ['Select Follow system default and click Save preferences to remove your personal model choice.'] },
-      { heading: 'Which models are available?', paragraphs: ['Internal environments offer ELSA, Llama-4 (Local), and Muse (Local); external environments offer Gemini. Your installation may limit this list further.', 'Guest accounts cannot save an AI preference. If AI preferences is unavailable on your personal account, ask your administrator about access. Connection addresses and keys are managed by administrators.'] },
+      { heading: 'Which models are available?', paragraphs: ['Internal environments offer ELSA, Llama-4 (Local), and Muse (Local); external environments offer Gemini. Your installation may limit this list further.', 'Guest accounts cannot save an LLM preference. If LLM preferences is unavailable on your personal account, ask your administrator about access. Connection addresses and keys are managed by administrators.'] },
     ],
   },
   {
     id: 'ai-usage', path: 'guides', group: 'Account & preferences',
-    title: 'View your AI usage', summary: 'Check recorded model use and token counts for your account.',
-    tags: ['AI', 'token usage', 'history', 'model', 'date filter'],
+    title: 'View your LLM usage', summary: 'Check recorded model use and token counts for your account.',
+    tags: ['LLM', 'token usage', 'history', 'model', 'date filter'],
     related: ['ai-preferences', 'history-guide'],
     action: { href: '/management?tab=tokens', label: 'Open My Token Usage' },
     sections: [
@@ -115,16 +115,16 @@ const CONTENT: WikiArticle[] = [
     id: 'query-guide', path: 'guides', group: 'Search labeling',
     title: 'Search labeling',
     summary: 'Find labeling, check the matches, and choose documents to review.',
-    tags: ['search', 'core workspace', 'query builder', 'AI Search Assistant', 'review set'], action: home,
+    tags: ['search', 'core workspace', 'query builder', 'LLM Search Assistant', 'review set'], action: home,
     related: ['find-labeling', 'search-scope', 'manual-query', 'ai-query', 'match-expansion', 'search-results', 'query-codes'],
     sections: [
       { heading: 'The workflow', illustration: 'search-workflow' },
       { heading: 'Build your query', table: {
         columns: ['Start with', 'What to do'], rows: [
           ['Names or known conditions', 'Enter them directly in the Query Builder.'],
-          ['A question in plain language', 'Use AI Search Assistant to search, or select Review before search to inspect the generated conditions.'],
+          ['A question in plain language', 'Use LLM Search Assistant to search, or select Review before search to inspect the generated conditions.'],
         ],
-      }, paragraphs: ['Both routes use the same editable criteria. Select Review before search to review an AI draft before searching.'] },
+      }, paragraphs: ['Both routes use the same editable criteria. Select Review before search to review an LLM draft before searching.'] },
       { heading: 'Check the scope', paragraphs: ['Search uses the database scope shown in the workspace—not necessarily Local. Available records and conditions depend on that scope.'] },
     ],
   },
@@ -150,15 +150,15 @@ const CONTENT: WikiArticle[] = [
   },
   {
     id: 'ai-query', path: 'guides', group: 'Search labeling',
-    title: 'Use AI to draft search criteria', summary: 'Describe the search, inspect the draft, then run it.',
-    tags: ['AI Search Assistant', 'Review before search', 'Build Criteria', 'external AI'], action: home,
+    title: 'Use LLM to draft search criteria', summary: 'Describe the search, inspect the draft, then run it.',
+    tags: ['LLM Search Assistant', 'Review before search', 'Build Criteria', 'external LLM'], action: home,
     related: ['manual-query', 'match-expansion', 'query-codes'],
     sections: [
-      { heading: 'Build and review', steps: ['Enter your request in AI Search Assistant. Select Review before search.', 'Click Build Criteria. Check names, terms, sections, AND/OR groups, and selected chips.', 'Correct the draft, then click Search Labels.'] },
+      { heading: 'Build and review', steps: ['Enter your request in LLM Search Assistant. Select Review before search.', 'Click Build Criteria. Check names, terms, sections, AND/OR groups, and selected chips.', 'Correct the draft, then click Search Labels.'] },
       { heading: 'Other starting points', table: { columns: ['Option', 'What changes'], rows: [
         ['Review before search', 'Builds criteria for review; when unchecked, a successful translation searches immediately.'],
         ['Restore Query', 'Loads saved conditions from a query code.'],
-        ['External AI', 'Use the provided query instructions, then import and check the generated conditions.'],
+        ['External LLM', 'Use the provided query instructions, then import and check the generated conditions.'],
       ] } },
     ],
   },
@@ -182,7 +182,7 @@ const CONTENT: WikiArticle[] = [
     tags: ['query code', 'FDALABEL-Q1', 'Copy Query Code', 'Restore Query'], action: home,
     related: ['search-results', 'search-scope', 'review-record'],
     sections: [
-      { heading: 'Save → restore → check', steps: ['From the results export menu, choose Copy Query Code. Copy the complete FDALABEL-Q1 code.', 'Paste it into AI Search Assistant and choose Restore Query.', 'Check scope, conditions, Exact match, and filters before searching again.'] },
+      { heading: 'Save → restore → check', steps: ['From the results export menu, choose Copy Query Code. Copy the complete FDALABEL-Q1 code.', 'Paste it into LLM Search Assistant and choose Restore Query.', 'Check scope, conditions, Exact match, and filters before searching again.'] },
       { heading: 'Keep the evidence separately', paragraphs: ['Save the reviewed document versions and exports alongside the code. Data can change between searches; restoring a code does not grant additional access.', 'Shared codes contain readable search information. Do not include confidential content.'] },
     ],
   },
@@ -258,11 +258,11 @@ const CONTENT: WikiArticle[] = [
   },
   {
     id: 'label-chat-guide', path: 'guides', group: 'Labeling workspace',
-    title: 'Ask AI about the current labeling', summary: 'Use AI Chat alongside the document you are reading.',
-    tags: ['AI Chat', 'AI Assistant', 'Reset Chat', 'conversation'], action: home,
+    title: 'Ask LLM about the current labeling', summary: 'Use LLM Chat alongside the document you are reading.',
+    tags: ['LLM Chat', 'LLM Assistant', 'Reset Chat', 'conversation'], action: home,
     related: ['read-labeling', 'notes-guide', 'evidence-types', 'ai-preferences'],
     sections: [
-      { heading: 'Ask and check', steps: ['Open AI Chat from the labeling toolbar.', 'Ask a focused question. For example: “Summarize the monitoring instructions and identify the relevant section.”', 'Find the supporting passage in the document and check the answer against it.'] },
+      { heading: 'Ask and check', steps: ['Open LLM Chat from the labeling toolbar.', 'Ask a focused question. For example: “Summarize the monitoring instructions and identify the relevant section.”', 'Find the supporting passage in the document and check the answer against it.'] },
       { heading: 'Manage the conversation', paragraphs: ['Close Chat hides the panel. Reset Chat clears the conversation after confirmation. History is stored in this browser for the labeling set; check the version before continuing an older conversation.', 'Chat history is separate from saved comments and is not included in a section export.'] },
     ],
   },
@@ -288,7 +288,7 @@ const CONTENT: WikiArticle[] = [
     'Inspect postmarket report patterns: use FAERS. For organ-focused or pharmacogenomic questions, choose the relevant DILI, DICT, DIRI, or PGx agent.',
     'Review a specific clinical question: use Examine where available. For selected packaging images use Visual Analysis and choose Read Image, Labeling Consistency, Artwork Comparison, or Product Confusion.',
     'Find structurally related products: use Chemical Structure Search; then inspect the resulting labeling and product context.',
-  ], ['Check whether an output is original evidence, an annotation, an aggregate, or an AI interpretation.', 'Open label-specific tools from a selected labeling; this handbook does not create a substitute product context.'], ['pv-guide', 'faers-guide', 'compare-guide', 'visual-guide', 'agent-guide']),
+  ], ['Check whether an output is original evidence, an annotation, an aggregate, or an LLM interpretation.', 'Open label-specific tools from a selected labeling; this handbook does not create a substitute product context.'], ['pv-guide', 'faers-guide', 'compare-guide', 'visual-guide', 'agent-guide']),
   guide('pv-guide', 'Organize safety evidence', 'Generate a PV Profile and review QC findings', 'Use a structured safety profile as an index back to labeling evidence.', [
     'Open PV-Profile from the selected labeling’s Toolbox and confirm the document version before generation.',
     'Review extracted terms, source quotations, section locations, and any reported drug/comparator frequency information.',
@@ -304,7 +304,7 @@ const CONTENT: WikiArticle[] = [
   guide('faers-guide', 'Organize safety evidence', 'Explore FAERS report patterns', 'Inspect report counts and trends while retaining the query and time-window context.', [
     'Open FAERS from the selected labeling. Verify the drug-name query and the available date or report filters.',
     'Inspect the counts, trends, and candidate terms shown by the tool. Check whether a display refers to an overall or recent reporting window.',
-    'When an AI interpretation is available, compare it with the underlying displayed terms and query settings.',
+    'When an LLM interpretation is available, compare it with the underlying displayed terms and query settings.',
     'Return to labeling and other relevant evidence before deciding how a reporting pattern informs the review question.',
   ], ['Retain the query terms, time window, and filters when recording an observation.', 'Use the FAERS interpretation article before comparing counts across products.'], ['faers-method', 'evidence-types', 'review-record']),
   {
@@ -324,10 +324,10 @@ const CONTENT: WikiArticle[] = [
         ['Discrepancy Panel', 'Expand a section and read the corresponding text in each column. Boxed warnings appear first.'],
         ['IDENTICAL / CHANGES DETECTED', 'Use these text-comparison flags to locate passages; check full wording and tables.'],
         ['FILTER BY SEVERITY GAP', 'Focus on large text differences. Switch it off to return to all sections; it does not rank clinical severity.'],
-        ['Generate Clinical Summary', 'Request an AI summary of differing sections. Verify important statements against the source passages.'],
+        ['Generate Clinical Summary', 'Request an LLM summary of differing sections. Verify important statements against the source passages.'],
       ] } },
-      { heading: 'Keep the comparison', paragraphs: ['Use Favorite to choose a project, enter a title, and Save to Project. Reopen it from the project’s saved comparisons.', 'Export downloads a JSON file containing comparison text and analysis instructions, not a formatted report or the displayed AI summary. The severity filter does not limit the export.'] },
-      { heading: 'Before drawing a conclusion', paragraphs: ['Differences can reflect formulation, indication, document structure, or wording. A highlighted change alone does not establish a new safety finding or product equivalence.'], steps: ['Check document identity and version, and read the surrounding passage.', 'For alignment, filter, and AI-summary limitations, see Interpret labeling differences below.'] },
+      { heading: 'Keep the comparison', paragraphs: ['Use Favorite to choose a project, enter a title, and Save to Project. Reopen it from the project’s saved comparisons.', 'Export downloads a JSON file containing comparison text and analysis instructions, not a formatted report or the displayed LLM summary. The severity filter does not limit the export.'] },
+      { heading: 'Before drawing a conclusion', paragraphs: ['Differences can reflect formulation, indication, document structure, or wording. A highlighted change alone does not establish a new safety finding or product equivalence.'], steps: ['Check document identity and version, and read the surrounding passage.', 'For alignment, filter, and LLM-summary limitations, see Interpret labeling differences below.'] },
     ],
   },
   guide('history-guide', 'Comparisons', 'Find archived labeling versions', 'Select available documents for a historical review.', [
@@ -411,12 +411,12 @@ const CONTENT: WikiArticle[] = [
     { heading: 'Substituted versions', paragraphs: ['Check any source or substituted-version notice. When the review requires a particular historical version, do not silently cite another version as if it were the requested document.'] },
     { heading: 'Reviewer checks', steps: ['Verify document identifiers on external material.', 'Record missing sources and substitutions as limitations of the review.'] },
   ], ['versions', 'read-labeling', 'visual-guide']),
-  method('evidence-types', 'AI and verification', 'Separate source evidence from generated interpretation', 'Source text, annotations, calculations, and AI summaries have different evidentiary roles.', [
-    { heading: 'Recognize the output', steps: ['Source: a passage, table, image, or record that you can inspect.', 'Extraction or annotation: selected content and assigned labels, which need context checks.', 'Calculation or aggregate: a value produced from inputs, definitions, and filters.', 'AI interpretation: a proposed explanation or synthesis, which needs source verification.'] },
+  method('evidence-types', 'LLM and verification', 'Separate source evidence from generated interpretation', 'Source text, annotations, calculations, and LLM summaries have different evidentiary roles.', [
+    { heading: 'Recognize the output', steps: ['Source: a passage, table, image, or record that you can inspect.', 'Extraction or annotation: selected content and assigned labels, which need context checks.', 'Calculation or aggregate: a value produced from inputs, definitions, and filters.', 'LLM interpretation: a proposed explanation or synthesis, which needs source verification.'] },
     { heading: 'What fluency does not establish', paragraphs: ['A clear summary can still omit qualifications or include unsupported statements. A matching citation must also support the statement in context. An automated QC pass adds a check; it is not proof of completeness.'] },
     { heading: 'Reviewer checks', steps: ['Trace material claims to the original passage or reference.', 'Check population, dose, timing, negation, comparator, and uncertainty.', 'Document your interpretation separately from generated wording.'] },
   ], ['first-review', 'pv-method', 'comparison-method', 'review-record']),
-  method('pv-method', 'AI and verification', 'What PV Profile and QC do—and do not establish', 'A profile organizes candidate safety evidence; QC helps inspect terms and citation support.', [
+  method('pv-method', 'LLM and verification', 'What PV Profile and QC do—and do not establish', 'A profile organizes candidate safety evidence; QC helps inspect terms and citation support.', [
     { heading: 'Profile and QC roles', paragraphs: ['PV-Profile structures extracted safety terms and their labeling context. The QC workflow examines term appropriateness, excluded candidate terms, ambiguity, and whether quoted evidence supports the proposed interpretation.', 'A term can describe an indication, a pre-existing condition, a measurement, or an adverse reaction. Read the supporting narrative before accepting an extracted classification.'] },
     { heading: 'Boundaries', paragraphs: ['Do not interpret a completed run as proof that all reactions were captured, that every citation was correctly judged, or that the document passed a comprehensive regulatory consistency audit.'] },
     { heading: 'Reviewer checks', steps: ['Review ambiguity and excluded-candidate findings, not only accepted rows.', 'Compare quotations with the original section and record unresolved differences.'] },
@@ -446,7 +446,7 @@ const CONTENT: WikiArticle[] = [
       ['Significant Section Overhaul', 'A large rewrite is shown without word highlights for readability. The label describes text change, not clinical importance.'],
       ['Severity Gap filter', 'Selects sections using text similarity, while retaining boxed warnings. It is most useful with two documents; with 3–4 it does not provide a meaningful severity ranking.'],
     ] } },
-    { heading: 'AI summary and saved comparisons', paragraphs: ['AI summaries use the differing sections, independently of the visible severity filter. Large comparisons can exceed the summary limit; Export still lets you retain the comparison text.', 'An existing summary may be reused. Saved comparisons and summary reuse are associated with labeling Set IDs rather than a frozen copy of each version. When reviewing historical changes, confirm the loaded dates and source passages instead of treating a saved comparison or summary as a version-pinned record.'] },
+    { heading: 'LLM summary and saved comparisons', paragraphs: ['LLM summaries use the differing sections, independently of the visible severity filter. Large comparisons can exceed the summary limit; Export still lets you retain the comparison text.', 'An existing summary may be reused. Saved comparisons and summary reuse are associated with labeling Set IDs rather than a frozen copy of each version. When reviewing historical changes, confirm the loaded dates and source passages instead of treating a saved comparison or summary as a version-pinned record.'] },
     { heading: 'Reviewer checks', steps: ['For historical changes, confirm both versions and their dates. Across products, check formulation, route, indication, and population.', 'Verify material findings in the original documents, including tables and footnotes. Establish RLD/RS relationships from the appropriate records.'] },
   ], ['compare-guide', 'history-guide', 'versions', 'source-availability']),
   method('visual-method', 'Comparisons and screening', 'Interpret image findings and partial visual reviews', 'Visible artwork, product-confusion concerns, and reference consistency are separate review questions.', [
@@ -462,7 +462,7 @@ const CONTENT: WikiArticle[] = [
     related: ['agent-guide', 'versions', 'source-availability', 'review-record'],
     sections: [
       { heading: 'What the assessment measures', paragraphs: [
-        'DILI Agent asks an AI model to identify liver-related evidence in a labeling document, assign a score to each selected sentence, and produce Most, Less, or No DILI Concern. The conclusion combines the type of liver finding with where it appears in labeling.',
+        'DILI Agent asks an LLM model to identify liver-related evidence in a labeling document, assign a score to each selected sentence, and produce Most, Less, or No DILI Concern. The conclusion combines the type of liver finding with where it appears in labeling.',
         'This is the application’s labeling-based rubric. A score is not an event rate, probability of injury, or patient-level causality score. A newly generated assessment is not a lookup of an independently established DILIrank classification.',
       ] },
       { heading: 'Which document and sections are read?', paragraphs: [
@@ -657,7 +657,7 @@ const CONTENT: WikiArticle[] = [
         "heading": "Stored results, reruns, and conflicting output",
         "paragraphs": [
           "Assessment Records can contain previously generated results. Check the assessment date and model where available; the assessment date is different from the labeling effective date. Run New Assessment requests another analysis of available labeling, rather than collecting new patient or literature evidence.",
-          "The AI assigns the evidence level and writes the conclusion; the application then extracts the stored class from that text. An unrecognized conclusion can currently be stored as No. If the badge, conclusion, and quoted evidence disagree, record the inconsistency and verify the source. A failure, missing source, or unsupported conclusion is not a negative finding.",
+          "The LLM assigns the evidence level and writes the conclusion; the application then extracts the stored class from that text. An unrecognized conclusion can currently be stored as No. If the badge, conclusion, and quoted evidence disagree, record the inconsistency and verify the source. A failure, missing source, or unsupported conclusion is not a negative finding.",
           "Preserve the evidence passage, section, document identity, assessment date, and unresolved questions. Repeated assessments are not guaranteed to create separate records: a result from the same day and model can replace the existing result."
         ]
       }
@@ -797,7 +797,7 @@ const CONTENT: WikiArticle[] = [
         "heading": "Stored results, reruns, and conflicting output",
         "paragraphs": [
           "Assessment Records can contain previously generated results. Check the assessment date and model where available; the assessment date is different from the labeling effective date. Run New Assessment requests another analysis of available labeling, rather than collecting new patient or literature evidence.",
-          "The AI assigns the evidence level and writes the conclusion; the application then extracts the stored class from that text. An unrecognized conclusion can currently be stored as No. If the badge, conclusion, and quoted evidence disagree, record the inconsistency and verify the source. A failure, missing source, or unsupported conclusion is not a negative finding.",
+          "The LLM assigns the evidence level and writes the conclusion; the application then extracts the stored class from that text. An unrecognized conclusion can currently be stored as No. If the badge, conclusion, and quoted evidence disagree, record the inconsistency and verify the source. A failure, missing source, or unsupported conclusion is not a negative finding.",
           "Preserve the evidence passage, section, document identity, assessment date, and unresolved questions. Repeated assessments are not guaranteed to create separate records: a result from the same day and model can replace the existing result."
         ]
       }
@@ -826,7 +826,7 @@ const CONTENT: WikiArticle[] = [
       {
         "heading": "What the agent produces",
         "paragraphs": [
-          "PGx Agent identifies candidate biomarkers, asks AI to interpret their relevance in labeling, and returns a summary for each retained biomarker. Its categories are Actionable PGx, Informational PGx, and No Biomarkers Found; it does not use the organ-toxicity agents\u2019 Most/Less/No rubric.",
+          "PGx Agent identifies candidate biomarkers, asks LLM to interpret their relevance in labeling, and returns a summary for each retained biomarker. Its categories are Actionable PGx, Informational PGx, and No Biomarkers Found; it does not use the organ-toxicity agents\u2019 Most/Less/No rubric.",
           "Candidates cover metabolism enzymes, HLA associations, transporters, and target biomarkers. A biomarker mention can concern metabolism, safety, dosing, treatment selection, or efficacy; it is not necessarily a toxicity finding or an inherited variant."
         ]
       },
@@ -847,7 +847,7 @@ const CONTENT: WikiArticle[] = [
               "The application looks for expected biomarkers by drug name in its imported reference data. Matching can fall back to the first word of a multiword name; verify combination-product and name matches. This is not a live FDA lookup."
             ],
             [
-              "AI review",
+              "LLM review",
               "The model receives candidates, expected table entries, and labeling text. It is asked to extract evidence, identify the section, and explain the clinical implication. The response still requires source verification."
             ]
           ]
@@ -874,7 +874,7 @@ const CONTENT: WikiArticle[] = [
             ],
             [
               "Clinical summary",
-              "AI interpretation of relevance and potential implications. Separate an explicit labeling instruction from a background association or metabolism statement."
+              "LLM interpretation of relevance and potential implications. Separate an explicit labeling instruction from a background association or metabolism statement."
             ],
             [
               "Label section and evidence quotation",
@@ -882,7 +882,7 @@ const CONTENT: WikiArticle[] = [
             ],
             [
               "FDA PGx Table: Yes / reference note",
-              "A claimed reference association, not a universal requirement to test or adjust treatment. AI-supplied membership flags are not independently rechecked for every retained entry."
+              "A claimed reference association, not a universal requirement to test or adjust treatment. LLM-supplied membership flags are not independently rechecked for every retained entry."
             ],
             [
               "Listed in FDA Table, but no explicit dosing guidance found",
@@ -946,7 +946,7 @@ const CONTENT: WikiArticle[] = [
             ],
             [
               "\u201cBiomarker mention detected in label text\u201d with no evidence quote",
-              "This can be a fallback after the AI response could not be parsed. It confirms a dictionary match, not a completed clinical interpretation."
+              "This can be a fallback after the LLM response could not be parsed. It confirms a dictionary match, not a completed clinical interpretation."
             ]
           ]
         }
@@ -954,8 +954,8 @@ const CONTENT: WikiArticle[] = [
       {
         "heading": "Empty results and incomplete interpretation",
         "paragraphs": [
-          "If no dictionary candidates and no expected reference entries are found, the agent can return No Biomarkers Found without calling AI. Unknown synonyms, drug-name mismatches, missing reference data, and section coverage can all limit detection.",
-          "If AI returns an unusable structured response, the application can retain detected candidates as generic informational entries. Missing quotes and generic mention-only text require a return to the labeling; they do not provide an independently supported clinical conclusion."
+          "If no dictionary candidates and no expected reference entries are found, the agent can return No Biomarkers Found without calling LLM. Unknown synonyms, drug-name mismatches, missing reference data, and section coverage can all limit detection.",
+          "If LLM returns an unusable structured response, the application can retain detected candidates as generic informational entries. Missing quotes and generic mention-only text require a return to the labeling; they do not provide an independently supported clinical conclusion."
         ]
       },
       {
@@ -977,7 +977,7 @@ const CONTENT: WikiArticle[] = [
     { heading: 'Reviewer checks', steps: ['Verify the intended structure and substance/product association.', 'Retain match mode and threshold.', 'Review relevant labeling and other evidence before making a class-wide safety inference.'] },
   ], ['chem-guide', 'agent-method', 'search-scope']),
   method('review-record', 'Traceability and reproducibility', 'Keep a traceable review record', 'Preserve enough context for another reviewer to understand what you examined and why.', [
-    { heading: 'Record the work', steps: ['Review question, product identity, relevant Set ID/document ID, and selected versions.', 'Database scope, search conditions, Exact match/expansion choices, active filters, and query code when available.', 'Original passages, table context, image references, or citations supporting each observation.', 'Tool and analysis date, displayed model/source information where available, task status, and unresolved limitations.', 'Reviewer interpretation, corrections, and follow-up decisions, kept separate from AI-generated text.'] },
+    { heading: 'Record the work', steps: ['Review question, product identity, relevant Set ID/document ID, and selected versions.', 'Database scope, search conditions, Exact match/expansion choices, active filters, and query code when available.', 'Original passages, table context, image references, or citations supporting each observation.', 'Tool and analysis date, displayed model/source information where available, task status, and unresolved limitations.', 'Reviewer interpretation, corrections, and follow-up decisions, kept separate from LLM-generated text.'] },
     { heading: 'Re-running is not freezing', paragraphs: ['A saved query or browser preference does not freeze source data or model output. Keep versioned source identifiers and exported evidence. If the application does not expose a needed provenance field, record that gap and consult support rather than inventing a value.'] },
   ], ['saved-work', 'query-codes', 'versions']),
   method('availability', 'Sources and scope', 'Why a tool or data scope may be unavailable', 'Feature visibility reflects the installation, account permissions, and selected product context.', [

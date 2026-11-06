@@ -554,9 +554,9 @@ export default function Header({
                         <div className="account-role">{session?.is_admin ? 'Administrator' : 'Account'}</div>
                       </div>
                     </div>
-                    <div className="account-ai-status" title="Effective AI model for your account">
+                    <div className="account-ai-status" title="Effective LLM model for your account">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>
-                      <span>AI model</span>
+                      <span>LLM model</span>
                       <strong>{({ elsa: 'ELSA', 'llama-4': 'Llama-4 (Local)', muse: 'Muse (Local)', gemini: 'Gemini' } as Record<string, string>)[session.ai_provider || ''] || session.ai_provider}</strong>
                     </div>
                     {!isGuest && (session?.is_admin || session?.permissions?.preferences) ? (
@@ -565,7 +565,7 @@ export default function Header({
                         className="account-ai-config"
                         onClick={() => setActiveDropdown(null)}
                       >
-                        AI preferences
+                        LLM preferences
                         <span aria-hidden="true">→</span>
                       </Link>
                     ) : null}
