@@ -290,8 +290,8 @@ function HomePage() {
   const hasHigherMeddra = hasInvalidMeddraLevel(query);
   const hasBlockers = hasCommonFullText || hasHigherMeddra;
 
-  const actionBar = (position: 'top' | 'bottom') => (
-    <div className={position === 'top' ? 'fdl-actions' : 'fdl-actions fdl-actions--bottom'}>
+  const actionBar = () => (
+    <div className="fdl-actions">
       <div className="fdl-actions__summary">
         {filled > 0 ? (
           <span className="fdl-active-tag fdl-active-tag--highlight">
@@ -386,7 +386,7 @@ function HomePage() {
       <Header />
 
       <main className="fdl-shell">
-        {actionBar('top')}
+        {actionBar()}
 
         <AiIntentPanel
           onQuery={setQuery}
@@ -421,7 +421,30 @@ function HomePage() {
           onSetAll={(checked) => setPrefilters((prev) => setAllPrefilters(prev, checked))}
         />
 
-        {actionBar('bottom')}
+        <div className="fdl-floating-bar">
+          <button type="button" className="fdl-link" onClick={clearAll} title="Clear all search criteria">
+            Clear
+          </button>
+          <button
+            type="button"
+            className="fdl-btn fdl-btn--search"
+            onClick={() => {
+              if (hasPendingAiInput) { setPendingInputDialog(true); return; }
+              runSearch();
+            }}
+            disabled={hasBlockers}
+            style={hasBlockers ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+            title={
+              hasCommonFullText
+                ? 'Full-text search for common/generic words is restricted to prevent slow queries'
+                : hasHigherMeddra
+                ? 'MedDRA searches above Preferred Term (PT) level are disabled'
+                : 'Search FDA Prescribing Information Labels'
+            }
+          >
+            Search Labels »
+          </button>
+        </div>
 
         {error ? <p className="fdl-error">{error}</p> : null}
       </main>
