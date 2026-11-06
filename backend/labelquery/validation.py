@@ -159,6 +159,24 @@ def heal_raw_query(query):
 
                 value = norm_val
 
+            # Standardize aliases (keyword, query, terms) into text for fullText / labelingSection
+            if ctype in ('fullText', 'labelingSection') and isinstance(value, dict):
+                if not (value.get('text') or '').strip():
+                    fallback_k = (
+                        value.get('keyword') or
+                        value.get('query') or
+                        value.get('searchTerm') or
+                        value.get('term') or
+                        (' OR '.join(str(t) for t in value.get('terms')) if isinstance(value.get('terms'), list) and value.get('terms') else value.get('terms')) or
+                        (' OR '.join(str(t) for t in value.get('keywords')) if isinstance(value.get('keywords'), list) and value.get('keywords') else value.get('keywords'))
+                    )
+                    if fallback_k and isinstance(fallback_k, str) and fallback_k.strip():
+                        value['text'] = fallback_k.strip()
+                if ctype == 'labelingSection':
+                    if not value.get('sections') and value.get('section'):
+                        sec = value.get('section')
+                        value['sections'] = [sec] if isinstance(sec, str) else list(sec)
+
             # Drop empty placeholder productName (e.g. text="" and no candidateNames)
             if ctype == 'productName' and isinstance(value, dict):
                 p_text = str(value.get('text') or '').strip()

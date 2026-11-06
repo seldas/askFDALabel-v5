@@ -1982,7 +1982,7 @@ Rules:
 2. Pharmacologic class: emit a pharmClass criterion in groups when requested. Use the requested class name. Always set classType to "any" unless the user explicitly specifies EPC, MoA, PE, or CS; never infer a type from a class name such as beta blocker or kinase inhibitor. Terms require confirmation against the application vocabulary. Do not substitute ingredients for the class.
 3. Adverse events and medical concepts: prefer "meddra" over free text. Only Preferred Term ("pt") or Lowest Level Term ("llt") levels are allowed. Higher MedDRA levels (SOC, HLGT, HLT) are disabled to avoid query timeouts. If a high-level category is requested, map it to the most relevant PT(s) or add a warning note in "notes".
 4. Free text is the fallback for wording MedDRA does not cover. Do NOT generate "fullText" or "labelingSection" for generic common words or stopwords (e.g. "drug", "patient", "dose", "tablet", "treatment", "effects", etc.) that match almost all labels. If the user asks for a generic common word in full text, omit the criterion and add an explanatory warning note in "notes".
-5. Target Sections: When specific sections are named (e.g. "Boxed Warning", "Warnings and Precautions", "Adverse Reactions"), use "labelingSection" or attach "sections" to "meddra".
+5. Target Sections: When specific sections are named (e.g. "Boxed Warning", "Warnings and Precautions", "Adverse Reactions"), use "labelingSection" or attach "sections" to "meddra". When the user asks for specific words, phrases, or conditions within a named section, include the keywords in the "text" field of "labelingSection". Never emit a "labelingSection" with empty "text" when a specific clinical condition or keyword was requested.
 6. A drug name goes in "productName", never "identifier". "identifier" is for codes: application number, Set ID, SPL ID, UNII, NDC. If the request provides one or more Set IDs / SPL GUIDs (UUID format), emit them in "identifier" under "setSplGuids" as an array.
 7. Never return an empty "groups" array when medical concepts, drug names, or labeling sections are requested (unless the target database explicitly notes that the requested concept is unavailable, e.g. MedDRA on Local DB).
 8. When the user explicitly asks for combination/fixed-dose combination products containing multiple ingredients joined by "and" or "with", emit one "productName" criterion per ingredient in the SAME group, with op="contains" for each. These criteria are ANDed by the query builder. Never put the whole conjunction into one productName text value, and do not use equals for these ingredient fragments.
@@ -2374,13 +2374,38 @@ def _sanitize_translation(parsed, target_db, intent=''):
             elif ctype in ('fullText', 'labelingSection'):
                 if isinstance(value, str):
                     value = {'mode': 'advanced' if ' OR ' in value or ' AND ' in value else 'simple', 'text': value}
+                if isinstance(value, dict):
+                    value.setdefault('mode', 'simple')
+                    if not (value.get('text') or '').strip():
+                        fallback_k = (
+                            value.get('keyword') or
+                            value.get('query') or
+                            value.get('searchTerm') or
+                            value.get('term') or
+                            (' OR '.join(str(t) for t in value.get('terms')) if isinstance(value.get('terms'), list) and value.get('terms') else value.get('terms')) or
+                            (' OR '.join(str(t) for t in value.get('keywords')) if isinstance(value.get('keywords'), list) and value.get('keywords') else value.get('keywords'))
+                        )
+                        if fallback_k and isinstance(fallback_k, str) and fallback_k.strip():
+                            value['text'] = fallback_k.strip()
+                    if ctype == 'labelingSection':
+                        raw_s = value.get('sections') or value.get('section')
+                        if isinstance(raw_s, str):
+                            value['sections'] = [raw_s.strip()] if raw_s.strip() else []
+                        elif isinstance(raw_s, list):
+                            value['sections'] = [str(s).strip() for s in raw_s if s and str(s).strip()]
                 f_text = value.get('text') if isinstance(value, dict) else ''
-                is_common, _ = is_common_fulltext_query(f_text)
-                if is_common:
-                    notes.append(
-                        f"Warning: Full-text search for generic common word(s) ('{f_text}') was omitted to prevent slow query performance. Please specify a more specific clinical term or condition."
-                    )
-                    continue
+                if f_text:
+                    is_common, _ = is_common_fulltext_query(f_text)
+                    if is_common:
+                        notes.append(
+                            f"Warning: Full-text search for generic common word(s) ('{f_text}') was omitted to prevent slow query performance. Please specify a more specific clinical term or condition."
+                        )
+                        continue
+                else:
+                    if ctype == 'fullText':
+                        continue
+                    if ctype == 'labelingSection' and not value.get('sections'):
+                        continue
             elif ctype == 'pharmClass':
                 raw = value if isinstance(value, dict) else {'terms': value if isinstance(value, list) else [value]}
                 terms = raw.get('terms') or ([raw.get('text')] if raw.get('text') else [])
@@ -2402,7 +2427,7 @@ def _sanitize_translation(parsed, target_db, intent=''):
                         terms = list(value.get('ptTerms') or []) + list(value.get('lltTerms') or [])
                     if not terms and value.get('text'):
                         terms = [value.get('text')]
-                
+
                 lvl = (value.get('level') or 'pt').lower() if isinstance(value, dict) else 'pt'
                 if lvl in ('soc', 'hlgt', 'hlt'):
                     notes.append(
@@ -2410,20 +2435,93 @@ def _sanitize_translation(parsed, target_db, intent=''):
                     )
                     lvl = 'pt'
 
+                meddra_sections = []
+                if isinstance(value, dict):
+                    raw_sec = value.get('sections') or value.get('section')
+                    if isinstance(raw_sec, str):
+                        meddra_sections = [raw_sec.strip()] if raw_sec.strip() else []
+                    elif isinstance(raw_sec, list):
+                        meddra_sections = [str(s).strip() for s in raw_sec if s and str(s).strip()]
+
+                terms = [str(t).strip() for t in terms if t and str(t).strip()]
+                if not terms:
+                    continue
+
                 verified_pts, verified_llts, unverified = _auto_verify_meddra(terms)
-                is_fully_verified = len(unverified) == 0 and (len(verified_pts) > 0 or len(verified_llts) > 0)
-                value = {
-                    'level': lvl if lvl in ('pt', 'llt') else 'pt',
-                    'ptTerms': verified_pts + (unverified if lvl == 'pt' else []),
-                    'lltTerms': verified_llts + (unverified if lvl == 'llt' else []),
-                    'unverifiedTerms': unverified,
-                    # New shape keeps PT and LLT rows distinct. Putting all
-                    # terms into the legacy field causes the compiler to treat
-                    # LLTs as PTs whenever level='pt', widening every LLT to
-                    # all of its siblings.
-                    'terms': [],
-                    'verified': is_fully_verified,
-                }
+
+                if unverified:
+                    # Fallback unverified terms to full text match with the same scope/section
+                    target_empty_section_crit = None
+                    fallback_sections = list(meddra_sections)
+
+                    if not fallback_sections:
+                        # Check if criteria already in this group has an empty labelingSection
+                        for c in criteria:
+                            if c.get('type') == 'labelingSection' and isinstance(c.get('value'), dict):
+                                if not (c['value'].get('text') or '').strip() and c['value'].get('sections'):
+                                    target_empty_section_crit = c
+                                    fallback_sections = list(c['value'].get('sections') or [])
+                                    break
+                        # If not, check remaining normalized_criteria in this group
+                        if not target_empty_section_crit:
+                            for raw_c in normalized_criteria:
+                                if isinstance(raw_c, dict) and raw_c.get('type') == 'labelingSection':
+                                    val = raw_c.get('value')
+                                    if isinstance(val, dict) and not (val.get('text') or '').strip() and val.get('sections'):
+                                        target_empty_section_crit = raw_c
+                                        fallback_sections = list(val.get('sections') or [])
+                                        break
+
+                    if len(unverified) == 1:
+                        text_query = unverified[0]
+                    else:
+                        text_query = ' OR '.join(
+                            f'"{t}"' if ' ' in t and not (t.startswith('"') and t.endswith('"')) else t
+                            for t in unverified
+                        )
+
+                    is_common, _ = is_common_fulltext_query(text_query)
+                    if is_common:
+                        notes.append(
+                            f"Warning: Full-text search for generic common word(s) ('{text_query}') was omitted to prevent query timeouts."
+                        )
+                    else:
+                        if target_empty_section_crit:
+                            target_empty_section_crit['value']['text'] = text_query
+                            target_empty_section_crit['value']['mode'] = 'simple'
+                            sec_disp = ', '.join(fallback_sections) if fallback_sections else 'selected section'
+                            notes.append(
+                                f"Notice: Term(s) '{', '.join(unverified)}' not matched in MedDRA dictionary were applied as text search in {sec_disp}."
+                            )
+                        else:
+                            if fallback_sections:
+                                fallback_val = {'mode': 'simple', 'text': text_query, 'sections': fallback_sections}
+                                criteria.append({'type': 'labelingSection', 'value': fallback_val})
+                                sec_disp = ', '.join(fallback_sections)
+                                notes.append(
+                                    f"Notice: Term(s) '{', '.join(unverified)}' not matched in MedDRA dictionary were converted to section text search in {sec_disp}."
+                                )
+                            else:
+                                fallback_val = {'mode': 'simple', 'text': text_query}
+                                criteria.append({'type': 'fullText', 'value': fallback_val})
+                                notes.append(
+                                    f"Notice: Term(s) '{', '.join(unverified)}' not matched in MedDRA dictionary were converted to full-text search."
+                                )
+
+                if verified_pts or verified_llts:
+                    value = {
+                        'level': lvl if lvl in ('pt', 'llt') else 'pt',
+                        'ptTerms': verified_pts,
+                        'lltTerms': verified_llts,
+                        'unverifiedTerms': [],
+                        'terms': [],
+                        'verified': True,
+                    }
+                    if meddra_sections:
+                        value['sections'] = meddra_sections
+                else:
+                    # All terms were unverified and fell back to text search; omit empty MedDRA criterion
+                    continue
             elif ctype == 'identifier':
                 if isinstance(value, str):
                     raw_tokens = re.split(r'[\r\n,;\s]+', value.strip())
