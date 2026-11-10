@@ -32,6 +32,37 @@ export default function LabelChat({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Load saved font size on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('askfdalabel_chat_font_size');
+        if (saved) {
+          const parsed = parseInt(saved, 10);
+          if (!isNaN(parsed) && parsed >= 10 && parsed <= 22) {
+            setFontSize(parsed);
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+  }, []);
+
+  const changeFontSize = (delta: number) => {
+    setFontSize((prev) => {
+      const next = Math.min(22, Math.max(10, prev + delta));
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('askfdalabel_chat_font_size', String(next));
+        } catch {
+          /* ignore */
+        }
+      }
+      return next;
+    });
+  };
+
   // Restore saved annotations onto label headers on mount
   useEffect(() => {
     if (savedAnnotations && Array.isArray(savedAnnotations) && savedAnnotations.length > 0) {
@@ -153,7 +184,7 @@ export default function LabelChat({
         <div className="chat-header-buttons" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
             type="button"
-            onClick={() => setFontSize((s) => Math.max(10, s - 1))}
+            onClick={() => changeFontSize(-1)}
             title="Decrease font size"
             style={{
               background: 'none',
@@ -170,7 +201,7 @@ export default function LabelChat({
           </button>
           <button
             type="button"
-            onClick={() => setFontSize((s) => Math.min(20, s + 1))}
+            onClick={() => changeFontSize(1)}
             title="Increase font size"
             style={{
               background: 'none',
@@ -180,7 +211,7 @@ export default function LabelChat({
               fontSize: '0.8rem',
               fontWeight: 700,
               padding: '2px 4px',
-              opacity: fontSize >= 20 ? 0.4 : 0.9,
+              opacity: fontSize >= 22 ? 0.4 : 0.9,
             }}
           >
             A+
@@ -237,7 +268,7 @@ export default function LabelChat({
       >
         {messages.length === 0 && (
           <div className="message message-ai message-greeting">
-            <div className="message-content">
+            <div className="message-content" style={{ fontSize: `${fontSize}px` }}>
               <p>
                 Hello! I am your LLM assistant for <strong>{drugName || 'this FDA label'}</strong>. Ask me
                 about indications, dosage, contraindications, adverse reactions, or drug interactions.
@@ -254,7 +285,7 @@ export default function LabelChat({
 
           return (
             <div key={idx} className={`message ${isAi ? 'message-ai' : 'message-user'}`}>
-              <div className="message-content">
+              <div className="message-content" style={{ fontSize: `${fontSize}px` }}>
                 {isAi ? (
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayContent}</ReactMarkdown>
                 ) : (
@@ -267,7 +298,7 @@ export default function LabelChat({
 
         {isLoading && (
           <div className="message message-ai">
-            <div className="message-content">
+            <div className="message-content" style={{ fontSize: `${fontSize}px` }}>
               <p className="typing-indicator">
                 <span>.</span>
                 <span>.</span>

@@ -1310,7 +1310,7 @@ html {
 .message-content { 
     padding: 12px 16px; 
     border-radius: var(--fdl-radius-sm, 2px); 
-    font-size: 0.9rem;
+    font-size: inherit;
     line-height: 1.6;
     word-wrap: break-word;
 }
