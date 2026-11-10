@@ -46,7 +46,7 @@ export default function ManagementPage() {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [userSearch, setUserSearch] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'user' | 'developer' | 'admin'>('all');
-  const [userStatusFilter, setUserStatusFilter] = useState<'all' | 'active' | 'deactivated'>('all');
+  const [hideDeactivated, setHideDeactivated] = useState<boolean>(true);
   const [userSortBy, setUserSortBy] = useState<'last_login_desc' | 'last_login_asc' | 'created_at_desc' | 'created_at_asc' | 'username_asc'>('last_login_desc');
   const [managingUser, setManagingUser] = useState<User | null>(null);
 
@@ -1298,16 +1298,6 @@ export default function ManagementPage() {
                     <option value="admin">Admin</option>
                   </select>
                   <select
-                    value={userStatusFilter}
-                    onChange={e => setUserStatusFilter(e.target.value as any)}
-                    className="mgmt-select"
-                    style={{ minWidth: '130px' }}
-                  >
-                    <option value="all">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="deactivated">Deactivated</option>
-                  </select>
-                  <select
                     value={userSortBy}
                     onChange={e => setUserSortBy(e.target.value as any)}
                     className="mgmt-select"
@@ -1319,6 +1309,34 @@ export default function ManagementPage() {
                     <option value="created_at_asc">Created (Oldest)</option>
                     <option value="username_asc">Name (A-Z)</option>
                   </select>
+                  {session?.is_admin && (
+                    <label
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        minHeight: '34px',
+                        padding: '6px 10px',
+                        border: '1px solid var(--fdl-line)',
+                        borderRadius: '2px',
+                        background: 'var(--fdl-paper)',
+                        color: 'var(--fdl-ink)',
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        whiteSpace: 'nowrap'
+                      }}
+                      title="When checked, deactivated user accounts are hidden from the list"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={hideDeactivated}
+                        onChange={e => setHideDeactivated(e.target.checked)}
+                        style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: 'var(--fdl-blue-600)' }}
+                      />
+                      Hide deactivated users
+                    </label>
+                  )}
                 </div>
 
                 <div className="user-table-wrapper">
@@ -1345,8 +1363,7 @@ export default function ManagementPage() {
                               const r = u.role ?? (u.is_admin ? 'admin' : 'user');
                               if (r !== userRoleFilter) return false;
                             }
-                            if (userStatusFilter === 'active' && u.is_active === false) return false;
-                            if (userStatusFilter === 'deactivated' && u.is_active !== false) return false;
+                            if (hideDeactivated && u.is_active === false) return false;
                             return true;
                           })
                           .sort((a, b) => {
