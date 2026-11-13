@@ -7,7 +7,7 @@ from time import monotonic
 import requests
 from werkzeug.exceptions import ServiceUnavailable
 from dashboard.config import Config
-from dashboard.services.fda_client import openfda_get
+from dashboard.services.fda_client import openfda_get, dailymed_get
 
 
 def get_service_url(name):
@@ -37,7 +37,7 @@ def service_status(name):
                 req = (
                     openfda_get(target_url, params=params, timeout=(5, 15), stream=True)
                     if name == 'openfda'
-                    else requests.get(target_url, params=params, timeout=(5, 15), stream=True, verify=Config.EXTERNAL_SSL_VERIFY)
+                    else dailymed_get(target_url, params=params, timeout=(5, 15), stream=True)
                 )
                 with req as response:
                     status = response.status_code

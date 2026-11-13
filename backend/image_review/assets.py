@@ -76,15 +76,14 @@ def read_local_artwork(source, inventory, asset_id):
 
     # For the current version (or set_id query), fallback to DailyMed
     from dashboard.services.external_services import require_service
+    from dashboard.services.fda_client import dailymed_get
     require_service('dailymed')
     import requests
-    from dashboard.config import Config
     try:
-        resp = requests.get(
-            f"{Config.DAILYMED_URL}/dailymed/image.cfm",
+        resp = dailymed_get(
+            "/dailymed/image.cfm",
             params={'setid': set_id, 'name': media_path},
             timeout=(5, 30),
-            verify=Config.EXTERNAL_SSL_VERIFY,
         )
         if resp.status_code == 200 and resp.content:
             if len(resp.content) > FILE_LIMIT:

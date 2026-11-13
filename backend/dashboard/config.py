@@ -197,6 +197,23 @@ class Config:
     else:
         DAILYMED_URL = 'https://dailymed.nlm.nih.gov'
 
+    # HTTP forward proxy for DailyMed (in RAPID, fda_client defaults to http://aws-proxy.fda.gov:8080)
+    _raw_dailymed_proxy = os.getenv('DAILYMED_PROXY', '').strip()
+    if _raw_dailymed_proxy and '://' not in _raw_dailymed_proxy:
+        _raw_dailymed_proxy = f'http://{_raw_dailymed_proxy}'
+    DAILYMED_PROXY = _raw_dailymed_proxy
+    DAILYMED_PROXIES = {'http': DAILYMED_PROXY, 'https': DAILYMED_PROXY} if DAILYMED_PROXY else None
+
+    # Optional explicit override for DailyMed SSL/TLS verification ('true'/'false').
+    # When unset, RAPID skips SSL verification and non-RAPID falls back to EXTERNAL_SSL_VERIFY.
+    _dailymed_ssl_env = os.getenv('DAILYMED_SSL_VERIFY', '').strip().lower()
+    if _dailymed_ssl_env in ('true', '1', 'yes'):
+        DAILYMED_SSL_VERIFY = True
+    elif _dailymed_ssl_env in ('false', '0', 'no'):
+        DAILYMED_SSL_VERIFY = False
+    else:
+        DAILYMED_SSL_VERIFY = None
+
     # SSL verification for external proxies (can be disabled for internal self-signed certs)
     _ssl_verify_env = os.getenv('EXTERNAL_SSL_VERIFY', '').strip().lower()
     EXTERNAL_SSL_VERIFY = False if _ssl_verify_env in ('false', '0', 'no') else True

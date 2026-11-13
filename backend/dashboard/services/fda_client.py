@@ -12,24 +12,19 @@ from dashboard.services.fdalabel_db import FDALabelDBService
 
 logger = logging.getLogger(__name__)
 
-_RAPID_OPENFDA_PROXY = 'http://aws-proxy.fda.gov:8080'
+_RAPID_EXTERNAL_PROXY = 'http://aws-proxy.fda.gov:8080'
 
 
-def openfda_get(path, params=None, timeout=10, stream=False):
-    """Issue a GET request to OpenFDA with configured proxy, API key, and SSL settings."""
-    url = path if path.startswith(('http://', 'https://')) else f"{Config.OPENFDA_URL}/{path.lstrip('/')}"
-    req_params = dict(params) if params else {}
-    api_key = req_params.get('api_key') or os.getenv('OPENFDA_API_KEY', '') or Config.OPENFDA_API_KEY
-    if api_key and 'api_key' not in req_params:
-        req_params['api_key'] = api_key
-
+def _external_get(base_url, path, proxies_cfg, ssl_verify_cfg, params=None, timeout=10, stream=False):
+    """Issue a GET request to an external FDA/NLM service with RAPID proxy & SSL handling."""
+    url = path if path.startswith(('http://', 'https://')) else f"{base_url}/{path.lstrip('/')}"
     rapid = is_rapid()
-    proxies = Config.OPENFDA_PROXIES
+    proxies = proxies_cfg
     if proxies is None and rapid:
-        proxies = {'http': _RAPID_OPENFDA_PROXY, 'https': _RAPID_OPENFDA_PROXY}
+        proxies = {'http': _RAPID_EXTERNAL_PROXY, 'https': _RAPID_EXTERNAL_PROXY}
 
-    if Config.OPENFDA_SSL_VERIFY is not None:
-        verify = Config.OPENFDA_SSL_VERIFY
+    if ssl_verify_cfg is not None:
+        verify = ssl_verify_cfg
     elif rapid:
         verify = False
     else:
@@ -39,11 +34,41 @@ def openfda_get(path, params=None, timeout=10, stream=False):
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     return requests.get(
         url,
-        params=req_params or None,
+        params=params or None,
         timeout=timeout,
         stream=stream,
         proxies=proxies,
         verify=verify,
+    )
+
+
+def openfda_get(path, params=None, timeout=10, stream=False):
+    """Issue a GET request to OpenFDA with configured proxy, API key, and SSL settings."""
+    req_params = dict(params) if params else {}
+    api_key = req_params.get('api_key') or os.getenv('OPENFDA_API_KEY', '') or Config.OPENFDA_API_KEY
+    if api_key and 'api_key' not in req_params:
+        req_params['api_key'] = api_key
+    return _external_get(
+        Config.OPENFDA_URL,
+        path,
+        Config.OPENFDA_PROXIES,
+        Config.OPENFDA_SSL_VERIFY,
+        params=req_params,
+        timeout=timeout,
+        stream=stream,
+    )
+
+
+def dailymed_get(path, params=None, timeout=10, stream=False):
+    """Issue a GET request to DailyMed with configured proxy and SSL settings."""
+    return _external_get(
+        Config.DAILYMED_URL,
+        path,
+        Config.DAILYMED_PROXIES,
+        Config.DAILYMED_SSL_VERIFY,
+        params=params,
+        timeout=timeout,
+        stream=stream,
     )
 
 def identify_query_type(term):

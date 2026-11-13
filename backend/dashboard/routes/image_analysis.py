@@ -164,15 +164,15 @@ def _read_artwork(set_id, spl_id, asset_id):
         abort(404, description="Archived labeling image is currently not available in askFDALabel.")
 
     from dashboard.services.external_services import require_service
+    from dashboard.services.fda_client import dailymed_get
     require_service('dailymed')
     # The existing label reader also uses DailyMed for SPL media. Keep the
     # host fixed here; never accept an arbitrary image URL from the browser.
     try:
-        response = requests.get(
-            f"{Config.DAILYMED_URL}/dailymed/image.cfm",
+        response = dailymed_get(
+            "/dailymed/image.cfm",
             params={"setid": set_id, "name": media_path},
             timeout=(5, 30),
-            verify=Config.EXTERNAL_SSL_VERIFY,
         )
         response.raise_for_status()
     except requests.HTTPError as exc:
