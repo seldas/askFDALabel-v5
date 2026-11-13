@@ -220,3 +220,6 @@ class Config:
 
     # Frontend base path for redirects
     FRONTEND_BASE_PATH = os.getenv('FRONTEND_BASE_PATH', '/fdalabel-v3').rstrip('/')
+
+    # Public RAPID URL shown on non-RAPID Prod landing prompt
+    RAPID_REDIRECT_URL = os.getenv('RAPID_REDIRECT_URL', '').strip()

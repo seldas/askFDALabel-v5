@@ -276,9 +276,14 @@ function HomePage() {
   }, [pendingDb]);
 
   if (!loading && !isAuthed) {
+    if (!capReady) {
+      return null;
+    }
     return (
       <StartPage
         ssoEnabled={Boolean(session?.sso_enabled)}
+        requireRapidConfirm={Boolean(capabilities.isProd && !capabilities.isRapid)}
+        rapidRedirectUrl={capabilities.rapidRedirectUrl || ''}
       />
     );
   }

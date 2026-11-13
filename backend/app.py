@@ -150,12 +150,30 @@ def create_unified_app():
         
         return jsonify({
             "isRapid": is_rapid(),
+            "isProd": os.environ.get('FLASK_ENV', '').strip().lower() == 'production',
+            "rapidRedirectUrl": current_app.config.get('RAPID_REDIRECT_URL', ''),
             "isInternal": has_elsa,
             "fdaAccessible": has_elsa,
             "cderAccessible": has_elsa,
             "localAccessible": allow_local,
             "allowLocalQuery": allow_local
         })
+
+    @app.route('/api/check-rapid', methods=['GET'])
+    def check_rapid():
+        import requests
+        import urllib3
+        from flask import current_app
+        url = (current_app.config.get('RAPID_REDIRECT_URL') or '').strip()
+        if not url:
+            return jsonify({"configured": False, "available": False, "url": ""})
+        try:
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            with requests.get(url, timeout=(2, 4), allow_redirects=True, stream=True, verify=False) as resp:
+                available = resp.status_code < 500
+        except requests.RequestException:
+            available = False
+        return jsonify({"configured": True, "available": available, "url": url})
 
     @app.route('/health', methods=['GET'])
     def health():

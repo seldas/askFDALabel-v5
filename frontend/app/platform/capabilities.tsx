@@ -25,6 +25,8 @@ import {
 
 export interface Capabilities {
   isRapid?: boolean;
+  isProd?: boolean;
+  rapidRedirectUrl?: string;
   externalServices?: ExternalServices;
   /** On the FDA internal network (either FDA or CDER endpoint reachable). */
   isInternal: boolean;
@@ -100,6 +102,8 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
         setCapabilities(previous => ({
           ...previous,
           isRapid: Boolean(data.isRapid),
+          isProd: Boolean(data.isProd),
+          rapidRedirectUrl: typeof data.rapidRedirectUrl === 'string' ? data.rapidRedirectUrl : '',
           isInternal: Boolean(data.isInternal),
           fdaAccessible: Boolean(data.fdaAccessible),
           cderAccessible: Boolean(data.cderAccessible),

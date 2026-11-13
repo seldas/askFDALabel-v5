@@ -51,6 +51,55 @@
   transition: background .15s ease;
 }
 .ssoButton:hover { background: #071f3d; }
+.ssoButtonDisabled {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 54px;
+  padding: 14px 20px;
+  border: 1px solid #cbd5e1;
+  border-radius: 2px;
+  background: #e2e8f0;
+  color: #64748b;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: not-allowed;
+}
+.noticeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.notAvailableBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fef2f2;
+  border: 1px solid #ef4444;
+  color: #b91c1c;
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.checkingBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  font-size: .75rem;
+  font-weight: 700;
+}
 .primaryHint { margin: 10px 0 0; font-size: .8rem; color: #475569; }
 .unavailable { font-size: .9rem; line-height: 1.6; color: #475569; }
 
