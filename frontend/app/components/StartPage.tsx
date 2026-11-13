@@ -55,7 +55,7 @@ export default function StartPage({
 
   return (
     <main className={styles.page}>
-      <section className={styles.card} aria-labelledby="welcome-title">
+      <section className={`${styles.card} ${showRapidGate ? styles.cardRapid : ''}`} aria-labelledby="welcome-title">
         <header className={styles.header}>
           <img src={withAppBase('/askFDALabel_hero.png')} alt="AskFDALabel" className={styles.logo} />
           <h1 id="welcome-title">Welcome to AskFDALabel</h1>
@@ -68,9 +68,9 @@ export default function StartPage({
 
         {showRapidGate ? (
           <>
-            <aside className={styles.notice} aria-labelledby="rapid-notice-title">
+            <aside className={`${styles.notice} ${styles.noticeRapid}`} aria-labelledby="rapid-notice-title">
               <div className={styles.noticeHeader}>
-                <span className={styles.noticeLabel}>PRODUCTION REDIRECT</span>
+                <span className={`${styles.noticeLabel} ${styles.noticeLabelRapid}`}>PRODUCTION REDIRECT</span>
                 {rapidStatus === 'checking' && (
                   <span className={styles.checkingBadge}>Checking RAPID availability…</span>
                 )}
@@ -90,7 +90,7 @@ export default function StartPage({
             <div className={styles.primary}>
               {rapidStatus === 'available' && targetRapidUrl ? (
                 <>
-                  <a href={targetRapidUrl} className={styles.ssoButton}>
+                  <a href={targetRapidUrl} className={`${styles.ssoButton} ${styles.rapidButton}`}>
                     Go to RAPID Server
                     <span aria-hidden="true">→</span>
                   </a>

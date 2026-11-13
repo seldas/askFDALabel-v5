@@ -17,6 +17,10 @@
   border: 1px solid #b8c8d7;
   border-top: 4px solid #071f3d;
 }
+.cardRapid {
+  border-color: #fed7aa;
+  border-top-color: #ea580c;
+}
 
 .header { text-align: center; margin-bottom: 28px; }
 .logo { display: block; max-width: 80%; height: auto; margin: 0 auto 24px; }
@@ -29,7 +33,13 @@
   border-left: 4px solid #0759a5;
   background: #edf4fa;
 }
+.noticeRapid {
+  border-color: #fed7aa;
+  border-left-color: #ea580c;
+  background: #fff7ed;
+}
 .noticeLabel { font-size: .7rem; font-weight: 800; letter-spacing: .1em; color: #0759a5; }
+.noticeLabelRapid { color: #c2410c; }
 .notice h2 { margin: 8px 0; font-size: 1.1rem; font-weight: 750; }
 .notice p { margin: 0; font-size: .9rem; line-height: 1.65; color: #334155; }
 
@@ -51,6 +61,14 @@
   transition: background .15s ease;
 }
 .ssoButton:hover { background: #071f3d; }
+.rapidButton {
+  background: #ea580c;
+}
+.rapidButton:hover { background: #c2410c; }
+.rapidButton:focus-visible {
+  outline: 3px solid #fb923c;
+  outline-offset: 4px;
+}
 .ssoButtonDisabled {
   display: flex;
   justify-content: center;
