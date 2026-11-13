@@ -26,7 +26,7 @@ from database import (
 import threading
 from dashboard.routes.guards import require_feature
 from dashboard.services.task_service import TaskService
-from dashboard.services.fda_client import get_label_metadata, get_label_xml, get_faers_data, find_labels, find_labels_by_set_ids, get_label_counts, get_rich_metadata_by_generic
+from dashboard.services.fda_client import get_label_metadata, get_label_xml, get_faers_data, find_labels, find_labels_by_set_ids, get_label_counts, get_rich_metadata_by_generic, openfda_get
 from dashboard.services.ai_handler import chat_with_document, summarize_comparison, generate_assessment, get_search_helper_response
 from dashboard.services.xml_handler import extract_metadata_from_xml
 from dashboard.services.pgx_handler import run_pgx_assessment
@@ -2041,13 +2041,11 @@ def run_ae_report_generation(task_id, report_id, project_id, target_pt):
             try:
                 if not openfda_available:
                     raise ConnectionError('OpenFDA is unreachable from this server')
-                base_url = f"{Config.OPENFDA_URL}/drug/event.json"
                 search_base = f'(patient.drug.openfda.brand_name:"{drug_name}" OR patient.drug.openfda.generic_name:"{drug_name}") AND patient.reaction.reactionmeddrapt.exact:"{target_pt}"'
                 
                 # 1. All counts
                 params = {'search': search_base}
-                if Config.OPENFDA_API_KEY: params['api_key'] = Config.OPENFDA_API_KEY
-                resp = requests.get(base_url, params=params, timeout=(3, 10), verify=Config.EXTERNAL_SSL_VERIFY)
+                resp = openfda_get('/drug/event.json', params=params, timeout=(3, 10))
                 if resp.status_code == 200:
                     counts['all'] = resp.json().get('meta', {}).get('results', {}).get('total', 0)
                     if counts['all'] == 0:
@@ -2059,8 +2057,7 @@ def run_ae_report_generation(task_id, report_id, project_id, target_pt):
                 if counts['all'] is not None and counts['all'] > 0:
                     # 2. Last 1 year
                     params_1y = {'search': f"{search_base} AND receivedate:[{date_1yr_ago} TO {date_today}]"}
-                    if Config.OPENFDA_API_KEY: params_1y['api_key'] = Config.OPENFDA_API_KEY
-                    resp_1y = requests.get(base_url, params=params_1y, timeout=(3, 10))
+                    resp_1y = openfda_get('/drug/event.json', params=params_1y, timeout=(3, 10))
                     if resp_1y.status_code == 200:
                         counts['1yr'] = resp_1y.json().get('meta', {}).get('results', {}).get('total', 0)
                     elif resp_1y.status_code == 404:
@@ -2068,8 +2065,7 @@ def run_ae_report_generation(task_id, report_id, project_id, target_pt):
                         
                     # 3. Last 5 years
                     params_5y = {'search': f"{search_base} AND receivedate:[{date_5yr_ago} TO {date_today}]"}
-                    if Config.OPENFDA_API_KEY: params_5y['api_key'] = Config.OPENFDA_API_KEY
-                    resp_5y = requests.get(base_url, params=params_5y, timeout=(3, 10))
+                    resp_5y = openfda_get('/drug/event.json', params=params_5y, timeout=(3, 10))
                     if resp_5y.status_code == 200:
                         counts['5yr'] = resp_5y.json().get('meta', {}).get('results', {}).get('total', 0)
                     elif resp_5y.status_code == 404:
@@ -2627,7 +2623,6 @@ def api_faers_trends():
     if not drug_name or not terms:
         return jsonify({'error': 'Missing drug_name or terms'}), 400
 
-    base_url = f"{Config.OPENFDA_URL}/drug/event.json"
     search_term = f'(patient.drug.openfda.brand_name:"{drug_name}" OR patient.drug.openfda.generic_name:"{drug_name}")'
     
     current_year = datetime.now().year
@@ -2649,15 +2644,13 @@ def api_faers_trends():
                     'search': f'{term_search} AND receivedate:[{date_string(start)} TO {date_string(end)}]',
                     'count': 'receivedate', 'limit': 1000,
                 }
-                if Config.OPENFDA_API_KEY:
-                    params['api_key'] = Config.OPENFDA_API_KEY
-                resp = requests.get(base_url, params=params, timeout=(3, 10), verify=Config.EXTERNAL_SSL_VERIFY)
+                resp = openfda_get('/drug/event.json', params=params, timeout=(3, 10))
                 if resp.status_code in (400, 404) and '^' in term:
                     fallback_term = term.replace('^', "'")
                     substitutions[term] = fallback_term
                     fallback_search = f'{search_term} AND patient.reaction.reactionmeddrapt.exact:"{fallback_term}"'
                     params['search'] = f'{fallback_search} AND receivedate:[{date_string(start)} TO {date_string(end)}]'
-                    resp = requests.get(base_url, params=params, timeout=(3, 10), verify=Config.EXTERNAL_SSL_VERIFY)
+                    resp = openfda_get('/drug/event.json', params=params, timeout=(3, 10))
                 if resp.status_code == 404:
                     return []
                 resp.raise_for_status()
@@ -2693,7 +2686,6 @@ def api_faers_emerging():
         return jsonify({'error': 'Missing drug_name'}), 400
 
     clean_name = re.split(r'[,;]', drug_name)[0].strip()
-    base_url = f"{Config.OPENFDA_URL}/drug/event.json"
     
     # We use openfda.brand_name OR openfda.generic_name for precision
     search_term = f'(patient.drug.openfda.brand_name:"{clean_name}" OR patient.drug.openfda.generic_name:"{clean_name}")'
@@ -2719,11 +2711,9 @@ def api_faers_emerging():
                 'count': 'patient.reaction.reactionmeddrapt.exact',
                 'limit': 1000
             }
-            if Config.OPENFDA_API_KEY:
-                params['api_key'] = Config.OPENFDA_API_KEY
             
             with _faers_request_slots:
-                resp = requests.get(base_url, params=params, timeout=(3, 15))
+                resp = openfda_get('/drug/event.json', params=params, timeout=(3, 15))
             if resp.status_code == 200:
                 return {r['term']: r['count'] for r in resp.json().get('results', [])}
             elif resp.status_code == 404:
@@ -2737,10 +2727,8 @@ def api_faers_emerging():
             if start and end:
                 query += f' AND receivedate:[{start} TO {end}]'
             params = {'search': query, 'limit': 1}
-            if Config.OPENFDA_API_KEY:
-                params['api_key'] = Config.OPENFDA_API_KEY
             with _faers_request_slots:
-                resp = requests.get(base_url, params=params, timeout=(3, 15))
+                resp = openfda_get('/drug/event.json', params=params, timeout=(3, 15))
             if resp.status_code == 404:
                 return 0
             resp.raise_for_status()
@@ -2994,8 +2982,6 @@ def generic_assessment_route(set_id, tox_type, pt_terms, prompt, keyword_check_f
         drug_name = brand_name if (brand_name and brand_name != 'N/A') else generic_name
 
         if drug_name and drug_name != 'N/A':
-            base_url = f"{Config.OPENFDA_URL}/drug/event.json"
-
             # Improved search: search both brand and generic in medicinalproduct field
             # and generic_name field if possible.
             # Simplified: use the provided keyword_check_fn but wrap the query logic
@@ -3018,11 +3004,9 @@ def generic_assessment_route(set_id, tox_type, pt_terms, prompt, keyword_check_f
                 'count': 'patient.reaction.reactionmeddrapt.exact',
                 'limit': 1000
             }
-            if Config.OPENFDA_API_KEY:
-                params['api_key'] = Config.OPENFDA_API_KEY
                 
             try:
-                resp = requests.get(base_url, params=params, timeout=10)
+                resp = openfda_get('/drug/event.json', params=params, timeout=10)
                 if resp.status_code == 200:
                     raw_results = resp.json().get('results', [])
                     faers_data = [item for item in raw_results if item['term'].upper() in pt_terms]

@@ -1,7 +1,6 @@
 import requests
 import logging
-from dashboard.config import Config
-from dashboard.services.fda_client import handle_openfda_error
+from dashboard.services.fda_client import handle_openfda_error, openfda_get
 
 logger = logging.getLogger(__name__)
 
@@ -18,28 +17,26 @@ def find_devices(query_term, skip=0, limit=10):
 
     endpoints = []
     if is_k_num:
-        endpoints = [(f"{Config.OPENFDA_URL}/device/510k.json", "510(k)", f'k_number:"{query_term}"')]
+        endpoints = [("/device/510k.json", "510(k)", f'k_number:"{query_term}"')]
     elif is_p_num:
-        endpoints = [(f"{Config.OPENFDA_URL}/device/pma.json", "PMA", f'pma_number:"{query_term}"')]
+        endpoints = [("/device/pma.json", "PMA", f'pma_number:"{query_term}"')]
     else:
         # Search both for generic terms
         search_query = f'(device_name:"{query_term}" OR applicant:"{query_term}")'
         endpoints = [
-            (f"{Config.OPENFDA_URL}/device/510k.json", "510(k)", search_query),
-            (f"{Config.OPENFDA_URL}/device/pma.json", "PMA", search_query)
+            ("/device/510k.json", "510(k)", search_query),
+            ("/device/pma.json", "PMA", search_query)
         ]
 
-    for url, dev_type, q in endpoints:
+    for endpoint, dev_type, q in endpoints:
         params = {
             'search': q,
             'limit': limit,
             'skip': skip
         }
-        if Config.OPENFDA_API_KEY:
-            params['api_key'] = Config.OPENFDA_API_KEY
 
         try:
-            response = requests.get(url, params=params, timeout=10)
+            response = openfda_get(endpoint, params=params, timeout=10)
             if response.status_code == 200:
                 data = response.json()
                 total += data.get('meta', {}).get('results', {}).get('total', 0)
@@ -91,13 +88,10 @@ def get_manufacturer_by_id(identifier):
     endpoint = "pma.json" if is_pma else "510k.json"
     id_field = "pma_number" if is_pma else "k_number"
     
-    url = f"{Config.OPENFDA_URL}/device/{endpoint}"
     params = {'search': f'{id_field}:"{identifier}"', 'limit': 1}
-    if Config.OPENFDA_API_KEY:
-        params['api_key'] = Config.OPENFDA_API_KEY
         
     try:
-        resp = requests.get(url, params=params, timeout=10, verify=Config.EXTERNAL_SSL_VERIFY)
+        resp = openfda_get(f"/device/{endpoint}", params=params, timeout=10)
         if resp.status_code == 200:
             results = resp.json().get('results', [])
             if results:
@@ -117,13 +111,10 @@ def get_device_ifu(identifier):
     endpoint = "pma.json" if is_pma else "510k.json"
     id_field = "pma_number" if is_pma else "k_number"
     
-    url = f"{Config.OPENFDA_URL}/device/{endpoint}"
     params = {'search': f'{id_field}:"{identifier}"', 'limit': 1}
-    if Config.OPENFDA_API_KEY:
-        params['api_key'] = Config.OPENFDA_API_KEY
         
     try:
-        resp = requests.get(url, params=params, timeout=10, verify=Config.EXTERNAL_SSL_VERIFY)
+        resp = openfda_get(f"/device/{endpoint}", params=params, timeout=10)
         if resp.status_code == 200:
             results = resp.json().get('results', [])
             if results:
@@ -141,7 +132,6 @@ def get_maude_data(product_code, limit=20):
     if not product_code:
         return None
         
-    base_url = f"{Config.OPENFDA_URL}/device/event.json"
     search_query = f'device.device_report_product_code:"{product_code}"'
     
     try:
@@ -150,10 +140,8 @@ def get_maude_data(product_code, limit=20):
             'count': 'event_type.exact',
             'limit': 10
         }
-        if Config.OPENFDA_API_KEY:
-            count_params['api_key'] = Config.OPENFDA_API_KEY
             
-        resp = requests.get(base_url, params=count_params, timeout=10, verify=Config.EXTERNAL_SSL_VERIFY)
+        resp = openfda_get('/device/event.json', params=count_params, timeout=10)
         if resp.status_code == 200:
             return resp.json().get('results', [])
     except Exception as e:

@@ -1,7 +1,5 @@
-import requests
-from dashboard.config import Config
 import logging
-from dashboard.config import Config
+from dashboard.services.fda_client import openfda_get
 from device.services.device_client import get_manufacturer_by_id
 
 logger = logging.getLogger(__name__)
@@ -14,8 +12,6 @@ def get_device_recalls(product_code, k_number=None):
     """
     if not product_code:
         return None
-
-    base_url = f"{Config.OPENFDA_URL}/device/enforcement.json"
     
     summary = {
         'total_recalls': 0,
@@ -35,10 +31,8 @@ def get_device_recalls(product_code, k_number=None):
             'search': search_query_class,
             'count': 'classification.exact'
         }
-        if Config.OPENFDA_API_KEY:
-            params_count['api_key'] = Config.OPENFDA_API_KEY
             
-        resp_count = requests.get(base_url, params=params_count, timeout=10, verify=Config.EXTERNAL_SSL_VERIFY)
+        resp_count = openfda_get('/device/enforcement.json', params=params_count, timeout=10)
         if resp_count.status_code == 200:
             results = resp_count.json().get('results', [])
             for res in results:
@@ -58,10 +52,8 @@ def get_device_recalls(product_code, k_number=None):
             'sort': 'recall_initiation_date:desc',
             'limit': 5
         }
-        if Config.OPENFDA_API_KEY:
-            params_recent['api_key'] = Config.OPENFDA_API_KEY
 
-        resp_recent = requests.get(base_url, params=params_recent, timeout=10, verify=Config.EXTERNAL_SSL_VERIFY)
+        resp_recent = openfda_get('/device/enforcement.json', params=params_recent, timeout=10)
         if resp_recent.status_code == 200:
             summary['recent_recalls'] = resp_recent.json().get('results', [])
 
@@ -80,10 +72,8 @@ def get_device_recalls(product_code, k_number=None):
                     'search': search_query_mfr,
                     'limit': 1
                 }
-                if Config.OPENFDA_API_KEY:
-                    params_mfr_count['api_key'] = Config.OPENFDA_API_KEY
                 
-                resp_mfr = requests.get(base_url, params=params_mfr_count, timeout=10, verify=Config.EXTERNAL_SSL_VERIFY)
+                resp_mfr = openfda_get('/device/enforcement.json', params=params_mfr_count, timeout=10)
                 if resp_mfr.status_code == 200:
                     summary['manufacturer_specific_recalls'] = resp_mfr.json().get('meta', {}).get('results', {}).get('total', 0)
 

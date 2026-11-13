@@ -7,6 +7,7 @@ from time import monotonic
 import requests
 from werkzeug.exceptions import ServiceUnavailable
 from dashboard.config import Config
+from dashboard.services.fda_client import openfda_get
 
 
 def get_service_url(name):
@@ -28,17 +29,17 @@ def service_status(name):
         if cached and monotonic() < cached[0]:
             return dict(cached[1])
         result = None
-        params = None
-        if name == 'openfda':
-            params = {'limit': 1}
-            api_key = os.getenv('OPENFDA_API_KEY', '') or Config.OPENFDA_API_KEY
-            if api_key:
-                params['api_key'] = api_key
+        params = {'limit': 1} if name == 'openfda' else None
         target_url = get_service_url(name)
         # Confirm network failure once before declaring the service unavailable.
         for _ in range(2):
             try:
-                with requests.get(target_url, params=params, timeout=(5, 15), stream=True, verify=Config.EXTERNAL_SSL_VERIFY) as response:
+                req = (
+                    openfda_get(target_url, params=params, timeout=(5, 15), stream=True)
+                    if name == 'openfda'
+                    else requests.get(target_url, params=params, timeout=(5, 15), stream=True, verify=Config.EXTERNAL_SSL_VERIFY)
+                )
+                with req as response:
                     status = response.status_code
                     if status == 200 and 'json' in response.headers.get('Content-Type', '').lower():
                         result = {'status': 'available', 'message': ''}

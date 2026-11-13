@@ -1,14 +1,50 @@
 import requests
+import urllib3
 import re
 import os
 import logging
 import json
 from datetime import datetime
 from dashboard.config import Config
+from dashboard.services.deployment import is_rapid
 from dashboard.services.xml_handler import extract_metadata_from_xml
 from dashboard.services.fdalabel_db import FDALabelDBService
 
 logger = logging.getLogger(__name__)
+
+_RAPID_OPENFDA_PROXY = 'http://aws-proxy.fda.gov:8080'
+
+
+def openfda_get(path, params=None, timeout=10, stream=False):
+    """Issue a GET request to OpenFDA with configured proxy, API key, and SSL settings."""
+    url = path if path.startswith(('http://', 'https://')) else f"{Config.OPENFDA_URL}/{path.lstrip('/')}"
+    req_params = dict(params) if params else {}
+    api_key = req_params.get('api_key') or os.getenv('OPENFDA_API_KEY', '') or Config.OPENFDA_API_KEY
+    if api_key and 'api_key' not in req_params:
+        req_params['api_key'] = api_key
+
+    rapid = is_rapid()
+    proxies = Config.OPENFDA_PROXIES
+    if proxies is None and rapid:
+        proxies = {'http': _RAPID_OPENFDA_PROXY, 'https': _RAPID_OPENFDA_PROXY}
+
+    if Config.OPENFDA_SSL_VERIFY is not None:
+        verify = Config.OPENFDA_SSL_VERIFY
+    elif rapid:
+        verify = False
+    else:
+        verify = Config.EXTERNAL_SSL_VERIFY
+
+    if not verify:
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    return requests.get(
+        url,
+        params=req_params or None,
+        timeout=timeout,
+        stream=stream,
+        proxies=proxies,
+        verify=verify,
+    )
 
 def identify_query_type(term):
     """
@@ -162,13 +198,11 @@ def get_label_xml(set_id, spl_id=None, force_local=False, local_only=False):
 def get_faers_data(drug_name, limit=20):
     if not drug_name or drug_name in ['N/A', 'Unknown Generic']: return None
     clean_name = re.split(r'[,;]', drug_name)[0].strip()
-    base_url = f"{Config.OPENFDA_URL}/drug/event.json"
     search_term = f'patient.drug.openfda.generic_name:"{clean_name}"'
     
     try:
         params = {'search': search_term, 'count': 'patient.reaction.reactionmeddrapt.exact', 'limit': limit}
-        if Config.OPENFDA_API_KEY: params['api_key'] = Config.OPENFDA_API_KEY
-        resp = requests.get(base_url, params=params, timeout=10, verify=Config.EXTERNAL_SSL_VERIFY)
+        resp = openfda_get('/drug/event.json', params=params, timeout=10)
         if resp.status_code == 200:
             return {'reactions': resp.json().get('results', []), 'dates': []}
     except requests.exceptions.RequestException as e:
@@ -205,15 +239,12 @@ def check_openfda_status(set_id, is_latest=True):
         has_failed = False
 
         # 1. Check openFDA
-        openfda_url = f"{Config.OPENFDA_URL}/drug/label.json"
         params = {
             'search': f'openfda.spl_set_id:"{set_id}"',
             'limit': 1
         }
-        if Config.OPENFDA_API_KEY:
-            params['api_key'] = Config.OPENFDA_API_KEY
         try:
-            resp = requests.get(openfda_url, params=params, timeout=3, verify=Config.EXTERNAL_SSL_VERIFY)
+            resp = openfda_get('/drug/label.json', params=params, timeout=3)
             if resp.status_code == 200:
                 results = resp.json().get('results', [])
                 if results:

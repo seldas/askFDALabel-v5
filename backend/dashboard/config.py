@@ -167,6 +167,23 @@ class Config:
     else:
         OPENFDA_URL = 'https://api.fda.gov'
 
+    # HTTP forward proxy for OpenFDA (in RAPID, fda_client defaults to http://aws-proxy.fda.gov:8080)
+    _raw_openfda_proxy = os.getenv('OPENFDA_PROXY', '').strip()
+    if _raw_openfda_proxy and '://' not in _raw_openfda_proxy:
+        _raw_openfda_proxy = f'http://{_raw_openfda_proxy}'
+    OPENFDA_PROXY = _raw_openfda_proxy
+    OPENFDA_PROXIES = {'http': OPENFDA_PROXY, 'https': OPENFDA_PROXY} if OPENFDA_PROXY else None
+
+    # Optional explicit override for OpenFDA SSL/TLS verification ('true'/'false').
+    # When unset, RAPID skips SSL verification and non-RAPID falls back to EXTERNAL_SSL_VERIFY.
+    _openfda_ssl_env = os.getenv('OPENFDA_SSL_VERIFY', '').strip().lower()
+    if _openfda_ssl_env in ('true', '1', 'yes'):
+        OPENFDA_SSL_VERIFY = True
+    elif _openfda_ssl_env in ('false', '0', 'no'):
+        OPENFDA_SSL_VERIFY = False
+    else:
+        OPENFDA_SSL_VERIFY = None
+
     DAILYMED_HOST = os.getenv('DAILYMED_HOST', '').strip()
     DAILYMED_PORT = os.getenv('DAILYMED_PORT', '').strip()
     DAILYMED_PROTOCOL = os.getenv('DAILYMED_PROTOCOL', '').strip()

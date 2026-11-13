@@ -1,8 +1,6 @@
-import requests
-from dashboard.config import Config
 import logging
 from datetime import datetime
-from dashboard.config import Config
+from dashboard.services.fda_client import openfda_get
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +17,6 @@ def get_maude_summary(product_code, k_number=None):
     if not product_code:
         return None
 
-    base_url = f"{Config.OPENFDA_URL}/device/event.json"
     current_year = datetime.now().year
     start_date = f"{current_year - 3}0101"
     end_date = f"{current_year}1231"
@@ -42,10 +39,8 @@ def get_maude_summary(product_code, k_number=None):
             'count': 'device.manufacturer_d_name.exact',
             'limit': 20
         }
-        if Config.OPENFDA_API_KEY:
-            params_mfr_list['api_key'] = Config.OPENFDA_API_KEY
             
-        resp_list = requests.get(base_url, params=params_mfr_list, timeout=10, verify=Config.EXTERNAL_SSL_VERIFY)
+        resp_list = openfda_get('/device/event.json', params=params_mfr_list, timeout=10)
         raw_mfrs = resp_list.json().get('results', []) if resp_list.status_code == 200 else []
         summary['manufacturers'] = raw_mfrs[:5] # Show top 5 in UI
 
@@ -83,10 +78,8 @@ def get_maude_summary(product_code, k_number=None):
                 'search': f"{search_query_mfr} AND {date_filter}",
                 'count': 'date_received',
             }
-            if Config.OPENFDA_API_KEY:
-                params_mfr_trend['api_key'] = Config.OPENFDA_API_KEY
                 
-            resp_mfr = requests.get(base_url, params=params_mfr_trend, timeout=10, verify=Config.EXTERNAL_SSL_VERIFY)
+            resp_mfr = openfda_get('/device/event.json', params=params_mfr_trend, timeout=10)
             if resp_mfr.status_code == 200:
                 mfr_raw_dates = resp_mfr.json().get('results', [])
                 mfr_monthly_counts = {}
@@ -99,16 +92,12 @@ def get_maude_summary(product_code, k_number=None):
         # 5. Standard Class-wide Stats (Distribution & Class Trend)
         params_type = {'search': f"{search_query_class} AND {date_filter}", 'count': 'event_type.exact', 'limit': 10}
         params_trend = {'search': f"{search_query_class} AND {date_filter}", 'count': 'date_received'}
-        
-        if Config.OPENFDA_API_KEY:
-            params_type['api_key'] = Config.OPENFDA_API_KEY
-            params_trend['api_key'] = Config.OPENFDA_API_KEY
 
-        resp_type = requests.get(base_url, params=params_type, timeout=10, verify=Config.EXTERNAL_SSL_VERIFY)
+        resp_type = openfda_get('/device/event.json', params=params_type, timeout=10)
         if resp_type.status_code == 200:
             summary['event_types'] = resp_type.json().get('results', [])
 
-        resp_trend = requests.get(base_url, params=params_trend, timeout=10, verify=Config.EXTERNAL_SSL_VERIFY)
+        resp_trend = openfda_get('/device/event.json', params=params_trend, timeout=10)
         if resp_trend.status_code == 200:
             raw_dates = resp_trend.json().get('results', [])
             monthly_counts = {}
