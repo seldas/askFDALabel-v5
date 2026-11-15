@@ -173,7 +173,7 @@ const CONTENT: WikiArticle[] = [
         ['Filtered total', 'Records remaining after the active filters.'],
         ['Facet counts', 'Category counts for the underlying query, without sidebar filters.'],
       ] }, paragraphs: ['These are labeling-record counts, not necessarily unique-drug counts.'] },
-      { heading: 'Refine the set', steps: ['Open representative and unexpected matches. Check product identity, version, and the source passage.', 'Use sidebar filters to narrow the set; use Back to search to change the criteria.', 'If results are missing, check scope, terms, and filters. Before exporting, check which records will be included.'] },
+      { heading: 'Refine the set', steps: ['Open representative and unexpected matches. Check product identity, version, and the source passage.', 'Use sidebar filters to narrow the set—for example, use Repacker / Relabeler (Remove relabeler/repacker) to exclude repackaged or relabeled duplicates; use Back to search to change the criteria.', 'If results are missing, check scope, terms, and filters. Before exporting, check which records will be included.'] },
     ],
   },
   {
@@ -227,6 +227,7 @@ const CONTENT: WikiArticle[] = [
         ['Label details', 'Inspect product metadata. Collapse details to regain space.'],
         ['Browser Find (Ctrl+F / Cmd+F)', 'Find text in the rendered document. Read surrounding text and table footnotes.'],
         ['Focus reading', 'Hide the global navigation while reading; Exit focus restores it.'],
+        ['Image + button', 'Preview a labeling image and launch Extract, Compare, or Analyze in Visual Analysis.'],
         ['More', 'Find actions that do not fit in the toolbar at the current window width.'],
       ] } },
       { heading: 'Check the document', paragraphs: ['Confirm the product and version before taking notes. The thin progress line shows section position, not review completion.'] },
@@ -341,7 +342,8 @@ const CONTENT: WikiArticle[] = [
     'Confirm each document and date before using it in a review or comparison.',
   ], ['Application-linked records do not by themselves establish a complete regulatory history.'], ['versions', 'source-availability', 'compare-guide']),
   guide('visual-guide', 'Compare and track changes', 'Review packaging artwork, confusion, and consistency', 'Choose the right visual-review purpose and inspect the evidence behind findings.', [
-    'Open Visual Analysis. Choose labeling and a specific image on each required side, or upload artwork and confirm its labeling association.',
+    'Open Visual Analysis directly, or click the + button on an image inside a labeling to preview it and launch Extract (Read Image), Compare (Artwork Comparison), or Analyze (Labeling Consistency).',
+    'Choose labeling and a specific image on each required side, or upload artwork and confirm its labeling association.',
     'Use Artwork Comparison for visible changes, Product Confusion for distinguishing features, or Labeling Consistency to compare an image with its own labeling reference.',
     'For product-confusion workflows, check and confirm the identified packaging information before comparison. Other visual-review modes may provide a quick overview before detailed findings.',
     'Inspect numbered findings and their evidence regions. Confirm or dismiss findings, add reviewer notes, and correct inaccurate localization where supported.',
@@ -362,10 +364,26 @@ const CONTENT: WikiArticle[] = [
     'Inspect the displayed lipophilicity method and thresholds. Re-evaluate the result if an input changes.',
   ], ['Record the selected inputs and their sources with the result.', 'Use the methods article to distinguish a screening association from a patient-specific conclusion.'], ['ro2-method', 'review-record']),
   guide('chem-guide', 'Find the right labeling', 'Find structurally related products', 'Search a chemical representation, then review the matched labeling context.', [
-    'Open Chemical Structure Search and enter a supported SMILES, InChI, or InChIKey representation.',
+    'Open Chemical Structure Search from the Tools directory, or launch it from a labeling’s Toolbox to auto-fill the active ingredient’s SMILES (and select a component when a product contains more than one).',
+    'Enter or adjust a supported SMILES, InChI, or InChIKey representation.',
     'Choose exact, substructure, or similarity matching. For similarity, inspect the threshold before searching.',
     'Review the matched structures/substances, scores where present, and linked labeling records.',
   ], ['Confirm the intended structure, salt/form, and product context.', 'Structure similarity is a retrieval aid, not a demonstrated shared safety profile.'], ['structure-method', 'search-scope'], { href: '/chemsearch', label: 'Open Chemical Structure Search' }),
+  guide('examine-guide', 'Clinical review', 'Run clinical prompt templates on a labeling', 'Use Examine to answer focused clinical questions and verify each point against the source text.', [
+    'Open Examine from the selected labeling’s Toolbox.',
+    'Choose a clinical prompt template or select the custom question option to enter your own question, then click Run Summarization.',
+    'Review the generated summary and check every cited section, dose, population, and caveat against the original labeling.',
+  ], ['Examine summarizes the selected labeling using an LLM; treat the output as a review aid and verify material facts in the source document.'], ['label-chat-guide', 'evidence-types', 'review-record']),
+  guide('deepdive-guide', 'Comparisons', 'Compare a labeling against pharmacologic class peers', 'Use Deep Dive to spot potential class-level differences and investigate them in source labeling.', [
+    'Open Deep Dive from the selected labeling’s Toolbox.',
+    'Inspect the Regulatory Intelligence matrix, Signal Anomalies, and Clinical Compliance Landscape alongside the listed peer references.',
+    'Open the referenced peer labels and the source labeling to confirm whether a flagged difference reflects true wording differences, product-specific indication, or formulation.',
+  ], ['Peer context is not a substitute for side-by-side version comparison; verify flagged anomalies in the original labeling text.'], ['compare-guide', 'evidence-types', 'review-record']),
+  guide('drugtox-guide', 'Toxicity & pharmacogenomics', 'Browse harmonized toxicity records across products', 'Use askDrugTox to explore curated toxicity classifications, supporting evidence, and linked labels.', [
+    'Open askDrugTox from the Tools directory and filter or search by drug name, toxicity class, or toxicity type.',
+    'Open a drug record to inspect its toxicity classification, supporting evidence, supported labeling section, and summary.',
+    'Follow the linked labeling record when you need full product and version context.',
+  ], ['Check the effective time, historical status, and supported section before applying a catalog classification to your review.'], ['agent-guide', 'ro2-guide', 'evidence-types'], { href: '/drugtox', label: 'Open askDrugTox' }),
   guide('waiting-results', 'Resolve common obstacles', 'Handle waiting, failures, and partial results', 'Keep useful evidence while determining what actually completed.', [
     'Read the task status and current stage. Some engines return their answer only when generation finishes; silence is not proof that the task failed.',
     'For background tasks, return to the available status/results view rather than starting repeated copies while a run remains active.',
@@ -1000,6 +1018,9 @@ const ARTICLE_TO_TOOL: Record<string, string> = {
   'pgx-guide': 'label-tox-pgx', 'pgx-guide-method': 'label-tox-pgx',
   'ro2-guide': 'label-ro2', 'ro2-method': 'label-ro2',
   'chem-guide': 'chemsearch', 'structure-method': 'chemsearch',
+  'examine-guide': 'label-examine',
+  'deepdive-guide': 'label-deepdive',
+  'drugtox-guide': 'drugtox',
 };
 const TOOL_CATEGORIES: Record<string, string> = {
   comparison: 'Comparisons', safety: 'Safety evidence',
