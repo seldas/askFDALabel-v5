@@ -502,11 +502,17 @@ def _c_identifier(criterion, bag, warnings, unii_available=True):
     if appl_num:
         digits = re.sub(r'\D', '', appl_num)
         if digits:
-            padded = digits.zfill(6)
+            stripped = digits.lstrip('0') or '0'
             if appl_kind:
-                alts.append(_like_any(['s.appr_num'], [f'%{appl_kind} {padded}%', f'%{appl_kind} {digits}%'], bag))
+                kind_re = re.escape(appl_kind)
+                p = bag.add(f'(^|[;,\\s]){kind_re}\\s*0*{stripped}([^0-9]|$)')
             else:
-                alts.append(_like_any(['s.appr_num'], [f'%{padded}%', f'%{digits}%'], bag))
+                p = bag.add(f'(^|[^0-9])0*{stripped}([^0-9]|$)')
+            alts.append(f's.appr_num ~* {p}')
+    elif appl_kind:
+        kind_re = re.escape(appl_kind)
+        p = bag.add(f'(^|[;,\\s]){kind_re}(\\s|[0-9]|$)')
+        alts.append(f's.appr_num ~* {p}')
 
     if unii_code:
         alts.append(

@@ -870,15 +870,17 @@ def _compile_identifier(value, bag):
     if appl_num:
         digits = re.sub(r'\D', '', appl_num)
         if digits:
-            padded = digits.zfill(6)
+            stripped = digits.lstrip('0') or '0'
             if appl_kind:
-                p1 = bag.add(f'{appl_kind} {padded}')
-                p2 = bag.add(f'{appl_kind} {digits}')
-                alts.append(f'(UPPER(s.APPR_NUM) = {p1} OR UPPER(s.APPR_NUM) = {p2})')
+                kind_re = re.escape(appl_kind)
+                p = bag.add(f'(^|[;,[:space:]]){kind_re}[[:space:]]*0*{stripped}([^0-9]|$)')
             else:
-                p1 = bag.add(f'%{padded}%')
-                p2 = bag.add(f'%{digits}%')
-                alts.append(f'(s.APPR_NUM LIKE {p1} OR s.APPR_NUM LIKE {p2})')
+                p = bag.add(f'(^|[^0-9])0*{stripped}([^0-9]|$)')
+            alts.append(f'REGEXP_LIKE(UPPER(s.APPR_NUM), {p})')
+    elif appl_kind:
+        kind_re = re.escape(appl_kind)
+        p = bag.add(f'(^|[;,[:space:]]){kind_re}([[:space:]]|[0-9]|$)')
+        alts.append(f'REGEXP_LIKE(UPPER(s.APPR_NUM), {p})')
 
     if unii_code:
         p_unii = bag.add(unii_code)
