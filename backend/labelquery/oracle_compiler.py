@@ -245,7 +245,7 @@ def _compile_application_type(value, bag, alias='s', base_table=BASE_TABLE_HUMAN
 
     if is_rld:
         clauses.append(
-            f"{alias}.SPL_ID IN (SELECT rld.SPL_ID FROM druglabel.SUM_SPL_RLD rld)"
+            f"{alias}.SPL_ID IN (SELECT rld.SPL_ID FROM druglabel.SUM_SPL_RLD rld WHERE UPPER(rld.RLD) = 'YES')"
         )
 
     return '(' + ' AND '.join(clauses) + ')' if clauses else None
@@ -823,8 +823,9 @@ def _compile_pharm_class(value, bag, alias='s'):
 
     clauses = []
     if class_type in ('any', 'epc'):
-        placeholders = [bag.add(t) for t in terms]
-        clauses.append(f"{alias}.SPL_ID IN (SELECT e.SPL_ID FROM druglabel.SUM_SPL_EPC e WHERE e.EPC IN ({', '.join(placeholders)}))")
+        placeholders = [bag.add(t.strip().upper()) for t in terms if t.strip()]
+        if placeholders:
+            clauses.append(f"{alias}.SPL_ID IN (SELECT e.SPL_ID FROM druglabel.SUM_SPL_EPC e WHERE UPPER(e.EPC) IN ({', '.join(placeholders)}))")
     if class_type in ('any', 'moa', 'pe', 'cs'):
         cat_token = {'moa': 'MOA', 'pe': 'PE', 'cs': 'CHEMICAL'}.get(class_type)
         cat_clause = f' AND UPPER(nc.CAT) LIKE {bag.add(f"%{cat_token}%")}' if cat_token else ''
@@ -1176,7 +1177,7 @@ def compile_oracle_query(query, sort=None, direction='desc', limit=50, offset=0,
                s.AUTHOR_ORG_NORMD_NAME as MANUFACTURER, s.APPR_NUM, s.NDC_CODES, s.NDC3_CODES, s.EFF_TIME as REVISED_DATE,
                s.MARKET_CATEGORIES, s.DOCUMENT_TYPE, s.ACT_INGR_NAMES as ACTIVE_INGREDIENTS,
                s.DOSAGE_FORMS, s.ROUTES_OF_ADMINISTRATION as ROUTES, s.EPC,
-               CASE WHEN EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = s.SPL_ID) THEN 1 ELSE 0 END as IS_RLD,
+               CASE WHEN EXISTS (SELECT 1 FROM druglabel.SUM_SPL_RLD rld WHERE rld.SPL_ID = s.SPL_ID AND UPPER(rld.RLD) = 'YES') THEN 1 ELSE 0 END as IS_RLD,
                k.TOTAL_COUNT,
                s.ACT_INGR_UNIIS as ACTIVE_UNIIS,
                {moiety_project}

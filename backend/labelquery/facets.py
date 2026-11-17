@@ -66,7 +66,7 @@ FACET_SCALARS = [
 
     ('applicationTypes', 'rld', 'RLD', 'Reference Listed Drug (RLD)',
      "coalesce(is_rld, 0) <> 0",
-     "m.SPL_ID IN (SELECT rr.SPL_ID FROM druglabel.SUM_SPL_RLD rr)"),
+     "m.SPL_ID IN (SELECT rr.SPL_ID FROM druglabel.SUM_SPL_RLD rr WHERE UPPER(rr.RLD) = 'YES')"),
 
     ('marketStatus', 'status_rx', 'Prescription', 'Prescription',
      "doc_type ILIKE '%%prescription%%'",
