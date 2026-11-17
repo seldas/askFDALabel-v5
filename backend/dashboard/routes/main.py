@@ -662,8 +662,8 @@ def preferences():
             return jsonify(success=False, error='Connection settings must be an object.'), 400
         allowed_keys = {
             'elsa': {'url', 'user', 'key', 'model_id', 'model_name'},
-            'llama-4': {'url', 'api_key', 'model_name'},
-            'muse': {'url', 'api_key', 'model_name'},
+            'local-1': {'url', 'api_key', 'model_name'},
+            'local-2': {'url', 'api_key', 'model_name'},
             'gemini': {'api_key', 'model_name'},
         }
         for name, options in settings.items():

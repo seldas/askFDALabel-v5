@@ -1475,7 +1475,8 @@ export default function ManagementPage() {
                                   setUserModelError(null);
                                   setManagingUser(user);
                                   setEditPassword('');
-                                  setSelectedUserModelProvider(['vllm', 'llama'].includes(user.ai_provider) ? 'llama-4' : user.ai_provider || '');
+                                  const legacyMap: Record<string, string> = { vllm: 'local-1', llama: 'local-1', 'llama-4': 'local-1', muse: 'local-2' };
+                                  setSelectedUserModelProvider(legacyMap[user.ai_provider] || user.ai_provider || '');
                                 }}
                                 className="btn-ghost"
                                 style={{ padding: '6px 14px', fontWeight: 600, fontSize: '0.8rem' }}

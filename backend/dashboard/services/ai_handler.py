@@ -124,7 +124,7 @@ class AIClientFactory:
         if provider == 'elsa':
             client, model = AIClientFactory._get_elsa_client({'elsa': config})
             return 'elsa', client, model
-        if provider in ('llama-4', 'muse'):
+        if provider in ('local-1', 'local-2'):
             if not config['url'] or not config['model_name']:
                 raise ValueError(f'{provider} connection URL and model are not configured.')
             cache_key = (provider, config['api_key'], config['url'])

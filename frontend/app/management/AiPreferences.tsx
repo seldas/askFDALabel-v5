@@ -4,12 +4,23 @@ import { useEffect, useState } from 'react';
 import { useUser } from '../context/UserContext';
 
 type Connections = Record<string, Record<string, string>>;
-const names: Record<string, string> = { elsa: 'ELSA', 'llama-4': 'Llama-4 (Local)', muse: 'Muse (Local)', gemini: 'Gemini' };
+const fallbackNames: Record<string, string> = {
+  elsa: 'ELSA',
+  'local-1': 'Local LLM 1',
+  'local-2': 'Local LLM 2',
+  gemini: 'Gemini',
+};
 const fields: Record<string, [string, string][]> = {
   elsa: [['url', 'Service URL'], ['user', 'Username'], ['key', 'API key'], ['model_id', 'Model ID'], ['model_name', 'Model name']],
-  'llama-4': [['url', 'API base URL'], ['api_key', 'API key'], ['model_name', 'Model name']],
-  muse: [['url', 'API base URL'], ['api_key', 'API key'], ['model_name', 'Model name']],
+  'local-1': [['url', 'API base URL'], ['api_key', 'API key'], ['model_name', 'Model name']],
+  'local-2': [['url', 'API base URL'], ['api_key', 'API key'], ['model_name', 'Model name']],
   gemini: [['api_key', 'API key'], ['model_name', 'Model name']],
+};
+const legacyProviderMap: Record<string, string> = {
+  vllm: 'local-1',
+  llama: 'local-1',
+  'llama-4': 'local-1',
+  muse: 'local-2',
 };
 
 export default function AiPreferences() {
@@ -20,16 +31,24 @@ export default function AiPreferences() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const models = session?.ai_models || [];
+  const labelFor = (id?: string) => {
+    if (!id) return '';
+    const normalized = legacyProviderMap[id] || id;
+    return models.find(m => m.id === normalized)?.name || fallbackNames[normalized] || id;
+  };
   const reset = () => {
     const saved = session?.ai_preference || '';
-    const normalized = ['vllm', 'llama'].includes(saved) ? 'llama-4' : saved;
+    const normalized = legacyProviderMap[saved] || saved;
     setSelected(models.some(m => m.id === normalized) ? normalized : '');
     try {
       const parsed = JSON.parse(session?.ai_settings || '{}');
       const settings: Connections = {};
       for (const model of models) {
-        const source = { ...(model.id === 'gemini' ? { api_key: session?.custom_gemini_key } : {}), ...(parsed[model.id] || {}) };
-        settings[model.id] = Object.fromEntries(fields[model.id].map(([key]) => [key, typeof source[key] === 'string' ? source[key] : '']));
+        const legacySource =
+          model.id === 'local-1' ? (parsed['llama-4'] || parsed.llama || parsed.vllm || {}) :
+          model.id === 'local-2' ? (parsed.muse || {}) : {};
+        const source = { ...(model.id === 'gemini' ? { api_key: session?.custom_gemini_key } : {}), ...legacySource, ...(parsed[model.id] || {}) };
+        settings[model.id] = Object.fromEntries((fields[model.id] || []).map(([key]) => [key, typeof source[key] === 'string' ? source[key] : '']));
       }
       setConnections(settings);
     } catch { setConnections({}); }
@@ -56,14 +75,14 @@ export default function AiPreferences() {
       <p>Choose the model for your account. Changes apply to your next LLM request.</p>
       <div className="ai-preferences__current">
         <span>Currently used</span>
-        <strong>{names[session?.ai_provider || ''] || session?.ai_provider}</strong>
+        <strong>{labelFor(session?.ai_provider)}</strong>
         <small>{session?.ai_model_name || 'Model not configured'} · {session?.ai_preference ? 'Account preference' : 'System default'}</small>
       </div>
       <fieldset disabled={saving}>
         <legend>Model preference</legend>
         <label className="ai-preferences__option">
           <input type="radio" name="ai-preference" checked={!selected} onChange={() => { setSelected(''); setMessage(''); }} />
-          <span>Follow system default <small>{names[session?.ai_default_provider || '']}</small></span>
+          <span>Follow system default <small>{labelFor(session?.ai_default_provider)}</small></span>
         </label>
         {models.map(model => (
           <label className="ai-preferences__option" key={model.id}>
@@ -74,7 +93,7 @@ export default function AiPreferences() {
       </fieldset>
       {session?.is_admin && fields[active] && (
         <details className="ai-preferences__advanced" key={active}>
-          <summary>Custom connection settings · {names[active]}</summary>
+          <summary>Custom connection settings · {labelFor(active)}</summary>
           <p>Only affects your account. Leave fields blank to use deployment defaults. System-wide connections are configured in .env and require a service restart.</p>
           {fields[active].map(([key, label]) => (
             <label className="ai-preferences__field" key={key}>

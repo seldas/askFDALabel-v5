@@ -557,7 +557,11 @@ export default function Header({
                     <div className="account-ai-status" title="Effective LLM model for your account">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>
                       <span>LLM model</span>
-                      <strong>{({ elsa: 'ELSA', 'llama-4': 'Llama-4 (Local)', muse: 'Muse (Local)', gemini: 'Gemini' } as Record<string, string>)[session.ai_provider || ''] || session.ai_provider}</strong>
+                      <strong>
+                        {session.ai_models?.find(m => m.id === session.ai_provider)?.name ||
+                          ({ elsa: 'ELSA', 'local-1': 'Local LLM 1', 'local-2': 'Local LLM 2', gemini: 'Gemini' } as Record<string, string>)[session.ai_provider || ''] ||
+                          session.ai_provider}
+                      </strong>
                     </div>
                     {!isGuest && (session?.is_admin || session?.permissions?.preferences) ? (
                       <Link
