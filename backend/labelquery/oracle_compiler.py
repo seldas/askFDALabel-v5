@@ -473,8 +473,6 @@ def _compile_market_status(value, bag, alias='s'):
         res.append(
             f"{alias}.SPL_ID IN (SELECT mkt.SPL_ID FROM druglabel.PROD_MKT_ACT mkt WHERE {' AND '.join(conds)})"
         )
-    if rld_cond:
-        res.append(rld_cond)
 
     if not res:
         return None
@@ -853,9 +851,9 @@ def _compile_identifier(value, bag):
     # Collect all SET IDs / SPL GUIDs without wildcards (pure exact matching)
     all_guids = []
     if set_spl_guid:
-        all_guids.append(set_spl_guid)
+        all_guids.append(set_spl_guid.lower())
     for g in set_spl_guids:
-        g_clean = str(g).strip()
+        g_clean = str(g).strip().lower()
         if g_clean and g_clean not in all_guids:
             all_guids.append(g_clean)
 

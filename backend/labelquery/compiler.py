@@ -265,7 +265,7 @@ def _c_value_list(criterion, key, bag, warnings):
     if has_wildcard:
         elem_check = f"btrim(item) ILIKE ANY ({bag.add(values)})"
     else:
-        elem_check = f"btrim(item) = ANY ({bag.add(values)})"
+        elem_check = f"lower(btrim(item)) = ANY ({bag.add([v.lower() for v in values])})"
 
     return (
         f'({column} ILIKE ANY ({bag.add(broad)}) AND '
@@ -485,9 +485,9 @@ def _c_identifier(criterion, bag, warnings, unii_available=True):
 
     all_guids = []
     if set_spl_guid:
-        all_guids.append(set_spl_guid)
+        all_guids.append(set_spl_guid.lower())
     for g in set_spl_guids:
-        g_clean = str(g).strip()
+        g_clean = str(g).strip().lower()
         if g_clean and g_clean not in all_guids:
             all_guids.append(g_clean)
 
