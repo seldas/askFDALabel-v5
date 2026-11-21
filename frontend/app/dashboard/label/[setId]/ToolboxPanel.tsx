@@ -20,11 +20,9 @@ export default function ToolboxPanel({ setId, data }: { setId: string; data: Lab
   const historyApplicationNumber = applicationNumber.split(/[;,]/, 1)[0].trim();
   const hasApplicationNumber = Boolean(historyApplicationNumber && !/^n\/?a$/i.test(historyApplicationNumber));
   const [favoriteToolIds, setFavoriteToolIds] = useState<string[]>([]);
-  const [layout, setLayout] = useState<'cards' | 'table'>('cards');
   const [search, setSearch] = useState('');
   const [workflowFilter, setWorkflowFilter] = useState('all');
   const [pinnedOnly, setPinnedOnly] = useState(false);
-  const [sort, setSort] = useState<{ column: 'name' | 'workflow'; descending: boolean }>({ column: 'name', descending: false });
   const { splId, headerCollapsed, setHeaderCollapsed } = useLabel();
   const controls = useRef<HTMLElement>(null);
   const container = useRef<HTMLElement>(null);
@@ -32,9 +30,6 @@ export default function ToolboxPanel({ setId, data }: { setId: string; data: Lab
   const [compact, setCompact] = useState(false);
 
   useEffect(() => {
-    try {
-      if (localStorage.getItem('askfdalabel_toolbox_layout') === 'table') setLayout('table');
-    } catch { /* The default view also works without browser storage. */ }
     const element = controls.current;
     if (!element) return;
     const resize = new ResizeObserver(() => container.current?.style.setProperty('--toolbox-controls-height', `${element.getBoundingClientRect().height}px`));
@@ -52,11 +47,6 @@ export default function ToolboxPanel({ setId, data }: { setId: string; data: Lab
     update();
     return () => { resize.disconnect(); scroll?.removeEventListener('scroll', schedule); cancelAnimationFrame(frame); };
   }, []);
-
-  const changeLayout = (next: 'cards' | 'table') => {
-    setLayout(next);
-    try { localStorage.setItem('askfdalabel_toolbox_layout', next); } catch { /* Session-only preference. */ }
-  };
 
   useEffect(() => {
     try {
@@ -133,14 +123,6 @@ export default function ToolboxPanel({ setId, data }: { setId: string; data: Lab
     (!pinnedOnly || favoriteToolIds.includes(tool.id)) &&
     `${tool.name} ${tool.blurb} ${workflowDetails[tool.workflow].title}`.toLowerCase().includes(search.trim().toLowerCase()),
   );
-  const tableTools = [...filteredTools].sort((a, b) => {
-    const pinned = Number(favoriteToolIds.includes(b.id)) - Number(favoriteToolIds.includes(a.id));
-    if (pinned) return pinned;
-    const left = sort.column === 'name' ? a.name : workflowDetails[a.workflow].title;
-    const right = sort.column === 'name' ? b.name : workflowDetails[b.workflow].title;
-    return (left.localeCompare(right) || a.name.localeCompare(b.name)) * (sort.descending ? -1 : 1);
-  });
-  const changeSort = (column: 'name' | 'workflow') => setSort(previous => ({ column, descending: previous.column === column ? !previous.descending : false }));
   const renderPin = (tool: typeof toolsList[number]) => {
     const pinned = favoriteToolIds.includes(tool.id);
     return <button type="button" className="afl-toolbox__pin" onClick={event => toggleFavoriteTool(tool.id, event)}
@@ -158,47 +140,40 @@ export default function ToolboxPanel({ setId, data }: { setId: string; data: Lab
 
   const renderToolCard = (t: typeof toolsList[number]) => {
     const isFav = favoriteToolIds.includes(t.id);
-    const detail = workflowDetails[t.workflow];
     return (
-      <article
+      <div
         key={t.id}
-        className={`afl-toolbox__tool afl-toolbox__tool--tile${isFav ? ' is-pinned' : ''}${t.disabled ? ' is-disabled' : ''}`}
+        className={`afl-toolbox__gemini-row${isFav ? ' is-pinned' : ''}${t.disabled ? ' is-disabled' : ''}`}
         data-workflow={t.workflow}
       >
-        <span className="afl-toolbox__tool-icon" aria-hidden="true">
-          <ToolIcon id={t.iconId} size={19} />
+        <span className="afl-toolbox__gemini-icon" aria-hidden="true">
+          <ToolIcon id={t.iconId} size={20} />
         </span>
-        <div className="afl-toolbox__tile-body">
-          <div className="afl-toolbox__tile-top">
-            <div className="afl-toolbox__tool-title-group">
-              <h3>
-                <a
-                  className="afl-toolbox__tool-name"
-                  href={t.disabled ? undefined : t.href}
-                  aria-disabled={t.disabled || undefined}
-                  title={t.serviceMessage}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {t.name}
-                </a>
-              </h3>
-              <span className="afl-toolbox__tool-category">{detail?.title ?? t.workflow}</span>
-            </div>
-            <div className="afl-toolbox__tile-controls">
-              <ServiceWarning toolId={t.id} compact />
-              {renderPin(t)}
-              {!t.disabled && <span className="afl-toolbox__tile-arrow" aria-hidden="true">↗</span>}
-            </div>
+        <div className="afl-toolbox__gemini-text">
+          <div className="afl-toolbox__gemini-title-line">
+            <a
+              className="afl-toolbox__gemini-name"
+              href={t.disabled ? undefined : t.href}
+              aria-disabled={t.disabled || undefined}
+              title={t.serviceMessage || t.blurb}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {t.name}
+            </a>
+            <ServiceWarning toolId={t.id} compact />
           </div>
-          <p className="afl-toolbox__tile-blurb">{t.blurb}</p>
+          <p className="afl-toolbox__gemini-blurb" title={t.blurb}>{t.blurb}</p>
           {t.disabled && t.id === 'label-faers' && (
             <Link className="afl-toolbox__tile-fallback" href={t.href} target="_blank">
               View saved results ↗
             </Link>
           )}
         </div>
-      </article>
+        <div className="afl-toolbox__gemini-actions">
+          {renderPin(t)}
+        </div>
+      </div>
     );
   };
 
@@ -233,38 +208,39 @@ export default function ToolboxPanel({ setId, data }: { setId: string; data: Lab
             <option value="all">All categories</option>{workflowOrder.map(workflow => <option key={workflow} value={workflow}>{workflowDetails[workflow].title}</option>)}
           </select></label>
           <label className="afl-toolbox__pinned-filter"><input type="checkbox" checked={pinnedOnly} onChange={event => setPinnedOnly(event.target.checked)} /> Pinned only</label>
-          <div className="afl-toolbox__view-switch" role="group" aria-label="Toolbox layout">
-            <button type="button" aria-pressed={layout === 'cards'} onClick={() => changeLayout('cards')}>▦ Cards</button>
-            <button type="button" aria-pressed={layout === 'table'} onClick={() => changeLayout('table')}>☷ Table</button>
-          </div>
         </div>
       </header>
-      <div className="afl-toolbox__results-summary" role="status">{filteredTools.length} of {toolsList.length} tools{layout === 'table' ? ' · Pinned tools first' : ''}</div>
+      <div className="afl-toolbox__results-summary" role="status">{filteredTools.length} of {toolsList.length} tools</div>
       {!filteredTools.length && <div className="afl-toolbox__empty"><h3>No matching tools</h3><p>Try another search or clear your filters.</p>
         <button type="button" className="label-tool-btn" onClick={() => { setSearch(''); setWorkflowFilter('all'); setPinnedOnly(false); }}>Clear filters</button>
       </div>}
-      {layout === 'table' && filteredTools.length > 0 && (
-        <table className="afl-toolbox__table">
-          <caption className="afl-toolbox__sr-only">Available tools for {brandName}. Pinned tools appear first. Tools open in a new tab.</caption>
-          <thead><tr>
-            <th scope="col" className="afl-toolbox__pin-column"><span className="afl-toolbox__sr-only">Pinned</span>☆</th>
-            <th scope="col" aria-sort={sort.column === 'name' ? sort.descending ? 'descending' : 'ascending' : 'none'}><button type="button" onClick={() => changeSort('name')}>Tool {sort.column === 'name' ? sort.descending ? '↓' : '↑' : '↕'}</button></th>
-            <th scope="col" className="afl-toolbox__purpose-column">Purpose</th>
-            <th scope="col" className="afl-toolbox__category-column" aria-sort={sort.column === 'workflow' ? sort.descending ? 'descending' : 'ascending' : 'none'}><button type="button" onClick={() => changeSort('workflow')}>Category {sort.column === 'workflow' ? sort.descending ? '↓' : '↑' : '↕'}</button></th>
-            <th scope="col" className="afl-toolbox__open-column">Action</th>
-          </tr></thead>
-          <tbody>{tableTools.map(tool => <tr key={tool.id} data-workflow={tool.workflow} data-pinned={favoriteToolIds.includes(tool.id)}>
-            <td>{renderPin(tool)}</td>
-            <th scope="row"><a className="afl-toolbox__table-name" href={tool.disabled ? undefined : tool.href} aria-disabled={tool.disabled || undefined} title={tool.serviceMessage} target="_blank" rel="noopener noreferrer"><ToolIcon id={tool.iconId} size={18} />{tool.name}</a><ServiceWarning toolId={tool.id} compact /><span className="afl-toolbox__mobile-purpose">{tool.blurb}</span></th>
-            <td className="afl-toolbox__purpose-column"><span>{tool.blurb}</span></td>
-            <td className="afl-toolbox__category-column">{workflowDetails[tool.workflow].title}</td>
-            <td className="afl-toolbox__open-column"><a className="label-tool-btn" href={tool.disabled ? undefined : tool.href} aria-disabled={tool.disabled || undefined} title={tool.serviceMessage} target="_blank" rel="noopener noreferrer">{tool.disabled ? 'Unavailable' : 'Open ↗'}</a>{tool.disabled && tool.id === 'label-faers' && <Link href={tool.href} target="_blank">View saved results ↗</Link>}</td>
-          </tr>)}</tbody>
-        </table>
-      )}
-      {layout === 'cards' && unifiedCardTools.length > 0 && (
-        <div className="afl-toolbox__grid afl-toolbox__grid--compact">
-          {unifiedCardTools.map(renderToolCard)}
+      {unifiedCardTools.length > 0 && (
+        <div className="afl-toolbox__gemini-wrap">
+          {pinnedTools.length > 0 && workflowFilter === 'all' && !search.trim() && (
+            <div className="afl-toolbox__gemini-group">
+              <div className="afl-toolbox__gemini-group-title">
+                <span>Pinned</span>
+                <span aria-hidden="true">›</span>
+              </div>
+              <div className="afl-toolbox__gemini-grid">
+                {pinnedTools.map(renderToolCard)}
+              </div>
+            </div>
+          )}
+          <div className="afl-toolbox__gemini-group">
+            {pinnedTools.length > 0 && workflowFilter === 'all' && !search.trim() && (
+              <div className="afl-toolbox__gemini-group-title">
+                <span>All tools</span>
+                <span aria-hidden="true">›</span>
+              </div>
+            )}
+            <div className="afl-toolbox__gemini-grid">
+              {(workflowFilter === 'all' && !search.trim()
+                ? filteredTools.filter((t) => !favoriteToolIds.includes(t.id))
+                : unifiedCardTools
+              ).map(renderToolCard)}
+            </div>
+          </div>
         </div>
       )}
       <aside className="afl-toolbox__contact">Tool requests or research collaboration: <a href="mailto:askfdalabel@fda.hhs.gov">askfdalabel@fda.hhs.gov</a></aside>
