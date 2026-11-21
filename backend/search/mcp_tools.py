@@ -614,6 +614,12 @@ def validate_and_filter_actions(raw_actions: List[Dict[str, Any]], user: Any) ->
     can_faers = is_allowed(user, "tool_faers")
     can_hist_sid = is_allowed(user, "tool_history_set_id")
     can_hist_app = is_allowed(user, "tool_history_application")
+    agent_gates = {
+        "dili": is_allowed(user, "tool_dili"),
+        "dict": is_allowed(user, "tool_dict"),
+        "diri": is_allowed(user, "tool_diri"),
+        "pgx": is_allowed(user, "tool_pgx"),
+    }
 
     validated: List[Dict[str, Any]] = []
     seen = set()
@@ -676,17 +682,26 @@ def validate_and_filter_actions(raw_actions: List[Dict[str, Any]], user: Any) ->
             })
 
         elif atype == "drugtox":
-            q = (act.get("query") or "").strip()
             sid = (act.get("set_id") or "").strip()
-            key = ("drugtox", sid or q)
+            q = (act.get("query") or "").strip()
+            agent = (act.get("agent") or "dili").strip().lower()
+            if agent not in agent_gates:
+                agent = "dili"
+            if not agent_gates.get(agent, True):
+                continue
+            if not sid and not q:
+                continue
+            key = ("drugtox", sid or q, agent)
             if key in seen:
                 continue
             seen.add(key)
+            default_label = f"Open {agent.upper()} Agent" if sid else "Open askDrugTox"
             validated.append({
                 "type": "drugtox",
-                "label": label or "Analyze in askDrugTox",
-                **({"query": q} if q else {}),
+                "label": label or default_label,
+                "agent": agent,
                 **({"set_id": sid} if sid else {}),
+                **({"query": q} if q else {}),
             })
 
         elif atype == "label_history":
@@ -825,8 +840,9 @@ def build_default_registry() -> MCPToolRegistry:
     reg.register(MCPTool(
         name="query_drugtox",
         description=(
-            "Query harmonized DrugTox toxicity records (e.g. DILI classification, update notes, "
-            "explanations, AI summaries) by drug name or SETID."
+            "ONLY call when the user explicitly asks about drug toxicity, DILI (liver injury), "
+            "DICT (cardiotoxicity), DIRI (renal injury), or PGx (pharmacogenomics). "
+            "Queries harmonized DrugTox toxicity records by drug name or SETID."
         ),
         input_schema={
             "type": "object",
@@ -838,40 +854,6 @@ def build_default_registry() -> MCPToolRegistry:
             "required": ["query"],
         },
         handler=handle_query_drugtox,
-    ))
-
-    reg.register(MCPTool(
-        name="emit_action_buttons",
-        description=(
-            "Attach clickable navigation Action Buttons below your response so the user can jump "
-            "directly to SPL View (/dashboard/label/<set_id>), LabelComp (/labelcomp), "
-            "LabelQuery search results (/labelquery), or askDrugTox (/drugtox)."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "actions": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "type": {"type": "string", "enum": ["spl_view", "labelcomp", "labelquery", "drugtox", "label_history", "faers"]},
-                            "label": {"type": "string", "description": "Short button text shown to the user."},
-                            "set_id": {"type": "string"},
-                            "spl_id": {"type": "string"},
-                            "set_ids": {"type": "array", "items": {"type": "string"}},
-                            "wire_query": {"type": "object"},
-                            "target_db": {"type": "string"},
-                            "query": {"type": "string"},
-                            "application_number": {"type": "string"},
-                        },
-                        "required": ["type", "label"],
-                    },
-                },
-            },
-            "required": ["actions"],
-        },
-        handler=handle_emit_action_buttons,
     ))
 
     reg.register(MCPTool(

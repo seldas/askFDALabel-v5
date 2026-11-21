@@ -24,6 +24,7 @@ export type ActionButton =
       label: string;
       query?: string;
       set_id?: string;
+      agent?: 'dili' | 'dict' | 'diri' | 'pgx';
     }
   | {
       type: 'label_history';

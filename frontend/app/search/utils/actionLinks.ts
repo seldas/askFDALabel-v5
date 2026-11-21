@@ -27,11 +27,12 @@ export function resolveActionHref(action: ActionButton): string {
     case 'labelquery':
       return resultsPath(action.wire_query, action.target_db || 'oracle');
     case 'drugtox':
+      if (action.set_id) {
+        const agent = action.agent || 'dili';
+        return `/drugtox/${encodeURIComponent(action.set_id)}?agent=${encodeURIComponent(agent)}`;
+      }
       if (action.query) {
         return `/drugtox?q=${encodeURIComponent(action.query)}`;
-      }
-      if (action.set_id) {
-        return `/drugtox?q=${encodeURIComponent(action.set_id)}`;
       }
       return '/drugtox';
     case 'label_history':

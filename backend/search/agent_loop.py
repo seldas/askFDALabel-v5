@@ -1,8 +1,8 @@
 """Agentic tool-calling loop for LabelChat (Elsa + vLLM + Gemini compatible).
 
-Runs an MCP-style multi-step tool loop and streams SSE events to the frontend:
-status, tool_call, tool_result, token (live-streamed), focus, actions,
-follow_ups, done, error.
+Uses native function/tool calling across Elsa, vLLM, and Gemini, isolates
+pre-tool-call preamble text from final answers, and builds deterministic
+permission-gated Action Buttons from tool outputs.
 """
 
 from __future__ import annotations
@@ -31,25 +31,20 @@ from search.mcp_tools import DEFAULT_REGISTRY, validate_and_filter_actions
 logger = logging.getLogger(__name__)
 
 MAX_TOOL_STEPS = 5
+_PREAMBLE_BUFFER_CHARS = 120
 
 SYSTEM_PROMPT = """You are LabelChat, the FDA drug labeling assistant for askFDALabel.
 You help FDA reviewers, clinicians, and researchers search drug labels, read specific SPL sections, trace label version history, inspect FAERS adverse event signals, and check DrugTox toxicity data.
 
 Guidelines:
 1. Ground all factual claims about drug labels, NDCs, application numbers, sections, version history, FAERS, or toxicity in tool outputs. Never fabricate label text or identifiers.
-2. When a user asks about a drug, start by calling `search_labels` (and `query_drugtox` or `query_faers_signals` when relevant).
+2. When a user asks about a drug, start by calling `search_labels`. ONLY call `query_drugtox` when the user explicitly asks about toxicity, DILI (liver injury), DICT (cardiotoxicity), DIRI (renal injury), or PGx (pharmacogenomics).
 3. RLD / Reference Priority: When `search_labels` returns multiple records for a drug, prioritize the RLD or NDA/BLA reference product for clinical summaries, and briefly note how many other versions or generics were found.
-4. Spell Correction: If `search_labels` returns 0 results for a drug name and you suspect a typo (e.g., "Ozempc" -> "Ozempic"), automatically call `search_labels` once more with the corrected spelling and mention the correction politely.
-5. Missing Full Text: If `read_label_sections` reports that full XML text is unavailable, clearly summarize the registration metadata you did find (brand/generic name, manufacturer, application number, NDC, revised date) and provide Action Buttons so the user can open the label view or search results.
+4. Spell Correction: If `search_labels` returns 0 results for a drug name and you suspect a typo (e.g., "Ozempc" -> "Ozempic"), automatically call `search_labels` once more with the corrected spelling. Only briefly note a spelling fix if the user's current input actually had a typo.
+5. Missing Full Text: If `read_label_sections` reports that full XML text is unavailable, clearly summarize the registration metadata you did find (brand/generic name, manufacturer, application number, NDC, revised date).
 6. Citations & Readability: Always cite the specific **Section Title** and **Revised Date** when summarizing label content. Refer to labels by **Drug Name, Manufacturer, Application Number, and Revised Date** — do NOT expose raw `set_id` or `spl_id` UUIDs in your prose.
-7. Use `emit_action_buttons` when helpful to provide one-click navigation to:
-   - `spl_view`: open a specific label in the SPL Label Workspace
-   - `labelcomp`: compare 2 to 4 label versions side-by-side
-   - `labelquery`: open full search results in LabelQuery
-   - `drugtox`: open DrugTox analysis
-   - `label_history`: view label version history (by set_id or application_number)
-   - `faers`: open FAERS adverse event profile for a label (requires set_id)
-8. Respond in clear, concise Markdown. Do NOT use `<annotation>` XML/HTML tags. Match the user's language (English or Chinese) naturally."""
+7. Respond in clear, concise Markdown. Do NOT use `<annotation>` XML/HTML tags. Match the user's language (English or Chinese) naturally.
+8. Never include meta-commentary such as "Correction of last reply", "Note on previous response", or narration of your internal tool calls/retries. Answer the user's current question directly."""
 
 
 def _pick_provider_chain(user: Any, requested_provider: Optional[str]) -> List[str]:
@@ -192,9 +187,15 @@ def _build_follow_ups(
     return suggestions[:3]
 
 
-def _derive_fallback_actions(tool_outputs: List[Tuple[str, Dict[str, Any]]], user: Any) -> List[Dict[str, Any]]:
-    """Derives helpful navigation actions from tool outputs if the model didn't emit them."""
+def _derive_actions(
+    tool_outputs: List[Tuple[str, Dict[str, Any]]],
+    focus: Optional[Dict[str, Any]],
+    user: Any,
+) -> List[Dict[str, Any]]:
+    """Deterministically builds permission-gated Action Buttons from tool outputs."""
     candidates: List[Dict[str, Any]] = []
+    focus_sid = (focus or {}).get("set_id") or ""
+
     for tname, out in tool_outputs:
         if not isinstance(out, dict) or out.get("error"):
             continue
@@ -212,13 +213,6 @@ def _derive_fallback_actions(tool_outputs: List[Tuple[str, Dict[str, Any]]], use
                     "spl_id": r.get("spl_id") or None,
                 })
             elif len(results) >= 2:
-                top_sids = [r["set_id"] for r in results[:2] if r.get("set_id")]
-                if len(top_sids) >= 2:
-                    candidates.append({
-                        "type": "labelcomp",
-                        "label": f"Compare Top {len(top_sids)} Labels",
-                        "set_ids": top_sids,
-                    })
                 if results[0].get("set_id"):
                     r0 = results[0]
                     candidates.append({
@@ -226,6 +220,13 @@ def _derive_fallback_actions(tool_outputs: List[Tuple[str, Dict[str, Any]]], use
                         "label": f"Open Reference SPL: {r0.get('brand_name') or r0.get('generic_name') or 'Label'}",
                         "set_id": r0["set_id"],
                         "spl_id": r0.get("spl_id") or None,
+                    })
+                top_sids = [r["set_id"] for r in results[:2] if r.get("set_id")]
+                if len(top_sids) >= 2:
+                    candidates.append({
+                        "type": "labelcomp",
+                        "label": f"Compare Top {len(top_sids)} Labels",
+                        "set_ids": top_sids,
                     })
             if wq and total > 0:
                 candidates.append({
@@ -243,14 +244,17 @@ def _derive_fallback_actions(tool_outputs: List[Tuple[str, Dict[str, Any]]], use
         elif tname == "query_drugtox" and (out.get("count") or 0) > 0:
             q = out.get("query") or ""
             recs = out.get("records") or []
-            candidates.append({
-                "type": "drugtox",
-                "label": f"Open {q or 'Drug'} in askDrugTox",
-                "query": q,
-                "set_id": recs[0].get("set_id") if recs else None,
-            })
+            sid = (recs[0].get("set_id") if recs else None) or focus_sid
+            if sid:
+                candidates.append({
+                    "type": "drugtox",
+                    "label": "Open DILI Agent",
+                    "set_id": sid,
+                    "agent": "dili",
+                    "query": q,
+                })
         elif tname == "get_label_history" and (out.get("total_versions") or 0) > 0:
-            sid = out.get("set_id")
+            sid = out.get("set_id") or focus_sid
             appr = out.get("application_number")
             candidates.append({
                 "type": "label_history",
@@ -258,18 +262,20 @@ def _derive_fallback_actions(tool_outputs: List[Tuple[str, Dict[str, Any]]], use
                 **({"set_id": sid} if sid else {}),
                 **({"application_number": appr} if appr else {}),
             })
-        elif tname == "query_faers_signals" and out.get("set_id") and not out.get("error"):
-            candidates.append({
-                "type": "faers",
-                "label": "Open FAERS Analysis",
-                "set_id": out["set_id"],
-            })
+        elif tname == "query_faers_signals" and not out.get("error"):
+            sid = out.get("set_id") or focus_sid
+            if sid:
+                candidates.append({
+                    "type": "faers",
+                    "label": "Open FAERS Analysis",
+                    "set_id": sid,
+                })
 
     return validate_and_filter_actions(candidates, user)[:5]
 
 
 def _extract_json_tool_call(text: str) -> Optional[Tuple[str, Dict[str, Any]]]:
-    """Fallback parser if a model emits ```json {"tool": ..., "arguments": ...}```."""
+    """Fallback parser when an OpenAI-compatible gateway rejects native tools."""
     m = re.search(r"```json\s*(\{.*?\})\s*```", text or "", re.DOTALL)
     raw = m.group(1) if m else None
     if not raw:
@@ -318,71 +324,66 @@ def _run_gemini_loop(
     openai_tools: List[Dict[str, Any]],
     prior_focus: Optional[Dict[str, Any]],
 ) -> Generator[Dict[str, Any], None, None]:
-    """Runs the multi-step JSON tool-calling loop on Gemini with live chunk streaming."""
-    tool_desc = json.dumps(
-        [
-            {
-                "name": t["function"]["name"],
-                "description": t["function"]["description"],
-                "parameters": t["function"]["parameters"],
-            }
-            for t in openai_tools
-        ],
-        ensure_ascii=False,
-    )
-    sys_prompt = (
-        messages[0]["content"]
-        + '\n\nAvailable tools (to call a tool, respond ONLY with ```json {"tool": "name", "arguments": {...}}```):\n'
-        + tool_desc
-    )
+    """Runs native Gemini FunctionDeclaration / FunctionResponse loop with live streaming."""
+    fn_decls = [
+        genai_types.FunctionDeclaration(
+            name=t["function"]["name"],
+            description=t["function"]["description"],
+            parameters_json_schema=t["function"]["parameters"],
+        )
+        for t in openai_tools
+    ]
+    gemini_tools = [genai_types.Tool(function_declarations=fn_decls)] if fn_decls else None
+    sys_prompt = messages[0]["content"]
 
-    explicit_actions: List[Dict[str, Any]] = []
+    contents: List[genai_types.Content] = []
+    for m in messages[1:]:
+        role = "model" if m["role"] == "assistant" else "user"
+        contents.append(
+            genai_types.Content(
+                role=role,
+                parts=[genai_types.Part.from_text(text=str(m.get("content") or ""))],
+            )
+        )
+
     tool_outputs: List[Tuple[str, Dict[str, Any]]] = []
-    working_msgs = [dict(m) for m in messages[1:]]
 
     for step in range(MAX_TOOL_STEPS):
         yield {"type": "status", "text": "Thinking..." if step == 0 else "Synthesizing results..."}
-
-        contents = []
-        for m in working_msgs:
-            role = "model" if m["role"] == "assistant" else "user"
-            contents.append(genai_types.Content(role=role, parts=[genai_types.Part.from_text(text=str(m.get("content") or ""))]))
 
         stream = client.models.generate_content_stream(
             model=model,
             contents=contents,
             config=genai_types.GenerateContentConfig(
                 system_instruction=sys_prompt,
+                tools=gemini_tools,
                 temperature=0.0,
                 max_output_tokens=2048,
             ),
         )
 
-        prefix_buf = ""
-        full_content = ""
-        decided_mode: Optional[str] = None  # "tool" | "stream"
+        text_buf = ""
+        flushed = False
+        collected_fcs: List[Any] = []
         last_usage = None
 
         for chunk in stream:
             if getattr(chunk, "usage_metadata", None):
                 last_usage = chunk.usage_metadata
-            delta = getattr(chunk, "text", None) or ""
-            if not delta:
-                continue
-            full_content += delta
 
-            if decided_mode == "stream":
-                yield {"type": "token", "text": delta}
-            elif decided_mode is None:
-                prefix_buf += delta
-                stripped = prefix_buf.lstrip()
-                if stripped.startswith("```json") or stripped.startswith("{"):
-                    if len(stripped) >= 12 or "\n" in stripped:
-                        decided_mode = "tool"
-                elif len(stripped) >= 16:
-                    decided_mode = "stream"
-                    yield {"type": "token", "text": prefix_buf}
-                    prefix_buf = ""
+            chunk_fcs = getattr(chunk, "function_calls", None) or []
+            if chunk_fcs:
+                collected_fcs.extend(chunk_fcs)
+
+            delta = getattr(chunk, "text", None) or ""
+            if delta and not collected_fcs:
+                text_buf += delta
+                if flushed:
+                    yield {"type": "token", "text": delta}
+                elif len(text_buf) >= _PREAMBLE_BUFFER_CHARS:
+                    flushed = True
+                    yield {"type": "token", "text": text_buf}
+                    text_buf = ""
 
         if last_usage:
             _record_usage(
@@ -392,34 +393,44 @@ def _run_gemini_loop(
                 getattr(last_usage, "candidates_token_count", 0) or 0,
             )
 
-        parsed = _extract_json_tool_call(full_content)
-        if parsed:
-            tname, targs = parsed
-            if tname != "emit_action_buttons":
+        if collected_fcs:
+            # Discard any short pre-tool preamble in text_buf so it doesn't leak
+            model_parts = [
+                genai_types.Part.from_function_call(
+                    name=fc.name,
+                    args=dict(fc.args) if fc.args else {},
+                )
+                for fc in collected_fcs
+            ]
+            contents.append(genai_types.Content(role="model", parts=model_parts))
+
+            resp_parts: List[genai_types.Part] = []
+            for fc in collected_fcs:
+                tname = fc.name
+                targs = dict(fc.args) if fc.args else {}
                 yield {"type": "status", "text": _friendly_status(tname), "tool": tname}
                 yield {"type": "tool_call", "tool": tname, "arguments": targs}
-            result = DEFAULT_REGISTRY.call(tname, targs, user)
-            tool_outputs.append((tname, result))
-            if tname == "emit_action_buttons" and isinstance(result.get("actions"), list):
-                explicit_actions.extend(result["actions"])
-            if tname != "emit_action_buttons":
+                result = DEFAULT_REGISTRY.call(tname, targs, user)
+                tool_outputs.append((tname, result))
                 yield {"type": "tool_result", "tool": tname, "summary": _summarize_tool_result(tname, result)}
-            working_msgs.append({"role": "assistant", "content": full_content})
-            working_msgs.append({
-                "role": "user",
-                "content": f"Tool `{tname}` result:\n```json\n{json.dumps(result, ensure_ascii=False, default=str)[:24000]}\n```\nNow continue answering the user in Markdown (do not output another tool JSON unless you need another tool).",
-            })
+                resp_parts.append(
+                    genai_types.Part.from_function_response(
+                        name=tname,
+                        response={"result": result},
+                    )
+                )
+
+            contents.append(genai_types.Content(role="user", parts=resp_parts))
             continue
 
-        # Flush any buffered prefix if it wasn't a tool call
-        if decided_mode != "stream" and prefix_buf:
-            yield {"type": "token", "text": prefix_buf}
+        if text_buf:
+            yield {"type": "token", "text": text_buf}
 
         focus = _extract_focus(tool_outputs, prior_focus)
         if focus:
             yield {"type": "focus", "focus": focus}
 
-        final_actions = validate_and_filter_actions(explicit_actions, user) or _derive_fallback_actions(tool_outputs, user)
+        final_actions = _derive_actions(tool_outputs, focus, user)
         if final_actions:
             yield {"type": "actions", "actions": final_actions}
 
@@ -434,7 +445,7 @@ def _run_gemini_loop(
     focus = _extract_focus(tool_outputs, prior_focus)
     if focus:
         yield {"type": "focus", "focus": focus}
-    final_actions = validate_and_filter_actions(explicit_actions, user) or _derive_fallback_actions(tool_outputs, user)
+    final_actions = _derive_actions(tool_outputs, focus, user)
     if final_actions:
         yield {"type": "actions", "actions": final_actions}
     yield {"type": "done", "provider": "gemini", "model": model}
@@ -454,7 +465,6 @@ def _run_with_provider(
         yield from _run_gemini_loop(client, model, user, messages, openai_tools, prior_focus)
         return
 
-    explicit_actions: List[Dict[str, Any]] = []
     tool_outputs: List[Tuple[str, Dict[str, Any]]] = []
     working_msgs = list(messages)
     use_native_tools = bool(openai_tools)
@@ -503,8 +513,9 @@ def _run_with_provider(
             raise
 
         full_content = ""
+        preamble_buf = ""
+        flushed = False
         tc_acc: Dict[int, Dict[str, str]] = {}
-        streamed_directly = False
 
         for chunk in stream:
             if not getattr(chunk, "choices", None):
@@ -528,19 +539,24 @@ def _run_with_provider(
             d_content = getattr(delta, "content", None)
             if d_content:
                 full_content += d_content
-                # Stream live when native tools are active (tool calls arrive via delta.tool_calls)
                 if use_native_tools and not tc_acc:
-                    streamed_directly = True
-                    yield {"type": "token", "text": d_content}
+                    preamble_buf += d_content
+                    if flushed:
+                        yield {"type": "token", "text": d_content}
+                    elif len(preamble_buf) >= _PREAMBLE_BUFFER_CHARS:
+                        flushed = True
+                        yield {"type": "token", "text": preamble_buf}
+                        preamble_buf = ""
 
         est_in = sum(len(str(m.get("content") or "")) for m in working_msgs) // 4
         _record_usage(user, model, est_in, len(full_content) // 4)
 
         if tc_acc:
+            # Discard any short pre-tool preamble in preamble_buf
             ordered_tcs = [tc_acc[i] for i in sorted(tc_acc.keys())]
             working_msgs.append({
                 "role": "assistant",
-                "content": full_content or None,
+                "content": None,
                 "tool_calls": [
                     {
                         "id": tc["id"] or f"call_{i}",
@@ -558,18 +574,11 @@ def _run_with_provider(
                 except Exception:
                     targs = {}
 
-                if tname != "emit_action_buttons":
-                    yield {"type": "status", "text": _friendly_status(tname), "tool": tname}
-                    yield {"type": "tool_call", "tool": tname, "arguments": targs}
-
+                yield {"type": "status", "text": _friendly_status(tname), "tool": tname}
+                yield {"type": "tool_call", "tool": tname, "arguments": targs}
                 result = DEFAULT_REGISTRY.call(tname, targs, user)
                 tool_outputs.append((tname, result))
-
-                if tname == "emit_action_buttons" and isinstance(result.get("actions"), list):
-                    explicit_actions.extend(result["actions"])
-
-                if tname != "emit_action_buttons":
-                    yield {"type": "tool_result", "tool": tname, "summary": _summarize_tool_result(tname, result)}
+                yield {"type": "tool_result", "tool": tname, "summary": _summarize_tool_result(tname, result)}
 
                 working_msgs.append({
                     "role": "tool",
@@ -582,15 +591,11 @@ def _run_with_provider(
             parsed = _extract_json_tool_call(full_content)
             if parsed:
                 tname, targs = parsed
-                if tname != "emit_action_buttons":
-                    yield {"type": "status", "text": _friendly_status(tname), "tool": tname}
-                    yield {"type": "tool_call", "tool": tname, "arguments": targs}
+                yield {"type": "status", "text": _friendly_status(tname), "tool": tname}
+                yield {"type": "tool_call", "tool": tname, "arguments": targs}
                 result = DEFAULT_REGISTRY.call(tname, targs, user)
                 tool_outputs.append((tname, result))
-                if tname == "emit_action_buttons" and isinstance(result.get("actions"), list):
-                    explicit_actions.extend(result["actions"])
-                if tname != "emit_action_buttons":
-                    yield {"type": "tool_result", "tool": tname, "summary": _summarize_tool_result(tname, result)}
+                yield {"type": "tool_result", "tool": tname, "summary": _summarize_tool_result(tname, result)}
                 working_msgs.append({"role": "assistant", "content": full_content})
                 working_msgs.append({
                     "role": "user",
@@ -598,14 +603,17 @@ def _run_with_provider(
                 })
                 continue
 
-        if full_content and not streamed_directly:
+        if use_native_tools:
+            if preamble_buf and not flushed:
+                yield {"type": "token", "text": preamble_buf}
+        elif full_content:
             yield {"type": "token", "text": full_content}
 
         focus = _extract_focus(tool_outputs, prior_focus)
         if focus:
             yield {"type": "focus", "focus": focus}
 
-        final_actions = validate_and_filter_actions(explicit_actions, user) or _derive_fallback_actions(tool_outputs, user)
+        final_actions = _derive_actions(tool_outputs, focus, user)
         if final_actions:
             yield {"type": "actions", "actions": final_actions}
 
@@ -616,7 +624,6 @@ def _run_with_provider(
         yield {"type": "done", "provider": provider, "model": model}
         return
 
-    # Final synthesis if max steps exhausted
     yield {"type": "status", "text": "Finalizing answer..."}
     stream = client.chat.completions.create(
         model=model,
@@ -632,7 +639,7 @@ def _run_with_provider(
     focus = _extract_focus(tool_outputs, prior_focus)
     if focus:
         yield {"type": "focus", "focus": focus}
-    final_actions = validate_and_filter_actions(explicit_actions, user) or _derive_fallback_actions(tool_outputs, user)
+    final_actions = _derive_actions(tool_outputs, focus, user)
     if final_actions:
         yield {"type": "actions", "actions": final_actions}
     follow_ups = _build_follow_ups(tool_outputs, focus, user)
@@ -658,11 +665,13 @@ def run_agent_stream(
     if isinstance(active_focus, dict) and (active_focus.get("set_id") or active_focus.get("brand_name")):
         focus_label = active_focus.get("brand_name") or active_focus.get("generic_name") or "Selected Label"
         sys_content += (
-            f"\n\n[Active Label Focus: {focus_label} | "
+            f"\n\n[Pronoun Fallback Context: {focus_label} | "
             f"Application: {active_focus.get('application_number') or 'N/A'} | "
             f"Manufacturer: {active_focus.get('manufacturer') or 'N/A'} | "
             f"Revised: {active_focus.get('revised_date') or 'N/A'} | "
-            f"set_id: {active_focus.get('set_id') or ''}]"
+            f"set_id: {active_focus.get('set_id') or ''}. "
+            "Use this ONLY when the user uses a pronoun ('it', 'this drug', 'its warnings') without naming a drug. "
+            "If the user names a different drug, ignore this context and search the newly named drug.]"
         )
 
     history_msgs = _trim_history(chat_history or [])
