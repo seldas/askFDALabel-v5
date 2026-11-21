@@ -1051,8 +1051,98 @@
 .afl-toolbox__table tbody tr[data-workflow] > td:first-child {
   border-left: 3px solid color-mix(in srgb, var(--toolbox-row-accent) 40%, var(--fdl-paper));
 }
-.afl-toolbox--adaptive .afl-toolbox__tool { padding: 16px; }
-.afl-toolbox--adaptive .afl-toolbox__tool > p { margin: 10px 0 16px; }
+.afl-toolbox--adaptive .afl-toolbox__grid--compact {
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.afl-toolbox__tool--tile {
+  position: relative;
+  min-height: 112px;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 20px;
+  border-radius: 6px;
+  border: 1px solid var(--fdl-line);
+  border-top: 2px solid var(--fdl-toolbox-workflow, var(--fdl-line));
+  background: var(--fdl-paper);
+  transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+}
+
+.afl-toolbox__tool--tile:not(.is-disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  border-color: var(--fdl-toolbox-workflow, var(--fdl-blue-600));
+}
+
+.afl-toolbox__tool--tile.is-disabled {
+  opacity: 0.65;
+}
+
+.afl-toolbox__tile-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.afl-toolbox__tile-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.afl-toolbox__tile-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.afl-toolbox__tile-arrow {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--fdl-muted);
+  opacity: 0.45;
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.afl-toolbox__tool--tile:not(.is-disabled):hover .afl-toolbox__tile-arrow {
+  opacity: 1;
+  color: var(--fdl-toolbox-workflow, var(--fdl-blue-700));
+  transform: translate(1px, -1px);
+}
+
+.afl-toolbox__tool--tile .afl-toolbox__tool-name::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.afl-toolbox__tile-blurb {
+  margin: 4px 0 0 !important;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--fdl-ink-soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.afl-toolbox__tile-fallback {
+  position: relative;
+  z-index: 2;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--fdl-blue-700);
+}
 @media (max-width: 1099px) {
   .afl-toolbox__table .afl-toolbox__purpose-column { display: none; }
   .afl-toolbox__table thead th:nth-child(2) { width: auto; }

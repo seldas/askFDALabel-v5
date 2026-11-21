@@ -151,32 +151,53 @@ export default function ToolboxPanel({ setId, data }: { setId: string; data: Lab
     </button>;
   };
   const pinnedTools = filteredTools.filter((tool) => favoriteToolIds.includes(tool.id));
-  const workflowSets = workflowOrder
-    .map((workflow) => ({
-      workflow,
-      tools: filteredTools.filter((tool) => tool.workflow === workflow && !favoriteToolIds.includes(tool.id)),
-    }))
-    .filter(({ tools }) => tools.length > 0);
+  const unifiedCardTools = [
+    ...pinnedTools,
+    ...filteredTools.filter((tool) => !favoriteToolIds.includes(tool.id)),
+  ];
 
   const renderToolCard = (t: typeof toolsList[number]) => {
     const isFav = favoriteToolIds.includes(t.id);
     const detail = workflowDetails[t.workflow];
     return (
-      <article key={t.id} className={`afl-toolbox__tool${isFav ? ' is-pinned' : ''}`} data-workflow={t.workflow}>
-        <header className="afl-toolbox__tool-header">
-          <span className="afl-toolbox__tool-icon" aria-hidden="true"><ToolIcon id={t.iconId} size={20} /></span>
-          <div className="afl-toolbox__tool-title-group">
-            <span className="afl-toolbox__tool-category">{detail?.title ?? t.workflow}</span>
-            <h3><a className="afl-toolbox__tool-name" href={t.disabled ? undefined : t.href} aria-disabled={t.disabled || undefined} title={t.serviceMessage} target="_blank" rel="noopener noreferrer">{t.name}</a></h3>
+      <article
+        key={t.id}
+        className={`afl-toolbox__tool afl-toolbox__tool--tile${isFav ? ' is-pinned' : ''}${t.disabled ? ' is-disabled' : ''}`}
+        data-workflow={t.workflow}
+      >
+        <span className="afl-toolbox__tool-icon" aria-hidden="true">
+          <ToolIcon id={t.iconId} size={19} />
+        </span>
+        <div className="afl-toolbox__tile-body">
+          <div className="afl-toolbox__tile-top">
+            <div className="afl-toolbox__tool-title-group">
+              <h3>
+                <a
+                  className="afl-toolbox__tool-name"
+                  href={t.disabled ? undefined : t.href}
+                  aria-disabled={t.disabled || undefined}
+                  title={t.serviceMessage}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t.name}
+                </a>
+              </h3>
+              <span className="afl-toolbox__tool-category">{detail?.title ?? t.workflow}</span>
+            </div>
+            <div className="afl-toolbox__tile-controls">
+              <ServiceWarning toolId={t.id} compact />
+              {renderPin(t)}
+              {!t.disabled && <span className="afl-toolbox__tile-arrow" aria-hidden="true">↗</span>}
+            </div>
           </div>
-          <ServiceWarning toolId={t.id} compact />
-          {renderPin(t)}
-        </header>
-        <p>{t.blurb}</p>
-        <a className="afl-toolbox__launch" href={t.disabled ? undefined : t.href} aria-disabled={t.disabled || undefined} title={t.serviceMessage} target="_blank" rel="noopener noreferrer">
-          {t.disabled ? 'Temporarily unavailable' : 'Open analysis'} <span aria-hidden="true">↗</span>
-        </a>
-        {t.disabled && t.id === 'label-faers' && <Link href={t.href} target="_blank">View saved results ↗</Link>}
+          <p className="afl-toolbox__tile-blurb">{t.blurb}</p>
+          {t.disabled && t.id === 'label-faers' && (
+            <Link className="afl-toolbox__tile-fallback" href={t.href} target="_blank">
+              View saved results ↗
+            </Link>
+          )}
+        </div>
       </article>
     );
   };
@@ -241,30 +262,11 @@ export default function ToolboxPanel({ setId, data }: { setId: string; data: Lab
           </tr>)}</tbody>
         </table>
       )}
-      {layout === 'cards' && <>
-      {pinnedTools.length > 0 && (
-        <section className="afl-toolbox__section afl-toolbox__section--pinned" aria-labelledby="pinned-tools-title">
-          <header className="afl-toolbox__section-header">
-            <div><span>PINNED / {String(pinnedTools.length).padStart(2, '0')}</span><h3 id="pinned-tools-title">Pinned tools</h3></div>
-            <p>Frequently used analyses for this workspace.</p>
-          </header>
-          <div className="afl-toolbox__grid">{pinnedTools.map(renderToolCard)}</div>
-        </section>
+      {layout === 'cards' && unifiedCardTools.length > 0 && (
+        <div className="afl-toolbox__grid afl-toolbox__grid--compact">
+          {unifiedCardTools.map(renderToolCard)}
+        </div>
       )}
-
-      {workflowSets.map(({ workflow, tools }) => {
-        const detail = workflowDetails[workflow];
-        return (
-          <section key={workflow} className="afl-toolbox__section" data-workflow={workflow} aria-labelledby={`toolbox-${workflow}`}>
-            <header className="afl-toolbox__section-header">
-              <div><span>{detail.code} / {String(tools.length).padStart(2, '0')}</span><h3 id={`toolbox-${workflow}`}>{detail.title}</h3></div>
-              <p>{detail.description}</p>
-            </header>
-            <div className="afl-toolbox__grid">{tools.map(renderToolCard)}</div>
-          </section>
-        );
-      })}
-      </>}
       <aside className="afl-toolbox__contact">Tool requests or research collaboration: <a href="mailto:askfdalabel@fda.hhs.gov">askfdalabel@fda.hhs.gov</a></aside>
     </section>
   );
