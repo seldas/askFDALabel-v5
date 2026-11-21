@@ -6,6 +6,7 @@ import AccessRestricted from '../components/AccessRestricted';
 import Header from '../components/Header';
 import './management.css';
 import AiPreferences from './AiPreferences';
+import { TokenUsagePanel } from './TokenUsagePanel';
 import { useRouter } from 'next/navigation';
 
 interface User {
@@ -604,8 +605,6 @@ export default function ManagementPage() {
     if (session?.is_authenticated) {
       if (session.is_admin) {
         fetchUsers();
-        fetchTokenUsage();
-        fetchAllTokenDetails();
         fetchAdminApiKeys();
       } else {
         setUsers([{
@@ -619,7 +618,6 @@ export default function ManagementPage() {
           created_at: new Date().toISOString()
         }]);
         setActiveTab((prev) => (prev === 'users' ? 'tokens' : prev));
-        fetchUserTokenDetails(session.id || 0, session.display_name || session.username || '');
       }
     }
   }, [session]);
@@ -2169,168 +2167,7 @@ else:
             )}
 
             {activeTab === 'tokens' && (
-              <section className="mgmt-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                  <h2 className="section-title" style={{ margin: 0 }}>{session?.is_admin ? 'Global LLM Action History' : 'My LLM Action History'}</h2>
-                  {session?.is_admin && (
-                    <button 
-                      className="btn-primary" 
-                      onClick={() => setIsTokenModalOpen(true)}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
-                        <line x1="18" y1="20" x2="18" y2="10"></line>
-                        <line x1="12" y1="20" x2="12" y2="4"></line>
-                        <line x1="6" y1="20" x2="6" y2="14"></line>
-                      </svg>
-                      Show Top 10 Users Summary
-                    </button>
-                  )}
-                </div>
-
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem', padding: '0.5rem', background: 'var(--fdl-canvas)', borderRadius: '2px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>Filter Date:</div>
-                      <select 
-                        value={historyDateFilter} 
-                        onChange={(e) => { setHistoryDateFilter(e.target.value as any); setHistoryPage(1); }}
-                        style={{ padding: '6px 12px', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
-                      >
-                        <option value="7d">Last 7 Days</option>
-                        <option value="1m">Last 1 Month</option>
-                        <option value="all">All Time</option>
-                        <option value="custom">Custom Range</option>
-                      </select>
-                    </div>
-                    
-                    {historyDateFilter === 'custom' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <input type="date" value={historyCustomStart} onChange={e => { setHistoryCustomStart(e.target.value); setHistoryPage(1); }} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }} />
-                        <span style={{ fontSize: '0.8rem', color: 'var(--fdl-canvas0)' }}>to</span>
-                        <input type="date" value={historyCustomEnd} onChange={e => { setHistoryCustomEnd(e.target.value); setHistoryPage(1); }} style={{ padding: '4px', fontSize: '0.8rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }} />
-                      </div>
-                    )}
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>Filter Model:</div>
-                      <select 
-                        value={historyModelFilter} 
-                        onChange={(e) => { setHistoryModelFilter(e.target.value); setHistoryPage(1); }}
-                        style={{ padding: '6px 12px', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.85rem' }}
-                      >
-                        <option value="all">All Models</option>
-                        {uniqueModels.map(model => (
-                          <option key={model} value={model}>{model}</option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div style={{ marginLeft: 'auto', fontSize: '0.85rem', color: 'var(--fdl-canvas0)' }}>
-                      {historyTotalItems} record{historyTotalItems !== 1 ? 's' : ''} found
-                    </div>
-                  </div>
-
-                  {/* Aggregated Token Counts Summary */}
-                  <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: 'repeat(3, 1fr)', 
-                    gap: '1rem', 
-                    marginBottom: '1.5rem',
-                    background: 'var(--fdl-canvas)',
-                    padding: '1.25rem',
-                    borderRadius: '2px',
-                    border: '1px solid var(--fdl-line)'
-                  }}>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-canvas0)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Input Tokens</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--fdl-ink)', marginTop: '4px' }}>
-                        {totalInputTokens.toLocaleString()}
-                      </div>
-                    </div>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-canvas0)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Output Tokens</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--fdl-ink)', marginTop: '4px' }}>
-                        {totalOutputTokens.toLocaleString()}
-                      </div>
-                    </div>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-canvas0)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Overall Tokens</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--fdl-blue-600)', marginTop: '4px' }}>
-                        {totalOverallTokens.toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="user-table-wrapper">
-                    <table className="user-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
-                      <thead>
-                        <tr>
-                          <th style={{ padding: '0 12px 8px', borderBottom: 'none' }}>Timestamp</th>
-                          {session?.is_admin && <th style={{ padding: '0 12px 8px', borderBottom: 'none' }}>Name</th>}
-                          <th style={{ padding: '0 12px 8px', borderBottom: 'none' }}>Model</th>
-                          <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Input</th>
-                          <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Output</th>
-                          <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {loadingUserTokens ? (
-                          <tr><td colSpan={session?.is_admin ? 6 : 5} style={{ textAlign: 'center', padding: '24px', color: 'var(--fdl-muted)' }}>Loading detailed usage...</td></tr>
-                        ) : historyFilteredTokens.length === 0 ? (
-                          <tr><td colSpan={session?.is_admin ? 6 : 5} style={{ textAlign: 'center', padding: '24px', color: 'var(--fdl-muted)' }}>No records found for the selected date range.</td></tr>
-                        ) : (
-                          historyPagedTokens.map((record: any) => (
-                            <tr key={record.id} style={{ background: 'var(--fdl-canvas)', borderRadius: '2px' }}>
-                              <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '2px 0 0 2px', fontSize: '0.85rem', color: 'var(--fdl-ink-soft)' }}>
-                                {new Date(record.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'medium' })}
-                              </td>
-                              {session?.is_admin && (
-                                <td style={{ padding: '12px', borderBottom: 'none', fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', fontWeight: 600 }}>
-                                  {record.display_name || record.username}
-                                </td>
-                              )}
-                              <td style={{ padding: '12px', borderBottom: 'none', fontSize: '0.85rem', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>
-                                <span style={{ background: 'var(--fdl-line)', padding: '4px 8px', borderRadius: '2px' }}>{record.model_name}</span>
-                              </td>
-                              <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontSize: '0.9rem', color: 'var(--fdl-canvas0)' }}>
-                                {record.input_tokens.toLocaleString()}
-                              </td>
-                              <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontSize: '0.9rem', color: 'var(--fdl-canvas0)' }}>
-                                {record.output_tokens.toLocaleString()}
-                              </td>
-                              <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '0 2px 2px 0', textAlign: 'right', fontWeight: 800, color: 'var(--fdl-ink)' }}>
-                                {record.total_tokens.toLocaleString()}
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                  
-                  {!loadingUserTokens && historyTotalPages > 1 && (
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
-                      <button 
-                        disabled={historyPage === 1}
-                        onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
-                        style={{ padding: '6px 12px', background: historyPage === 1 ? 'var(--fdl-line-soft)' : 'var(--fdl-line)', color: historyPage === 1 ? 'var(--fdl-muted)' : 'var(--fdl-ink-soft)', border: 'none', borderRadius: '2px', cursor: historyPage === 1 ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}
-                      >
-                        Previous
-                      </button>
-                      <span style={{ fontSize: '0.85rem', color: 'var(--fdl-ink-soft)' }}>
-                        Page {historyPage} of {historyTotalPages}
-                      </span>
-                      <button 
-                        disabled={historyPage === historyTotalPages}
-                        onClick={() => setHistoryPage(p => Math.min(historyTotalPages, p + 1))}
-                        style={{ padding: '6px 12px', background: historyPage === historyTotalPages ? 'var(--fdl-line-soft)' : 'var(--fdl-line)', color: historyPage === historyTotalPages ? 'var(--fdl-muted)' : 'var(--fdl-ink-soft)', border: 'none', borderRadius: '2px', cursor: historyPage === historyTotalPages ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}
-                      >
-                        Next
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </section>
+              <TokenUsagePanel isAdmin={Boolean(session?.is_admin)} />
             )}
 
             {activeTab === 'tools' && session?.is_admin && (
@@ -2882,74 +2719,6 @@ else:
       )}
 
 
-      {/* Top 10 Users Summary Modal */}
-      {isTokenModalOpen && session?.is_admin && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(7, 31, 61, 0.58)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-        }}>
-          <div style={{
-            background: 'white', borderRadius: '2px', width: '90%', maxWidth: '800px',
-            maxHeight: '90vh', display: 'flex', flexDirection: 'column',
-            boxShadow: 'var(--fdl-elevation-3, 0 12px 32px rgba(7, 31, 61, 0.18))', borderTop: '3px solid var(--fdl-navy-800)'
-          }}>
-            <div style={{ padding: '24px', borderBottom: '1px solid var(--fdl-line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--fdl-ink)' }}>Top 10 Users Summary</h3>
-              <button onClick={() => setIsTokenModalOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px', color: 'var(--fdl-canvas0)' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </div>
-            <div style={{ padding: '24px', overflowY: 'auto' }}>
-              <table className="user-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
-                <thead>
-                  <tr>
-                    <th style={{ padding: '0 12px 8px', borderBottom: 'none' }}>Name</th>
-                    <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>All Time</th>
-                    <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Past 30 Days</th>
-                    <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Past 7 Days</th>
-                    <th style={{ padding: '0 12px 8px', borderBottom: 'none', textAlign: 'right' }}>Past 24 Hrs</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tokenUsage.length === 0 ? (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--fdl-muted)' }}>No token usage data</td></tr>
-                  ) : (
-                    [...tokenUsage]
-                      .sort((a: any, b: any) => b.stats.total_all_time - a.stats.total_all_time)
-                      .slice(0, 10)
-                      .map((u: any) => (
-                        <tr key={u.user_id} style={{ background: 'var(--fdl-canvas)', borderRadius: '2px' }}>
-                          <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '2px 0 0 2px', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>
-                            {u.display_name || u.username}
-                          </td>
-                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 800, color: 'var(--fdl-ink)' }}>
-                            {u.stats.total_all_time.toLocaleString()}
-                          </td>
-                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>
-                            {u.stats.total_30_days.toLocaleString()}
-                          </td>
-                          <td style={{ padding: '12px', borderBottom: 'none', textAlign: 'right', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>
-                            {u.stats.total_7_days.toLocaleString()}
-                          </td>
-                          <td style={{ padding: '12px', borderBottom: 'none', borderRadius: '0 2px 2px 0', textAlign: 'right', fontWeight: 600, color: 'var(--fdl-ink-soft)' }}>
-                            {u.stats.total_1_day.toLocaleString()}
-                          </td>
-                        </tr>
-                      ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--fdl-line)', display: 'flex', justifyContent: 'flex-end', background: 'var(--fdl-canvas)', borderRadius: '0 0 2px 2px' }}>
-              <button onClick={() => setIsTokenModalOpen(false)} className="btn-primary">Close</button>
-            </div>
-          </div>
-        </div>
-      )}
       {/* Manage User Modal */}
       {managingUser && (
         <div className="modal-overlay" onClick={() => { if (!savingUserModel) setManagingUser(null); }}>

@@ -404,49 +404,294 @@ def cancel_task(task_id):
         return jsonify({'success': True})
     return jsonify({'success': False, 'error': 'Task is not running'}), 400
 
+def _parse_token_date_bounds():
+    """Parses range/start/end query params into (start_dt, end_dt) naive UTC bounds."""
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    rng = (request.args.get('range') or '7d').strip().lower()
+    if rng == '7d':
+        return now - timedelta(days=7), None
+    if rng in ('1m', '30d'):
+        return now - timedelta(days=30), None
+    if rng == 'custom':
+        start_s = (request.args.get('start') or '').strip()
+        end_s = (request.args.get('end') or '').strip()
+        start_dt = datetime.strptime(start_s, '%Y-%m-%d') if start_s else None
+        end_dt = (datetime.strptime(end_s, '%Y-%m-%d') + timedelta(days=1)) if end_s else None
+        return start_dt, end_dt
+    return None, None
+
+
+def _apply_token_filters(query, model_cls, start_dt, end_dt, model_filter, user_id_filter):
+    if start_dt is not None:
+        query = query.filter(model_cls.created_at >= start_dt)
+    if end_dt is not None:
+        query = query.filter(model_cls.created_at < end_dt)
+    if model_filter and model_filter != 'all':
+        query = query.filter(model_cls.model_name == model_filter)
+    if user_id_filter is not None:
+        query = query.filter(model_cls.user_id == user_id_filter)
+    return query
+
+
 @admin_bp.route('/token_usage', methods=['GET'])
 @login_required
 @admin_required
 def get_token_usage():
     from datetime import datetime, timedelta, timezone
+    from sqlalchemy import case, func
     from database.models import TokenUsage
+
     try:
         now = datetime.now(timezone.utc).replace(tzinfo=None)
-        time_windows = {
-            '1_day': now - timedelta(days=1),
-            '7_days': now - timedelta(days=7),
-            '30_days': now - timedelta(days=30),
-        }
-        
-        users = User.query.all()
-        user_usage = []
-        
-        for u in users:
-            usages = TokenUsage.query.filter_by(user_id=u.id).all()
-            
-            stats = {
-                'total_all_time': sum(us.total_tokens for us in usages),
-                'total_1_day': sum(us.total_tokens for us in usages if us.created_at >= time_windows['1_day']),
-                'total_7_days': sum(us.total_tokens for us in usages if us.created_at >= time_windows['7_days']),
-                'total_30_days': sum(us.total_tokens for us in usages if us.created_at >= time_windows['30_days']),
-                'input_all_time': sum(us.input_tokens for us in usages),
-                'output_all_time': sum(us.output_tokens for us in usages),
-                'models': list(set(us.model_name for us in usages))
+        d1 = now - timedelta(days=1)
+        d7 = now - timedelta(days=7)
+        d30 = now - timedelta(days=30)
+
+        rows = (
+            db.session.query(
+                User.id.label('user_id'),
+                User.username.label('username'),
+                func.coalesce(func.sum(TokenUsage.total_tokens), 0).label('total_all_time'),
+                func.coalesce(func.sum(case((TokenUsage.created_at >= d1, TokenUsage.total_tokens), else_=0)), 0).label('total_1_day'),
+                func.coalesce(func.sum(case((TokenUsage.created_at >= d7, TokenUsage.total_tokens), else_=0)), 0).label('total_7_days'),
+                func.coalesce(func.sum(case((TokenUsage.created_at >= d30, TokenUsage.total_tokens), else_=0)), 0).label('total_30_days'),
+                func.coalesce(func.sum(TokenUsage.input_tokens), 0).label('input_all_time'),
+                func.coalesce(func.sum(TokenUsage.output_tokens), 0).label('output_all_time'),
+            )
+            .outerjoin(TokenUsage, TokenUsage.user_id == User.id)
+            .group_by(User.id, User.username)
+            .all()
+        )
+
+        display_map = {u.id: u.display_name for u in User.query.all()}
+        user_usage = [
+            {
+                'user_id': r.user_id,
+                'username': r.username,
+                'display_name': display_map.get(r.user_id, r.username),
+                'stats': {
+                    'total_all_time': int(r.total_all_time or 0),
+                    'total_1_day': int(r.total_1_day or 0),
+                    'total_7_days': int(r.total_7_days or 0),
+                    'total_30_days': int(r.total_30_days or 0),
+                    'input_all_time': int(r.input_all_time or 0),
+                    'output_all_time': int(r.output_all_time or 0),
+                },
             }
-            
-            user_usage.append({
-                'user_id': u.id,
-                'username': u.username,
-                'display_name': u.display_name,
-                'stats': stats
-            })
-            
-        return jsonify({
-            'success': True,
-            'usage': user_usage
-        })
+            for r in rows
+        ]
+
+        return jsonify({'success': True, 'usage': user_usage})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/token_usage/summary', methods=['GET'])
+@login_required
+def get_token_usage_summary():
+    """Returns SQL-aggregated token KPIs, daily trend, model breakdown, and per-user summary."""
+    from flask_login import current_user
+    from sqlalchemy import func
+    from database.models import TokenUsage
+
+    try:
+        start_dt, end_dt = _parse_token_date_bounds()
+        model_filter = (request.args.get('model') or 'all').strip()
+        req_user_id = request.args.get('user_id', type=int)
+        user_id_filter = req_user_id if current_user.is_admin else current_user.id
+
+        # 1. Totals
+        totals_q = _apply_token_filters(
+            db.session.query(
+                func.coalesce(func.sum(TokenUsage.input_tokens), 0).label('input_tokens'),
+                func.coalesce(func.sum(TokenUsage.output_tokens), 0).label('output_tokens'),
+                func.coalesce(func.sum(TokenUsage.total_tokens), 0).label('total_tokens'),
+                func.count(TokenUsage.id).label('request_count'),
+            ),
+            TokenUsage,
+            start_dt,
+            end_dt,
+            model_filter,
+            user_id_filter,
+        ).one()
+
+        # 2. Daily trend
+        day_col = func.date(TokenUsage.created_at)
+        daily_rows = (
+            _apply_token_filters(
+                db.session.query(
+                    day_col.label('day'),
+                    func.coalesce(func.sum(TokenUsage.input_tokens), 0).label('input_tokens'),
+                    func.coalesce(func.sum(TokenUsage.output_tokens), 0).label('output_tokens'),
+                    func.coalesce(func.sum(TokenUsage.total_tokens), 0).label('total_tokens'),
+                    func.count(TokenUsage.id).label('requests'),
+                ),
+                TokenUsage,
+                start_dt,
+                end_dt,
+                model_filter,
+                user_id_filter,
+            )
+            .group_by(day_col)
+            .order_by(day_col.asc())
+            .all()
+        )
+
+        # 3. Model breakdown (filtered by date & user, not model, so model selector stays populated)
+        model_rows = (
+            _apply_token_filters(
+                db.session.query(
+                    TokenUsage.model_name.label('model_name'),
+                    func.coalesce(func.sum(TokenUsage.input_tokens), 0).label('input_tokens'),
+                    func.coalesce(func.sum(TokenUsage.output_tokens), 0).label('output_tokens'),
+                    func.coalesce(func.sum(TokenUsage.total_tokens), 0).label('total_tokens'),
+                    func.count(TokenUsage.id).label('requests'),
+                ),
+                TokenUsage,
+                start_dt,
+                end_dt,
+                'all',
+                user_id_filter,
+            )
+            .group_by(TokenUsage.model_name)
+            .order_by(func.sum(TokenUsage.total_tokens).desc())
+            .all()
+        )
+
+        # 4. Per-user summary for Admins (date + model filtered, across all users)
+        users_summary = []
+        if current_user.is_admin:
+            user_rows = (
+                _apply_token_filters(
+                    db.session.query(
+                        User.id.label('user_id'),
+                        User.username.label('username'),
+                                func.coalesce(func.sum(TokenUsage.input_tokens), 0).label('input_tokens'),
+                        func.coalesce(func.sum(TokenUsage.output_tokens), 0).label('output_tokens'),
+                        func.coalesce(func.sum(TokenUsage.total_tokens), 0).label('total_tokens'),
+                        func.count(TokenUsage.id).label('requests'),
+                        func.max(TokenUsage.created_at).label('last_used'),
+                    ).join(TokenUsage, TokenUsage.user_id == User.id),
+                    TokenUsage,
+                    start_dt,
+                    end_dt,
+                    model_filter,
+                    None,
+                )
+                .group_by(User.id, User.username)
+                .order_by(func.sum(TokenUsage.total_tokens).desc())
+                .all()
+            )
+            display_map = {u.id: u.display_name for u in User.query.all()}
+            users_summary = [
+                {
+                    'user_id': r.user_id,
+                    'username': r.username,
+                    'display_name': display_map.get(r.user_id, r.username),
+                    'input_tokens': int(r.input_tokens or 0),
+                    'output_tokens': int(r.output_tokens or 0),
+                    'total_tokens': int(r.total_tokens or 0),
+                    'requests': int(r.requests or 0),
+                    'last_used': r.last_used.isoformat() + 'Z' if r.last_used else None,
+                }
+                for r in user_rows
+            ]
+
+        return jsonify({
+            'success': True,
+            'totals': {
+                'input_tokens': int(totals_q.input_tokens or 0),
+                'output_tokens': int(totals_q.output_tokens or 0),
+                'total_tokens': int(totals_q.total_tokens or 0),
+                'request_count': int(totals_q.request_count or 0),
+            },
+            'daily': [
+                {
+                    'date': str(r.day),
+                    'input_tokens': int(r.input_tokens or 0),
+                    'output_tokens': int(r.output_tokens or 0),
+                    'total_tokens': int(r.total_tokens or 0),
+                    'requests': int(r.requests or 0),
+                }
+                for r in daily_rows
+            ],
+            'by_model': [
+                {
+                    'model_name': r.model_name,
+                    'input_tokens': int(r.input_tokens or 0),
+                    'output_tokens': int(r.output_tokens or 0),
+                    'total_tokens': int(r.total_tokens or 0),
+                    'requests': int(r.requests or 0),
+                }
+                for r in model_rows
+            ],
+            'available_models': [r.model_name for r in model_rows if r.model_name],
+            'users_summary': users_summary,
+        })
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid date format (expected YYYY-MM-DD)'}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/token_usage/logs', methods=['GET'])
+@login_required
+def get_token_usage_logs():
+    """Returns paginated, on-demand token usage activity logs."""
+    from flask_login import current_user
+    from database.models import TokenUsage
+
+    try:
+        start_dt, end_dt = _parse_token_date_bounds()
+        model_filter = (request.args.get('model') or 'all').strip()
+        req_user_id = request.args.get('user_id', type=int)
+        user_id_filter = req_user_id if current_user.is_admin else current_user.id
+
+        page = max(1, request.args.get('page', default=1, type=int))
+        limit = max(1, min(request.args.get('limit', default=25, type=int), 100))
+
+        display_map = {u.id: u.display_name for u in User.query.all()}
+        q = (
+            db.session.query(TokenUsage, User.username)
+            .outerjoin(User, TokenUsage.user_id == User.id)
+        )
+        q = _apply_token_filters(q, TokenUsage, start_dt, end_dt, model_filter, user_id_filter)
+        total = q.count()
+        total_pages = max(1, (total + limit - 1) // limit)
+        rows = (
+            q.order_by(TokenUsage.created_at.desc())
+            .offset((page - 1) * limit)
+            .limit(limit)
+            .all()
+        )
+
+        return jsonify({
+            'success': True,
+            'total': total,
+            'page': page,
+            'total_pages': total_pages,
+            'logs': [
+                {
+                    'id': tu.id,
+                    'user_id': tu.user_id,
+                    'username': uname or 'System',
+                    'display_name': display_map.get(tu.user_id, uname or 'System'),
+                    'model_name': tu.model_name,
+                    'input_tokens': int(tu.input_tokens or 0),
+                    'output_tokens': int(tu.output_tokens or 0),
+                    'total_tokens': int(tu.total_tokens or 0),
+                    'created_at': tu.created_at.isoformat() + 'Z' if tu.created_at else None,
+                }
+                for tu, uname in rows
+            ],
+        })
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid date format (expected YYYY-MM-DD)'}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @admin_bp.route('/token_usage/<int:user_id>', methods=['GET'])
 @login_required
@@ -471,6 +716,7 @@ def get_user_token_usage_details(user_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+
 @admin_bp.route('/token_usage/all', methods=['GET'])
 @login_required
 @admin_required
@@ -493,6 +739,7 @@ def get_all_token_usage_details():
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
 
 def _get_last_update_date(db_type_keys):
     from database.models import DatabaseUpdateLog, SystemTask
