@@ -712,8 +712,11 @@ def ai_chat():
         logger.error(f"Error calling AI API: {e}, {current_user}, {chat_type}")
         return jsonify({'error': f'AI API error: {str(e)}'}), 500
 
+# DEPRECATED / UNUSED: No frontend callers remain for /api/dashboard/ai_search_help.
+# Retained for backwards compatibility only.
 @api_bp.route('/ai_search_help', methods=['POST'])
 def ai_search_help():
+    """Deprecated: legacy search helper endpoint (no active frontend callers)."""
     data = request.get_json()
     user_message = data.get('message')
     history = data.get('history', [])

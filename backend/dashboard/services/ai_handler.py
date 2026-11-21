@@ -430,5 +430,7 @@ def summarize_comparison(user, differing_sections, label1_name, label2_name):
 def generate_assessment(user, prompt, content):
     return call_llm(user, prompt, f"--- DRUG LABEL CONTENT ---\n{content}")
 
+# DEPRECATED / UNUSED: Only referenced by the legacy /api/dashboard/ai_search_help route.
 def get_search_helper_response(user, user_message, history):
+    """Deprecated: legacy search helper wrapper (no active frontend callers)."""
     return call_llm(user, SEARCH_HELPER_PROMPT, user_message, history)

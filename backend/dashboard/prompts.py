@@ -272,6 +272,7 @@ After the evidence list, provide one conclusion:
 <div class="label-section"><!-- No DIRI evidence found in label --><div class="toxicity-summary"><strong>Summary:</strong> No evidence of renal injury was found in the label.</div><p><strong>Conclusion:</strong> No DIRI Concern</p></div>
 '''
 
+# DEPRECATED / UNUSED: Only used by the legacy /api/dashboard/ai_search_help route.
 SEARCH_HELPER_PROMPT = '''
 ### Role
 You are an intelligent search assistant for "AskFDALabel", a specialized search engine for FDA Drug Labels.
