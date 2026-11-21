@@ -6,6 +6,7 @@ name and the previous canonical file is retained under ``archive/``.
 """
 from __future__ import annotations
 
+import json
 import shutil
 import zipfile
 from datetime import datetime, timezone
@@ -47,20 +48,49 @@ def target_path(data_dir: str | Path, file_type: str) -> Path:
     return Path(data_dir) / item['relative_dir'] / item['filename']
 
 
+def _meta_path(data_dir: str | Path, file_type: str) -> Path:
+    target = target_path(data_dir, file_type)
+    return target.parent / f'{target.name}.meta.json'
+
+
+def _read_file_meta(data_dir: str | Path, file_type: str) -> dict:
+    mp = _meta_path(data_dir, file_type)
+    if not mp.is_file():
+        return {}
+    try:
+        data = json.loads(mp.read_text(encoding='utf-8'))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
 def file_status(data_dir: str | Path, file_type: str) -> dict:
     path = target_path(data_dir, file_type)
     exists = path.is_file()
     modified = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc) if exists else None
     age_days = (datetime.now(timezone.utc) - modified).days if modified else None
+    meta = _read_file_meta(data_dir, file_type) if exists else {}
     return {
-        'type': file_type, 'label': spec(file_type)['label'], 'filename': spec(file_type)['filename'],
-        'exists': exists, 'size': path.stat().st_size if exists else 0,
+        'type': file_type,
+        'label': spec(file_type)['label'],
+        'filename': spec(file_type)['filename'],
+        'original_filename': meta.get('original_filename'),
+        'uploaded_by': meta.get('uploaded_by'),
+        'exists': exists,
+        'size': path.stat().st_size if exists else 0,
         'updated_at': modified.isoformat() if modified else None,
-        'age_days': age_days, 'stale': bool(age_days is not None and age_days > 31),
+        'age_days': age_days,
+        'stale': bool(age_days is not None and age_days > 31),
     }
 
 
-def archive_and_replace(data_dir: str | Path, file_type: str, completed_part: Path) -> Path:
+def archive_and_replace(
+    data_dir: str | Path,
+    file_type: str,
+    completed_part: Path,
+    original_name: str | None = None,
+    uploaded_by: str | None = None,
+) -> Path:
     target = target_path(data_dir, file_type)
     target.parent.mkdir(parents=True, exist_ok=True)
     if target.exists():
@@ -69,6 +99,13 @@ def archive_and_replace(data_dir: str | Path, file_type: str, completed_part: Pa
         stamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         shutil.move(str(target), str(archive / f'{target.stem}_{stamp}{target.suffix}'))
     completed_part.replace(target)
+    if original_name or uploaded_by:
+        meta = {
+            'original_filename': original_name or target.name,
+            'uploaded_by': uploaded_by,
+            'uploaded_at': datetime.now(timezone.utc).isoformat(),
+        }
+        _meta_path(data_dir, file_type).write_text(json.dumps(meta), encoding='utf-8')
     return target
 
 

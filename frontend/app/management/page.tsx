@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { Fragment, useState, useEffect, useRef } from 'react';
 import { useUser } from '../context/UserContext';
 import AccessRestricted from '../components/AccessRestricted';
 import Header from '../components/Header';
@@ -142,6 +142,7 @@ export default function ManagementPage() {
 
   useEffect(() => {
     if (session && session.username?.toLowerCase() !== 'guest') {
+      if (activeTab === 'apikey') setShowKey(false);
       if (session.api_key !== undefined) {
         setApiKey(session.api_key);
       } else if (activeTab === 'apikey') {
@@ -163,7 +164,7 @@ export default function ManagementPage() {
       const data = await res.json();
       if (data.success) {
         setApiKey(data.api_key);
-        setShowKey(true);
+        setShowKey(false);
         if (typeof refreshSession === 'function') {
           refreshSession();
         }
@@ -454,12 +455,30 @@ export default function ManagementPage() {
   const [dataFiles, setDataFiles] = useState<any[]>([]);
   const [uploadingFileType, setUploadingFileType] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [dbOverview, setDbOverview] = useState<{
+    datasets: Record<string, { count: number; last_updated: string | null; last_message: string | null; source_file?: { original_filename?: string | null; uploaded_by?: string | null; updated_at?: string | null } | null }>;
+    recent_logs: Array<{ id: number; db_type: string; status: string; message: string | null; completed_at: string | null }>;
+  }>({ datasets: {}, recent_logs: [] });
+  const [showDbHistory, setShowDbHistory] = useState(false);
+  const [showOracleSettings, setShowOracleSettings] = useState(false);
+  const [showApiExamples, setShowApiExamples] = useState(false);
+  const [userKeyFilter, setUserKeyFilter] = useState<'all' | 'has_key' | 'no_key'>('all');
 
   const refreshDataFiles = async () => {
     try {
-      const res = await fetch('/api/dashboard/admin/data_files');
-      const data = await res.json();
-      if (data.success) setDataFiles(data.files || []);
+      const [filesRes, overviewRes] = await Promise.all([
+        fetch('/api/dashboard/admin/data_files'),
+        fetch('/api/dashboard/admin/db_overview'),
+      ]);
+      const filesData = await filesRes.json();
+      if (filesData.success) setDataFiles(filesData.files || []);
+      const overviewData = await overviewRes.json();
+      if (overviewData.success) {
+        setDbOverview({
+          datasets: overviewData.datasets || {},
+          recent_logs: overviewData.recent_logs || [],
+        });
+      }
     } catch (err) {
       console.error('Unable to read managed data files', err);
     }
@@ -621,12 +640,6 @@ export default function ManagementPage() {
       }
     }
   }, [session]);
-
-  useEffect(() => {
-    if (activeTab === 'apimanagement' && session?.is_admin) {
-      fetchAdminApiKeys();
-    }
-  }, [activeTab, session?.is_admin]);
 
   const fetchTokenUsage = async () => {
     setLoadingTokenUsage(true);
@@ -1173,21 +1186,6 @@ export default function ManagementPage() {
               </svg>
               API Key
             </button>
-            {session?.is_admin && (
-              <button
-                className={`sidebar-tab ${activeTab === 'apimanagement' ? 'active' : ''}`}
-                aria-current={activeTab === 'apimanagement' ? 'page' : undefined}
-                onClick={() => setActiveTab('apimanagement')}
-                disabled={session?.username?.toLowerCase() === 'guest'}
-                style={{ opacity: session?.username?.toLowerCase() === 'guest' ? 0.5 : 1, cursor: session?.username?.toLowerCase() === 'guest' ? 'not-allowed' : 'pointer' }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-                API Management
-              </button>
-            )}
             <button
               className={`sidebar-tab ${activeTab === 'tokens' ? 'active' : ''}`}
                 aria-current={activeTab === 'tokens' ? 'page' : undefined}
@@ -1308,6 +1306,18 @@ export default function ManagementPage() {
                     <option value="username_asc">Name (A-Z)</option>
                   </select>
                   {session?.is_admin && (
+                    <select
+                      value={userKeyFilter}
+                      onChange={e => setUserKeyFilter(e.target.value as 'all' | 'has_key' | 'no_key')}
+                      className="mgmt-select"
+                      style={{ minWidth: '125px' }}
+                    >
+                      <option value="all">All API Keys</option>
+                      <option value="has_key">Has API Key</option>
+                      <option value="no_key">No API Key</option>
+                    </select>
+                  )}
+                  {session?.is_admin && (
                     <label
                       style={{
                         display: 'inline-flex',
@@ -1341,11 +1351,12 @@ export default function ManagementPage() {
                   <table className="user-table">
                     <thead>
                       <tr>
-                        <th style={{ width: '26%', maxWidth: '240px' }}>User</th>
-                        <th style={{ width: '18%', minWidth: '130px' }}>Role</th>
-                        <th style={{ width: '22%', minWidth: '140px' }}>Comments / Notes</th>
-                        <th style={{ width: '20%', minWidth: '140px' }}>Last Login</th>
-                        <th style={{ width: '14%', minWidth: '90px', textAlign: 'right' }}>Actions</th>
+                        <th style={{ width: '24%', maxWidth: '220px' }}>User</th>
+                        <th style={{ width: '14%', minWidth: '110px' }}>Role</th>
+                        {session?.is_admin && <th style={{ width: '16%', minWidth: '120px' }}>API Key</th>}
+                        <th style={{ width: '16%', minWidth: '120px' }}>Comments</th>
+                        <th style={{ width: '18%', minWidth: '130px' }}>Last Login</th>
+                        <th style={{ width: '12%', minWidth: '80px', textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1362,6 +1373,12 @@ export default function ManagementPage() {
                               if (r !== userRoleFilter) return false;
                             }
                             if (hideDeactivated && u.is_active === false) return false;
+                            if (session?.is_admin && userKeyFilter !== 'all') {
+                              const kInfo = adminApiKeys.find(k => k.user_id === u.id);
+                              const hasKey = Boolean(kInfo?.has_api_key);
+                              if (userKeyFilter === 'has_key' && !hasKey) return false;
+                              if (userKeyFilter === 'no_key' && hasKey) return false;
+                            }
                             return true;
                           })
                           .sort((a, b) => {
@@ -1390,7 +1407,7 @@ export default function ManagementPage() {
                         if (filtered.length === 0) {
                           return (
                             <tr>
-                              <td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--fdl-muted)' }}>
+                              <td colSpan={session?.is_admin ? 6 : 5} style={{ textAlign: 'center', padding: '24px', color: 'var(--fdl-muted)' }}>
                                 No users found matching filters.
                               </td>
                             </tr>
@@ -1435,6 +1452,28 @@ export default function ManagementPage() {
                                 <option value="admin">Admin</option>
                               </select>
                             </td>
+                            {session?.is_admin && (
+                              <td>
+                                {(() => {
+                                  const kInfo = adminApiKeys.find(k => k.user_id === user.id);
+                                  if (!kInfo?.has_api_key) {
+                                    return <span style={{ fontSize: '0.75rem', color: 'var(--fdl-muted)' }}>None</span>;
+                                  }
+                                  if (kInfo.last_used_at) {
+                                    return (
+                                      <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '2px 7px', borderRadius: '2px', whiteSpace: 'nowrap' }} title={`Last used: ${new Date(kInfo.last_used_at).toLocaleString()}`}>
+                                        Active · {new Date(kInfo.last_used_at).toLocaleDateString()}
+                                      </span>
+                                    );
+                                  }
+                                  return (
+                                    <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', padding: '2px 7px', borderRadius: '2px', whiteSpace: 'nowrap' }}>
+                                      Unused
+                                    </span>
+                                  );
+                                })()}
+                              </td>
+                            )}
                             <td style={{ minWidth: '140px' }}>
                               <button
                                 type="button"
@@ -1672,7 +1711,25 @@ export default function ManagementPage() {
 
                 {/* API USAGE & QUICK START DOCUMENTATION */}
                 <section className="mgmt-card">
-                  <h2 className="section-title">REST API Quick Start Guide</h2>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                    <div>
+                      <h2 className="section-title" style={{ margin: 0 }}>REST API Quick Start &amp; Code Examples</h2>
+                      <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.84rem', margin: '4px 0 0' }}>
+                        Endpoint URLs, curl commands, and Python examples using your key.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      onClick={() => setShowApiExamples(v => !v)}
+                      style={{ padding: '6px 12px', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                    >
+                      {showApiExamples ? 'Hide Examples ▴' : 'Show Examples ▾'}
+                    </button>
+                  </div>
+                  {showApiExamples && (
+                    <div style={{ marginTop: '1.25rem', borderTop: '1px solid var(--fdl-line)', paddingTop: '1.25rem' }}>
+
                   <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.9rem', marginBottom: '1rem' }}>
                     The askFDALabel REST API provides direct querying over the official CDER-CBER Oracle labeling database.
                   </p>
@@ -1751,7 +1808,7 @@ export default function ManagementPage() {
                         fontFamily: 'monospace'
                       }}>
 {`curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'localhost'}/fdalabel-v3_api/api/v1/search?q=myocardial+infarction&limit=10" \\
-  -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
+  -H "X-API-Key: ${showKey && apiKey ? apiKey : 'YOUR_API_KEY'}"`}
                       </pre>
                     </div>
 
@@ -1770,7 +1827,7 @@ export default function ManagementPage() {
                         fontFamily: 'monospace'
                       }}>
 {`curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'localhost'}/fdalabel-v3_api/api/v1/search?appl_num=NDA021436&limit=5" \\
-  -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
+  -H "X-API-Key: ${showKey && apiKey ? apiKey : 'YOUR_API_KEY'}"`}
                       </pre>
                     </div>
 
@@ -1790,7 +1847,7 @@ export default function ManagementPage() {
                       }}>
 {`# Multi-section query (34066-1 Boxed Warning & 34067-9 Indications)
 curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'localhost'}/fdalabel-v3_api/api/v1/sections/7e606a5b-010e-4050-bf6c-6712b32bbbc4?loinc_code=34066-1,34067-9" \\
-  -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
+  -H "X-API-Key: ${showKey && apiKey ? apiKey : 'YOUR_API_KEY'}"`}
                       </pre>
                     </div>
 
@@ -1810,7 +1867,7 @@ curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_S
                       }}>
 {`# Returns adverse events, severity tiers, frequencies, MedDRA PTs, and leftover matches
 curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'localhost'}/fdalabel-v3_api/api/v1/pvlabeling/7e606a5b-010e-4050-bf6c-6712b32bbbc4" \\
-  -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
+  -H "X-API-Key: ${showKey && apiKey ? apiKey : 'YOUR_API_KEY'}"`}
                       </pre>
                     </div>
 
@@ -1829,7 +1886,7 @@ curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_S
                         fontFamily: 'monospace'
                       }}>
 {`curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'localhost'}/fdalabel-v3_api/api/v1/labels/7e606a5b-010e-4050-bf6c-6712b32bbbc4" \\
-  -H "X-API-Key: ${apiKey || 'YOUR_API_KEY'}"`}
+  -H "X-API-Key: ${showKey && apiKey ? apiKey : 'YOUR_API_KEY'}"`}
                       </pre>
                     </div>
 
@@ -1850,7 +1907,7 @@ curl -X GET "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_S
 {`import requests
 
 base_url = "https://${session?.api_server_host || process.env.NEXT_PUBLIC_API_SERVER_HOST || 'localhost'}/fdalabel-v3_api/api/v1"
-headers = {"X-API-Key": "${apiKey || 'YOUR_API_KEY'}"}
+headers = {"X-API-Key": "${showKey && apiKey ? apiKey : 'YOUR_API_KEY'}"}
 
 set_id = "7e606a5b-010e-4050-bf6c-6712b32bbbc4"
 pv_resp = requests.get(f"{base_url}/pvlabeling/{set_id}", headers=headers)
@@ -1867,301 +1924,9 @@ else:
                       </pre>
                     </div>
                   </div>
-                </section>
-              </div>
-            )}
-
-            {activeTab === 'apimanagement' && session?.is_admin && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <section className="mgmt-card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <div>
-                      <h2 className="section-title" style={{ margin: 0 }}>API Key Management</h2>
-                      <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.9rem', margin: '4px 0 0' }}>
-                        Monitor active REST API keys across all users, track last used dates, and rotate or revoke keys.
-                      </p>
+                
                     </div>
-                    <button
-                      onClick={fetchAdminApiKeys}
-                      className="btn-ghost"
-                      style={{ padding: '6px 12px', fontSize: '0.85rem' }}
-                      disabled={loadingAdminApiKeys}
-                    >
-                      {loadingAdminApiKeys ? 'Refreshing...' : 'Refresh'}
-                    </button>
-                  </div>
-
-                  {/* Summary Metric Cards */}
-                  {(() => {
-                    const now = new Date().getTime();
-                    const past24hMs = 24 * 60 * 60 * 1000;
-                    const isRecent = (isoStr: string | null | undefined, windowMs: number) => {
-                      if (!isoStr) return false;
-                      const t = new Date(isoStr.endsWith('Z') || isoStr.includes('+') ? isoStr : `${isoStr}Z`).getTime();
-                      return !isNaN(t) && (now - t) <= windowMs;
-                    };
-
-                    const activeCount = adminApiKeys.filter(k => k.has_api_key && k.is_active !== false).length;
-                    const past24hCount = adminApiKeys.filter(k => isRecent(k.last_used_at, past24hMs)).length;
-                    const neverUsedCount = adminApiKeys.filter(k => k.has_api_key && !k.last_used_at).length;
-                    const noKeyCount = adminApiKeys.filter(k => !k.has_api_key).length;
-
-                    return (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-                        <div style={{ background: 'var(--fdl-canvas)', border: '1px solid var(--fdl-line)', borderRadius: '2px', padding: '1rem' }}>
-                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--fdl-canvas0)', letterSpacing: '0.05em' }}>Active Keys</div>
-                          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--fdl-ink)', marginTop: '4px' }}>{activeCount}</div>
-                        </div>
-                        <div style={{ background: 'var(--fdl-canvas)', border: '1px solid var(--fdl-line)', borderRadius: '2px', padding: '1rem' }}>
-                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--fdl-canvas0)', letterSpacing: '0.05em' }}>Used Past 24h</div>
-                          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--fdl-green)', marginTop: '4px' }}>{past24hCount}</div>
-                        </div>
-                        <div style={{ background: 'var(--fdl-canvas)', border: '1px solid var(--fdl-line)', borderRadius: '2px', padding: '1rem' }}>
-                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--fdl-canvas0)', letterSpacing: '0.05em' }}>Never Used</div>
-                          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--fdl-amber)', marginTop: '4px' }}>{neverUsedCount}</div>
-                        </div>
-                        <div style={{ background: 'var(--fdl-canvas)', border: '1px solid var(--fdl-line)', borderRadius: '2px', padding: '1rem' }}>
-                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--fdl-canvas0)', letterSpacing: '0.05em' }}>No Key Issued</div>
-                          <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--fdl-ink-soft)', marginTop: '4px' }}>{noKeyCount}</div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Search, Filter & Sort Toolbar */}
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1rem' }}>
-                    <div style={{ flex: '1 1 200px' }}>
-                      <input
-                        type="text"
-                        placeholder="Search by name, username or key..."
-                        value={adminKeySearch}
-                        onChange={e => setAdminKeySearch(e.target.value)}
-                        className="mgmt-input"
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                    <select
-                      value={adminKeyFilter}
-                      onChange={e => setAdminKeyFilter(e.target.value as any)}
-                      className="mgmt-select"
-                      style={{ minWidth: '130px' }}
-                    >
-                      <option value="all">All Keys</option>
-                      <option value="active">Active Only</option>
-                      <option value="never_used">Never Used</option>
-                      <option value="no_key">No Key</option>
-                    </select>
-                    <select
-                      value={adminKeySortBy}
-                      onChange={e => setAdminKeySortBy(e.target.value as any)}
-                      className="mgmt-select"
-                      style={{ minWidth: '170px' }}
-                    >
-                      <option value="last_used_desc">Last Used (Newest)</option>
-                      <option value="last_used_asc">Last Used (Oldest)</option>
-                      <option value="created_at_desc">Generated (Newest)</option>
-                      <option value="created_at_asc">Generated (Oldest)</option>
-                      <option value="username_asc">Name (A-Z)</option>
-                    </select>
-                  </div>
-
-                  {/* API Keys Table */}
-                  <div className="user-table-wrapper">
-                    <table className="user-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: '28%', maxWidth: '240px' }}>User</th>
-                          <th style={{ width: '36%' }}>API Key</th>
-                          <th style={{ width: '22%' }}>Activity</th>
-                          <th style={{ width: '14%', textAlign: 'right' }}>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(() => {
-                          const filtered = adminApiKeys
-                            .filter(k => {
-                              if (adminKeySearch.trim()) {
-                                const q = adminKeySearch.toLowerCase();
-                                const matchUser = [k.display_name, k.username].some(value => value?.toLowerCase().includes(q));
-                                const matchKey = k.api_key && k.api_key.toLowerCase().includes(q);
-                                if (!matchUser && !matchKey) return false;
-                              }
-                              if (adminKeyFilter === 'active') {
-                                if (!k.has_api_key || k.is_active === false) return false;
-                              } else if (adminKeyFilter === 'never_used') {
-                                if (!k.has_api_key || k.last_used_at) return false;
-                              } else if (adminKeyFilter === 'no_key') {
-                                if (k.has_api_key) return false;
-                              }
-                              return true;
-                            })
-                            .sort((a, b) => {
-                              if (adminKeySortBy === 'username_asc') {
-                                return (a.display_name || a.username).localeCompare(b.display_name || b.username);
-                              }
-                              if (adminKeySortBy === 'created_at_desc') {
-                                return (b.created_at || '').localeCompare(a.created_at || '');
-                              }
-                              if (adminKeySortBy === 'created_at_asc') {
-                                return (a.created_at || '').localeCompare(b.created_at || '');
-                              }
-                              if (adminKeySortBy === 'last_used_asc') {
-                                if (!a.last_used_at && !b.last_used_at) return 0;
-                                if (!a.last_used_at) return 1;
-                                if (!b.last_used_at) return -1;
-                                return a.last_used_at.localeCompare(b.last_used_at);
-                              }
-                              // default: last_used_desc
-                              if (!a.last_used_at && !b.last_used_at) return (b.created_at || '').localeCompare(a.created_at || '');
-                              if (!a.last_used_at) return 1;
-                              if (!b.last_used_at) return -1;
-                              return b.last_used_at.localeCompare(a.last_used_at);
-                            });
-
-                          if (filtered.length === 0) {
-                            return (
-                              <tr>
-                                <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: 'var(--fdl-muted)' }}>
-                                  No API keys found matching filters.
-                                </td>
-                              </tr>
-                            );
-                          }
-
-                          return filtered.map(k => {
-                            const isRevealed = Boolean(revealedKeys[k.user_id]);
-                            const isCopied = copiedKeyUserId === k.user_id;
-                            const isBusy = actionInProgressUserId === k.user_id;
-
-                            return (
-                              <tr key={k.user_id} style={{ opacity: k.is_active === false ? 0.6 : 1 }}>
-                                <td style={{ maxWidth: '240px' }}>
-                                  <div
-                                    style={{
-                                      fontWeight: 700,
-                                      color: 'var(--fdl-ink)',
-                                      fontSize: '0.9rem',
-                                      maxWidth: '240px',
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap'
-                                    }}
-                                    title={k.display_name || k.username}
-                                  >
-                                    {k.display_name || k.username}
-                                  </div>
-                                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
-                                    <span style={{ fontSize: '0.7rem', color: 'var(--fdl-canvas0)', textTransform: 'capitalize' }}>
-                                      {k.role}
-                                    </span>
-                                    {k.is_active === false && (
-                                      <span style={{ fontSize: '0.65rem', background: 'var(--fdl-red-050)', color: 'var(--fdl-red)', padding: '1px 5px', borderRadius: '2px', fontWeight: 800 }}>
-                                        DEACTIVATED
-                                      </span>
-                                    )}
-                                  </div>
-                                </td>
-                                <td>
-                                  {k.has_api_key && k.api_key ? (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                      <code style={{
-                                        fontFamily: 'monospace',
-                                        fontSize: '0.8rem',
-                                        background: 'var(--fdl-line-soft)',
-                                        padding: '4px 8px',
-                                        borderRadius: '2px',
-                                        color: 'var(--fdl-ink)',
-                                        maxWidth: '220px',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap'
-                                      }}>
-                                        {isRevealed ? k.api_key : k.api_key_masked}
-                                      </code>
-                                      <button
-                                        type="button"
-                                        onClick={() => toggleRevealKey(k.user_id)}
-                                        className="btn-ghost"
-                                        style={{ padding: '2px 6px', fontSize: '0.7rem' }}
-                                        title={isRevealed ? 'Mask key' : 'Reveal full key'}
-                                      >
-                                        {isRevealed ? 'Hide' : 'Show'}
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleCopyKey(k.api_key!, k.user_id)}
-                                        className="btn-ghost"
-                                        style={{ padding: '2px 6px', fontSize: '0.7rem' }}
-                                      >
-                                        {isCopied ? 'Copied!' : 'Copy'}
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <span style={{ color: 'var(--fdl-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>
-                                      No key generated
-                                    </span>
-                                  )}
-                                </td>
-                                <td>
-                                  <div style={{ fontSize: '0.75rem', color: 'var(--fdl-canvas0)' }}>
-                                    Generated: {formatUserDate(k.created_at) || '—'}
-                                  </div>
-                                  <div style={{ fontSize: '0.8rem', marginTop: '2px' }}>
-                                    <span style={{ fontSize: '0.75rem', color: 'var(--fdl-canvas0)' }}>Last used: </span>
-                                    {k.last_used_at ? (
-                                      <span style={{ fontWeight: 600, color: 'var(--fdl-ink)', whiteSpace: 'nowrap' }}>
-                                        {formatUserDate(k.last_used_at)}
-                                      </span>
-                                    ) : (
-                                      <span style={{ color: 'var(--fdl-muted)', fontStyle: 'italic' }}>Never</span>
-                                    )}
-                                  </div>
-                                </td>
-                                <td style={{ textAlign: 'right' }}>
-                                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                                    {k.has_api_key ? (
-                                      <>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleAdminGenerateKey(k.user_id, k.display_name || k.username)}
-                                          className="btn-ghost"
-                                          disabled={isBusy || k.is_active === false}
-                                          style={{ padding: '4px 8px', fontSize: '0.75rem' }}
-                                          title="Rotate and issue a new API key"
-                                        >
-                                          {isBusy ? '...' : 'Rotate'}
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleAdminRevokeKey(k.user_id, k.display_name || k.username)}
-                                          className="btn-danger-ghost"
-                                          disabled={isBusy}
-                                          style={{ padding: '4px 8px', fontSize: '0.75rem' }}
-                                          title="Revoke and invalidate API key"
-                                        >
-                                          Revoke
-                                        </button>
-                                      </>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleAdminGenerateKey(k.user_id, k.display_name || k.username)}
-                                        className="btn-primary-sm"
-                                        disabled={isBusy || k.is_active === false}
-                                        style={{ padding: '4px 10px', fontSize: '0.75rem' }}
-                                      >
-                                        {isBusy ? '...' : 'Generate'}
-                                      </button>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          });
-                        })()}
-                      </tbody>
-                    </table>
-                  </div>
+                  )}
                 </section>
               </div>
             )}
@@ -2391,235 +2156,272 @@ else:
             )}
 
             {activeTab === 'database' && session?.is_admin && (
-              <>
               <section className="mgmt-card">
-                <h2 className="section-title">Database Maintenance</h2>
-                <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                  Manually trigger background synchronization with local source files (data/downloads).
-                </p>
-
-                <section style={{ marginBottom: '1.75rem', padding: '1rem', border: '1px solid var(--fdl-line)', borderRadius: '2px', background: 'var(--fdl-canvas)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'baseline', marginBottom: '6px' }}>
-                    <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--fdl-ink)' }}>Managed data files</h3>
-                    <button type="button" onClick={refreshDataFiles} className="btn-ghost" style={{ padding: '4px 9px', fontSize: '0.75rem' }}>Refresh</button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+                  <div>
+                    <h2 className="section-title" style={{ margin: 0 }}>Database Maintenance</h2>
+                    <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.85rem', margin: '4px 0 0' }}>
+                      Manage source packages and synchronize local PostgreSQL datasets. Previous files are archived automatically.
+                    </p>
                   </div>
-                  <p style={{ margin: '0 0 12px', fontSize: '0.78rem', color: 'var(--fdl-canvas0)', lineHeight: 1.45 }}>
-                    Upload is separate from database updates. Files are renamed automatically; an existing file is moved into an <code>archive</code> folder before replacement. Large files upload in 10 MB resumable chunks.
-                  </p>
-                  {[
-                    { type: 'dailymed', title: 'DailyMed monthly update', accept: '.zip', name: 'dailymed_monthly_update.zip' },
-                    { type: 'pharmacologic_class', title: 'Pharmacologic class indexing', accept: '.zip', name: 'pharmacologic_class_indexing_spl_files.zip' },
-                    { type: 'meddra', title: 'MedDRA', accept: '.zip', name: 'meddra.zip' },
-                    { type: 'orangebook', title: 'Orange Book (EOBZIP)', accept: '.zip', name: 'EOBZIP.zip' },
-                    { type: 'askdrugtox', title: 'AskDrugTox update', accept: '.xlsx', name: 'askdrugtox_update.xlsx' },
-                  ].map(item => {
-                    const status = dataFiles.find(file => file.type === item.type);
-                    const busy = uploadingFileType === item.type;
-                    return <div key={item.type} style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) minmax(180px, 1.4fr) auto', gap: '12px', alignItems: 'center', padding: '10px 0', borderTop: '1px solid var(--fdl-line)' }}>
-                      <div><div style={{ fontWeight: 750, fontSize: '0.84rem', color: 'var(--fdl-ink)' }}>{item.title}</div><code style={{ fontSize: '0.7rem', color: 'var(--fdl-canvas0)' }}>{item.name}</code></div>
-                      <div style={{ fontSize: '0.75rem', color: status?.exists ? (status.stale ? '#b45309' : '#15803d') : '#b91c1c' }}>
-                        {busy ? `Uploading ${uploadProgress[item.type] || 0}%…` : status?.exists ? `${status.stale ? 'Older than one month' : 'Ready'} · ${(status.size / 1024 / 1024).toFixed(1)} MB · ${new Date(status.updated_at).toLocaleDateString()}` : 'No file uploaded'}
-                      </div>
-                      <label className="btn-ghost" style={{ padding: '6px 10px', fontSize: '0.75rem', cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.6 : 1 }}>
-                        {busy ? 'Uploading…' : 'Upload file'}
-                        <input type="file" accept={item.accept} disabled={busy} style={{ display: 'none' }} onChange={e => { const file = e.target.files?.[0]; if (file) uploadDataFile(item.type, file); e.currentTarget.value = ''; }} />
-                      </label>
-                    </div>;
-                  })}
-                </section>
+                  <button type="button" onClick={refreshDataFiles} className="btn-ghost" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
+                    Refresh
+                  </button>
+                </div>
 
-                <div className="update-grid">
-                  {[
-                    { id: 'monthly_labeling', name: 'Monthly Label Update', desc: 'Incrementally import the uploaded DailyMed monthly update' },
-                    { id: 'orangebook', name: 'Orange Book', desc: 'Approved Drug Products with Therapeutic Equivalence Evaluations' },
-                    { id: 'epc', name: 'Pharmacologic Class Indexing', desc: 'Import EPC, MoA, and physiologic-effect indexing records' },
-                    { id: 'drugtox', name: 'AskDrugTox', desc: 'Import the current AskDrugTox Excel update' },
-                    { id: 'generate_drugtox', name: 'Generate DrugTox (LLM)', desc: 'Dynamically generate DILI/DICT/DIRI for recently updated single-ingredient human Rx labels' },
-                    { id: 'meddra', name: 'MedDRA', desc: 'Dictionary (SOC, HLT, etc.)' }
-                  ].map(item => (
-                    <div key={item.id} className="update-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 800, color: 'var(--fdl-ink)' }}>{item.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--fdl-canvas0)' }}>{item.desc}</div>
-                        </div>
-                        <button
-                          onClick={() => handleUpdateClick(item.id)}
-                          className="btn-update"
-                          disabled={dbStatus[item.id]?.status === 'processing'}
-                        >
-                          {dbStatus[item.id]?.status === 'processing' ? 'Running...' : 'Update'}
-                        </button>
-                      </div>
+                {[
+                  {
+                    groupKey: 'labeling',
+                    title: 'Labeling & Reference Databases',
+                    hasOracleBar: true,
+                    items: [
+                      { id: 'monthly_labeling', name: 'Monthly Label Update', sub: 'DailyMed SPL incremental import', fileType: 'dailymed', accept: '.zip', canonicalName: 'dailymed_monthly_update.zip' },
+                      { id: 'orangebook', name: 'Orange Book', sub: 'RLD / RS & therapeutic equivalence', fileType: 'orangebook', accept: '.zip', canonicalName: 'EOBZIP.zip' },
+                      { id: 'epc', name: 'Pharmacologic Class Indexing', sub: 'EPC, MoA, and physiologic effect', fileType: 'pharmacologic_class', accept: '.zip', canonicalName: 'pharmacologic_class_indexing_spl_files.zip' },
+                    ],
+                  },
+                  {
+                    groupKey: 'safety',
+                    title: 'Safety & Terminology',
+                    hasOracleBar: false,
+                    items: [
+                      { id: 'drugtox', name: 'AskDrugTox (Excel)', sub: 'Import harmonized toxicity workbook', fileType: 'askdrugtox', accept: '.xlsx', canonicalName: 'askdrugtox_update.xlsx' },
+                      { id: 'generate_drugtox', name: 'Generate DrugTox (LLM)', sub: 'Dynamic DILI / DICT / DIRI generation', fileType: null, accept: '', canonicalName: '' },
+                      { id: 'meddra', name: 'MedDRA Dictionary', sub: 'SOC, HLGT, HLT, and PT hierarchy', fileType: 'meddra', accept: '.zip', canonicalName: 'meddra.zip' },
+                    ],
+                  },
+                ].map(group => (
+                  <div key={group.groupKey} style={{ marginBottom: '1.75rem', border: '1px solid var(--fdl-line)', borderRadius: '4px', background: 'white', overflow: 'hidden' }}>
+                    {/* Group Header */}
+                    <div style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
+                      padding: '12px 16px', background: 'var(--fdl-canvas)', borderBottom: '1px solid var(--fdl-line)'
+                    }}>
+                      <span style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--fdl-ink)', letterSpacing: '0.01em' }}>
+                        {group.title}
+                      </span>
 
-                      {item.id === 'monthly_labeling' && (
-                        <div style={{ marginTop: '12px', padding: '12px', background: 'white', borderRadius: '2px', border: '1px solid var(--fdl-line)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <div style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--fdl-ink-soft)', marginBottom: '4px' }}>Configuration Options</div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.8rem', color: 'var(--fdl-ink-soft)' }}>
-                              The uploaded monthly package is unpacked automatically and only new SPL versions are imported.
+                      {group.hasOracleBar && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.74rem', color: 'var(--fdl-canvas0)', fontWeight: 600 }}>
+                            Oracle ({(oracleForm.oracle_db_env || 'tst').toUpperCase()})
+                          </span>
+                          {oracleTestResult && (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '5px',
+                              fontSize: '0.73rem', fontWeight: 600, padding: '2px 8px', borderRadius: '999px',
+                              background: oracleTestResult.success ? '#f0fdf4' : '#fef2f2',
+                              color: oracleTestResult.success ? '#15803d' : '#b91c1c',
+                              border: `1px solid ${oracleTestResult.success ? '#bbf7d0' : '#fecaca'}`,
+                            }}>
+                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: oracleTestResult.success ? '#16a34a' : '#dc2626' }} />
+                              {oracleTestResult.success ? `Connected${oracleTestResult.elapsed_ms != null ? ` (${oracleTestResult.elapsed_ms} ms)` : ''}` : oracleTestResult.message}
                             </span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--fdl-ink-soft)' }}>
-                              <span>Workers:</span>
-                              <select value={workers} onChange={(e) => setWorkers(Number(e.target.value))} style={{ padding: '2px 8px', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.8rem', cursor: 'pointer' }}>
-                                <option value={1}>1</option>
-                                <option value={4}>4</option>
-                                <option value={10}>10</option>
-                              </select>
-                            </div>
-                          </div>
+                          )}
+                          <button type="button" onClick={handleTestOracle} className="btn-ghost" disabled={testingOracle} style={{ padding: '4px 10px', fontSize: '0.74rem', background: 'white' }}>
+                            {testingOracle ? 'Testing…' : 'Test Oracle'}
+                          </button>
+                          <button type="button" onClick={() => setShowOracleSettings(v => !v)} className="btn-ghost" style={{ padding: '4px 10px', fontSize: '0.74rem', background: 'white' }}>
+                            {showOracleSettings ? 'Close Settings' : 'Configure'}
+                          </button>
                         </div>
-                      )}
-
-                      {item.id === 'generate_drugtox' && (
-                        <div style={{ marginTop: '12px', padding: '12px', background: 'white', borderRadius: '2px', border: '1px solid var(--fdl-line)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <div style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--fdl-ink-soft)', marginBottom: '4px' }}>Configuration Options</div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--fdl-ink-soft)', cursor: 'pointer', userSelect: 'none' }}>
-                              <input type="checkbox" checked={useLocalDB} onChange={(e) => setUseLocalDB(e.target.checked)} style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: 'var(--fdl-blue-600)' }} />
-                              Use Local DB (Postgres)
-                            </label>
-                          </div>
-                        </div>
-                      )}
-
-                      {dbStatus[item.id] && (
-                        <ProgressBar
-                          progress={dbStatus[item.id].progress}
-                          status={dbStatus[item.id].status}
-                          message={dbStatus[item.id].message}
-                          taskId={dbStatus[item.id].id}
-                        />
                       )}
                     </div>
-                  ))}
-                </div>
 
-                <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--fdl-canvas)', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
-                  <div style={{ fontWeight: 800, fontSize: '0.8rem', color: 'var(--fdl-ink-soft)', marginBottom: '8px' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ marginRight: '6px', verticalAlign: 'middle' }}>
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="12" y1="16" x2="12" y2="12"></line>
-                      <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                    </svg>
-                    Processing Note
+                    {/* Collapsible Oracle Settings Drawer */}
+                    {group.hasOracleBar && showOracleSettings && (
+                      <div style={{ padding: '14px 16px', background: '#f8fafc', borderBottom: '1px solid var(--fdl-line)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Environment Preset:</span>
+                          <button type="button" onClick={() => applyOraclePreset('dev')} disabled={!oraclePresets} className={oracleForm.oracle_db_env === 'dev' ? 'btn-primary' : 'btn-ghost'} style={{ padding: '4px 12px', fontSize: '0.74rem' }}>DEV</button>
+                          <button type="button" onClick={() => applyOraclePreset('tst')} disabled={!oraclePresets} className={oracleForm.oracle_db_env === 'tst' ? 'btn-primary' : 'btn-ghost'} style={{ padding: '4px 12px', fontSize: '0.74rem' }}>TST</button>
+                        </div>
+                        <div className="mgmt-form" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '10px', marginBottom: '10px' }}>
+                          <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
+                            Host / URL
+                            <input className="mgmt-input" value={oracleForm.host} onChange={e => setOracleForm({ ...oracleForm, host: e.target.value })} placeholder="ncsvmlbldbtst2.fda.gov" />
+                          </label>
+                          <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
+                            Port
+                            <input className="mgmt-input" value={oracleForm.port} onChange={e => setOracleForm({ ...oracleForm, port: e.target.value })} placeholder="1521" />
+                          </label>
+                          <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
+                            SID / Service
+                            <input className="mgmt-input" value={oracleForm.service} onChange={e => setOracleForm({ ...oracleForm, service: e.target.value })} placeholder="lbltst2" />
+                          </label>
+                          <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
+                            User
+                            <input className="mgmt-input" value={oracleForm.user} onChange={e => setOracleForm({ ...oracleForm, user: e.target.value })} autoComplete="off" />
+                          </label>
+                          <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
+                            Password
+                            <span style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                              <input className="mgmt-input" type={showOraclePassword ? 'text' : 'password'} value={oracleForm.password} onChange={e => setOracleForm({ ...oracleForm, password: e.target.value })} autoComplete="new-password" />
+                              <button type="button" onClick={() => setShowOraclePassword(v => !v)} className="btn-ghost" style={{ padding: '5px 8px', fontSize: '0.72rem', whiteSpace: 'nowrap' }}>{showOraclePassword ? 'Hide' : 'Show'}</button>
+                            </span>
+                          </label>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <button type="button" onClick={handleSaveOracle} className="btn-primary" disabled={savingOracle} style={{ padding: '6px 14px', fontSize: '0.78rem' }}>
+                            {savingOracle ? 'Saving…' : 'Save Oracle Settings'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Unified Aligned Table */}
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: '720px' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid var(--fdl-line)', background: '#fcfcfd' }}>
+                            <th style={{ width: '28%', padding: '9px 16px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--fdl-canvas0)' }}>Dataset</th>
+                            <th style={{ width: '22%', padding: '9px 12px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--fdl-canvas0)' }}>Last Synced &amp; Size</th>
+                            <th style={{ width: '30%', padding: '9px 12px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--fdl-canvas0)' }}>Source Package / Options</th>
+                            <th style={{ width: '20%', padding: '9px 16px', textAlign: 'right', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--fdl-canvas0)' }}>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {group.items.map((item, idx) => {
+                            const fileStat = item.fileType ? dataFiles.find(f => f.type === item.fileType) : null;
+                            const busyUpload = item.fileType ? uploadingFileType === item.fileType : false;
+                            const info = dbOverview.datasets[item.id];
+                            const task = dbStatus[item.id];
+                            const lastStr = info?.last_updated
+                              ? new Date(info.last_updated).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
+                              : 'Never synced';
+                            const dotColor = fileStat?.exists ? (fileStat.stale ? '#d97706' : '#16a34a') : '#dc2626';
+
+                            return (
+                              <Fragment key={item.id}>
+                                <tr style={{ borderTop: idx === 0 ? 'none' : '1px solid var(--fdl-line)' }}>
+                                  <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--fdl-ink)' }}>{item.name}</div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--fdl-canvas0)', marginTop: '2px' }}>{item.sub}</div>
+                                  </td>
+
+                                  <td style={{ padding: '12px', verticalAlign: 'middle' }}>
+                                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: info?.last_updated ? 'var(--fdl-ink-soft)' : 'var(--fdl-muted)' }}>
+                                      {lastStr}
+                                    </div>
+                                    <div style={{ fontSize: '0.74rem', color: 'var(--fdl-canvas0)', marginTop: '2px' }}>
+                                      {info ? `${info.count.toLocaleString()} records` : '—'}
+                                    </div>
+                                  </td>
+
+                                  <td style={{ padding: '12px', verticalAlign: 'middle' }}>
+                                    {item.fileType ? (
+                                      <div style={{ fontSize: '0.76rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--fdl-ink)' }}>
+                                          <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+                                          <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={fileStat?.original_filename || item.canonicalName}>
+                                            {busyUpload
+                                              ? `Uploading ${uploadProgress[item.fileType] || 0}%…`
+                                              : fileStat?.exists
+                                                ? (fileStat.original_filename || item.canonicalName)
+                                                : 'No file uploaded'}
+                                          </span>
+                                        </div>
+                                        {fileStat?.exists && !busyUpload && (
+                                          <div style={{ fontSize: '0.71rem', color: 'var(--fdl-canvas0)', marginTop: '3px', paddingLeft: '13px' }}>
+                                            {(fileStat.size / 1024 / 1024).toFixed(1)} MB · {new Date(fileStat.updated_at).toLocaleDateString()}
+                                            {fileStat.uploaded_by ? ` · ${fileStat.uploaded_by}` : ''}
+                                          </div>
+                                        )}
+                                        {item.id === 'monthly_labeling' && (
+                                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', color: 'var(--fdl-ink-soft)', marginTop: '5px', paddingLeft: '13px' }}>
+                                            <span>Workers:</span>
+                                            <select value={workers} onChange={(e) => setWorkers(Number(e.target.value))} style={{ padding: '2px 6px', borderRadius: '2px', border: '1px solid var(--fdl-line)', fontSize: '0.72rem', background: 'white' }}>
+                                              <option value={1}>1</option>
+                                              <option value={4}>4</option>
+                                              <option value={10}>10</option>
+                                            </select>
+                                          </label>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--fdl-ink-soft)', cursor: 'pointer', userSelect: 'none' }}>
+                                        <input type="checkbox" checked={useLocalDB} onChange={(e) => setUseLocalDB(e.target.checked)} style={{ width: '14px', height: '14px', cursor: 'pointer', accentColor: 'var(--fdl-blue-600)' }} />
+                                        Use Local DB (Postgres)
+                                      </label>
+                                    )}
+                                  </td>
+
+                                  <td style={{ padding: '12px 16px', verticalAlign: 'middle', textAlign: 'right' }}>
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                      {item.fileType && (
+                                        <label className="btn-ghost" style={{ padding: '5px 10px', fontSize: '0.75rem', cursor: busyUpload ? 'wait' : 'pointer', opacity: busyUpload ? 0.6 : 1 }}>
+                                          {busyUpload ? 'Uploading…' : 'Upload'}
+                                          <input type="file" accept={item.accept} disabled={busyUpload} style={{ display: 'none' }} onChange={e => { const file = e.target.files?.[0]; if (file && item.fileType) uploadDataFile(item.fileType, file); e.currentTarget.value = ''; }} />
+                                        </label>
+                                      )}
+                                      <button
+                                        onClick={() => handleUpdateClick(item.id)}
+                                        className="btn-update"
+                                        style={{ padding: '5px 12px', fontSize: '0.75rem' }}
+                                        disabled={task?.status === 'processing'}
+                                      >
+                                        {task?.status === 'processing' ? 'Running…' : 'Update'}
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                                {task && (
+                                  <tr>
+                                    <td colSpan={4} style={{ padding: '0 16px 12px', background: 'white' }}>
+                                      <ProgressBar progress={task.progress} status={task.status} message={task.message} taskId={task.id} />
+                                    </td>
+                                  </tr>
+                                )}
+                              </Fragment>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--fdl-canvas0)', lineHeight: 1.4, margin: 0 }}>
-                    Updates run as background processes. Larger datasets (Labeling, MedDRA) may take 5-10 minutes.
-                    Existing data will be replaced using the <code>--force</code> flag.
-                  </p>
+                ))}
+
+                {/* Recent Update History */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+                  <button type="button" className="btn-ghost" style={{ fontSize: '0.8rem' }} onClick={() => setShowDbHistory(v => !v)}>
+                    {showDbHistory ? 'Hide Update History' : `Recent Update History (${dbOverview.recent_logs.length})`}
+                  </button>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--fdl-canvas0)' }}>
+                    Background updates replace existing records using <code>--force</code>.
+                  </span>
                 </div>
+
+                {showDbHistory && (
+                  <div style={{ marginTop: '0.75rem', border: '1px solid var(--fdl-line)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: 'var(--fdl-canvas)', borderBottom: '1px solid var(--fdl-line)' }}>
+                          <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--fdl-canvas0)' }}>Database</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--fdl-canvas0)' }}>Completed At</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--fdl-canvas0)' }}>Status</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--fdl-canvas0)' }}>Details</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dbOverview.recent_logs.length === 0 ? (
+                          <tr><td colSpan={4} style={{ textAlign: 'center', padding: '16px', fontSize: '0.82rem', color: 'var(--fdl-muted)' }}>No update logs recorded yet.</td></tr>
+                        ) : (
+                          dbOverview.recent_logs.map((log, i) => (
+                            <tr key={log.id} style={{ borderTop: i === 0 ? 'none' : '1px solid var(--fdl-line)' }}>
+                              <td style={{ padding: '8px 12px', fontWeight: 700, fontSize: '0.8rem', color: 'var(--fdl-ink-soft)' }}>{log.db_type}</td>
+                              <td style={{ padding: '8px 12px', fontSize: '0.8rem', color: 'var(--fdl-canvas0)' }}>
+                                {log.completed_at ? new Date(log.completed_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '—'}
+                              </td>
+                              <td style={{ padding: '8px 12px', fontSize: '0.78rem', fontWeight: 600, color: log.status === 'completed' ? '#15803d' : '#b91c1c' }}>{log.status}</td>
+                              <td style={{ padding: '8px 12px', fontSize: '0.78rem', color: 'var(--fdl-ink-soft)' }}>{log.message || '—'}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </section>
-
-              <section className="mgmt-card" style={{ marginTop: '1.5rem' }}>
-                <h2 className="section-title">FDALabel Oracle Connection</h2>
-                <p style={{ color: 'var(--fdl-canvas0)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                  Target used when label queries run against Oracle. Values default to the TST server
-                  defined in <code>.env</code>; clearing a field falls back to that <code>.env</code> value.
-                </p>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>Quick apply from .env:</span>
-                  <button
-                    type="button"
-                    onClick={() => applyOraclePreset('dev')}
-                    disabled={!oraclePresets}
-                    className={oracleForm.oracle_db_env === 'dev' ? 'btn-primary' : 'btn-ghost'}
-                    style={{ padding: '6px 16px', fontSize: '0.8rem' }}
-                  >
-                    DEV
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyOraclePreset('tst')}
-                    disabled={!oraclePresets}
-                    className={oracleForm.oracle_db_env === 'tst' ? 'btn-primary' : 'btn-ghost'}
-                    style={{ padding: '6px 16px', fontSize: '0.8rem' }}
-                  >
-                    TST
-                  </button>
-                </div>
-
-                <div className="mgmt-form" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
-                    Host / URL
-                    <input
-                      className="mgmt-input"
-                      value={oracleForm.host}
-                      onChange={e => setOracleForm({ ...oracleForm, host: e.target.value })}
-                      placeholder="ncsvmlbldbtst2.fda.gov"
-                    />
-                  </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
-                    Port
-                    <input
-                      className="mgmt-input"
-                      value={oracleForm.port}
-                      onChange={e => setOracleForm({ ...oracleForm, port: e.target.value })}
-                      placeholder="1521"
-                    />
-                  </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
-                    SID / Service
-                    <input
-                      className="mgmt-input"
-                      value={oracleForm.service}
-                      onChange={e => setOracleForm({ ...oracleForm, service: e.target.value })}
-                      placeholder="lbltst2"
-                    />
-                  </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
-                    User
-                    <input
-                      className="mgmt-input"
-                      value={oracleForm.user}
-                      onChange={e => setOracleForm({ ...oracleForm, user: e.target.value })}
-                      autoComplete="off"
-                    />
-                  </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--fdl-ink-soft)' }}>
-                    Password
-                    <span style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      <input
-                        className="mgmt-input"
-                        type={showOraclePassword ? 'text' : 'password'}
-                        value={oracleForm.password}
-                        onChange={e => setOracleForm({ ...oracleForm, password: e.target.value })}
-                        autoComplete="new-password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowOraclePassword(v => !v)}
-                        className="btn-ghost"
-                        style={{ padding: '6px 10px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
-                      >
-                        {showOraclePassword ? 'Hide' : 'Show'}
-                      </button>
-                    </span>
-                  </label>
-                </div>
-
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <button onClick={handleTestOracle} className="btn-ghost" disabled={testingOracle}>
-                    {testingOracle ? 'Testing...' : 'Test Connection'}
-                  </button>
-                  <button onClick={handleSaveOracle} className="btn-primary" disabled={savingOracle}>
-                    {savingOracle ? 'Saving...' : 'Save Settings'}
-                  </button>
-                  {oracleTestResult && (
-                    <span style={{
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      color: oracleTestResult.success ? 'var(--fdl-green)' : 'var(--fdl-red)'
-                    }}>
-                      {oracleTestResult.success ? '✓ ' : '✕ '}
-                      {oracleTestResult.message}
-                      {oracleTestResult.success && oracleTestResult.elapsed_ms != null ? ` (${oracleTestResult.elapsed_ms} ms)` : ''}
-                    </span>
-                  )}
-                </div>
-              </section>
-              </>
             )}
           </div>
         </div>
@@ -2838,6 +2640,55 @@ else:
                   </button>
                 </div>
               )}
+
+              {/* REST API Key Management (Admin Only) */}
+              {session?.is_admin && (() => {
+                const kInfo = adminApiKeys.find(k => k.user_id === managingUser.id);
+                const isRevealed = Boolean(revealedKeys[managingUser.id]);
+                const busyKey = actionInProgressUserId === managingUser.id;
+                return (
+                  <div style={{ background: 'var(--fdl-canvas)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink)' }}>REST API Key</div>
+                      {kInfo?.last_used_at && (
+                        <span style={{ fontSize: '0.74rem', color: 'var(--fdl-canvas0)' }}>
+                          Last used: {new Date(kInfo.last_used_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                        </span>
+                      )}
+                    </div>
+                    {kInfo?.has_api_key && kInfo.api_key ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <code style={{ flex: 1, background: 'white', border: '1px solid var(--fdl-line)', padding: '6px 8px', borderRadius: '2px', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {isRevealed ? kInfo.api_key : kInfo.api_key_masked}
+                          </code>
+                          <button type="button" className="btn-ghost" style={{ padding: '5px 8px', fontSize: '0.75rem' }} onClick={() => setRevealedKeys(prev => ({ ...prev, [managingUser.id]: !prev[managingUser.id] }))}>
+                            {isRevealed ? 'Hide' : 'Show'}
+                          </button>
+                          <button type="button" className="btn-ghost" style={{ padding: '5px 8px', fontSize: '0.75rem' }} onClick={() => handleCopyKey(kInfo.api_key!, managingUser.id)}>
+                            {copiedKeyUserId === managingUser.id ? 'Copied!' : 'Copy'}
+                          </button>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button type="button" className="btn-ghost" disabled={busyKey} style={{ padding: '5px 10px', fontSize: '0.78rem' }} onClick={() => handleAdminGenerateKey(managingUser.id, managingUser.username)}>
+                            {busyKey ? 'Working…' : 'Rotate Key'}
+                          </button>
+                          <button type="button" className="btn-ghost" disabled={busyKey} style={{ padding: '5px 10px', fontSize: '0.78rem', color: 'var(--fdl-red)', borderColor: 'var(--fdl-red)' }} onClick={() => handleAdminRevokeKey(managingUser.id, managingUser.username)}>
+                            Revoke Key
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--fdl-muted)' }}>No API key issued for this user.</span>
+                        <button type="button" className="btn-primary" disabled={busyKey} style={{ padding: '5px 12px', fontSize: '0.78rem' }} onClick={() => handleAdminGenerateKey(managingUser.id, managingUser.username)}>
+                          {busyKey ? 'Generating…' : 'Generate Key'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Account Status / Danger Zone (Admin Only) */}
               {session?.is_admin && (

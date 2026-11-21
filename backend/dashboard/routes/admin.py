@@ -187,7 +187,8 @@ def init_data_file_upload():
         item = spec(file_type)
         if not isinstance(size, int) or size <= 0 or size > 20 * 1024 ** 3:
             raise ValueError('File size must be between 1 byte and 20 GB')
-        suffix = Path(str(data.get('name', ''))).suffix.lower()
+        original_name = Path(str(data.get('name', ''))).name
+        suffix = Path(original_name).suffix.lower()
         if suffix not in item['extensions']:
             raise ValueError(f"Expected {' or '.join(sorted(item['extensions']))} file")
         folder = _upload_dir()
@@ -198,10 +199,12 @@ def init_data_file_upload():
             old_part = folder / f'{old_meta_path.stem}.part'
             if old_meta.get('type') == file_type and old_meta.get('size') == size and old_part.is_file():
                 old_meta['received'] = min(old_meta.get('received', 0), old_part.stat().st_size)
+                if original_name:
+                    old_meta['original_name'] = original_name
                 old_meta_path.write_text(json.dumps(old_meta), encoding='utf-8')
                 return jsonify({'success': True, 'upload_id': old_meta_path.stem, 'received': old_meta['received']})
         upload_id = uuid.uuid4().hex
-        meta = {'type': file_type, 'size': size, 'received': 0}
+        meta = {'type': file_type, 'size': size, 'received': 0, 'original_name': original_name}
         (folder / f'{upload_id}.json').write_text(json.dumps(meta), encoding='utf-8')
         return jsonify({'success': True, 'upload_id': upload_id, 'received': 0})
     except ValueError as exc:
@@ -243,7 +246,14 @@ def complete_data_file_upload(upload_id):
     part = folder / f'{upload_id}.part'
     if meta['received'] != meta['size'] or not part.is_file() or part.stat().st_size != meta['size']:
         return jsonify({'success': False, 'error': 'Upload is incomplete', 'received': meta['received']}), 409
-    destination = archive_and_replace(current_app.config['DATA_DIR'], meta['type'], part)
+    from flask_login import current_user
+    destination = archive_and_replace(
+        current_app.config['DATA_DIR'],
+        meta['type'],
+        part,
+        original_name=meta.get('original_name'),
+        uploaded_by=getattr(current_user, 'username', None),
+    )
     meta_path.unlink(missing_ok=True)
     return jsonify({'success': True, 'file': file_status(current_app.config['DATA_DIR'], meta['type']), 'path': str(destination)})
 
@@ -765,6 +775,108 @@ def _get_last_update_date(db_type_keys):
         pass
         
     return 'N/A'
+
+
+
+@admin_bp.route('/db_overview', methods=['GET'])
+@login_required
+@admin_required
+def get_db_overview():
+    """Returns consolidated record counts, last update timestamps, linked source files, and recent logs."""
+    from flask import current_app
+    from sqlalchemy import func, text
+    from database.models import (
+        DatabaseUpdateLog,
+        DrugLabel,
+        DrugToxicity,
+        MeddraHLGT,
+        MeddraHLT,
+        MeddraPT,
+        MeddraSOC,
+        OrangeBook,
+        SystemTask,
+    )
+
+    def _latest_info(keys):
+        log = (
+            DatabaseUpdateLog.query.filter(
+                DatabaseUpdateLog.db_type.in_(keys),
+                DatabaseUpdateLog.status == 'completed',
+            )
+            .order_by(DatabaseUpdateLog.completed_at.desc())
+            .first()
+        )
+        if log and log.completed_at:
+            return log.completed_at.isoformat() + 'Z', log.message
+        task = (
+            SystemTask.query.filter(
+                SystemTask.task_type.in_(keys),
+                SystemTask.status == 'completed',
+                SystemTask.completed_at.isnot(None),
+            )
+            .order_by(SystemTask.completed_at.desc())
+            .first()
+        )
+        if task and task.completed_at:
+            return task.completed_at.isoformat() + 'Z', task.message
+        return None, None
+
+    try:
+        data_dir = current_app.config['DATA_DIR']
+        files_by_type = {k: file_status(data_dir, k) for k in FILE_TYPES}
+
+        meddra_count = (
+            (db.session.query(func.count(MeddraSOC.soc_code)).scalar() or 0)
+            + (db.session.query(func.count(MeddraHLGT.hlgt_code)).scalar() or 0)
+            + (db.session.query(func.count(MeddraHLT.hlt_code)).scalar() or 0)
+            + (db.session.query(func.count(MeddraPT.pt_code)).scalar() or 0)
+        )
+        try:
+            epc_count = db.session.execute(text("SELECT count(*) FROM labeling.substance_indexing")).scalar() or 0
+        except Exception:
+            epc_count = 0
+
+        drugtox_count = db.session.query(func.count(DrugToxicity.id)).scalar() or 0
+
+        specs = [
+            ('monthly_labeling', ['monthly_labeling', 'labeling'], db.session.query(func.count(DrugLabel.spl_id)).scalar() or 0, 'dailymed'),
+            ('orangebook', ['orangebook'], db.session.query(func.count(OrangeBook.id)).scalar() or 0, 'orangebook'),
+            ('epc', ['epc', 'pharmacologic_class'], epc_count, 'pharmacologic_class'),
+            ('drugtox', ['drugtox'], drugtox_count, 'askdrugtox'),
+            ('generate_drugtox', ['generate_drugtox'], drugtox_count, None),
+            ('meddra', ['meddra'], meddra_count, 'meddra'),
+        ]
+
+        datasets = {}
+        for key, log_keys, count, file_key in specs:
+            last_dt, last_msg = _latest_info(log_keys)
+            src = files_by_type.get(file_key) if file_key else None
+            datasets[key] = {
+                'count': int(count),
+                'last_updated': last_dt,
+                'last_message': last_msg,
+                'source_file': src,
+            }
+
+        recent_rows = (
+            DatabaseUpdateLog.query.order_by(DatabaseUpdateLog.completed_at.desc())
+            .limit(15)
+            .all()
+        )
+        recent_logs = [
+            {
+                'id': r.id,
+                'db_type': r.db_type,
+                'status': r.status,
+                'message': r.message,
+                'completed_at': r.completed_at.isoformat() + 'Z' if r.completed_at else None,
+            }
+            for r in recent_rows
+        ]
+
+        return jsonify({'success': True, 'datasets': datasets, 'recent_logs': recent_logs})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @admin_bp.route('/db_stats/<db_type>', methods=['GET'])
 @login_required
