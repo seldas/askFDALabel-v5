@@ -59,6 +59,7 @@ export interface ChatMessage {
   actions?: ActionButton[];
   toolSteps?: ToolStep[];
   followUps?: string[];
+  focus?: ActiveFocus;
   modelUsed?: string;
 }
 

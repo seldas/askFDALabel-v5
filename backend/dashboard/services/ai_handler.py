@@ -429,6 +429,3 @@ def summarize_comparison(user, differing_sections, label1_name, label2_name):
 
 def generate_assessment(user, prompt, content):
     return call_llm(user, prompt, f"--- DRUG LABEL CONTENT ---\n{content}")
-
-def get_search_helper_response(user, user_message, history):
-    return call_llm(user, SEARCH_HELPER_PROMPT, user_message, history)

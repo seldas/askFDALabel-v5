@@ -13,6 +13,9 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CloseIcon from '@mui/icons-material/Close';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import CheckIcon from '@mui/icons-material/Check';
 import { useUser } from '../../context/UserContext';
 import { ActionButtons } from './ActionButtons';
 import type { ActionButton, ActiveFocus, ChatMessage, HistoryItem, ModelOption, ToolStep } from '../types';
@@ -115,6 +118,8 @@ export const LabelChatWorkspace: React.FC = () => {
   const [historyOpen, setHistoryOpen] = useState<boolean>(false);
   const [histories, setHistories] = useState<HistoryItem[]>([]);
   const [currentHistoryId, setCurrentHistoryId] = useState<number | null>(null);
+  const [editingHistoryId, setEditingHistoryId] = useState<number | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string>('');
   const [activeFocus, setActiveFocus] = useState<ActiveFocus | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
@@ -223,6 +228,7 @@ export const LabelChatWorkspace: React.FC = () => {
       let accSteps: ToolStep[] = [];
       let accActions: ActionButton[] = [];
       let accFollowUps: string[] = [];
+      let accFocus: ActiveFocus | undefined = activeFocus || undefined;
       let modelUsed = '';
 
       const updateAssistant = (patch: Partial<ChatMessage>) => {
@@ -304,6 +310,7 @@ export const LabelChatWorkspace: React.FC = () => {
                 updateAssistant({ actions: accActions });
               } else if (evt.type === 'focus') {
                 if (evt.focus && typeof evt.focus === 'object') {
+                  accFocus = evt.focus;
                   setActiveFocus(evt.focus);
                 }
               } else if (evt.type === 'follow_ups') {
@@ -343,6 +350,7 @@ export const LabelChatWorkspace: React.FC = () => {
           toolSteps: accSteps,
           actions: accActions,
           followUps: accFollowUps,
+          focus: accFocus,
           modelUsed,
         };
         const finalThread = [...baseMessages, finalAssistant];
@@ -375,9 +383,46 @@ export const LabelChatWorkspace: React.FC = () => {
 
   const handleSelectHistory = (item: HistoryItem) => {
     if (isStreaming) handleStop();
-    setMessages(Array.isArray(item.chat_data) ? item.chat_data : []);
+    const loaded = Array.isArray(item.chat_data) ? item.chat_data : [];
+    setMessages(loaded);
     setCurrentHistoryId(item.id);
+    const lastWithFocus = [...loaded].reverse().find((m) => m.focus && (m.focus.set_id || m.focus.brand_name));
+    setActiveFocus(lastWithFocus?.focus || null);
     setHistoryOpen(false);
+  };
+
+  const handleRenameHistory = async (id: number) => {
+    const trimmed = editingTitle.trim();
+    if (!trimmed) {
+      setEditingHistoryId(null);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/search/history/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: trimmed }),
+      });
+      if (res.ok) {
+        setHistories((prev) => prev.map((h) => (h.id === id ? { ...h, title: trimmed } : h)));
+      }
+    } finally {
+      setEditingHistoryId(null);
+    }
+  };
+
+  const handleDeleteHistory = async (id: number) => {
+    try {
+      const res = await fetch(`/api/search/history/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setHistories((prev) => prev.filter((h) => h.id !== id));
+        if (currentHistoryId === id) {
+          setCurrentHistoryId(null);
+        }
+      }
+    } catch {
+      // ignore
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -407,17 +452,70 @@ export const LabelChatWorkspace: React.FC = () => {
               <div className="lc-history-empty">No saved conversations yet.</div>
             ) : (
               histories.map((h) => (
-                <button
+                <div
                   key={h.id}
-                  type="button"
                   className={`lc-history-item ${currentHistoryId === h.id ? 'is-active' : ''}`}
-                  onClick={() => handleSelectHistory(h)}
                 >
-                  <div className="lc-history-title">{h.title || 'Untitled'}</div>
-                  <div className="lc-history-date">
-                    {new Date(h.timestamp).toLocaleDateString()}
-                  </div>
-                </button>
+                  {editingHistoryId === h.id ? (
+                    <div className="lc-history-edit-row">
+                      <input
+                        type="text"
+                        className="lc-history-edit-input"
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleRenameHistory(h.id);
+                          if (e.key === 'Escape') setEditingHistoryId(null);
+                        }}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        className="lc-icon-btn"
+                        onClick={() => handleRenameHistory(h.id)}
+                        aria-label="Save title"
+                      >
+                        <CheckIcon sx={{ fontSize: 16 }} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="lc-history-row">
+                      <button
+                        type="button"
+                        className="lc-history-select"
+                        onClick={() => handleSelectHistory(h)}
+                      >
+                        <div className="lc-history-title">{h.title || 'Untitled'}</div>
+                        <div className="lc-history-date">
+                          {new Date(h.timestamp).toLocaleDateString()}
+                        </div>
+                      </button>
+                      <div className="lc-history-actions">
+                        <button
+                          type="button"
+                          className="lc-icon-btn"
+                          onClick={() => {
+                            setEditingHistoryId(h.id);
+                            setEditingTitle(h.title || '');
+                          }}
+                          title="Rename"
+                          aria-label="Rename conversation"
+                        >
+                          <EditOutlinedIcon sx={{ fontSize: 15 }} />
+                        </button>
+                        <button
+                          type="button"
+                          className="lc-icon-btn lc-icon-btn--danger"
+                          onClick={() => handleDeleteHistory(h.id)}
+                          title="Delete"
+                          aria-label="Delete conversation"
+                        >
+                          <DeleteOutlineIcon sx={{ fontSize: 15 }} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               ))
             )}
           </div>

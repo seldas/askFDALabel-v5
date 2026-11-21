@@ -66,9 +66,8 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: 8px;
-  padding: 9px 10px;
+  padding: 6px 8px;
   margin-bottom: 4px;
-  cursor: pointer;
 }
 
 .lc-history-item:hover {
@@ -78,6 +77,55 @@
 .lc-history-item.is-active {
   background: var(--bg-accent-subtle, #eff6ff);
   border-color: var(--border-accent, #bfdbfe);
+}
+
+.lc-history-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lc-history-select {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.lc-history-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.lc-history-item:hover .lc-history-actions,
+.lc-history-item.is-active .lc-history-actions {
+  opacity: 1;
+}
+
+.lc-icon-btn--danger:hover {
+  color: #dc2626;
+}
+
+.lc-history-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lc-history-edit-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.83rem;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border-accent, #93c5fd);
+  outline: none;
 }
 
 .lc-history-title {
