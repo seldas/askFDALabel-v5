@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, Response, stream_with_context
 from flask_login import current_user
 import io
 import json
@@ -193,6 +193,7 @@ def db_search():
     payload    = request.json or {}
     query      = (payload.get("query") or "").strip()
     ai_provider = payload.get("ai_provider")
+    active_focus = payload.get("active_focus")
     from dashboard.services.ai_handler import _check_is_internal
     if user_obj and ai_provider:
         if not (_check_is_internal() and ai_provider == 'gemini'):
@@ -545,3 +546,67 @@ def save_history():
     db.session.commit()
     
     return jsonify({"success": True, "id": new_history.id}), 200
+
+
+@search_bp.route("/models", methods=["GET"])
+def list_models():
+    """Returns allowed AI models from .env/preferences, defaulting to Elsa when available."""
+    from dashboard.services.ai_preferences import public_catalog, allowed_providers, resolve_provider
+
+    user_obj = current_user._get_current_object() if current_user.is_authenticated else None
+    catalog = public_catalog()
+    allowed = allowed_providers()
+    if "elsa" in allowed:
+        default_provider = "elsa"
+    elif allowed:
+        default_provider, _ = resolve_provider(user_obj)
+    else:
+        default_provider = ""
+
+    return jsonify({
+        "models": catalog,
+        "default_provider": default_provider,
+    }), 200
+
+
+@search_bp.route("/agent_stream", methods=["POST"])
+def agent_stream():
+    """AI-native MCP tool-calling SSE endpoint for LabelChat."""
+    try:
+        from search.agent_loop import run_agent_stream
+    except Exception as exc:
+        logger.exception("Failed to initialize LabelChat agent")
+        return jsonify({"error": "The assistant service is temporarily unavailable."}), 500
+
+    user_obj = current_user._get_current_object() if current_user.is_authenticated else None
+    payload = request.json or {}
+    query = (payload.get("query") or "").strip()
+    chat_history = payload.get("chat_history") or []
+    ai_provider = payload.get("ai_provider")
+    active_focus = payload.get("active_focus")
+
+    if not query:
+        return jsonify({"error": "Please enter a question."}), 400
+
+    def generate():
+        try:
+            for evt in run_agent_stream(
+                user=user_obj,
+                query=query,
+                chat_history=chat_history,
+                provider_override=ai_provider,
+                active_focus=active_focus,
+            ):
+                yield f"data: {json.dumps(evt, ensure_ascii=False, default=str)}\n\n"
+        except Exception:
+            logger.exception("LabelChat stream failed")
+            yield f"data: {json.dumps({'type': 'error', 'error': 'Something went wrong while answering your question.'})}\n\n"
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )

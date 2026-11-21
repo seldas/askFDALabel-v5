@@ -1,29 +1,76 @@
-// No adverseEvents or labelingSection: both filtered on label section text,
-// which the backend can no longer search since labeling.spl_sections was
-// dropped. Chat search matches drug names, NDCs and label metadata only.
-export interface Filters {
-  labelingType: string[];
-  applicationType: string[];
-  drugNames: string[];
-  ndcs: string[];
-  isRx: boolean;
+import type { TargetDb, WireQuery } from '../../querybuilder/types';
+
+export type ActionButton =
+  | {
+      type: 'spl_view';
+      label: string;
+      set_id: string;
+      spl_id?: string;
+    }
+  | {
+      type: 'labelcomp';
+      label: string;
+      set_ids: string[];
+      spl_ids?: string[];
+    }
+  | {
+      type: 'labelquery';
+      label: string;
+      wire_query: WireQuery;
+      target_db?: TargetDb;
+    }
+  | {
+      type: 'drugtox';
+      label: string;
+      query?: string;
+      set_id?: string;
+    }
+  | {
+      type: 'label_history';
+      label: string;
+      set_id?: string;
+      application_number?: string;
+    }
+  | {
+      type: 'faers';
+      label: string;
+      set_id: string;
+    };
+
+export interface ToolStep {
+  tool: string;
+  summary?: string;
+  status: 'running' | 'done';
 }
 
-export interface ResultItem {
-  PRODUCT_NAMES: string;
-  GENERIC_NAMES: string;
-  COMPANY: string;
-  APPR_NUM: string;
-  ACT_INGR_NAMES: string;
-  MARKET_CATEGORIES: string;
-  DOCUMENT_TYPE: string;
-  Routes: string;
-  DOSAGE_FORMS: string;
-  EPC: string;
-  NDC_CODES: string;
-  set_id: string;
-  similarity_score: number;
-  keywords: string;
-  section_code: string;
-  section_content: string;
+export interface ActiveFocus {
+  set_id?: string;
+  spl_id?: string;
+  brand_name?: string;
+  generic_name?: string;
+  application_number?: string;
+  manufacturer?: string;
+  revised_date?: string;
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  actions?: ActionButton[];
+  toolSteps?: ToolStep[];
+  followUps?: string[];
+  modelUsed?: string;
+}
+
+export interface ModelOption {
+  id: string;
+  name: string;
+  model: string;
+}
+
+export interface HistoryItem {
+  id: number;
+  title: string;
+  chat_data: ChatMessage[];
+  timestamp: string;
 }
