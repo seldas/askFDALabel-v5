@@ -463,6 +463,8 @@ export default function ManagementPage() {
   const [showOracleSettings, setShowOracleSettings] = useState(false);
   const [showApiExamples, setShowApiExamples] = useState(false);
   const [userKeyFilter, setUserKeyFilter] = useState<'all' | 'has_key' | 'no_key'>('all');
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [userPage, setUserPage] = useState(1);
 
   const refreshDataFiles = async () => {
     try {
@@ -1234,299 +1236,417 @@ export default function ManagementPage() {
 
             {activeTab === 'users' && session?.username?.toLowerCase() !== 'guest' && (
               <section className="mgmt-card">
-                <h2 className="section-title">{session?.is_admin ? 'User Management' : 'My Account'}</h2>
+                {!session?.is_admin ? (
+                  /* Non-Admin: Clean My Account Profile & Settings Card */
+                  (() => {
+                    const me = users[0];
+                    const roleLabel = session?.role || (session?.is_admin ? 'admin' : 'user');
+                    return (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '10px' }}>
+                          <div>
+                            <h2 className="section-title" style={{ margin: 0 }}>My Account</h2>
+                            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--fdl-canvas0)' }}>
+                              Manage your profile details, default AI model, and account security.
+                            </p>
+                          </div>
+                          {me && (
+                            <button
+                              type="button"
+                              className="btn-ghost"
+                              onClick={() => {
+                                setUserModelError(null);
+                                setManagingUser(me);
+                                setEditPassword('');
+                                const legacyMap: Record<string, string> = { vllm: 'local-1', llama: 'local-1', 'llama-4': 'local-1', muse: 'local-2' };
+                                setSelectedUserModelProvider(legacyMap[me.ai_provider] || me.ai_provider || '');
+                              }}
+                            >
+                              Account Settings
+                            </button>
+                          )}
+                        </div>
 
-                {/* Create User Form */}
-                {session?.is_admin && (
-                  <form onSubmit={handleCreateUser} className="mgmt-form">
-                  <div style={{ display: 'flex', gap: '10px', marginBottom: '1rem' }}>
-                    <input
-                      type="text"
-                      placeholder="Username"
-                      value={newUsername}
-                      onChange={e => setNewUsername(e.target.value)}
-                      className="mgmt-input"
-                      required
-                    />
-                    <input
-                      type="password"
-                      placeholder="Password"
-                      value={newPassword}
-                      onChange={e => setNewPassword(e.target.value)}
-                      className="mgmt-input"
-                      required
-                    />
-                    <select
-                      value={newRole}
-                      onChange={e => setNewRole(e.target.value as 'user' | 'developer' | 'admin')}
-                      className="mgmt-select"
-                      title="Developer is User plus the labeling-database switch"
-                    >
-                      <option value="user">User</option>
-                      <option value="developer">Developer</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                    <button type="submit" className="btn-primary">Add</button>
-                  </div>
-                </form>
-                )}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', background: 'var(--fdl-canvas)', padding: '1.15rem', border: '1px solid var(--fdl-line)', borderRadius: '2px' }}>
+                          <div>
+                            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--fdl-canvas0)' }}>Name</div>
+                            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--fdl-ink)', marginTop: '3px' }}>
+                              {session?.display_name || session?.username || '—'}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--fdl-canvas0)' }}>Username</div>
+                            <div style={{ fontSize: '0.92rem', color: 'var(--fdl-ink-soft)', marginTop: '3px' }}>
+                              {session?.username || '—'}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--fdl-canvas0)' }}>Role</div>
+                            <div style={{ marginTop: '4px' }}>
+                              <span style={{ fontSize: '0.76rem', fontWeight: 700, textTransform: 'capitalize', background: 'white', border: '1px solid var(--fdl-line)', padding: '2px 8px', borderRadius: '2px', color: 'var(--fdl-ink)' }}>
+                                {roleLabel}
+                              </span>
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--fdl-canvas0)' }}>Comments &amp; Notes</div>
+                            <div style={{ marginTop: '4px' }}>
+                              <span style={{
+                                fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: '2px',
+                                color: me?.can_comment !== false ? '#15803d' : '#b91c1c',
+                                background: me?.can_comment !== false ? '#f0fdf4' : '#fef2f2',
+                                border: `1px solid ${me?.can_comment !== false ? '#bbf7d0' : '#fecaca'}`,
+                              }}>
+                                {me?.can_comment !== false ? 'Enabled' : 'Disabled'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()
+                ) : (
+                  /* Admin: Full User Management Console */
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                      <div>
+                        <h2 className="section-title" style={{ margin: 0 }}>User Management</h2>
+                        {(() => {
+                          const totalU = users.length;
+                          const activeU = users.filter(u => u.is_active !== false).length;
+                          const adminU = users.filter(u => (u.role ?? (u.is_admin ? 'admin' : 'user')) === 'admin').length;
+                          const devU = users.filter(u => (u.role ?? (u.is_admin ? 'admin' : 'user')) === 'developer').length;
+                          const keyU = adminApiKeys.filter(k => k.has_api_key).length;
+                          return (
+                            <div style={{ fontSize: '0.8rem', color: 'var(--fdl-canvas0)', marginTop: '4px' }}>
+                              Total: <strong>{totalU}</strong> · Active: <strong>{activeU}</strong> · Admins: <strong>{adminU}</strong> · Developers: <strong>{devU}</strong> · With API Key: <strong>{keyU}</strong>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <button
+                        type="button"
+                        className={showCreateUser ? 'btn-ghost' : 'btn-primary'}
+                        onClick={() => setShowCreateUser(v => !v)}
+                        style={{ padding: '6px 14px', fontSize: '0.82rem' }}
+                      >
+                        {showCreateUser ? 'Cancel' : '+ Add User'}
+                      </button>
+                    </div>
 
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1rem', marginTop: '1rem' }}>
-                  <div style={{ flex: '1 1 200px' }}>
-                    <input
-                      type="text"
-                      placeholder="Search by name, username or email..."
-                      value={userSearch}
-                      onChange={e => setUserSearch(e.target.value)}
-                      className="mgmt-input"
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                  <select
-                    value={userRoleFilter}
-                    onChange={e => setUserRoleFilter(e.target.value as any)}
-                    className="mgmt-select"
-                    style={{ minWidth: '120px' }}
-                  >
-                    <option value="all">All Roles</option>
-                    <option value="user">User</option>
-                    <option value="developer">Developer</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                  <select
-                    value={userSortBy}
-                    onChange={e => setUserSortBy(e.target.value as any)}
-                    className="mgmt-select"
-                    style={{ minWidth: '170px' }}
-                  >
-                    <option value="last_login_desc">Last Login (Newest)</option>
-                    <option value="last_login_asc">Last Login (Oldest)</option>
-                    <option value="created_at_desc">Created (Newest)</option>
-                    <option value="created_at_asc">Created (Oldest)</option>
-                    <option value="username_asc">Name (A-Z)</option>
-                  </select>
-                  {session?.is_admin && (
-                    <select
-                      value={userKeyFilter}
-                      onChange={e => setUserKeyFilter(e.target.value as 'all' | 'has_key' | 'no_key')}
-                      className="mgmt-select"
-                      style={{ minWidth: '125px' }}
-                    >
-                      <option value="all">All API Keys</option>
-                      <option value="has_key">Has API Key</option>
-                      <option value="no_key">No API Key</option>
-                    </select>
-                  )}
-                  {session?.is_admin && (
-                    <label
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        minHeight: '34px',
-                        padding: '6px 10px',
-                        border: '1px solid var(--fdl-line)',
-                        borderRadius: '2px',
-                        background: 'var(--fdl-paper)',
-                        color: 'var(--fdl-ink)',
-                        fontSize: '0.85rem',
-                        cursor: 'pointer',
-                        userSelect: 'none',
-                        whiteSpace: 'nowrap'
-                      }}
-                      title="When checked, deactivated user accounts are hidden from the list"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={hideDeactivated}
-                        onChange={e => setHideDeactivated(e.target.checked)}
-                        style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: 'var(--fdl-blue-600)' }}
-                      />
-                      Hide deactivated users
-                    </label>
-                  )}
-                </div>
+                    {/* Collapsible Create User Form */}
+                    {showCreateUser && (
+                      <form
+                        onSubmit={async (e) => {
+                          await handleCreateUser(e);
+                          setShowCreateUser(false);
+                        }}
+                        className="mgmt-form"
+                        style={{ background: 'var(--fdl-canvas)', padding: '0.9rem', border: '1px solid var(--fdl-line)', borderRadius: '2px', marginBottom: '1rem' }}
+                      >
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            placeholder="Username"
+                            value={newUsername}
+                            onChange={e => setNewUsername(e.target.value)}
+                            className="mgmt-input"
+                            style={{ flex: '1 1 160px' }}
+                            required
+                          />
+                          <input
+                            type="password"
+                            placeholder="Password"
+                            value={newPassword}
+                            onChange={e => setNewPassword(e.target.value)}
+                            className="mgmt-input"
+                            style={{ flex: '1 1 160px' }}
+                            required
+                          />
+                          <select
+                            value={newRole}
+                            onChange={e => setNewRole(e.target.value as 'user' | 'developer' | 'admin')}
+                            className="mgmt-select"
+                            title="Developer is User plus the labeling-database switch"
+                          >
+                            <option value="user">User</option>
+                            <option value="developer">Developer</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                          <button type="submit" className="btn-primary" style={{ padding: '7px 16px' }}>Create</button>
+                        </div>
+                      </form>
+                    )}
 
-                <div className="user-table-wrapper">
-                  <table className="user-table">
-                    <thead>
-                      <tr>
-                        <th style={{ width: '24%', maxWidth: '220px' }}>User</th>
-                        <th style={{ width: '14%', minWidth: '110px' }}>Role</th>
-                        {session?.is_admin && <th style={{ width: '16%', minWidth: '120px' }}>API Key</th>}
-                        <th style={{ width: '16%', minWidth: '120px' }}>Comments</th>
-                        <th style={{ width: '18%', minWidth: '130px' }}>Last Login</th>
-                        <th style={{ width: '12%', minWidth: '80px', textAlign: 'right' }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(() => {
-                        const filtered = users
-                          .filter(u => session?.is_admin || u.id === session?.id)
-                          .filter(u => {
-                            if (userSearch.trim()) {
-                              const q = userSearch.toLowerCase();
-                              if (![u.display_name, u.username, u.email, u.office].some(value => value?.toLowerCase().includes(q))) return false;
-                            }
-                            if (userRoleFilter !== 'all') {
-                              const r = u.role ?? (u.is_admin ? 'admin' : 'user');
-                              if (r !== userRoleFilter) return false;
-                            }
-                            if (hideDeactivated && u.is_active === false) return false;
-                            if (session?.is_admin && userKeyFilter !== 'all') {
-                              const kInfo = adminApiKeys.find(k => k.user_id === u.id);
-                              const hasKey = Boolean(kInfo?.has_api_key);
-                              if (userKeyFilter === 'has_key' && !hasKey) return false;
-                              if (userKeyFilter === 'no_key' && hasKey) return false;
-                            }
-                            return true;
-                          })
-                          .sort((a, b) => {
-                            if (userSortBy === 'username_asc') {
-                              return (a.display_name || a.username).localeCompare(b.display_name || b.username);
-                            }
-                            if (userSortBy === 'created_at_desc') {
-                              return (b.created_at || '').localeCompare(a.created_at || '');
-                            }
-                            if (userSortBy === 'created_at_asc') {
-                              return (a.created_at || '').localeCompare(b.created_at || '');
-                            }
-                            if (userSortBy === 'last_login_asc') {
-                              if (!a.last_login && !b.last_login) return 0;
-                              if (!a.last_login) return 1;
-                              if (!b.last_login) return -1;
-                              return a.last_login.localeCompare(b.last_login);
-                            }
-                            // default: last_login_desc
-                            if (!a.last_login && !b.last_login) return (b.created_at || '').localeCompare(a.created_at || '');
+                    {/* Filter & Sort Toolbar */}
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                      <div style={{ flex: '1 1 200px' }}>
+                        <input
+                          type="text"
+                          placeholder="Search by name, username or email..."
+                          value={userSearch}
+                          onChange={e => { setUserSearch(e.target.value); setUserPage(1); }}
+                          className="mgmt-input"
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      <select
+                        value={userRoleFilter}
+                        onChange={e => { setUserRoleFilter(e.target.value as any); setUserPage(1); }}
+                        className="mgmt-select"
+                        style={{ minWidth: '115px' }}
+                      >
+                        <option value="all">All Roles</option>
+                        <option value="user">User</option>
+                        <option value="developer">Developer</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                      <select
+                        value={userKeyFilter}
+                        onChange={e => { setUserKeyFilter(e.target.value as 'all' | 'has_key' | 'no_key'); setUserPage(1); }}
+                        className="mgmt-select"
+                        style={{ minWidth: '125px' }}
+                      >
+                        <option value="all">All API Keys</option>
+                        <option value="has_key">Has API Key</option>
+                        <option value="no_key">No API Key</option>
+                      </select>
+                      <select
+                        value={userSortBy}
+                        onChange={e => { setUserSortBy(e.target.value as any); setUserPage(1); }}
+                        className="mgmt-select"
+                        style={{ minWidth: '165px' }}
+                      >
+                        <option value="last_login_desc">Last Login (Newest)</option>
+                        <option value="last_login_asc">Last Login (Oldest)</option>
+                        <option value="created_at_desc">Created (Newest)</option>
+                        <option value="created_at_asc">Created (Oldest)</option>
+                        <option value="username_asc">Name (A-Z)</option>
+                      </select>
+                      <label
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '6px', minHeight: '34px',
+                          padding: '6px 10px', border: '1px solid var(--fdl-line)', borderRadius: '2px',
+                          background: 'var(--fdl-paper)', color: 'var(--fdl-ink)', fontSize: '0.84rem',
+                          cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap'
+                        }}
+                        title="When checked, deactivated user accounts are hidden from the list"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={hideDeactivated}
+                          onChange={e => { setHideDeactivated(e.target.checked); setUserPage(1); }}
+                          style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: 'var(--fdl-blue-600)' }}
+                        />
+                        Hide deactivated
+                      </label>
+                    </div>
+
+                    {(() => {
+                      const USERS_PER_PAGE = 25;
+                      const filtered = users
+                        .filter(u => {
+                          if (userSearch.trim()) {
+                            const q = userSearch.toLowerCase();
+                            if (![u.display_name, u.username, u.email, u.office].some(value => value?.toLowerCase().includes(q))) return false;
+                          }
+                          if (userRoleFilter !== 'all') {
+                            const r = u.role ?? (u.is_admin ? 'admin' : 'user');
+                            if (r !== userRoleFilter) return false;
+                          }
+                          if (hideDeactivated && u.is_active === false) return false;
+                          if (userKeyFilter !== 'all') {
+                            const kInfo = adminApiKeys.find(k => k.user_id === u.id);
+                            const hasKey = Boolean(kInfo?.has_api_key);
+                            if (userKeyFilter === 'has_key' && !hasKey) return false;
+                            if (userKeyFilter === 'no_key' && hasKey) return false;
+                          }
+                          return true;
+                        })
+                        .sort((a, b) => {
+                          if (userSortBy === 'username_asc') {
+                            return (a.display_name || a.username).localeCompare(b.display_name || b.username);
+                          }
+                          if (userSortBy === 'created_at_desc') {
+                            return (b.created_at || '').localeCompare(a.created_at || '');
+                          }
+                          if (userSortBy === 'created_at_asc') {
+                            return (a.created_at || '').localeCompare(b.created_at || '');
+                          }
+                          if (userSortBy === 'last_login_asc') {
+                            if (!a.last_login && !b.last_login) return 0;
                             if (!a.last_login) return 1;
                             if (!b.last_login) return -1;
-                            return b.last_login.localeCompare(a.last_login);
-                          });
+                            return a.last_login.localeCompare(b.last_login);
+                          }
+                          if (!a.last_login && !b.last_login) return (b.created_at || '').localeCompare(a.created_at || '');
+                          if (!a.last_login) return 1;
+                          if (!b.last_login) return -1;
+                          return b.last_login.localeCompare(a.last_login);
+                        });
 
-                        if (filtered.length === 0) {
-                          return (
-                            <tr>
-                              <td colSpan={session?.is_admin ? 6 : 5} style={{ textAlign: 'center', padding: '24px', color: 'var(--fdl-muted)' }}>
-                                No users found matching filters.
-                              </td>
-                            </tr>
-                          );
-                        }
+                      const totalPages = Math.max(1, Math.ceil(filtered.length / USERS_PER_PAGE));
+                      const safePage = Math.min(userPage, totalPages);
+                      const paged = filtered.slice((safePage - 1) * USERS_PER_PAGE, safePage * USERS_PER_PAGE);
 
-                        return filtered.map(user => (
-                          <tr key={user.id} style={{ opacity: user.is_active === false ? 0.6 : 1 }}>
-                            <td style={{ maxWidth: '240px' }}>
-                              <div
-                                style={{
-                                  fontWeight: 700,
-                                  color: 'var(--fdl-ink)',
-                                  fontSize: '0.9rem',
-                                  maxWidth: '240px',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
-                                }}
-                                title={user.display_name || user.username}
-                              >
-                                {user.display_name || user.username}
-                              </div>
-                              {user.is_active === false && (
-                                <span style={{ fontSize: '0.65rem', background: 'var(--fdl-red-050)', color: 'var(--fdl-red)', padding: '2px 6px', borderRadius: '2px', fontWeight: 800, marginTop: '2px', display: 'inline-block' }}>DEACTIVATED</span>
-                              )}
-                              <div style={{ fontSize: '0.75rem', color: 'var(--fdl-canvas0)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                Joined {formatUserDate(user.created_at) || '—'}
-                              </div>
-                            </td>
-                            <td style={{ minWidth: '130px' }}>
-                              <select
-                                value={user.role ?? (user.is_admin ? 'admin' : 'user')}
-                                onChange={e => handleUpdateRole(user.id, e.target.value)}
-                                className="mgmt-select"
-                                disabled={user.is_active === false || !session?.is_admin}
-                                title="Developer is User plus the labeling-database switch"
-                                style={{ width: '100%', minWidth: '110px', maxWidth: '140px' }}
-                              >
-                                <option value="user">User</option>
-                                <option value="developer">Developer</option>
-                                <option value="admin">Admin</option>
-                              </select>
-                            </td>
-                            {session?.is_admin && (
-                              <td>
-                                {(() => {
-                                  const kInfo = adminApiKeys.find(k => k.user_id === user.id);
-                                  if (!kInfo?.has_api_key) {
-                                    return <span style={{ fontSize: '0.75rem', color: 'var(--fdl-muted)' }}>None</span>;
-                                  }
-                                  if (kInfo.last_used_at) {
+                      return (
+                        <>
+                          <div className="user-table-wrapper">
+                            <table className="user-table">
+                              <thead>
+                                <tr>
+                                  <th style={{ width: '24%', maxWidth: '220px' }}>User</th>
+                                  <th style={{ width: '14%', minWidth: '110px' }}>Role</th>
+                                  <th style={{ width: '16%', minWidth: '120px' }}>API Key</th>
+                                  <th style={{ width: '14%', minWidth: '100px' }}>Comments</th>
+                                  <th style={{ width: '20%', minWidth: '130px' }}>Last Login</th>
+                                  <th style={{ width: '12%', minWidth: '80px', textAlign: 'right' }}>Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {paged.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--fdl-muted)' }}>
+                                      No users found matching filters.
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  paged.map(user => {
+                                    const kInfo = adminApiKeys.find(k => k.user_id === user.id);
                                     return (
-                                      <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '2px 7px', borderRadius: '2px', whiteSpace: 'nowrap' }} title={`Last used: ${new Date(kInfo.last_used_at).toLocaleString()}`}>
-                                        Active · {new Date(kInfo.last_used_at).toLocaleDateString()}
-                                      </span>
+                                      <tr key={user.id} style={{ opacity: user.is_active === false ? 0.6 : 1 }}>
+                                        <td style={{ maxWidth: '220px' }}>
+                                          <div
+                                            style={{
+                                              fontWeight: 700, color: 'var(--fdl-ink)', fontSize: '0.9rem',
+                                              maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                                            }}
+                                            title={user.display_name || user.username}
+                                          >
+                                            {user.display_name || user.username}
+                                          </div>
+                                          {user.is_active === false && (
+                                            <span style={{ fontSize: '0.65rem', background: 'var(--fdl-red-050)', color: 'var(--fdl-red)', padding: '2px 6px', borderRadius: '2px', fontWeight: 800, marginTop: '2px', display: 'inline-block' }}>DEACTIVATED</span>
+                                          )}
+                                          <div style={{ fontSize: '0.74rem', color: 'var(--fdl-canvas0)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            Joined {formatUserDate(user.created_at) || '—'}
+                                          </div>
+                                        </td>
+                                        <td>
+                                          <select
+                                            value={user.role ?? (user.is_admin ? 'admin' : 'user')}
+                                            onChange={e => handleUpdateRole(user.id, e.target.value)}
+                                            className="mgmt-select"
+                                            disabled={user.is_active === false}
+                                            title="Developer is User plus the labeling-database switch"
+                                            style={{ width: '100%', minWidth: '105px', maxWidth: '135px' }}
+                                          >
+                                            <option value="user">User</option>
+                                            <option value="developer">Developer</option>
+                                            <option value="admin">Admin</option>
+                                          </select>
+                                        </td>
+                                        <td>
+                                          {!kInfo?.has_api_key ? (
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--fdl-muted)' }}>None</span>
+                                          ) : kInfo.last_used_at ? (
+                                            <span style={{ fontSize: '0.73rem', fontWeight: 700, color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '2px 7px', borderRadius: '2px', whiteSpace: 'nowrap' }} title={`Last used: ${new Date(kInfo.last_used_at).toLocaleString()}`}>
+                                              Active · {new Date(kInfo.last_used_at).toLocaleDateString()}
+                                            </span>
+                                          ) : (
+                                            <span style={{ fontSize: '0.73rem', fontWeight: 700, color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', padding: '2px 7px', borderRadius: '2px', whiteSpace: 'nowrap' }}>
+                                              Unused
+                                            </span>
+                                          )}
+                                        </td>
+                                        <td>
+                                          <button
+                                            type="button"
+                                            disabled={user.is_active === false}
+                                            onClick={() => handleToggleCommentPermission(user.id, !(user.can_comment !== false))}
+                                            style={{
+                                              padding: '2px 8px',
+                                              fontSize: '0.73rem',
+                                              fontWeight: 700,
+                                              borderRadius: '2px',
+                                              color: user.can_comment !== false ? '#15803d' : '#b91c1c',
+                                              backgroundColor: user.can_comment !== false ? '#f0fdf4' : '#fef2f2',
+                                              border: `1px solid ${user.can_comment !== false ? '#bbf7d0' : '#fecaca'}`,
+                                              cursor: user.is_active === false ? 'not-allowed' : 'pointer',
+                                              whiteSpace: 'nowrap',
+                                            }}
+                                            title="Click to toggle commenting, annotations & LLM notes permission"
+                                          >
+                                            {user.can_comment !== false ? 'Enabled' : 'Disabled'}
+                                          </button>
+                                        </td>
+                                        <td>
+                                          {user.last_login ? (
+                                            <span style={{ fontSize: '0.84rem', color: 'var(--fdl-ink-soft)', whiteSpace: 'nowrap' }}>
+                                              {formatUserDate(user.last_login)}
+                                            </span>
+                                          ) : (
+                                            <span style={{ fontSize: '0.84rem', color: 'var(--fdl-muted)', fontStyle: 'italic' }}>
+                                              Never
+                                            </span>
+                                          )}
+                                        </td>
+                                        <td style={{ textAlign: 'right' }}>
+                                          <button
+                                            onClick={() => {
+                                              setUserModelError(null);
+                                              setManagingUser(user);
+                                              setEditPassword('');
+                                              const legacyMap: Record<string, string> = { vllm: 'local-1', llama: 'local-1', 'llama-4': 'local-1', muse: 'local-2' };
+                                              setSelectedUserModelProvider(legacyMap[user.ai_provider] || user.ai_provider || '');
+                                            }}
+                                            className="btn-ghost"
+                                            style={{ padding: '5px 12px', fontWeight: 600, fontSize: '0.78rem' }}
+                                          >
+                                            Manage
+                                          </button>
+                                        </td>
+                                      </tr>
                                     );
-                                  }
-                                  return (
-                                    <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', padding: '2px 7px', borderRadius: '2px', whiteSpace: 'nowrap' }}>
-                                      Unused
-                                    </span>
-                                  );
-                                })()}
-                              </td>
-                            )}
-                            <td style={{ minWidth: '140px' }}>
-                              <button
-                                type="button"
-                                disabled={user.is_active === false || !session?.is_admin}
-                                onClick={() => handleToggleCommentPermission(user.id, !(user.can_comment !== false))}
-                                className="btn-ghost"
-                                style={{
-                                  padding: '4px 10px',
-                                  fontSize: '0.78rem',
-                                  fontWeight: 700,
-                                  borderRadius: '2px',
-                                  color: user.can_comment !== false ? '#15803d' : '#b91c1c',
-                                  backgroundColor: user.can_comment !== false ? '#dcfce7' : '#fee2e2',
-                                  borderColor: user.can_comment !== false ? '#86efac' : '#fca5a5',
-                                  cursor: session?.is_admin ? 'pointer' : 'default',
-                                }}
-                                title={session?.is_admin ? "Click to toggle commenting, annotations & LLM notes permission" : undefined}
-                              >
-                                {user.can_comment !== false ? '✓ Enabled' : '✕ Disabled'}
-                              </button>
-                            </td>
-                            <td style={{ minWidth: '140px' }}>
-                              {user.last_login ? (
-                                <span style={{ fontSize: '0.85rem', color: 'var(--fdl-ink-soft)', whiteSpace: 'nowrap' }}>
-                                  {formatUserDate(user.last_login)}
-                                </span>
-                              ) : (
-                                <span style={{ fontSize: '0.85rem', color: 'var(--fdl-muted)', fontStyle: 'italic' }}>
-                                  Never
-                                </span>
-                              )}
-                            </td>
-                            <td style={{ minWidth: '90px', textAlign: 'right' }}>
-                              <button
-                                onClick={() => {
-                                  setUserModelError(null);
-                                  setManagingUser(user);
-                                  setEditPassword('');
-                                  const legacyMap: Record<string, string> = { vllm: 'local-1', llama: 'local-1', 'llama-4': 'local-1', muse: 'local-2' };
-                                  setSelectedUserModelProvider(legacyMap[user.ai_provider] || user.ai_provider || '');
-                                }}
-                                className="btn-ghost"
-                                style={{ padding: '6px 14px', fontWeight: 600, fontSize: '0.8rem' }}
-                              >
-                                Manage
-                              </button>
-                            </td>
-                          </tr>
-                        ));
-                      })()}
-                    </tbody>
-                  </table>
-                </div>
+                                  })
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {totalPages > 1 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', fontSize: '0.82rem', color: 'var(--fdl-ink-soft)' }}>
+                              <span>
+                                Showing {(safePage - 1) * USERS_PER_PAGE + 1}–{Math.min(safePage * USERS_PER_PAGE, filtered.length)} of {filtered.length} users
+                              </span>
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <button
+                                  type="button"
+                                  className="btn-ghost"
+                                  disabled={safePage <= 1}
+                                  onClick={() => setUserPage(p => Math.max(1, p - 1))}
+                                  style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+                                >
+                                  Previous
+                                </button>
+                                <span>Page {safePage} of {totalPages}</span>
+                                <button
+                                  type="button"
+                                  className="btn-ghost"
+                                  disabled={safePage >= totalPages}
+                                  onClick={() => setUserPage(p => Math.min(totalPages, p + 1))}
+                                  style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+                                >
+                                  Next
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </>
+                )}
               </section>
             )}
 
@@ -2524,179 +2644,102 @@ else:
       {/* Manage User Modal */}
       {managingUser && (
         <div className="modal-overlay" onClick={() => { if (!savingUserModel) setManagingUser(null); }}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px', width: '90%', padding: '2rem', borderRadius: '2px', background: 'white' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', borderBottom: '1px solid var(--fdl-line)', paddingBottom: '1rem' }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--fdl-ink)', fontWeight: 800 }}>
-                  Manage Account: {managingUser.display_name || managingUser.username}
+          <div
+            className="modal-content"
+            onClick={e => e.stopPropagation()}
+            style={{
+              maxWidth: '780px',
+              width: '94%',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: 0,
+              borderRadius: '4px',
+              background: 'white',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.9rem 1.35rem', borderBottom: '1px solid var(--fdl-line)', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
+                <h3 style={{ margin: 0, fontSize: '1.08rem', color: 'var(--fdl-ink)', fontWeight: 800 }}>
+                  {managingUser.display_name || managingUser.username}
                 </h3>
-                <div style={{ fontSize: '0.8rem', color: 'var(--fdl-canvas0)', marginTop: '4px' }}>
-                  Role: <strong style={{ textTransform: 'capitalize' }}>{managingUser.role || (managingUser.is_admin ? 'Admin' : 'User')}</strong>
-                  {' • '}
-                  Joined: {formatUserDate(managingUser.created_at) || '—'}
-                </div>
+                <span style={{ fontSize: '0.78rem', color: 'var(--fdl-canvas0)' }}>
+                  <strong style={{ textTransform: 'capitalize' }}>{managingUser.role || (managingUser.is_admin ? 'Admin' : 'User')}</strong>
+                  {' · '}
+                  Joined {formatUserDate(managingUser.created_at) || '—'}
+                </span>
               </div>
-              <button 
+              <button
                 onClick={() => setManagingUser(null)}
                 disabled={savingUserModel}
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--fdl-muted)', padding: '4px 8px' }}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: 'var(--fdl-muted)', padding: '2px 6px' }}
                 title="Close"
               >
                 ✕
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <div style={{ background: 'var(--fdl-canvas)', padding: '1rem', border: '1px solid var(--fdl-line)', overflowWrap: 'anywhere' }}>
-                <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: '90px 1fr', gap: '8px' }}>
-                  <dt>Name</dt><dd style={{ margin: 0 }}>{managingUser.display_name || managingUser.username}</dd>
-                  <dt>Username</dt><dd style={{ margin: 0 }}>{managingUser.username}</dd>
-                  <dt>Email</dt><dd style={{ margin: 0 }}>{managingUser.email || '—'}</dd>
-                  <dt>Office</dt><dd style={{ margin: 0 }}>{managingUser.office || '—'}</dd>
-                </dl>
-              </div>
-              {managingUser.is_sso && <p style={{ margin: 0 }}>SSO account details and password are managed by the identity provider.</p>}
-              {/* Password Section */}
-              <div style={{ background: 'var(--fdl-canvas)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
-                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink)', marginBottom: '0.5rem' }}>
-                  Reset Password
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="password"
-                    placeholder="Enter new password"
-                    value={editPassword}
-                    onChange={e => setEditPassword(e.target.value)}
-                    className="mgmt-input"
-                    disabled={managingUser.is_active === false || managingUser.is_sso === true}
-                  />
-                  <button
-                    onClick={async () => {
-                      await handleChangePassword(managingUser.id);
-                    }}
-                    className="btn-primary"
-                    disabled={!editPassword || managingUser.is_active === false || managingUser.is_sso === true}
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-
-              {/* AI Model Section (Admin Only) */}
-              {session?.is_admin && (
-                <div style={{ background: 'var(--fdl-canvas)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink)', marginBottom: '0.5rem' }}>
-                    Assigned Model Provider
+            {/* Two-Column Body (fits without scrolling on standard viewports) */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '1.1rem 1.35rem',
+              display: 'grid',
+              gridTemplateColumns: session?.is_admin ? 'repeat(auto-fit, minmax(290px, 1fr))' : '1fr',
+              gap: '1rem',
+              alignItems: 'start',
+            }}>
+              {/* Left Column: Profile + Security + Account Status */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ background: 'var(--fdl-canvas)', padding: '0.8rem 0.9rem', border: '1px solid var(--fdl-line)', borderRadius: '2px', overflowWrap: 'anywhere' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--fdl-canvas0)', marginBottom: '0.5rem' }}>
+                    Account Details
                   </div>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <select
-                      value={selectedUserModelProvider}
-                      onChange={e => { setSelectedUserModelProvider(e.target.value); setUserModelError(null); }}
-                      className="mgmt-select"
-                      style={{ flex: 1 }}
-                      disabled={savingUserModel || managingUser.is_active === false}
-                    >
-                      <option value="">Follow system default</option>
-                      {session?.ai_models?.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}
-                    </select>
-                    <button
-                      onClick={async () => {
-                        await handleSaveUserModel(managingUser.id, selectedUserModelProvider);
-                      }}
-                      className="btn-primary"
-                      disabled={savingUserModel || managingUser.is_active === false}
-                    >
-                      {savingUserModel ? 'Saving...' : 'Save'}
-                    </button>
-                  </div>
-                  {userModelError && <p role="alert" style={{ color: 'var(--fdl-red)', margin: '0.75rem 0 0' }}>{userModelError}</p>}
+                  <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: '76px 1fr', gap: '5px 8px', fontSize: '0.82rem' }}>
+                    <dt style={{ color: 'var(--fdl-canvas0)', fontWeight: 600 }}>Name</dt><dd style={{ margin: 0, fontWeight: 600 }}>{managingUser.display_name || managingUser.username}</dd>
+                    <dt style={{ color: 'var(--fdl-canvas0)', fontWeight: 600 }}>Username</dt><dd style={{ margin: 0 }}>{managingUser.username}</dd>
+                    <dt style={{ color: 'var(--fdl-canvas0)', fontWeight: 600 }}>Email</dt><dd style={{ margin: 0 }}>{managingUser.email || '—'}</dd>
+                    <dt style={{ color: 'var(--fdl-canvas0)', fontWeight: 600 }}>Office</dt><dd style={{ margin: 0 }}>{managingUser.office || '—'}</dd>
+                  </dl>
                 </div>
-              )}
 
-              {/* Comments, Annotations & AI Notes Permission (Admin Only) */}
-              {session?.is_admin && (
-                <div style={{ background: 'var(--fdl-canvas)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink)', marginBottom: '0.35rem' }}>
-                    Comments, Annotations & LLM Notes Permission
+                {managingUser.is_sso ? (
+                  <div style={{ background: 'var(--fdl-canvas)', padding: '0.7rem 0.9rem', border: '1px solid var(--fdl-line)', borderRadius: '2px', fontSize: '0.78rem', color: 'var(--fdl-canvas0)' }}>
+                    SSO account details and password are managed by your identity provider.
                   </div>
-                  <p style={{ fontSize: '0.78rem', color: 'var(--fdl-canvas0)', margin: '0 0 0.75rem 0', lineHeight: 1.4 }}>
-                    Controls whether this user can post comments & justifications in visual compare, create label highlights/notes, and save LLM notes.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleCommentPermission(managingUser.id, !(managingUser.can_comment !== false))}
-                    className="btn-ghost"
-                    style={{
-                      padding: '6px 14px',
-                      fontSize: '0.82rem',
-                      fontWeight: 700,
-                      borderRadius: '2px',
-                      color: managingUser.can_comment !== false ? '#15803d' : '#b91c1c',
-                      backgroundColor: managingUser.can_comment !== false ? '#dcfce7' : '#fee2e2',
-                      borderColor: managingUser.can_comment !== false ? '#86efac' : '#fca5a5',
-                    }}
-                  >
-                    {managingUser.can_comment !== false ? '✓ Comments & Notes: Enabled' : '✕ Comments & Notes: Disabled'}
-                  </button>
-                </div>
-              )}
-
-              {/* REST API Key Management (Admin Only) */}
-              {session?.is_admin && (() => {
-                const kInfo = adminApiKeys.find(k => k.user_id === managingUser.id);
-                const isRevealed = Boolean(revealedKeys[managingUser.id]);
-                const busyKey = actionInProgressUserId === managingUser.id;
-                return (
-                  <div style={{ background: 'var(--fdl-canvas)', padding: '1rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink)' }}>REST API Key</div>
-                      {kInfo?.last_used_at && (
-                        <span style={{ fontSize: '0.74rem', color: 'var(--fdl-canvas0)' }}>
-                          Last used: {new Date(kInfo.last_used_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                        </span>
-                      )}
+                ) : (
+                  <div style={{ background: 'var(--fdl-canvas)', padding: '0.8rem 0.9rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--fdl-ink)', marginBottom: '0.45rem' }}>
+                      Reset Password
                     </div>
-                    {kInfo?.has_api_key && kInfo.api_key ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                          <code style={{ flex: 1, background: 'white', border: '1px solid var(--fdl-line)', padding: '6px 8px', borderRadius: '2px', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {isRevealed ? kInfo.api_key : kInfo.api_key_masked}
-                          </code>
-                          <button type="button" className="btn-ghost" style={{ padding: '5px 8px', fontSize: '0.75rem' }} onClick={() => setRevealedKeys(prev => ({ ...prev, [managingUser.id]: !prev[managingUser.id] }))}>
-                            {isRevealed ? 'Hide' : 'Show'}
-                          </button>
-                          <button type="button" className="btn-ghost" style={{ padding: '5px 8px', fontSize: '0.75rem' }} onClick={() => handleCopyKey(kInfo.api_key!, managingUser.id)}>
-                            {copiedKeyUserId === managingUser.id ? 'Copied!' : 'Copy'}
-                          </button>
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button type="button" className="btn-ghost" disabled={busyKey} style={{ padding: '5px 10px', fontSize: '0.78rem' }} onClick={() => handleAdminGenerateKey(managingUser.id, managingUser.username)}>
-                            {busyKey ? 'Working…' : 'Rotate Key'}
-                          </button>
-                          <button type="button" className="btn-ghost" disabled={busyKey} style={{ padding: '5px 10px', fontSize: '0.78rem', color: 'var(--fdl-red)', borderColor: 'var(--fdl-red)' }} onClick={() => handleAdminRevokeKey(managingUser.id, managingUser.username)}>
-                            Revoke Key
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--fdl-muted)' }}>No API key issued for this user.</span>
-                        <button type="button" className="btn-primary" disabled={busyKey} style={{ padding: '5px 12px', fontSize: '0.78rem' }} onClick={() => handleAdminGenerateKey(managingUser.id, managingUser.username)}>
-                          {busyKey ? 'Generating…' : 'Generate Key'}
-                        </button>
-                      </div>
-                    )}
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <input
+                        type="password"
+                        placeholder="New password"
+                        value={editPassword}
+                        onChange={e => setEditPassword(e.target.value)}
+                        className="mgmt-input"
+                        style={{ flex: 1, minWidth: 0 }}
+                        disabled={managingUser.is_active === false}
+                      />
+                      <button
+                        onClick={async () => {
+                          await handleChangePassword(managingUser.id);
+                        }}
+                        className="btn-primary"
+                        style={{ padding: '5px 12px', fontSize: '0.78rem' }}
+                        disabled={!editPassword || managingUser.is_active === false}
+                      >
+                        Save
+                      </button>
+                    </div>
                   </div>
-                );
-              })()}
+                )}
 
-              {/* Account Status / Danger Zone (Admin Only) */}
-              {session?.is_admin && (
-                <div style={{ borderTop: '1px solid var(--fdl-line)', paddingTop: '1rem' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--fdl-ink)', marginBottom: '0.75rem' }}>
-                    Account Status
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                {session?.is_admin && (
+                  <div style={{ paddingTop: '0.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     {managingUser.is_active !== false ? (
                       <button
                         onClick={async () => {
@@ -2704,7 +2747,7 @@ else:
                           setManagingUser(null);
                         }}
                         className="btn-ghost"
-                        style={{ color: 'var(--fdl-amber)', borderColor: 'var(--fdl-amber)', backgroundColor: 'var(--fdl-amber-050)' }}
+                        style={{ padding: '5px 10px', fontSize: '0.76rem', color: 'var(--fdl-amber)', borderColor: 'var(--fdl-amber)', backgroundColor: 'var(--fdl-amber-050)' }}
                       >
                         Deactivate Account
                       </button>
@@ -2715,7 +2758,7 @@ else:
                           setManagingUser(null);
                         }}
                         className="btn-ghost"
-                        style={{ color: 'var(--fdl-green)', borderColor: 'var(--fdl-green)', backgroundColor: 'var(--fdl-green-050)' }}
+                        style={{ padding: '5px 10px', fontSize: '0.76rem', color: 'var(--fdl-green)', borderColor: 'var(--fdl-green)', backgroundColor: 'var(--fdl-green-050)' }}
                       >
                         Reactivate Account
                       </button>
@@ -2727,16 +2770,124 @@ else:
                         setManagingUser(null);
                       }}
                       className="btn-danger-ghost"
+                      style={{ padding: '5px 10px', fontSize: '0.76rem' }}
                     >
                       Delete User
                     </button>
                   </div>
+                )}
+              </div>
+
+              {/* Right Column (Admin Only): AI Model + Comments + REST API Key */}
+              {session?.is_admin && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ background: 'var(--fdl-canvas)', padding: '0.8rem 0.9rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--fdl-ink)', marginBottom: '0.45rem' }}>
+                      Assigned Model Provider
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <select
+                        value={selectedUserModelProvider}
+                        onChange={e => { setSelectedUserModelProvider(e.target.value); setUserModelError(null); }}
+                        className="mgmt-select"
+                        style={{ flex: 1, minWidth: 0 }}
+                        disabled={savingUserModel || managingUser.is_active === false}
+                      >
+                        <option value="">Follow system default</option>
+                        {session?.ai_models?.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}
+                      </select>
+                      <button
+                        onClick={async () => {
+                          await handleSaveUserModel(managingUser.id, selectedUserModelProvider);
+                        }}
+                        className="btn-primary"
+                        style={{ padding: '5px 12px', fontSize: '0.78rem' }}
+                        disabled={savingUserModel || managingUser.is_active === false}
+                      >
+                        {savingUserModel ? 'Saving…' : 'Save'}
+                      </button>
+                    </div>
+                    {userModelError && <p role="alert" style={{ color: 'var(--fdl-red)', margin: '0.4rem 0 0', fontSize: '0.78rem' }}>{userModelError}</p>}
+                  </div>
+
+                  <div style={{ background: 'var(--fdl-canvas)', padding: '0.75rem 0.9rem', borderRadius: '2px', border: '1px solid var(--fdl-line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--fdl-ink)' }}>Comments &amp; LLM Notes</div>
+                      <div style={{ fontSize: '0.73rem', color: 'var(--fdl-canvas0)' }}>Compare notes &amp; label highlights</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleCommentPermission(managingUser.id, !(managingUser.can_comment !== false))}
+                      className="btn-ghost"
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: '0.76rem',
+                        fontWeight: 700,
+                        borderRadius: '2px',
+                        color: managingUser.can_comment !== false ? '#15803d' : '#b91c1c',
+                        backgroundColor: managingUser.can_comment !== false ? '#dcfce7' : '#fee2e2',
+                        borderColor: managingUser.can_comment !== false ? '#86efac' : '#fca5a5',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {managingUser.can_comment !== false ? '✓ Enabled' : '✕ Disabled'}
+                    </button>
+                  </div>
+
+                  {(() => {
+                    const kInfo = adminApiKeys.find(k => k.user_id === managingUser.id);
+                    const isRevealed = Boolean(revealedKeys[managingUser.id]);
+                    const busyKey = actionInProgressUserId === managingUser.id;
+                    return (
+                      <div style={{ background: 'var(--fdl-canvas)', padding: '0.8rem 0.9rem', borderRadius: '2px', border: '1px solid var(--fdl-line)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--fdl-ink)' }}>REST API Key</div>
+                          {kInfo?.last_used_at && (
+                            <span style={{ fontSize: '0.71rem', color: 'var(--fdl-canvas0)' }}>
+                              Used {new Date(kInfo.last_used_at).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                        {kInfo?.has_api_key && kInfo.api_key ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+                            <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                              <code style={{ flex: 1, minWidth: 0, background: 'white', border: '1px solid var(--fdl-line)', padding: '5px 7px', borderRadius: '2px', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {isRevealed ? kInfo.api_key : kInfo.api_key_masked}
+                              </code>
+                              <button type="button" className="btn-ghost" style={{ padding: '4px 8px', fontSize: '0.73rem' }} onClick={() => setRevealedKeys(prev => ({ ...prev, [managingUser.id]: !prev[managingUser.id] }))}>
+                                {isRevealed ? 'Hide' : 'Show'}
+                              </button>
+                              <button type="button" className="btn-ghost" style={{ padding: '4px 8px', fontSize: '0.73rem' }} onClick={() => handleCopyKey(kInfo.api_key!, managingUser.id)}>
+                                {copiedKeyUserId === managingUser.id ? 'Copied!' : 'Copy'}
+                              </button>
+                            </div>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button type="button" className="btn-ghost" disabled={busyKey} style={{ padding: '4px 10px', fontSize: '0.74rem' }} onClick={() => handleAdminGenerateKey(managingUser.id, managingUser.username)}>
+                                {busyKey ? 'Working…' : 'Rotate Key'}
+                              </button>
+                              <button type="button" className="btn-ghost" disabled={busyKey} style={{ padding: '4px 10px', fontSize: '0.74rem', color: 'var(--fdl-red)', borderColor: 'var(--fdl-red)' }} onClick={() => handleAdminRevokeKey(managingUser.id, managingUser.username)}>
+                                Revoke Key
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '0.76rem', color: 'var(--fdl-muted)' }}>No API key issued.</span>
+                            <button type="button" className="btn-primary" disabled={busyKey} style={{ padding: '4px 12px', fontSize: '0.75rem' }} onClick={() => handleAdminGenerateKey(managingUser.id, managingUser.username)}>
+                              {busyKey ? 'Generating…' : 'Generate Key'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid var(--fdl-line-soft)', paddingTop: '1rem' }}>
-              <button onClick={handleManageUserDone} disabled={savingUserModel} className="btn-primary" style={{ minWidth: '100px' }}>
+            {/* Footer */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.75rem 1.35rem', borderTop: '1px solid var(--fdl-line)', background: 'var(--fdl-canvas)', flexShrink: 0 }}>
+              <button onClick={handleManageUserDone} disabled={savingUserModel} className="btn-primary" style={{ minWidth: '90px', padding: '6px 16px', fontSize: '0.82rem' }}>
                 {savingUserModel ? 'Saving...' : 'Done'}
               </button>
             </div>
