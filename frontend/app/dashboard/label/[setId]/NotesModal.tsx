@@ -173,13 +173,13 @@ export default function NotesModal({ isOpen, onClose, setId }: NotesModalProps) 
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: 'min(720px, 92vw)',
-          maxHeight: 'min(640px, 85vh)',
-          backgroundColor: 'var(--fdl-paper, #ffffff)',
+          width: '90%',
+          maxWidth: '900px',
+          maxHeight: '85vh',
+          backgroundColor: '#ffffff',
           borderRadius: 'var(--fdl-radius-sm, 2px)',
-          boxShadow: '0 16px 36px rgba(7, 31, 61, 0.24)',
-          border: '1px solid var(--fdl-line, #b8c8d7)',
-          borderTop: '3px solid var(--fdl-navy-800, #12375b)',
+          boxShadow: '0 16px 40px rgba(15, 23, 42, 0.2)',
+          border: '1px solid var(--fdl-line)',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
@@ -189,50 +189,52 @@ export default function NotesModal({ isOpen, onClose, setId }: NotesModalProps) 
         <div
           style={{
             padding: '16px 20px',
-            borderBottom: '1px solid var(--fdl-line, #b8c8d7)',
+            borderBottom: '1px solid var(--fdl-line)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            backgroundColor: 'var(--fdl-canvas, #f3f6f8)',
+            backgroundColor: 'var(--fdl-canvas)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--fdl-navy-950, #071f3d)' }}>
-              My Notes & Highlights
-            </h3>
-            <span
-              style={{
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                color: 'var(--fdl-navy-800, #12375b)',
-                background: 'var(--fdl-blue-050, #edf4fa)',
-                border: '1px solid var(--fdl-line, #b8c8d7)',
-                padding: '2px 8px',
-                borderRadius: 'var(--fdl-radius-sm, 2px)',
-                fontFamily: 'var(--fdl-font-mono, monospace)'
-              }}
-            >
-              {notes.length}
-            </span>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--fdl-navy-950)' }}>
+                My Notes &amp; Highlights
+              </h2>
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  color: 'var(--fdl-navy-800)',
+                  background: 'var(--fdl-blue-050)',
+                  border: '1px solid var(--fdl-line)',
+                  padding: '2px 8px',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  fontFamily: 'var(--fdl-font-mono, monospace)',
+                }}
+              >
+                {notes.length}
+              </span>
+            </div>
+            <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: 'var(--fdl-muted)' }}>
+              Saved highlights, inline comments, and pinned LLM Q&amp;A notes for this label.
+            </p>
           </div>
           <button
             onClick={onClose}
             aria-label="Close notes modal"
             style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: 'var(--fdl-radius-sm, 2px)',
+              background: '#ffffff',
               border: '1px solid var(--fdl-line)',
-              background: 'white',
+              borderRadius: 'var(--fdl-radius-sm, 2px)',
+              padding: '5px 12px',
               cursor: 'pointer',
-              fontSize: '18px',
+              fontWeight: 700,
               color: 'var(--fdl-ink)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              fontSize: '0.82rem',
             }}
           >
-            &times;
+            ✕ Close
           </button>
         </div>
 
@@ -242,17 +244,18 @@ export default function NotesModal({ isOpen, onClose, setId }: NotesModalProps) 
             <div
               style={{
                 textAlign: 'center',
-                padding: '48px 16px',
+                padding: '44px 20px',
+                background: 'var(--fdl-canvas)',
+                border: '1px solid var(--fdl-line)',
+                borderRadius: 'var(--fdl-radius-sm, 2px)',
                 color: 'var(--fdl-muted)',
               }}
             >
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>📝</div>
-              <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--fdl-navy-900)' }}>
+              <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--fdl-navy-900)' }}>
                 No notes or highlights yet
               </div>
-              <p style={{ fontSize: '0.88rem', margin: '6px 0 0 0', maxWidth: '360px', marginInline: 'auto' }}>
-                Select text in the label to add highlights or comments, or ask the LLM assistant questions to pin
-                insights to document sections.
+              <p style={{ fontSize: '0.85rem', margin: '6px auto 0', maxWidth: '400px', lineHeight: 1.5 }}>
+                Select text in the label to add highlights or comments, or ask LLM Chat questions to pin insights to document sections.
               </p>
             </div>
           ) : (

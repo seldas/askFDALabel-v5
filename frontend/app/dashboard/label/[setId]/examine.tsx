@@ -94,46 +94,116 @@ export function ProductSpecsTable({ productData }: { productData: ProductData[] 
       </div>
     );
   }
-  const headers = ['Product Name', 'NDC Number', 'Dosage Form', 'Application No.', 'Category', 'Ingredients'];
+
   return (
-    <div style={{ overflowX: 'auto', borderRadius: 'var(--fdl-radius-sm, 2px)', border: '1px solid var(--fdl-line)' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-        <thead>
-          <tr style={{ background: 'var(--fdl-canvas)', borderBottom: '2px solid var(--fdl-line)' }}>
-            {headers.map(h => (
-              <th key={h} style={{
-                padding: '10px 14px', textAlign: 'left', fontWeight: 700,
-                fontSize: '0.7rem', textTransform: 'uppercase' as const,
-                letterSpacing: '0.06em', color: 'var(--fdl-muted)', whiteSpace: 'nowrap' as const,
-              }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {productData.map((prod, idx) => (
-            <tr key={idx} style={{ borderBottom: idx < productData.length - 1 ? '1px solid var(--fdl-line-soft)' : 'none', background: idx % 2 === 0 ? 'var(--fdl-paper)' : 'var(--fdl-canvas)' }}>
-              <td style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--fdl-navy-950)', whiteSpace: 'nowrap' as const }}>{prod.name || '—'}</td>
-              <td style={{ padding: '12px 14px' }}>
-                {prod.ndc ? (
-                  <span style={{ display: 'inline-block', fontFamily: 'ui-monospace, monospace', fontSize: '0.78rem', fontWeight: 600, color: 'var(--fdl-navy-950)', background: 'var(--fdl-line-soft)', padding: '2px 7px', borderRadius: '2px', letterSpacing: '0.04em' }}>
-                    {prod.ndc}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {productData.map((prod, idx) => {
+        const activeIngs = (prod.ingredients || []).filter((ing: any) => ing.type !== 'I' && ing.type !== 'INACTIVE');
+        const inactiveIngs = (prod.ingredients || []).filter((ing: any) => ing.type === 'I' || ing.type === 'INACTIVE');
+        const formLabel = prod.form
+          ? prod.form.split(/\s+/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+          : '—';
+
+        return (
+          <div
+            key={idx}
+            style={{
+              border: '1px solid var(--fdl-line)',
+              borderRadius: '4px',
+              background: 'var(--fdl-paper)',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Product Header Bar */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '10px',
+              padding: '10px 14px',
+              background: 'var(--fdl-canvas)',
+              borderBottom: '1px solid var(--fdl-line)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 800, fontSize: '0.92rem', color: 'var(--fdl-navy-950)' }}>
+                  {prod.name || '—'}
+                </span>
+                {prod.ndc && (
+                  <span style={{
+                    fontFamily: 'ui-monospace, monospace',
+                    fontSize: '0.76rem',
+                    fontWeight: 600,
+                    color: 'var(--fdl-navy-950)',
+                    background: 'var(--fdl-paper)',
+                    border: '1px solid var(--fdl-line)',
+                    padding: '2px 7px',
+                    borderRadius: '2px',
+                    letterSpacing: '0.03em',
+                  }}>
+                    NDC {prod.ndc}
                   </span>
-                ) : '—'}
-              </td>
-              <td style={{ padding: '12px 14px', color: 'var(--fdl-ink-soft)', whiteSpace: 'nowrap' as const }}>
-                {prod.form ? prod.form.split(/\s+/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') : '—'}
-              </td>
-              <td style={{ padding: '12px 14px' }}>
-                {prod.app_num ? (
-                  <span style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700, color: 'var(--fdl-blue-700)', fontSize: '0.8rem' }}>{prod.app_num}</span>
-                ) : '—'}
-              </td>
-              <td style={{ padding: '12px 14px' }}><AppTypeBadge appType={prod.app_type} /></td>
-              <td style={{ padding: '12px 14px', maxWidth: '280px' }}><IngredientsList ingredients={prod.ingredients} /></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', fontSize: '0.78rem' }}>
+                <span style={{ color: 'var(--fdl-ink-soft)', fontWeight: 600 }}>{formLabel}</span>
+                {prod.app_num && (
+                  <span style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700, color: 'var(--fdl-blue-700)' }}>
+                    {prod.app_num}
+                  </span>
+                )}
+                <AppTypeBadge appType={prod.app_type} />
+              </div>
+            </div>
+
+            {/* Full-Width Ingredients Breakdown */}
+            <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.8rem' }}>
+              <div>
+                <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--fdl-muted)', marginBottom: '5px' }}>
+                  Active Ingredients ({activeIngs.length})
+                </div>
+                {activeIngs.length === 0 ? (
+                  <span style={{ color: 'var(--fdl-muted)' }}>—</span>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {activeIngs.map((ing: any, i: number) => (
+                      <span
+                        key={i}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          padding: '3px 9px',
+                          borderRadius: '2px',
+                          background: 'var(--fdl-blue-050)',
+                          border: '1px solid #bfdbfe',
+                          color: 'var(--fdl-navy-900)',
+                          fontWeight: 600,
+                        }}
+                      >
+                        <span>{ing.name}</span>
+                        {ing.strength && <span style={{ color: 'var(--fdl-blue-700)', fontWeight: 700 }}>· {ing.strength}</span>}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {inactiveIngs.length > 0 && (
+                <div>
+                  <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--fdl-muted)', marginBottom: '4px' }}>
+                    Inactive Ingredients ({inactiveIngs.length})
+                  </div>
+                  <div style={{ color: 'var(--fdl-ink-soft)', lineHeight: 1.55 }}>
+                    {inactiveIngs.map((ing: any) => ing.name).filter(Boolean).join(', ')}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

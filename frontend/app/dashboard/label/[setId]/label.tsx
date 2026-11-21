@@ -391,20 +391,20 @@ export default function LabelView({
                   </svg>
                   <span>ToC</span>
                 </button>
-                <button 
-                  type="button"
-                  className={`nav-tab-toggle-btn ${navTab === 'soc' ? 'active' : ''}`}
-                  onClick={() => setNavTab('soc')}
-                  title="MedDRA System Organ Classes"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-                  </svg>
-                  <span>SoC</span>
-                  {Object.keys(socCatalog).length > 0 && (
+                {Object.keys(socCatalog).length > 0 && (
+                  <button
+                    type="button"
+                    className={`nav-tab-toggle-btn ${navTab === 'soc' ? 'active' : ''}`}
+                    onClick={() => setNavTab('soc')}
+                    title="MedDRA System Organ Classes"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                    </svg>
+                    <span>SoC</span>
                     <span className="nav-tab-badge">{Object.keys(socCatalog).length}</span>
-                  )}
-                </button>
+                  </button>
+                )}
                 </div>
               </div>
 
@@ -533,23 +533,37 @@ export default function LabelView({
                     </div>
                   </div>
                 ) : (
-                  /* No SoC active: display list of all available SOCs */
                   <div>
-                    <div style={{ marginBottom: '10px' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--fdl-muted)', letterSpacing: '0.05em' }}>
+                    <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' }}>
+                      <div style={{ fontSize: '0.73rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--fdl-muted)', letterSpacing: '0.05em' }}>
                         System Organ Classes
                       </div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--fdl-muted)', marginTop: '2px' }}>
-                        Select an organ class to highlight its terms in the label:
-                      </div>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--fdl-muted)', fontWeight: 600 }}>
+                        {Object.keys(socCatalog).length} classes
+                      </span>
                     </div>
 
-                    {Object.keys(socCatalog).length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        {Object.values(socCatalog).map((group) => (
-                          <div
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {Object.values(socCatalog)
+                        .sort((a, b) => b.totalOccurrences - a.totalOccurrences)
+                        .map((group) => (
+                          <button
+                            type="button"
                             key={group.socName}
                             className="soc-group-item"
+                            style={{
+                              width: '100%',
+                              textAlign: 'left',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '8px',
+                              padding: '7px 10px',
+                              border: '1px solid var(--fdl-line)',
+                              borderRadius: 'var(--fdl-radius-sm, 2px)',
+                              background: 'var(--fdl-paper, #fff)',
+                              cursor: 'pointer',
+                            }}
                             onClick={() => {
                               setActiveSoc(group.socName);
                               setActiveTermName(null);
@@ -560,32 +574,24 @@ export default function LabelView({
                             }}
                             title={`Highlight all ${group.totalOccurrences} terms for ${group.socName}`}
                           >
-                            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>
+                            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8rem', fontWeight: 600, color: 'var(--fdl-ink)' }}>
                               {group.socName}
                             </span>
                             <span style={{
                               fontSize: '0.7rem',
                               fontWeight: 700,
-                              padding: '1px 5px',
-                              borderRadius: 'var(--fdl-radius-sm, 2px)',
-                              background: 'var(--fdl-canvas, var(--fdl-line))',
-                              color: 'var(--fdl-text, var(--fdl-ink-soft))',
-                              flexShrink: 0
+                              padding: '2px 7px',
+                              borderRadius: '999px',
+                              background: 'var(--fdl-blue-050, #eff6ff)',
+                              border: '1px solid #bfdbfe',
+                              color: 'var(--fdl-blue-700, #1d4ed8)',
+                              flexShrink: 0,
                             }}>
                               {group.totalOccurrences}
                             </span>
-                          </div>
+                          </button>
                         ))}
-                      </div>
-                    ) : (
-                      <div style={{ padding: '24px 10px', textAlign: 'center', color: 'var(--fdl-muted)', fontSize: '0.8rem' }}>
-                        <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>📋</div>
-                        <div style={{ fontWeight: 600 }}>No Adverse Event scan found</div>
-                        <div style={{ fontSize: '0.72rem', marginTop: '4px', color: 'var(--fdl-muted)' }}>
-                          Run PV-Profile in Toolbox to scan and index MedDRA terms for this label.
-                        </div>
-                      </div>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>

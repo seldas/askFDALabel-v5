@@ -565,11 +565,11 @@ export const LabelChatWorkspace: React.FC = () => {
               {models.length > 0 ? (
                 models.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.name} {m.model ? `(${m.model})` : ''}
+                    {m.name}
                   </option>
                 ))
               ) : (
-                <option value="elsa">ELSA (Default)</option>
+                <option value="elsa">ELSA</option>
               )}
             </select>
           </div>

@@ -1,23 +1,36 @@
 'use client';
 
-import { Children, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { Children, Fragment, isValidElement, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
-export default function ReaderToolbar({ title, date, status, tocCollapsed, onToggleContents, chatOpen, onToggleChat, progress = 0, children }: {
+function flattenNodes(nodes: ReactNode): ReactNode[] {
+  const out: ReactNode[] = [];
+  Children.forEach(nodes, (child) => {
+    if (isValidElement<{ children?: ReactNode }>(child) && child.type === Fragment) {
+      out.push(...flattenNodes(child.props.children));
+    } else if (child != null && child !== false && child !== true) {
+      out.push(child);
+    }
+  });
+  return out;
+}
+
+export default function ReaderToolbar({ title, date, status, tocCollapsed, onToggleContents, chatOpen, onToggleChat, progress = 0, leadingTools, secondaryActions, children }: {
   title: string; date?: string; status?: string | null; tocCollapsed: boolean;
-  onToggleContents: () => void; chatOpen: boolean; onToggleChat: () => void; progress?: number; children: ReactNode;
+  onToggleContents: () => void; chatOpen: boolean; onToggleChat: () => void; progress?: number; leadingTools?: ReactNode; secondaryActions?: ReactNode; children: ReactNode;
 }) {
   const sentinel = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLDivElement>(null);
   const moreButton = useRef<HTMLButtonElement>(null);
   const [compact, setCompact] = useState(false);
   const [open, setOpen] = useState(false);
-  const actions = Children.toArray(children);
+  const actions = flattenNodes(children);
+  const extraActions = flattenNodes(secondaryActions);
   const [visibleCount, setVisibleCount] = useState(actions.length);
   const actionElements = useRef(new Map<string, HTMLDivElement>());
   const actionWidths = useRef(new Map<string, number>());
   const primary = useRef<HTMLDivElement>(null);
   const [availableWidth, setAvailableWidth] = useState(0);
-  const hasOverflow = visibleCount < actions.length;
+  const hasOverflow = visibleCount < actions.length || extraActions.length > 0;
 
   useEffect(() => {
     if (!bar.current) return;
@@ -125,29 +138,32 @@ export default function ReaderToolbar({ title, date, status, tocCollapsed, onTog
     <div className={`afl-reader-toolbar-slot${compact ? ' is-floating' : ''}`}>
       <div ref={bar} className="afl-reader-toolbar" aria-label="Label reading controls"
         onBlur={event => { if ( !event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false); }}>
+        {leadingTools && <div className="afl-reader-toolbar__leading">{leadingTools}</div>}
         <div className="afl-reader-toolbar__identity">
           <span className="afl-reader-toolbar__eyebrow">LABEL DOCUMENT</span>
           <strong title={title}>{title}</strong>
           <span className="afl-reader-toolbar__metadata">{[date, status].filter(Boolean).join(' · ')}</span>
         </div>
         <div ref={primary} className="afl-reader-toolbar__primary">
-          <button type="button" className="label-tool-btn" aria-expanded={!tocCollapsed} aria-controls="toc-panel" onClick={onToggleContents}>
+          <button type="button" className="label-tool-btn label-tool-contents" aria-expanded={!tocCollapsed} aria-controls="toc-panel" onClick={onToggleContents}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></svg>
             Contents
           </button>
-          <button id="chat-bubble" type="button" className="label-tool-btn label-tool-chat" aria-pressed={chatOpen} onClick={onToggleChat}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-            LLM Chat
-          </button>
         </div>
         <div className="afl-reader-toolbar__inline">{actions.slice(0, visibleCount).map(action)}</div>
+        <button id="chat-bubble" type="button" className="label-tool-btn label-tool-chat" aria-pressed={chatOpen} onClick={onToggleChat}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+          LLM Chat
+        </button>
         <div className="afl-reader-toolbar__overflow">
           {hasOverflow && <button ref={moreButton} type="button" className="label-tool-btn afl-reader-toolbar__more" aria-expanded={open} aria-controls="reader-more-actions" onClick={() => setOpen(!open)}>
-            More <span aria-hidden="true">⌄</span>
+            <span>More</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transition: 'transform 0.15s ease', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}><polyline points="6 9 12 15 18 9" /></svg>
           </button>}
           <div id="reader-more-actions" className={`afl-reader-toolbar__secondary${open && hasOverflow ? ' is-open' : ''}`}
             onClick={event => { if ((event.target as HTMLElement).closest('button:not(:disabled), a')) setOpen(false); }}>
             {actions.slice(visibleCount).map((child, index) => action(child, visibleCount + index))}
+            {extraActions.map((child, index) => action(child, actions.length + index))}
           </div>
         </div>
         <div className="afl-reader-toolbar__progress" role="progressbar" aria-label="Label section progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>

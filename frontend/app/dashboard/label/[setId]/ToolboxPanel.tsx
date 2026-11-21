@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { labelRoute, type LaunchContext } from '../../../platform/context';
+import { type LaunchContext } from '../../../platform/context';
 import { ToolIcon } from '../../../platform/icons';
-import { useToolboxTools } from '../../../platform/ToolLauncher';
+import { LabelToolStrip, useToolboxTools } from '../../../platform/ToolLauncher';
 import type { ToolboxWorkflow } from '../../../platform/registry';
 import type { LabelData } from './types';
 import { useLabel } from './LabelContext';
@@ -185,18 +185,22 @@ export default function ToolboxPanel({ setId, data }: { setId: string; data: Lab
     <section ref={container} className="afl-toolbox afl-toolbox--adaptive" aria-labelledby="toolbox-title">
       <div ref={sentinel} className="afl-toolbox__sentinel" aria-hidden="true" />
       <header ref={controls} className={`afl-toolbox__controls${compact ? ' is-compact' : ''}`}>
-        <div className="afl-toolbox__identity-row">
-          <div className="afl-toolbox__heading">
-            <span className="afl-toolbox__region">LABEL WORKSPACE / TOOLS</span>
-            <h2 id="toolbox-title">Product Toolbox</h2>
-            <p className="afl-toolbox__product" title={brandName}><strong>{brandName}</strong><span>{[data.effective_time, data.openfda_status].filter(Boolean).join(' · ')}</span></p>
+        <div className="afl-reader-toolbar" style={{ padding: '0 0 12px' }}>
+          <div className="afl-reader-toolbar__leading">
+            <LabelToolStrip setId={setId} />
+          </div>
+          <div className="afl-reader-toolbar__identity">
+            <span className="afl-reader-toolbar__eyebrow">PRODUCT TOOLBOX</span>
+            <strong id="toolbox-title" title={brandName}>{brandName}</strong>
+            <span className="afl-reader-toolbar__metadata">
+              {[data.effective_time, data.openfda_status].filter(Boolean).join(' · ')}
+            </span>
           </div>
           <div className="afl-toolbox__header-actions">
-            <button type="button" className="label-tool-btn" aria-expanded={!headerCollapsed} onClick={() => {
+            <button type="button" className="label-tool-btn label-tool-details" aria-expanded={!headerCollapsed} onClick={() => {
               setHeaderCollapsed(!headerCollapsed);
               if (headerCollapsed) requestAnimationFrame(() => controls.current?.closest('.afl-label-shell__scroll')?.scrollTo({ top: 0, behavior: 'smooth' }));
             }}>{headerCollapsed ? 'Label details' : 'Collapse details'}</button>
-            <Link className="label-tool-btn" href={labelRoute(setId, undefined, { splId: splId || undefined })}>← Back to label</Link>
           </div>
         </div>
         <div className="afl-toolbox__filters" role="group" aria-label="Toolbox filters and view">

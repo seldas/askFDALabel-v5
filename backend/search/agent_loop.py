@@ -368,11 +368,18 @@ def _run_gemini_loop(
         text_buf = ""
         flushed = False
         collected_fcs: List[Any] = []
+        raw_model_parts: List[genai_types.Part] = []
         last_usage = None
 
         for chunk in stream:
             if getattr(chunk, "usage_metadata", None):
                 last_usage = chunk.usage_metadata
+
+            cands = getattr(chunk, "candidates", None) or []
+            if cands and getattr(cands[0], "content", None) and getattr(cands[0].content, "parts", None):
+                for part in cands[0].content.parts:
+                    if getattr(part, "function_call", None) or getattr(part, "thought_signature", None) or getattr(part, "thought", False):
+                        raw_model_parts.append(part)
 
             chunk_fcs = getattr(chunk, "function_calls", None) or []
             if chunk_fcs:
@@ -397,15 +404,16 @@ def _run_gemini_loop(
             )
 
         if collected_fcs:
-            # Discard any short pre-tool preamble in text_buf so it doesn't leak
-            model_parts = [
-                genai_types.Part.from_function_call(
-                    name=fc.name,
-                    args=dict(fc.args) if fc.args else {},
-                )
-                for fc in collected_fcs
-            ]
-            contents.append(genai_types.Content(role="model", parts=model_parts))
+            # Preserve raw model parts (including thought_signature) for Gemini 2.5/3.x
+            if not raw_model_parts:
+                raw_model_parts = [
+                    genai_types.Part.from_function_call(
+                        name=fc.name,
+                        args=dict(fc.args) if fc.args else {},
+                    )
+                    for fc in collected_fcs
+                ]
+            contents.append(genai_types.Content(role="model", parts=raw_model_parts))
 
             resp_parts: List[genai_types.Part] = []
             for fc in collected_fcs:

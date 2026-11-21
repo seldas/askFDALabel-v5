@@ -550,121 +550,117 @@ function LabelContent() {
         date={data.effective_time} status={data.openfda_status} progress={readingProgress}
         tocCollapsed={tocCollapsed} onToggleContents={() => setTocCollapsed(!tocCollapsed)}
         chatOpen={chatOpen} onToggleChat={() => setChatOpen(previous => !previous)}
-      >
-          {/* Product Specifications — pop window to the left of AI Chat */}
-          <button
-            id="product-specs-btn"
-            className="label-tool-btn label-tool-specs"
-            onClick={() => setProductSpecsModalOpen(true)}
-            data-tooltip="Product Specifications"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-            <span>Specs</span>
-            <svg className="pop-indicator" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-          </button>
+        leadingTools={<LabelToolStrip setId={setId} />}
+        secondaryActions={
+          <>
+            {session?.is_authenticated && (
+              <button
+                id="export-pdf-btn"
+                onClick={() => {
+                  const allIds = new Set<string>();
+                  const addIdsRecursive = (items: any[]) => {
+                    items.forEach(i => {
+                      allIds.add(i.id);
+                      if (i.children && i.children.length > 0) {
+                        addIdsRecursive(i.children);
+                      }
+                    });
+                  };
+                  if (data.table_of_contents) {
+                    addIdsRecursive(data.table_of_contents);
+                  }
+                  setSelectedSectionsForExport(allIds);
+                  setExportModalOpen(true);
+                }}
+                data-tooltip="Export Selected Sections"
+                className="label-tool-btn label-tool-export"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>Export</span>
+              </button>
+            )}
 
-          {/* MedDRA Stats — label tab only, enabled ONLY when PV-profile is ready */}
-          {activeTab === 'label-view' && (
             <button
-              id="meddra-stats-btn"
-              disabled={pvProfileReady === false}
-              onClick={() => {
-                setMeddraModalOpen(true);
-                setTimeout(() => {
-                  (window as any).loadMeddraStatistics?.();
-                }, 50);
-              }}
-              className={`label-tool-btn label-tool-meddra ${pvProfileReady === false ? 'disabled' : ''}`}
-              data-tooltip={
-                pvProfileReady === false
-                  ? "PV-Profile not generated yet. Open Toolbox > PV-Profile to generate adverse event profile."
-                  : "Adverse Events & MedDRA Statistics (Verified by PV-Profile)"
-              }
-              style={pvProfileReady === false ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+              id="favorite-btn"
+              className={`label-tool-btn label-tool-fav ${isFavoriteAny ? 'active' : ''}`}
+              onClick={handleFavoriteClick}
+              disabled={!session?.is_authenticated}
+              data-tooltip={session?.is_authenticated ? "Add to Projects" : "Login Required to Add to Projects"}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-              <span>AEs</span>
-              <svg className="pop-indicator" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>Projects</span>
             </button>
-          )}
 
-          {/* Notes — label tab + authenticated only */}
-          {activeTab === 'label-view' && session?.is_authenticated && (
-            <button
-              id="user-notes-btn"
-              className="label-tool-btn label-tool-notes"
-              data-tooltip="Annotation Notes"
-              onClick={() => setNotesModalOpen(true)}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-              <span>Notes</span>
-              <svg className="pop-indicator" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-            </button>
-          )}
-
-          {/* Export — authenticated only */}
-          {session?.is_authenticated && (
-            <button 
-              id="export-pdf-btn"
-              onClick={() => {
-                const allIds = new Set<string>();
-                const addIdsRecursive = (items: any[]) => {
-                  items.forEach(i => {
-                    allIds.add(i.id);
-                    if (i.children && i.children.length > 0) {
-                      addIdsRecursive(i.children);
-                    }
-                  });
-                };
-                if (data.table_of_contents) {
-                  addIdsRecursive(data.table_of_contents);
+            {activeTab === 'label-view' && (
+              <button
+                id="meddra-stats-btn"
+                disabled={pvProfileReady === false}
+                onClick={() => {
+                  setMeddraModalOpen(true);
+                  setTimeout(() => {
+                    (window as any).loadMeddraStatistics?.();
+                  }, 50);
+                }}
+                className={`label-tool-btn label-tool-meddra ${pvProfileReady === false ? 'disabled' : ''}`}
+                data-tooltip={
+                  pvProfileReady === false
+                    ? "PV-Profile not generated yet. Open Toolbox > PV-Profile to generate adverse event profile."
+                    : "Adverse Events & MedDRA Statistics (Verified by PV-Profile)"
                 }
-                setSelectedSectionsForExport(allIds);
-                setExportModalOpen(true);
-              }}
-              data-tooltip="Export Selected Sections"
-              className="label-tool-btn label-tool-export"
+                style={pvProfileReady === false ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                <span>AEs</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="label-tool-btn"
+              aria-pressed={readingFocus}
+              onClick={() => { setHeaderCollapsed(true); setReadingFocus(!readingFocus); }}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              <span>Export</span>
-              <svg className="pop-indicator" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+              <span>{readingFocus ? 'Exit focus' : 'Focus reading'}</span>
             </button>
-          )}
-
-          {/* Add to Projects button (Fav) */}
-          <button 
-            id="favorite-btn" 
-            className={`label-tool-btn label-tool-fav ${isFavoriteAny ? 'active' : ''}`}
-            onClick={handleFavoriteClick}
-            disabled={!session?.is_authenticated}
-            data-tooltip={session?.is_authenticated ? "Add to Projects" : "Login Required to Add to Projects"}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            <span>Projects</span>
-            <svg className="pop-indicator" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-          </button>
-
-        <button type="button" className="label-tool-btn" aria-expanded={!headerCollapsed}
+          </>
+        }
+      >
+        <button
+          type="button"
+          className="label-tool-btn label-tool-details"
+          aria-expanded={!headerCollapsed}
           onClick={() => {
             if (headerCollapsed) {
               setReadingFocus(false);
               setHeaderCollapsed(false);
               requestAnimationFrame(() => document.querySelector('.afl-label-shell__scroll')?.scrollTo({ top: 0, behavior: 'smooth' }));
             } else { setHeaderCollapsed(true); }
-          }}>
+          }}
+        >
           {headerCollapsed ? 'Label details' : 'Collapse details'}
         </button>
-        {data.has_boxed_warning && (
-          <a className="label-tool-btn label-tool-meddra"
-            href={`#${data.table_of_contents?.find(item => item.is_boxed_warning)?.id || 'highlights-section'}`}>
-            Boxed warning
-          </a>
-        )}
-          <button type="button" className="label-tool-btn" aria-pressed={readingFocus}
-            onClick={() => { setHeaderCollapsed(true); setReadingFocus(!readingFocus); }}>
-            <span>{readingFocus ? 'Exit focus' : 'Focus reading'}</span>
+
+        <button
+          id="product-specs-btn"
+          className="label-tool-btn label-tool-specs"
+          onClick={() => setProductSpecsModalOpen(true)}
+          data-tooltip="Products & Packaging"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          <span>Products</span>
+        </button>
+
+        {activeTab === 'label-view' && session?.is_authenticated && (
+          <button
+            id="user-notes-btn"
+            className="label-tool-btn label-tool-notes"
+            data-tooltip="Annotation Notes"
+            onClick={() => setNotesModalOpen(true)}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            <span>Notes</span>
           </button>
-        <div className="afl-reader-toolbar__tools"><LabelToolStrip setId={setId} /></div>
+        )}
       </ReaderToolbar>
 
       <div className="function-content-area" style={{ 
@@ -702,10 +698,10 @@ function LabelContent() {
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--fdl-line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--fdl-canvas)' }}>
               <div>
                 <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--fdl-navy-950)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span>📦</span> Product Specifications
+                  <span>📦</span> Products
                 </h2>
                 <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: 'var(--fdl-muted)' }}>
-                  Structured product registration &amp; packaging specifications extracted from the SPL XML document.
+                  Product registration, packaging, and ingredient details extracted from the SPL XML document.
                 </p>
               </div>
               <button
