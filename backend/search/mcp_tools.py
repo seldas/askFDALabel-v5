@@ -133,7 +133,11 @@ def _build_wire_query(args: Dict[str, Any]) -> Dict[str, Any]:
     return {"groups": [{"criteria": criteria}], "exactMatch": False}
 
 
-def _execute_oracle_search(wire_query: Dict[str, Any], limit: int) -> Optional[Dict[str, Any]]:
+def _execute_oracle_search(
+    wire_query: Dict[str, Any],
+    limit: int,
+    base_table: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
     """Executes a WireQuery against Oracle if a connection is available."""
     conn = FDALabelDBService.get_oracle_connection()
     if not conn:
@@ -148,7 +152,7 @@ def _execute_oracle_search(wire_query: Dict[str, Any], limit: int) -> Optional[D
             offset=0,
             expand_meddra=_expand_meddra,
             capabilities=_capabilities(),
-            base_table=_oracle_base_table("oracle"),
+            base_table=base_table or _oracle_base_table("oracle"),
         )
         cur = conn.cursor()
         cur.execute(sql, params)
@@ -193,8 +197,8 @@ def _execute_oracle_search(wire_query: Dict[str, Any], limit: int) -> Optional[D
                         "application_number": r[5] or "",
                         "ndc_codes": r[6] or "",
                         "revised_date": str(r[8] or "") if len(r) > 8 else "",
-                        "market_category": str(r[10] or "") if len(r) > 10 else "",
-                        "is_rld": False,
+                        "market_category": str(r[9] or "") if len(r) > 9 else "",
+                        "is_rld": bool(r[15]) if len(r) > 15 else False,
                     })
 
         for item in results:
@@ -236,7 +240,17 @@ def _execute_local_search(args: Dict[str, Any], limit: int) -> Dict[str, Any]:
     if not query_str:
         return {"source_db": "local", "total_count": 0, "results": []}
 
-    rows, total_count = FDALabelDBService.search_labels_with_count(query_str, limit=limit)
+    rows, total_count = FDALabelDBService.search_labels_with_count(
+        query_str, limit=limit, force_local=True
+    )
+    if total_count == 0 and args.get("application_number"):
+        m = _APPNUM_RE.match(str(args["application_number"]).strip())
+        if m:
+            spaced_app = f"{m.group(1).upper()} {m.group(2)}"
+            if spaced_app != query_str:
+                rows, total_count = FDALabelDBService.search_labels_with_count(
+                    spaced_app, limit=limit, force_local=True
+                )
     results = []
     for r in rows:
         results.append({
@@ -280,10 +294,22 @@ def handle_search_labels(args: Dict[str, Any], user: Any) -> Dict[str, Any]:
     payload = None
     if target_db == "oracle":
         payload = _execute_oracle_search(wire_query, limit=limit)
+        if payload is not None and payload.get("total_count", 0) == 0:
+            from labelquery.oracle_compiler import BASE_TABLE_ALL
+            all_payload = _execute_oracle_search(wire_query, limit=limit, base_table=BASE_TABLE_ALL)
+            if all_payload is not None and all_payload.get("total_count", 0) > 0:
+                payload = all_payload
 
     if payload is None:
         payload = _execute_local_search(args, limit=limit)
         effective_db = "local"
+    elif payload.get("total_count", 0) == 0:
+        local_payload = _execute_local_search(args, limit=limit)
+        if local_payload.get("total_count", 0) > 0:
+            payload = local_payload
+            effective_db = "local"
+        else:
+            effective_db = "oracle"
     else:
         effective_db = "oracle"
 
