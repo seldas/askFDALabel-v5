@@ -229,7 +229,7 @@ export default function Header({
             lineHeight: '1.2',
             letterSpacing: '0.05em'
           }}>
-            alpha
+            beta
           </span>
         </h1>
       </div>
@@ -276,17 +276,6 @@ export default function Header({
             >
               <ToolIcon id={searchTool.iconId} size={16} />
               <span style={{ fontWeight: 800 }}>LabelChat</span>
-              <span style={{
-                background: '#dcecf8',
-                color: '#0759a5',
-                fontSize: '0.6rem',
-                fontWeight: 800,
-                padding: '1px 5px',
-                borderRadius: '2px',
-                letterSpacing: '0.05em',
-                lineHeight: 1.2,
-                display: 'inline-block',
-              }}>BETA</span>
             </a>
           );
         })()}
@@ -639,7 +628,7 @@ export default function Header({
               <div className="about-product">
                 <div className="about-product-heading">
                   <span>AskFDALabel V3</span>
-                  <span className="about-badge">Alpha</span>
+                  <span className="about-badge">Beta</span>
                 </div>
                 <p>Search, review, and analyze FDA drug-label metadata.</p>
               </div>

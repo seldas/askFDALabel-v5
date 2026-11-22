@@ -52,9 +52,14 @@ Guidelines:
 
 def _pick_provider_chain(user: Any, requested_provider: Optional[str]) -> List[str]:
     """Returns ordered list of providers to try, defaulting to Elsa when available."""
+    from dashboard.services.deployment import is_rapid
+
     allowed = allowed_providers()
     if not allowed:
         return []
+
+    if is_rapid():
+        return ["elsa"] if "elsa" in allowed else []
 
     req = normalize_provider(requested_provider) if requested_provider else ""
     if req and req in allowed:

@@ -24,10 +24,20 @@ def list_models():
         public_catalog,
         resolve_provider,
     )
+    from dashboard.services.deployment import is_rapid
 
     user_obj = current_user._get_current_object() if current_user.is_authenticated else None
     catalog = public_catalog()
     allowed = allowed_providers()
+
+    if is_rapid():
+        catalog = [m for m in catalog if m.get("id") == "elsa"]
+        default_provider = "elsa" if "elsa" in allowed else ""
+        return jsonify({
+            "models": catalog,
+            "default_provider": default_provider,
+        }), 200
+
     if "elsa" in allowed:
         default_provider = "elsa"
     elif allowed:

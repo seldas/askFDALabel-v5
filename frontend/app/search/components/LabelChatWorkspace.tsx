@@ -575,7 +575,7 @@ export const LabelChatWorkspace: React.FC = () => {
               className="lc-model-select"
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
-              disabled={isStreaming}
+              disabled={isStreaming || models.length <= 1}
             >
               {models.length > 0 ? (
                 models.map((m) => (
