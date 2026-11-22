@@ -24,6 +24,7 @@ export const McpConnectModal: React.FC<McpConnectModalProps> = ({
   const [wasCreated, setWasCreated] = useState<boolean>(false);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   useEffect(() => {
     if (!open || !canUseApiKey || apiKey) return;
@@ -94,6 +95,32 @@ export const McpConnectModal: React.FC<McpConnectModalProps> = ({
       setTimeout(() => setter(false), 2000);
     } catch {
       // Clipboard fallback ignored if blocked
+    }
+  };
+
+  const handleRegenerateKey = async () => {
+    if (
+      regenerating ||
+      !window.confirm(
+        'Generate a new API key? Your previous key will stop working immediately.'
+      )
+    ) {
+      return;
+    }
+    setRegenerating(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/dashboard/auth/api-key/generate', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to regenerate API key.');
+      }
+      setApiKey(data.api_key || '');
+      setWasCreated(true);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to regenerate API key.');
+    } finally {
+      setRegenerating(false);
     }
   };
 
@@ -170,6 +197,15 @@ export const McpConnectModal: React.FC<McpConnectModalProps> = ({
                     >
                       {copiedKey ? <CheckIcon sx={{ fontSize: 14 }} /> : <ContentCopyIcon sx={{ fontSize: 14 }} />}
                       <span>{copiedKey ? 'Copied' : 'Copy Key'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="lc-topbar-btn"
+                      onClick={handleRegenerateKey}
+                      disabled={regenerating}
+                      title="Rotate API key (revokes previous key)"
+                    >
+                      <span>{regenerating ? 'Regenerating...' : 'Regenerate Key'}</span>
                     </button>
                   </div>
                 </div>

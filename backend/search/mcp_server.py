@@ -2,6 +2,7 @@
 
 import json
 import logging
+import time
 from typing import Any, Dict, List, Optional, Tuple
 from flask import Blueprint, Response, jsonify, request
 
@@ -83,8 +84,17 @@ def _handle_single_message(msg: Any, user: Any) -> Tuple[Optional[Dict[str, Any]
         if not isinstance(tool_args, dict):
             return _jsonrpc_error(req_id, -32602, "Tool arguments must be an object."), 200
 
+        t0 = time.monotonic()
         output = DEFAULT_REGISTRY.call(tool_name, tool_args, user)
+        elapsed_ms = int((time.monotonic() - t0) * 1000)
         is_error = isinstance(output, dict) and "error" in output and len(output) == 1
+        logger.info(
+            "MCP tools/call user=%s tool=%s is_error=%s elapsed_ms=%d",
+            getattr(user, "username", getattr(user, "id", "?")),
+            tool_name,
+            is_error,
+            elapsed_ms,
+        )
         return (
             _jsonrpc_result(
                 req_id,
