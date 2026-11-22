@@ -16,8 +16,10 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import CheckIcon from '@mui/icons-material/Check';
+import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import { useUser } from '../../context/UserContext';
 import { ActionButtons } from './ActionButtons';
+import { McpConnectModal } from './McpConnectModal';
 import type { ActionButton, ActiveFocus, ChatMessage, HistoryItem, ModelOption, ToolStep } from '../types';
 
 const STARTER_PROMPTS = [
@@ -121,6 +123,7 @@ export const LabelChatWorkspace: React.FC = () => {
   const [editingHistoryId, setEditingHistoryId] = useState<number | null>(null);
   const [editingTitle, setEditingTitle] = useState<string>('');
   const [activeFocus, setActiveFocus] = useState<ActiveFocus | null>(null);
+  const [mcpModalOpen, setMcpModalOpen] = useState<boolean>(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -548,6 +551,15 @@ export const LabelChatWorkspace: React.FC = () => {
               <AddCommentOutlinedIcon sx={{ fontSize: 18 }} />
               <span>New Chat</span>
             </button>
+            <button
+              type="button"
+              className="lc-topbar-btn"
+              onClick={() => setMcpModalOpen(true)}
+              title="Connect askFDALabel MCP to Claude Desktop or Claude Code"
+            >
+              <HubOutlinedIcon sx={{ fontSize: 18 }} />
+              <span>Use in Claude</span>
+            </button>
           </div>
 
           <div className="lc-topbar-center">
@@ -729,6 +741,11 @@ export const LabelChatWorkspace: React.FC = () => {
           </div>
         </div>
       </main>
+      <McpConnectModal
+        open={mcpModalOpen}
+        onClose={() => setMcpModalOpen(false)}
+        canUseApiKey={canPersistHistory}
+      />
     </div>
   );
 };

@@ -14,6 +14,7 @@ load_dotenv(dotenv_path=env_path)
 from dashboard import create_app as create_dashboard_app
 # Import Blueprints
 from search.blueprint import search_bp
+from search.mcp_server import mcp_bp
 from drugtox.blueprint import drugtox_bp
 from labelcomp.blueprint import labelcomp_bp
 from device.blueprint import device_bp
@@ -42,6 +43,7 @@ def create_unified_app():
 
     # 3. Register Blueprints with prefixes
     app.register_blueprint(search_bp, url_prefix='/api/search')
+    app.register_blueprint(mcp_bp, url_prefix='/api/mcp')
     app.register_blueprint(drugtox_bp, url_prefix='/api/drugtox')
     app.register_blueprint(labelcomp_bp, url_prefix='/api/labelcomp')
     app.register_blueprint(device_bp, url_prefix='/api/device')

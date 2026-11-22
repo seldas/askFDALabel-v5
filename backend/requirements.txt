@@ -11,6 +11,7 @@ flask-cors
 openpyxl
 SQLAlchemy
 requests
+httpx
 google-genai
 Flask-SQLAlchemy
 Flask-Migrate

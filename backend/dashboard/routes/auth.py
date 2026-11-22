@@ -213,6 +213,30 @@ def generate_api_key():
     })
 
 
+@auth_bp.route('/api-key/ensure', methods=['POST'])
+@login_required
+def ensure_api_key():
+    """Returns the current user's API key, generating one if none exists yet."""
+    if current_user.is_guest:
+        return jsonify({'error': 'API key generation is not available for guest accounts.'}), 403
+
+    existing = getattr(current_user, 'api_key', None)
+    if existing:
+        return jsonify({
+            'success': True,
+            'api_key': existing,
+            'created': False,
+        })
+
+    key = current_user.generate_api_key()
+    db.session.commit()
+    return jsonify({
+        'success': True,
+        'api_key': key,
+        'created': True,
+    })
+
+
 @auth_bp.route('/api-key', methods=['DELETE'])
 @login_required
 def revoke_api_key():
