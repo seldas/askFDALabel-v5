@@ -198,6 +198,9 @@ def _execute_oracle_search(wire_query: Dict[str, Any], limit: int) -> Optional[D
                     })
 
         for item in results:
+            ndc_str = item.get("ndc_codes") or ""
+            if len(ndc_str) > 120:
+                item["ndc_codes"] = ndc_str[:120] + "..."
             item["product_role"] = _classify_product_role(
                 bool(item.get("is_rld")),
                 item.get("application_number", ""),
@@ -249,6 +252,9 @@ def _execute_local_search(args: Dict[str, Any], limit: int) -> Dict[str, Any]:
             "is_rld": bool(r.get("is_rld", False)),
         })
     for item in results:
+        ndc_str = item.get("ndc_codes") or ""
+        if len(ndc_str) > 120:
+            item["ndc_codes"] = ndc_str[:120] + "..."
         item["product_role"] = _classify_product_role(
             bool(item.get("is_rld")),
             item.get("application_number", ""),
@@ -264,7 +270,7 @@ def _execute_local_search(args: Dict[str, Any], limit: int) -> Dict[str, Any]:
 
 def handle_search_labels(args: Dict[str, Any], user: Any) -> Dict[str, Any]:
     """Searches FDA drug labels in Oracle (primary) or local PostgreSQL."""
-    limit = max(1, min(int(args.get("limit") or 10), 20))
+    limit = max(1, min(int(args.get("limit") or 8), 15))
     target_db = (args.get("target_db") or "oracle").strip().lower()
 
     wire_query = _build_wire_query(args)
@@ -352,6 +358,7 @@ def handle_read_label_sections(args: Dict[str, Any], user: Any) -> Dict[str, Any
     xml_content, source = FDALabelDBService.resolve_spl_xml(set_id, spl_id=spl_id)
     if not xml_content:
         return {
+            "has_full_text": False,
             "error": f"SPL XML not available locally or in Oracle for set_id={set_id}.",
             "set_id": set_id,
         }
@@ -396,7 +403,7 @@ def handle_read_label_sections(args: Dict[str, Any], user: Any) -> Dict[str, Any
             matched = sections[:6]
 
     # Enforce character budget (24,000 chars total)
-    budget = 24000
+    budget = 16000
     used = 0
     out_sections = []
     for s in matched:
@@ -415,6 +422,7 @@ def handle_read_label_sections(args: Dict[str, Any], user: Any) -> Dict[str, Any
     return {
         "set_id": set_id,
         "source": source,
+        "has_full_text": True,
         "matched_count": len(out_sections),
         "sections": out_sections,
         "available_titles": [s["title"] for s in sections[:40]],
@@ -429,7 +437,7 @@ def handle_query_drugtox(args: Dict[str, Any], user: Any) -> Dict[str, Any]:
     """Queries harmonized DrugTox records in public.drug_toxicity."""
     q = (args.get("query") or "").strip()
     tox_type = (args.get("tox_type") or "DILI").strip()
-    limit = max(1, min(int(args.get("limit") or 10), 20))
+    limit = max(1, min(int(args.get("limit") or 8), 15))
 
     if not q:
         return {"error": "query (drug name, generic name, or set_id) is required."}

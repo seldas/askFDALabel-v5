@@ -277,6 +277,51 @@ def _derive_actions(
     return validate_and_filter_actions(candidates, user)[:5]
 
 
+
+_UUID_EXTRACT_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I)
+
+
+def _seed_known_set_ids(messages: List[Dict[str, Any]], prior_focus: Optional[Dict[str, Any]]) -> set:
+    known = set()
+    if isinstance(prior_focus, dict) and prior_focus.get("set_id"):
+        known.add(str(prior_focus["set_id"]).strip().lower())
+    for m in messages:
+        for uid in _UUID_EXTRACT_RE.findall(str(m.get("content") or "")):
+            known.add(uid.lower())
+    return known
+
+
+def _execute_tool_guarded(
+    tname: str,
+    targs: Dict[str, Any],
+    user: Any,
+    seen_calls: set,
+    known_set_ids: set,
+) -> Dict[str, Any]:
+    """Runs a tool with duplicate-call deduplication and set_id allowlist verification."""
+    call_key = (tname, json.dumps(targs or {}, sort_keys=True, default=str))
+    if call_key in seen_calls:
+        return {"error": "Duplicate tool call with identical arguments. Use the previous result to answer the user."}
+    seen_calls.add(call_key)
+
+    if tname == "read_label_sections":
+        sid = str((targs or {}).get("set_id") or "").strip().lower()
+        if not sid or sid not in known_set_ids:
+            return {"error": "Unverified set_id. Call search_labels first to obtain a valid set_id."}
+
+    result = _execute_tool_guarded(tname, targs, user, seen_calls, known_set_ids)
+    if isinstance(result, dict):
+        for r in result.get("results") or []:
+            if isinstance(r, dict) and r.get("set_id"):
+                known_set_ids.add(str(r["set_id"]).strip().lower())
+        for v in result.get("versions") or []:
+            if isinstance(v, dict) and v.get("set_id"):
+                known_set_ids.add(str(v["set_id"]).strip().lower())
+        if result.get("set_id"):
+            known_set_ids.add(str(result["set_id"]).strip().lower())
+    return result
+
+
 def _extract_json_tool_call(text: str) -> Optional[Tuple[str, Dict[str, Any]]]:
     """Fallback parser when an OpenAI-compatible gateway rejects native tools."""
     m = re.search(r"```json\s*(\{.*?\})\s*```", text or "", re.DOTALL)
@@ -350,6 +395,8 @@ def _run_gemini_loop(
         )
 
     tool_outputs: List[Tuple[str, Dict[str, Any]]] = []
+    seen_calls: set = set()
+    known_set_ids = _seed_known_set_ids(messages, prior_focus)
 
     for step in range(MAX_TOOL_STEPS):
         yield {"type": "status", "text": "Thinking..." if step == 0 else "Synthesizing results..."}
@@ -421,7 +468,7 @@ def _run_gemini_loop(
                 targs = dict(fc.args) if fc.args else {}
                 yield {"type": "status", "text": _friendly_status(tname), "tool": tname}
                 yield {"type": "tool_call", "tool": tname, "arguments": targs}
-                result = DEFAULT_REGISTRY.call(tname, targs, user)
+                result = _execute_tool_guarded(tname, targs, user, seen_calls, known_set_ids)
                 tool_outputs.append((tname, result))
                 yield {"type": "tool_result", "tool": tname, "summary": _summarize_tool_result(tname, result)}
                 resp_parts.append(
@@ -449,7 +496,7 @@ def _run_gemini_loop(
         if follow_ups:
             yield {"type": "follow_ups", "items": follow_ups}
 
-        yield {"type": "done", "provider": "gemini", "model": model}
+        yield {"type": "done", "provider": "gemini", "model": model, "grounded": len(tool_outputs) > 0}
         return
 
     yield {"type": "token", "text": "I gathered the available information; please refine your question if you need more details."}
@@ -459,7 +506,7 @@ def _run_gemini_loop(
     final_actions = _derive_actions(tool_outputs, focus, user)
     if final_actions:
         yield {"type": "actions", "actions": final_actions}
-    yield {"type": "done", "provider": "gemini", "model": model}
+    yield {"type": "done", "provider": "gemini", "model": model, "grounded": len(tool_outputs) > 0}
 
 
 def _run_with_provider(
@@ -477,6 +524,8 @@ def _run_with_provider(
         return
 
     tool_outputs: List[Tuple[str, Dict[str, Any]]] = []
+    seen_calls: set = set()
+    known_set_ids = _seed_known_set_ids(messages, prior_focus)
     working_msgs = list(messages)
     use_native_tools = bool(openai_tools)
 
@@ -587,7 +636,7 @@ def _run_with_provider(
 
                 yield {"type": "status", "text": _friendly_status(tname), "tool": tname}
                 yield {"type": "tool_call", "tool": tname, "arguments": targs}
-                result = DEFAULT_REGISTRY.call(tname, targs, user)
+                result = _execute_tool_guarded(tname, targs, user, seen_calls, known_set_ids)
                 tool_outputs.append((tname, result))
                 yield {"type": "tool_result", "tool": tname, "summary": _summarize_tool_result(tname, result)}
 
@@ -604,7 +653,7 @@ def _run_with_provider(
                 tname, targs = parsed
                 yield {"type": "status", "text": _friendly_status(tname), "tool": tname}
                 yield {"type": "tool_call", "tool": tname, "arguments": targs}
-                result = DEFAULT_REGISTRY.call(tname, targs, user)
+                result = _execute_tool_guarded(tname, targs, user, seen_calls, known_set_ids)
                 tool_outputs.append((tname, result))
                 yield {"type": "tool_result", "tool": tname, "summary": _summarize_tool_result(tname, result)}
                 working_msgs.append({"role": "assistant", "content": full_content})
@@ -632,7 +681,7 @@ def _run_with_provider(
         if follow_ups:
             yield {"type": "follow_ups", "items": follow_ups}
 
-        yield {"type": "done", "provider": provider, "model": model}
+        yield {"type": "done", "provider": provider, "model": model, "grounded": len(tool_outputs) > 0}
         return
 
     yield {"type": "status", "text": "Finalizing answer..."}
@@ -656,7 +705,7 @@ def _run_with_provider(
     follow_ups = _build_follow_ups(tool_outputs, focus, user)
     if follow_ups:
         yield {"type": "follow_ups", "items": follow_ups}
-    yield {"type": "done", "provider": provider, "model": model}
+    yield {"type": "done", "provider": provider, "model": model, "grounded": len(tool_outputs) > 0}
 
 
 def run_agent_stream(

@@ -62,6 +62,7 @@ export interface ChatMessage {
   followUps?: string[];
   focus?: ActiveFocus;
   modelUsed?: string;
+  grounded?: boolean;
 }
 
 export interface ModelOption {

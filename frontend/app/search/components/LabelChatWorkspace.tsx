@@ -230,6 +230,7 @@ export const LabelChatWorkspace: React.FC = () => {
       let accFollowUps: string[] = [];
       let accFocus: ActiveFocus | undefined = activeFocus || undefined;
       let modelUsed = '';
+      let isGrounded: boolean | undefined = undefined;
 
       const updateAssistant = (patch: Partial<ChatMessage>) => {
         setMessages((prev) => {
@@ -318,7 +319,8 @@ export const LabelChatWorkspace: React.FC = () => {
                 updateAssistant({ followUps: accFollowUps });
               } else if (evt.type === 'done') {
                 modelUsed = evt.model || evt.provider || '';
-                updateAssistant({ modelUsed });
+                isGrounded = typeof evt.grounded === 'boolean' ? evt.grounded : undefined;
+                updateAssistant({ modelUsed, grounded: isGrounded });
               } else if (evt.type === 'error') {
                 console.error('LabelChat stream error:', evt.error);
                 accContent =
@@ -352,6 +354,7 @@ export const LabelChatWorkspace: React.FC = () => {
           followUps: accFollowUps,
           focus: accFocus,
           modelUsed,
+          grounded: isGrounded,
         };
         const finalThread = [...baseMessages, finalAssistant];
         saveHistory(finalThread, currentHistoryId);
@@ -608,6 +611,13 @@ export const LabelChatWorkspace: React.FC = () => {
                     <div className="lc-msg-bubble">
                       {msg.role === 'assistant' && msg.content && msg.toolSteps && msg.toolSteps.length > 0 && (
                         <SourcesDisclosure steps={msg.toolSteps} />
+                      )}
+                      {msg.role === 'assistant' && msg.content && msg.grounded === false && (!msg.toolSteps || msg.toolSteps.length === 0) && (
+                        <div className="lc-sources-box">
+                          <span className="lc-sources-toggle" style={{ cursor: 'default', color: '#92400e', background: '#fffbeb', borderColor: '#fde68a' }}>
+                            General response · No FDA label queried
+                          </span>
+                        </div>
                       )}
 
                       {msg.content ? (
