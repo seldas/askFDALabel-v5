@@ -257,8 +257,39 @@ export default function Header({
         )}
       </button>
 
-      {/* Right Controls: 1. Resources, 2. User Panel, 3. About */}
+      {/* Right Controls: LabelChat, 1. Resources, 2. User Panel, 3. About */}
       <div className={cx('header-controls', mobileMenuOpen && 'open')}>
+
+        {/* Direct LabelChat Link */}
+        {(() => {
+          const searchTool = getTool('search');
+          if (!searchTool || !isToolAvailable(searchTool, GLOBAL_CTX, capabilities, toolAccess)) return null;
+          return (
+            <a
+              href={searchTool.href(GLOBAL_CTX)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="dropdown-trigger header-chip"
+              style={{ textDecoration: 'none', gap: '6px' }}
+              onClick={handleNavClick}
+              title={searchTool.blurb}
+            >
+              <ToolIcon id={searchTool.iconId} size={16} />
+              <span style={{ fontWeight: 800 }}>LabelChat</span>
+              <span style={{
+                background: '#dcecf8',
+                color: '#0759a5',
+                fontSize: '0.6rem',
+                fontWeight: 800,
+                padding: '1px 5px',
+                borderRadius: '2px',
+                letterSpacing: '0.05em',
+                lineHeight: 1.2,
+                display: 'inline-block',
+              }}>BETA</span>
+            </a>
+          );
+        })()}
 
         {/* 1. Resources Dropdown */}
         <div
@@ -374,41 +405,6 @@ export default function Header({
               <div className="dropdown-section-label" style={{ padding: '8px 12px 4px', fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>
                 Others
               </div>
-
-              {(() => {
-                const searchTool = getTool('search');
-                if (!searchTool || !isToolAvailable(searchTool, GLOBAL_CTX, capabilities, toolAccess)) return null;
-                return (
-                  <a
-                    href={searchTool.href(GLOBAL_CTX)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cx('hp-dropdown-item', resolvedActiveApp === 'afl' && 'is-active')}
-                    onClick={handleNavClick}
-                  >
-                    <span className="hp-dropdown-icon">
-                      <ToolIcon id={searchTool.iconId} size={18} />
-                    </span>
-                    <div style={{ flex: 1 }}>
-                      <div className="dropdown-title" style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span>LabelChat</span>
-                        <span style={{
-                          background: '#dcecf8',
-                          color: '#0759a5',
-                          fontSize: '0.6rem',
-                          fontWeight: 800,
-                          padding: '1px 5px',
-                          borderRadius: '2px',
-                          letterSpacing: '0.05em',
-                          lineHeight: 1.2,
-                          display: 'inline-block'
-                        }}>BETA</span>
-                      </div>
-                      <div style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 500 }}>{searchTool.blurb}</div>
-                    </div>
-                  </a>
-                );
-              })()}
 
               {(() => {
                 const drugtox = getTool('drugtox');
