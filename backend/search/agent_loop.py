@@ -314,7 +314,7 @@ def _execute_tool_guarded(
         if not sid or sid not in known_set_ids:
             return {"error": "Unverified set_id. Call search_labels first to obtain a valid set_id."}
 
-    result = _execute_tool_guarded(tname, targs, user, seen_calls, known_set_ids)
+    result = DEFAULT_REGISTRY.call(tname, targs, user)
     if isinstance(result, dict):
         for r in result.get("results") or []:
             if isinstance(r, dict) and r.get("set_id"):
