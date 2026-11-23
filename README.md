@@ -10,7 +10,7 @@ AskFDALabel is an enterprise-grade FDA drug and device labeling intelligence sui
 
 | Module | Route / Path | Core Description | Documentation |
 | :--- | :--- | :--- | :--- |
-| **Global AI Search** | `/search` | DB-first decision routing (`uuid`, `ndc`, `appnum`, `keyword`, `general`), XML disk extraction, and conversational synthesis. | [Search & Discovery](documents/modules/search_and_discovery.md) |
+| **Label Copilot** | `/search` | AI copilot with MCP tool-calling for searching FDA labels, reading SPL sections, tracing version history, checking FAERS/DrugTox signals, and `/api/mcp` integration. | [Search & Discovery](documents/modules/search_and_discovery.md) |
 | **Criteria Query Builder** | `/querybuilder` | 3-step structured filter builder, AI natural language intent compiler, Late Materialization, and Excel export. | [Query Builder Docs](documents/modules/local_query_builder.md) |
 | **Adverse Events & MedDRA** | `/labeling-ae` | In-situ SPL XML clinical text rendering with hierarchical MedDRA (SOC/HLGT/HLT/PT/LLT) multi-color keyword highlighting. | [Labeling AE & MedDRA](documents/modules/labeling_ae_and_meddra.md) |
 | **PV Profile & QC** | `/pv-profile` | SIDER 4.1-style adverse event evidence grid, user tagging, manual reconciliation, and automated rule-based QC verification. | [PV Profile & QC](documents/modules/pv_profile_and_qc.md) |
@@ -65,7 +65,7 @@ documents/
 ```text
 ├── backend/                               # Flask application, blueprints, services, database models
 │   ├── dashboard/                         # Base dashboard app, config, auth, and API routes
-│   ├── search/                            # DB-first search blueprint and chat endpoints
+│   ├── search/                            # Label Copilot agent loop, MCP tools, and /api/mcp server
 │   ├── labelquery/                        # Criteria query builder (PostgreSQL & Oracle compilers)
 │   ├── drugtox/                           # Drug toxicity assessment and FAERS integration
 │   ├── device/                            # openFDA device intelligence blueprint
