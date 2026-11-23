@@ -8,13 +8,13 @@ import RequireFeature from "../components/RequireFeature";
 import { LabelChatWorkspace } from "./components/LabelChatWorkspace";
 
 const SearchPage = () => (
-  <RequireFeature feature="LabelChat" featureKey="labelchat" activeApp="afl">
+  <RequireFeature feature="Label Copilot" featureKey="labelchat" activeApp="afl">
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <Header />
       <Suspense
         fallback={
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            Loading LabelChat...
+            Loading Label Copilot...
           </div>
         }
       >

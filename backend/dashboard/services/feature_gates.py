@@ -68,8 +68,8 @@ class FeatureSpec:
 FEATURE_CATALOG = [
     FeatureSpec(
         key='labelchat',
-        name='LabelChat',
-        blurb='AI chat that locates labeling records by drug name or identifier.',
+        name='Label Copilot',
+        blurb='AI copilot for searching FDA labels, reading SPL sections, tracing version history, and checking FAERS/DrugTox signals.',
         category='Modules',
         enforced_at='/api/search/* and the /search page',
         default_min_role=ROLE_DEVELOPER,

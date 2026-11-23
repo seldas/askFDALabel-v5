@@ -325,8 +325,8 @@ const LABEL_TOOLS: ToolDef[] = [
 const PLATFORM_TOOLS: ToolDef[] = [
   {
     id: 'search',
-    name: 'LabelChat',
-    blurb: 'Find labeling records by drug name, NDC, application number or set ID.',
+    name: 'Label Copilot',
+    blurb: 'AI copilot for searching FDA labels, reading SPL sections, tracing version history, and checking FAERS/DrugTox signals.',
     iconId: 'chat',
     kind: 'embedded',
     group: 'discover',

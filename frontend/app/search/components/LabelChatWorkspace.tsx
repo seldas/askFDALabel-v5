@@ -177,7 +177,7 @@ export const LabelChatWorkspace: React.FC = () => {
     async (updatedMessages: ChatMessage[], existingId: number | null) => {
       if (!canPersistHistory || updatedMessages.length === 0) return;
       const firstUser = updatedMessages.find((m) => m.role === 'user');
-      const title = (firstUser?.content || 'LabelChat Session').slice(0, 60);
+      const title = (firstUser?.content || 'Label Copilot Session').slice(0, 60);
       try {
         const res = await fetch('/api/search/history', {
           method: 'POST',
@@ -563,7 +563,7 @@ export const LabelChatWorkspace: React.FC = () => {
           </div>
 
           <div className="lc-topbar-center">
-            <span className="lc-brand-title">LabelChat</span>
+            <span className="lc-brand-title">Label Copilot</span>
           </div>
 
           <div className="lc-topbar-right">

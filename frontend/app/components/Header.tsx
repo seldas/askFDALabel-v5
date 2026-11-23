@@ -257,10 +257,10 @@ export default function Header({
         )}
       </button>
 
-      {/* Right Controls: LabelChat, 1. Resources, 2. User Panel, 3. About */}
+      {/* Right Controls: Label Copilot, 1. Resources, 2. User Panel, 3. About */}
       <div className={cx('header-controls', mobileMenuOpen && 'open')}>
 
-        {/* Direct LabelChat Link */}
+        {/* Direct Label Copilot Link */}
         {(() => {
           const searchTool = getTool('search');
           if (!searchTool || !isToolAvailable(searchTool, GLOBAL_CTX, capabilities, toolAccess)) return null;
@@ -275,7 +275,7 @@ export default function Header({
               title={searchTool.blurb}
             >
               <ToolIcon id={searchTool.iconId} size={16} />
-              <span style={{ fontWeight: 800 }}>LabelChat</span>
+              <span style={{ fontWeight: 800 }}>Label Copilot</span>
             </a>
           );
         })()}

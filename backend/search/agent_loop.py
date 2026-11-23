@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 MAX_TOOL_STEPS = 5
 _PREAMBLE_BUFFER_CHARS = 120
 
-SYSTEM_PROMPT = """You are LabelChat, the FDA drug labeling assistant for askFDALabel.
+SYSTEM_PROMPT = """You are Label Copilot, the FDA drug labeling assistant for askFDALabel.
 You help FDA reviewers, clinicians, and researchers search drug labels, read specific SPL sections, trace label version history, inspect FAERS adverse event signals, and check DrugTox toxicity data.
 
 Guidelines:
