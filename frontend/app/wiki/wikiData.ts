@@ -17,7 +17,7 @@ export const PATHS = {
   guides: { title: 'Complete a review task', short: 'Guides', description: 'Find the right labeling, examine evidence, and preserve your review.' },
   methods: { title: 'Understand data & results', short: 'Data & methods', description: 'Understand sources, analytical outputs, uncertainty, and verification.' },
 };
-export const SEARCH_CHAPTER_IDS = ['query-guide', 'find-labeling', 'search-scope', 'manual-query', 'ai-query', 'match-expansion', 'search-results', 'query-codes'];
+export const SEARCH_CHAPTER_IDS = ['query-guide', 'find-labeling', 'search-scope', 'manual-query', 'ai-query', 'label-copilot', 'match-expansion', 'search-results', 'query-codes'];
 const home = { href: '/', label: 'Find labeling' };
 const tools = { href: '/tools', label: 'Browse available tools' };
 const dailyMed = { title: 'NLM: About DailyMed', href: 'https://www.dailymed.nlm.nih.gov/dailymed/about-dailymed.cfm' };
@@ -116,15 +116,16 @@ const CONTENT: WikiArticle[] = [
     title: 'Search labeling',
     summary: 'Find labeling, check the matches, and choose documents to review.',
     tags: ['search', 'core workspace', 'query builder', 'LLM Search Assistant', 'review set'], action: home,
-    related: ['find-labeling', 'search-scope', 'manual-query', 'ai-query', 'match-expansion', 'search-results', 'query-codes'],
+    related: ['find-labeling', 'search-scope', 'manual-query', 'ai-query', 'label-copilot', 'match-expansion', 'search-results', 'query-codes'],
     sections: [
       { heading: 'The workflow', illustration: 'search-workflow' },
       { heading: 'Build your query', table: {
         columns: ['Start with', 'What to do'], rows: [
           ['Names or known conditions', 'Enter them directly in the Query Builder.'],
-          ['A question in plain language', 'Use LLM Search Assistant to search, or select Review before search to inspect the generated conditions.'],
+          ['A question in plain language (cohort search)', 'Use LLM Search Assistant to draft criteria, or select Review before search to inspect the generated conditions.'],
+          ['Exploratory, multi-source labeling questions', 'Open Label Copilot in the header to search labels, read SPL sections, trace versions, and check FAERS or DrugTox signals conversationally.'],
         ],
-      }, paragraphs: ['Both routes use the same editable criteria. Select Review before search to review an LLM draft before searching.'] },
+      }, paragraphs: ['Query Builder routes use the same editable criteria. Label Copilot runs an agentic tool-calling session and links back to LabelQuery or SPL View when deeper inspection is needed.'] },
       { heading: 'Check the scope', paragraphs: ['Search uses the database scope shown in the workspace—not necessarily Local. Available records and conditions depend on that scope.'] },
     ],
   },
@@ -160,6 +161,42 @@ const CONTENT: WikiArticle[] = [
         ['Restore Query', 'Loads saved conditions from a query code.'],
         ['External LLM', 'Use the provided query instructions, then import and check the generated conditions.'],
       ] } },
+    ],
+  },
+  {
+    id: 'label-copilot', path: 'guides', group: 'Search labeling', toolId: 'search',
+    title: 'Use Label Copilot',
+    summary: 'Ask plain-language questions grounded in labeling records, SPL sections, version history, FAERS, and DrugTox.',
+    tags: ['Label Copilot', 'copilot', 'MCP', 'agent', 'SPL sections', 'FAERS', 'DrugTox', 'Claude'],
+    action: { href: '/search', label: 'Open Label Copilot' },
+    related: ['query-guide', 'ai-query', 'evidence-types', 'label-chat-guide'],
+    sections: [
+      { heading: 'Choose between Label Copilot and Query Builder', table: {
+        columns: ['Use case', 'Recommended tool'],
+        rows: [
+          ['Build a reproducible cohort, filter by structured criteria, or export tables', 'Criteria Query Builder (with optional LLM Search Assistant)'],
+          ['Investigate a drug across labels, sections, revision history, FAERS, and DrugTox in one conversation', 'Label Copilot'],
+          ['Ask follow-up questions about a single open label', 'Chat tab inside the Labeling workspace'],
+        ],
+      } },
+      { heading: 'What Label Copilot can look up', table: {
+        columns: ['Capability', 'Grounded data source'],
+        rows: [
+          ['Product & identifier lookup', 'Searches labeling records by brand/generic name, NDC, application number, or set ID, prioritizing RLD/NDA/BLA reference products.'],
+          ['SPL section reading', 'Reads the Table of Contents and specific prescribing-information sections from stored SPL XML.'],
+          ['Version history & diffs', 'Lists historical revisions and compares section changes across label versions.'],
+          ['Safety, toxicity & Orange Book', 'Queries FAERS adverse event signals, DrugTox (DILI, DICT, DIRI, PGx) records, and Orange Book entries when relevant.'],
+        ],
+      } },
+      { heading: 'Workflow and verification', steps: [
+        'Open Label Copilot from the header and enter a question (or pick a starter prompt).',
+        'Watch the tool steps as Copilot searches records and reads sections; answers cite the Section Title and Revised Date.',
+        'Use the generated Action Buttons (such as Open SPL View, Compare Labels, or View All Results in LabelQuery) to inspect the primary document or full cohort.',
+        'Verify any regulatory or clinical conclusion against the original SPL text before recording a review finding.',
+      ] },
+      { heading: 'Use in Claude (MCP)', paragraphs: [
+        'Click Use in Claude in the Label Copilot toolbar to view connection details for the Streamable HTTP /api/mcp endpoint, allowing external MCP-compatible clients to reuse the same permission-gated labeling tools.',
+      ] },
     ],
   },
   {
