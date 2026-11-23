@@ -13,6 +13,7 @@ import logging
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
+from difflib import SequenceMatcher, unified_diff
 from typing import Any, Callable, Dict, List, Optional
 
 from sqlalchemy import text
@@ -453,6 +454,181 @@ def handle_read_label_sections(args: Dict[str, Any], user: Any) -> Dict[str, Any
         "sections": out_sections,
         "available_titles": [s["title"] for s in sections[:40]],
     }
+
+
+# ---------------------------------------------------------------------------
+# Label Comparison (aligned with labelcomp)
+# ---------------------------------------------------------------------------
+
+def _extract_labelcomp_sections(xml_content: str, set_id: str) -> Dict[str, Any]:
+    """Extracts metadata and section map using labelcomp's exact PLR/non-PLR alignment."""
+    from dashboard.services.xml_handler import (
+        extract_metadata_from_xml,
+        flatten_sections,
+        get_aggregate_content,
+        parse_spl_xml,
+    )
+    from dashboard.utils import extract_numeric_section_id, normalize_title_text
+
+    doc_title, sections, _, _, _, _ = parse_spl_xml(xml_content, set_id)
+    flat_sections = flatten_sections(sections)
+    meta = extract_metadata_from_xml(xml_content) or {}
+    label_format = meta.get("label_format", "PLR")
+
+    sections_by_key: Dict[str, str] = {}
+    titles_by_key: Dict[str, str] = {}
+    for s in flat_sections:
+        raw_title = s.get("title")
+        if not raw_title:
+            continue
+        norm_title = normalize_title_text(raw_title)
+        if label_format == "PLR":
+            normalized_lower = (norm_title or "").strip().lower()
+            if re.search(r"\bboxed warning(s)?\b", normalized_lower):
+                key = "0"
+            else:
+                key = extract_numeric_section_id(raw_title)
+            if key:
+                sections_by_key[key] = get_aggregate_content(s)
+                titles_by_key.setdefault(key, raw_title)
+        else:
+            key = norm_title
+            if key:
+                sections_by_key[key] = s.get("content", "")
+                titles_by_key.setdefault(key, raw_title)
+
+    return {
+        "title": doc_title,
+        "meta": meta,
+        "label_format": label_format,
+        "sections_by_key": sections_by_key,
+        "titles_by_key": titles_by_key,
+    }
+
+
+def _agg_normalize_lines(lines: Optional[List[str]]) -> str:
+    if not lines:
+        return ""
+    return re.sub(r"[^a-z0-9]", "", " ".join(lines).lower())
+
+
+def handle_compare_labels(args: Dict[str, Any], user: Any) -> Dict[str, Any]:
+    """Compares two SPL labels/versions using labelcomp's section-alignment and diff rules."""
+    from dashboard.utils import get_section_sort_key, normalize_text_for_diff
+
+    set_id_a = (args.get("set_id_a") or "").strip()
+    set_id_b = (args.get("set_id_b") or "").strip()
+    spl_id_a = (args.get("spl_id_a") or "").strip() or None
+    spl_id_b = (args.get("spl_id_b") or "").strip() or None
+    section_queries = [str(q).strip().lower() for q in (args.get("section_queries") or []) if str(q).strip()]
+    include_unchanged = bool(args.get("include_unchanged", False))
+
+    if not set_id_a or not set_id_b:
+        return {"error": "Provide both set_id_a and set_id_b."}
+
+    xml_a, source_a = FDALabelDBService.resolve_spl_xml(set_id_a, spl_id=spl_id_a)
+    if not xml_a:
+        return {"error": f"SPL XML not found for label A (set_id={set_id_a}, spl_id={spl_id_a})."}
+
+    xml_b, source_b = FDALabelDBService.resolve_spl_xml(set_id_b, spl_id=spl_id_b)
+    if not xml_b:
+        return {"error": f"SPL XML not found for label B (set_id={set_id_b}, spl_id={spl_id_b})."}
+
+    try:
+        parsed_a = _extract_labelcomp_sections(xml_a, set_id_a)
+        parsed_b = _extract_labelcomp_sections(xml_b, set_id_b)
+
+        all_keys = set(parsed_a["sections_by_key"].keys()) | set(parsed_b["sections_by_key"].keys())
+        is_plr = parsed_a["label_format"] == "PLR" and parsed_b["label_format"] == "PLR"
+        sorted_keys = sorted(all_keys, key=get_section_sort_key) if is_plr else sorted(all_keys)
+
+        changed_sections: List[Dict[str, Any]] = []
+        unchanged_sections: List[str] = []
+
+        for key in sorted_keys:
+            title = parsed_b["titles_by_key"].get(key) or parsed_a["titles_by_key"].get(key) or key
+            if section_queries and not any(q in key.lower() or q in title.lower() for q in section_queries):
+                continue
+
+            raw_a = parsed_a["sections_by_key"].get(key)
+            raw_b = parsed_b["sections_by_key"].get(key)
+            norm_a = list(normalize_text_for_diff(raw_a)) if raw_a else None
+            norm_b = list(normalize_text_for_diff(raw_b)) if raw_b else None
+            agg_a = _agg_normalize_lines(norm_a)
+            agg_b = _agg_normalize_lines(norm_b)
+
+            if not agg_a and not agg_b:
+                continue
+
+            is_same = (norm_a is not None and norm_b is not None and agg_a == agg_b)
+            if is_same:
+                unchanged_sections.append(f"{key} {title}".strip() if key != title else title)
+                continue
+
+            t1 = " ".join(norm_a) if norm_a else ""
+            t2 = " ".join(norm_b) if norm_b else ""
+            similarity = round(SequenceMatcher(None, t1, t2).ratio(), 3) if t1 and t2 else 0.0
+
+            if raw_a is None:
+                status = "added"
+            elif raw_b is None:
+                status = "removed"
+            elif similarity < 0.3 and len(t1) > 200 and len(t2) > 200:
+                status = "major_change"
+            else:
+                status = "modified"
+
+            entry: Dict[str, Any] = {
+                "key": key,
+                "title": title,
+                "status": status,
+                "similarity_ratio": similarity,
+            }
+
+            if status in ("added", "removed", "major_change"):
+                if t1:
+                    entry["text_a_preview"] = t1[:1200] + ("..." if len(t1) > 1200 else "")
+                if t2:
+                    entry["text_b_preview"] = t2[:1200] + ("..." if len(t2) > 1200 else "")
+            else:
+                lines_a = [ln.strip() for ln in (norm_a or []) if ln.strip()]
+                lines_b = [ln.strip() for ln in (norm_b or []) if ln.strip()]
+                diff_lines = list(unified_diff(lines_a, lines_b, fromfile="label_a", tofile="label_b", lineterm="", n=2))
+                diff_text = "\n".join(diff_lines)
+                if len(diff_text) > 2500:
+                    diff_text = diff_text[:2500] + "\n... [diff truncated]"
+                entry["diff"] = diff_text
+
+            changed_sections.append(entry)
+
+        max_sections = 20
+        truncated = len(changed_sections) > max_sections
+        result: Dict[str, Any] = {
+            "label_a": {
+                "set_id": set_id_a,
+                "spl_id": spl_id_a,
+                "brand_name": parsed_a["meta"].get("brand_name", ""),
+                "revised_date": parsed_a["meta"].get("revised_date", ""),
+                "source": source_a,
+            },
+            "label_b": {
+                "set_id": set_id_b,
+                "spl_id": spl_id_b,
+                "brand_name": parsed_b["meta"].get("brand_name", ""),
+                "revised_date": parsed_b["meta"].get("revised_date", ""),
+                "source": source_b,
+            },
+            "changed_count": len(changed_sections),
+            "unchanged_count": len(unchanged_sections),
+            "changed_sections": changed_sections[:max_sections],
+            "truncated": truncated,
+        }
+        if include_unchanged:
+            result["unchanged_sections"] = unchanged_sections
+        return result
+    except Exception as exc:
+        logger.error("compare_labels failed: %s", exc)
+        return {"error": f"Failed to compare labels: {exc}"}
 
 
 # ---------------------------------------------------------------------------
@@ -905,6 +1081,32 @@ def build_default_registry() -> MCPToolRegistry:
             },
         },
         handler=handle_get_label_history,
+    ))
+
+    reg.register(MCPTool(
+        name="compare_labels",
+        description=(
+            "Compare two SPL drug labels or two historical versions of the same label "
+            "(using labelcomp's section alignment and diff rules). Returns only changed "
+            "sections with similarity_ratio and concise text diffs."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "set_id_a": {"type": "string", "description": "Baseline SPL Set ID UUID (older version or reference label)."},
+                "spl_id_a": {"type": "string", "description": "Optional SPL version ID for label A (from get_label_history)."},
+                "set_id_b": {"type": "string", "description": "Comparison SPL Set ID UUID (newer version or target label)."},
+                "spl_id_b": {"type": "string", "description": "Optional SPL version ID for label B (from get_label_history)."},
+                "section_queries": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional section titles or numbers to restrict comparison, e.g. ['Boxed Warning', '5', 'Adverse Reactions'].",
+                },
+                "include_unchanged": {"type": "boolean", "default": False},
+            },
+            "required": ["set_id_a", "set_id_b"],
+        },
+        handler=handle_compare_labels,
     ))
 
     reg.register(MCPTool(

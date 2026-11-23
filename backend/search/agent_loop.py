@@ -94,6 +94,7 @@ def _friendly_status(tool_name: str) -> str:
         "read_label_sections": "Reading labeling sections...",
         "query_drugtox": "Checking DrugTox safety data...",
         "get_label_history": "Checking label version history...",
+        "compare_labels": "Comparing drug label sections...",
         "query_faers_signals": "Checking FAERS adverse event reports...",
     }.get(tool_name, "Looking up information...")
 
@@ -121,6 +122,9 @@ def _summarize_tool_result(tool_name: str, result: Dict[str, Any]) -> str:
     if tool_name == "get_label_history":
         count = result.get("total_versions", 0)
         return f"Found {count} version{'s' if count != 1 else ''}"
+    if tool_name == "compare_labels":
+        changed = result.get("changed_count", 0)
+        return f"Compared labels ({changed} changed section{'s' if changed != 1 else ''})"
     if tool_name == "query_faers_signals":
         count = result.get("count", 0)
         return f"Loaded top {count} reported reaction{'s' if count != 1 else ''}"
