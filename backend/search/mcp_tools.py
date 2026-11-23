@@ -131,6 +131,29 @@ def _build_wire_query(args: Dict[str, Any]) -> Dict[str, Any]:
             "value": {"values": ["NDA", "BLA"]},
         })
 
+    epc = (args.get("epc") or "").strip()
+    if epc:
+        criteria.append({
+            "type": "pharmClass",
+            "value": {"classType": "epc", "terms": [epc]},
+        })
+
+    meddra_term = (args.get("meddra_term") or "").strip()
+    if meddra_term:
+        meddra_val: Dict[str, Any] = {
+            "level": "pt",
+            "ptTerms": [meddra_term],
+        }
+        meddra_sections = [
+            str(s).strip() for s in (args.get("meddra_sections") or []) if str(s).strip()
+        ]
+        if meddra_sections:
+            meddra_val["sections"] = meddra_sections
+        criteria.append({
+            "type": "meddra",
+            "value": meddra_val,
+        })
+
     return {"groups": [{"criteria": criteria}], "exactMatch": False}
 
 
@@ -235,6 +258,7 @@ def _execute_local_search(args: Dict[str, Any], limit: int) -> Dict[str, Any]:
         or args.get("application_number")
         or args.get("ndc")
         or args.get("drug_name")
+        or args.get("epc")
         or ""
     ).strip()
 
@@ -244,6 +268,47 @@ def _execute_local_search(args: Dict[str, Any], limit: int) -> Dict[str, Any]:
     rows, total_count = FDALabelDBService.search_labels_with_count(
         query_str, limit=limit, force_local=True
     )
+    if total_count == 0 and args.get("epc") and not args.get("drug_name"):
+        conn = FDALabelDBService.get_connection(force_local=True)
+        if conn:
+            try:
+                cur = conn.cursor()
+                epc_pat = f"%{args['epc'].strip()}%"
+                cur.execute(
+                    "SELECT COUNT(*) FROM labeling.sum_spl WHERE epc ILIKE %s AND is_latest = TRUE",
+                    (epc_pat,),
+                )
+                total_count = FDALabelDBService._get_count(cur.fetchone())
+                if total_count > 0:
+                    cur.execute(
+                        """
+                        SELECT set_id, product_names, generic_names, manufacturer, market_categories,
+                               appr_num, ndc_codes, revised_date, is_rld
+                        FROM labeling.sum_spl
+                        WHERE epc ILIKE %s AND is_latest = TRUE
+                        LIMIT %s
+                        """,
+                        (epc_pat, limit),
+                    )
+                    rows = [
+                        {
+                            "set_id": r["set_id"],
+                            "brand_name": (r["product_names"] or "").replace(";", ", "),
+                            "generic_name": (r["generic_names"] or "").replace(";", ", "),
+                            "manufacturer_name": r["manufacturer"] or "",
+                            "application_number": (r["appr_num"] or "")[:50],
+                            "ndc": r["ndc_codes"] or "",
+                            "revised_date": r["revised_date"] or "",
+                            "market_category": r["market_categories"] or "",
+                            "is_rld": r["is_rld"],
+                        }
+                        for r in cur.fetchall()
+                    ]
+                cur.close()
+            except Exception as exc:
+                logger.warning("Local EPC search failed: %s", exc)
+            finally:
+                conn.close()
     if total_count == 0 and args.get("application_number"):
         m = _APPNUM_RE.match(str(args["application_number"]).strip())
         if m:
@@ -785,6 +850,92 @@ def handle_get_label_history(args: Dict[str, Any], user: Any) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Orange Book Query
+# ---------------------------------------------------------------------------
+
+def handle_query_orange_book(args: Dict[str, Any], user: Any) -> Dict[str, Any]:
+    """Queries FDA Orange Book records for RLD/RS status, TE codes, and generic equivalents."""
+    from sqlalchemy import or_
+    from database.models import OrangeBook
+
+    q = (args.get("query") or "").strip()
+    if not q:
+        return {"error": "Provide a drug name, active ingredient, or application number.", "count": 0, "records": []}
+
+    rld_only = bool(args.get("rld_only", False))
+    rs_only = bool(args.get("rs_only", False))
+    include_discontinued = bool(args.get("include_discontinued", False))
+    limit = max(1, min(int(args.get("limit") or 15), 30))
+
+    try:
+        query_obj = OrangeBook.query
+        app_match = _APPNUM_RE.match(q)
+        if app_match:
+            digits = app_match.group(2)
+            query_obj = query_obj.filter(OrangeBook.appl_no.ilike(f"%{digits}%"))
+        elif q.isdigit():
+            query_obj = query_obj.filter(OrangeBook.appl_no.ilike(f"%{q}%"))
+        else:
+            pat = f"%{q}%"
+            query_obj = query_obj.filter(
+                or_(
+                    OrangeBook.trade_name.ilike(pat),
+                    OrangeBook.ingredient.ilike(pat),
+                    OrangeBook.applicant.ilike(pat),
+                )
+            )
+
+        if rld_only:
+            query_obj = query_obj.filter(OrangeBook.rld.ilike("Yes"))
+        if rs_only:
+            query_obj = query_obj.filter(OrangeBook.rs.ilike("Yes"))
+        if not include_discontinued:
+            query_obj = query_obj.filter(or_(OrangeBook.type.is_(None), OrangeBook.type != "DISCN"))
+
+        total_matches = query_obj.count()
+        rows = (
+            query_obj.order_by(
+                OrangeBook.rld.desc(),
+                OrangeBook.rs.desc(),
+                OrangeBook.appl_type.desc(),
+                OrangeBook.approval_date.desc(),
+            )
+            .limit(limit)
+            .all()
+        )
+
+        records = [
+            {
+                "trade_name": r.trade_name or "",
+                "ingredient": r.ingredient or "",
+                "application_number": f"{'NDA' if (r.appl_type or '').upper() == 'N' else 'ANDA'}{r.appl_no or ''}",
+                "product_no": r.product_no or "",
+                "df_route": r.df_route or "",
+                "strength": r.strength or "",
+                "te_code": r.te_code or "",
+                "rld": (r.rld or "").lower() == "yes",
+                "rs": (r.rs or "").lower() == "yes",
+                "marketing_status": r.type or "",
+                "approval_date": r.approval_date or "",
+                "applicant": r.applicant_full_name or r.applicant or "",
+            }
+            for r in rows
+        ]
+
+        return {
+            "query": q,
+            "total_matches": total_matches,
+            "returned_count": len(records),
+            "rld_count": sum(1 for rec in records if rec["rld"]),
+            "rs_count": sum(1 for rec in records if rec["rs"]),
+            "records": records,
+        }
+    except Exception as exc:
+        logger.error("query_orange_book failed: %s", exc)
+        return {"error": f"Orange Book query failed: {exc}", "count": 0, "records": []}
+
+
+# ---------------------------------------------------------------------------
 # FAERS Adverse Event Signals
 # ---------------------------------------------------------------------------
 
@@ -1006,7 +1157,8 @@ def build_default_registry() -> MCPToolRegistry:
         name="search_labels",
         description=(
             "Search FDA drug labeling records in Oracle (or local PostgreSQL fallback) by "
-            "drug name, set_id, application number (NDA/ANDA/BLA), or NDC. Returns matching "
+            "drug name, set_id, application number (NDA/ANDA/BLA), NDC, Established Pharmacologic "
+            "Class (epc), or MedDRA adverse event Preferred Term (meddra_term). Returns matching "
             "metadata rows and a wire_query object for opening full results in /labelquery."
         ),
         input_schema={
@@ -1016,6 +1168,13 @@ def build_default_registry() -> MCPToolRegistry:
                 "set_id": {"type": "string", "description": "SPL Set ID UUID."},
                 "application_number": {"type": "string", "description": "FDA application number, e.g. NDA021500."},
                 "ndc": {"type": "string", "description": "NDC code."},
+                "epc": {"type": "string", "description": "Established Pharmacologic Class (EPC), e.g. 'Glucagon-Like Peptide-1 (GLP-1) Receptor Agonist'."},
+                "meddra_term": {"type": "string", "description": "MedDRA Preferred Term (PT) to search across labels, e.g. 'Pancreatitis' or 'Hepatotoxicity'."},
+                "meddra_sections": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional SPL sections to restrict meddra_term search, e.g. ['Boxed Warning', 'Warnings and Precautions', 'Adverse Reactions'].",
+                },
                 "rld_only": {"type": "boolean", "description": "Filter toward NDA/BLA reference products."},
                 "target_db": {"type": "string", "enum": ["oracle", "local"], "default": "oracle"},
                 "limit": {"type": "integer", "default": 10, "minimum": 1, "maximum": 20},
@@ -1126,6 +1285,27 @@ def build_default_registry() -> MCPToolRegistry:
         },
         required_feature="tool_faers",
         handler=handle_query_faers_signals,
+    ))
+
+    reg.register(MCPTool(
+        name="query_orange_book",
+        description=(
+            "Query FDA Orange Book records by drug trade name, active ingredient, or application number "
+            "to check Reference Listed Drug (RLD) / Reference Standard (RS) status, TE codes, "
+            "marketing status (RX/OTC/DISCN), and approved generic equivalents."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Trade name, active ingredient, applicant, or NDA/ANDA number."},
+                "rld_only": {"type": "boolean", "default": False},
+                "rs_only": {"type": "boolean", "default": False},
+                "include_discontinued": {"type": "boolean", "default": False},
+                "limit": {"type": "integer", "default": 15, "minimum": 1, "maximum": 30},
+            },
+            "required": ["query"],
+        },
+        handler=handle_query_orange_book,
     ))
 
     return reg
