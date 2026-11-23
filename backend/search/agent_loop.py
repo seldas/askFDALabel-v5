@@ -48,7 +48,20 @@ Guidelines:
    - By default, optimize for low reading burden: lead with a 1-2 sentence direct takeaway, followed by 3-5 short bullet points covering only the highest-signal facts (~150-250 words). Do not dump entire SPL sections or exhaustive lists unprompted; the user can click Open SPL View or ask to expand.
    - When the user explicitly asks for depth or completeness (e.g., "in detail", "full", "all", "list every", "compare", "table", "详细", "完整", "全部") or the task inherently requires thorough analysis (such as multi-version diffs or full safety/dosing schedules), provide a complete, well-structured breakdown without artificially cutting off important details.
    - Respond in clean Markdown. Do NOT use `<annotation>` XML/HTML tags. Match the user's language (English or Chinese) naturally.
-8. Never include meta-commentary such as "Correction of last reply", "Note on previous response", or narration of your internal tool calls/retries. Answer the user's current question directly."""
+8. Tool Errors & Incomplete Lookups:
+   - Never treat a tool error (e.g., external service timeout, database unavailable, permission restriction, or missing SPL XML) as "no data exists".
+   - Use the error details to choose your next action (for example, retry with corrected parameters, check another product/version, or fall back to registration metadata).
+   - If you must answer while a tool error remains unresolved, explicitly tell the user **which lookup failed**, **how that error limits the answer**, and **what practical next step they can take** (such as opening the SPL/FAERS view directly or retrying later).
+9. Never include meta-commentary such as "Correction of last reply", "Note on previous response", or narration of your internal tool calls/retries. Answer the user's current question directly."""
+
+
+_STEP_LIMIT_HANDOFF_PROMPT = (
+    "You have reached the 5-step tool-call limit for this turn. Do NOT call any more tools. "
+    "Provide a clear, structured response that:\n"
+    "1. Summarizes the verified findings gathered so far (including any tool errors and their impact).\n"
+    "2. Explicitly states what was completed vs. what remains unfinished in this turn.\n"
+    "3. Suggests concrete next steps or a specific follow-up prompt the user can send next to continue."
+)
 
 
 def _pick_provider_chain(user: Any, requested_provider: Optional[str]) -> List[str]:
@@ -103,7 +116,23 @@ def _friendly_status(tool_name: str) -> str:
 
 def _summarize_tool_result(tool_name: str, result: Dict[str, Any]) -> str:
     if result.get("error"):
-        return "No matching data found"
+        err = str(result["error"]).strip()
+        err_l = err.lower()
+        if "permission denied" in err_l or "forbidden" in err_l:
+            return "Access restricted for this tool"
+        if "no faers records" in err_l:
+            return "No FAERS records returned"
+        if any(k in err_l for k in ("timeout", "timed out", "connection", "unreachable", "network", "502", "503", "504", "429", "openfda")):
+            return "External service unreachable or timed out"
+        if "not connected" in err_l:
+            return "Database unavailable"
+        if "spl xml" in err_l and ("not available" in err_l or "not found" in err_l):
+            return "Full SPL XML unavailable"
+        if any(k in err_l for k in ("required", "provide ", "unverified set_id")):
+            return "Invalid or incomplete parameters"
+        if "failed" in err_l or "raised an error" in err_l:
+            return "Tool execution failed"
+        return err[:90] + ("..." if len(err) > 90 else "")
     if tool_name == "search_labels":
         count = result.get("total_count", 0)
         return f"Found {count} matching label{'s' if count != 1 else ''}"
@@ -336,23 +365,78 @@ def _execute_tool_guarded(
     return result
 
 
-def _extract_json_tool_call(text: str) -> Optional[Tuple[str, Dict[str, Any]]]:
-    """Fallback parser when an OpenAI-compatible gateway rejects native tools."""
-    m = re.search(r"```json\s*(\{.*?\})\s*```", text or "", re.DOTALL)
-    raw = m.group(1) if m else None
-    if not raw:
-        stripped = (text or "").strip()
-        if stripped.startswith("{") and stripped.endswith("}") and '"tool"' in stripped:
-            raw = stripped
-    if not raw:
-        return None
+def _loads_json_lenient(raw: str) -> Any:
+    """Parses JSON, tolerating trailing commas from LLM output."""
     try:
-        obj = json.loads(raw)
-        if isinstance(obj, dict) and isinstance(obj.get("tool"), str):
-            return obj["tool"], obj.get("arguments") or {}
-    except Exception:
-        return None
-    return None
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        cleaned = re.sub(r",\s*([}\]])", r"\1", raw)
+        return json.loads(cleaned)
+
+
+def _collect_tool_items(obj: Any, out: List[Tuple[str, Dict[str, Any]]]) -> None:
+    if isinstance(obj, dict) and isinstance(obj.get("tool"), str):
+        args = obj.get("arguments")
+        out.append((obj["tool"], args if isinstance(args, dict) else {}))
+    elif isinstance(obj, list):
+        for item in obj:
+            _collect_tool_items(item, out)
+
+
+def _extract_json_tool_calls(text: str) -> List[Tuple[str, Dict[str, Any]]]:
+    """Fallback parser supporting single or multiple JSON tool calls."""
+    calls: List[Tuple[str, Dict[str, Any]]] = []
+    if not text:
+        return calls
+
+    for m in re.finditer(r"```(?:json)?\s*([\[{].*?[\]}])\s*```", text, re.DOTALL | re.IGNORECASE):
+        try:
+            _collect_tool_items(_loads_json_lenient(m.group(1)), calls)
+        except Exception:
+            continue
+
+    if calls:
+        return calls
+
+    # Fallback: scan for bare JSON objects/arrays containing "tool"
+    decoder = json.JSONDecoder()
+    idx = 0
+    n = len(text)
+    while idx < n:
+        ch = text[idx]
+        if ch in "{[":
+            try:
+                obj, end_idx = decoder.raw_decode(text, idx)
+                _collect_tool_items(obj, calls)
+                idx = end_idx
+                continue
+            except Exception:
+                pass
+        idx += 1
+    return calls
+
+
+_COMPACT_OLD_TOOL_CHARS = 3000
+
+
+def _compact_older_tool_messages(working_msgs: List[Dict[str, Any]], keep_recent_msgs: int = 4) -> None:
+    """Trims older tool-output messages so multi-step loops stay within fast context bounds."""
+    cutoff = len(working_msgs) - keep_recent_msgs
+    if cutoff <= 1:
+        return
+    for i in range(1, cutoff):
+        msg = working_msgs[i]
+        content = msg.get("content")
+        if not isinstance(content, str) or len(content) <= _COMPACT_OLD_TOOL_CHARS:
+            continue
+        is_tool_msg = msg.get("role") == "tool" or (
+            msg.get("role") == "user" and content.startswith("Tool `")
+        )
+        if is_tool_msg:
+            msg["content"] = (
+                content[:_COMPACT_OLD_TOOL_CHARS]
+                + "\n... [earlier tool output compacted to save context]"
+            )
 
 
 def _build_provider_client(provider: str, user: Any):
@@ -513,13 +597,51 @@ def _run_gemini_loop(
         yield {"type": "done", "provider": "gemini", "model": model, "grounded": len(tool_outputs) > 0}
         return
 
-    yield {"type": "token", "text": "I gathered the available information; please refine your question if you need more details."}
+    yield {"type": "status", "text": "Finalizing answer..."}
+    handoff_contents = list(contents) + [
+        genai_types.Content(
+            role="user",
+            parts=[genai_types.Part.from_text(text=_STEP_LIMIT_HANDOFF_PROMPT)],
+        )
+    ]
+    final_yielded = False
+    try:
+        resp_stream = client.models.generate_content_stream(
+            model=model,
+            contents=handoff_contents,
+            config=genai_types.GenerateContentConfig(
+                system_instruction=sys_instruction,
+                temperature=0.0,
+                max_output_tokens=2048,
+            ),
+        )
+        for chunk in resp_stream:
+            if getattr(chunk, "text", None):
+                final_yielded = True
+                yield {"type": "token", "text": chunk.text}
+    except Exception:
+        logger.exception("Gemini step-limit handoff failed")
+
+    if not final_yielded:
+        completed = [f"`{t}` ({_summarize_tool_result(t, r)})" for t, r in tool_outputs]
+        summary_line = ", ".join(completed) if completed else "no completed tool calls"
+        yield {
+            "type": "token",
+            "text": (
+                f"Reached the 5-step tool limit for this turn. Completed so far: {summary_line}.\n\n"
+                "Please reply with what you would like to inspect next so I can continue in the next turn."
+            ),
+        }
+
     focus = _extract_focus(tool_outputs, prior_focus)
     if focus:
         yield {"type": "focus", "focus": focus}
     final_actions = _derive_actions(tool_outputs, focus, user)
     if final_actions:
         yield {"type": "actions", "actions": final_actions}
+    follow_ups = _build_follow_ups(tool_outputs, focus, user)
+    if follow_ups:
+        yield {"type": "follow_ups", "items": follow_ups}
     yield {"type": "done", "provider": "gemini", "model": model, "grounded": len(tool_outputs) > 0}
 
 
@@ -594,6 +716,7 @@ def _run_with_provider(
         _inject_json_tools_prompt()
 
     for step in range(MAX_TOOL_STEPS):
+        _compact_older_tool_messages(working_msgs)
         yield {
             "type": "status",
             "text": "Thinking..." if step == 0 else "Synthesizing results...",
@@ -730,18 +853,23 @@ def _run_with_provider(
             continue
 
         if not use_native_tools:
-            parsed = _extract_json_tool_call(full_content)
-            if parsed:
-                tname, targs = parsed
-                yield {"type": "status", "text": _friendly_status(tname), "tool": tname}
-                yield {"type": "tool_call", "tool": tname, "arguments": targs}
-                result = _execute_tool_guarded(tname, targs, user, seen_calls, known_set_ids)
-                tool_outputs.append((tname, result))
-                yield {"type": "tool_result", "tool": tname, "summary": _summarize_tool_result(tname, result)}
+            parsed_calls = _extract_json_tool_calls(full_content)
+            if parsed_calls:
+                result_blocks: List[str] = []
+                per_tool_cap = 24000 if len(parsed_calls) == 1 else max(8000, 24000 // len(parsed_calls))
+                for tname, targs in parsed_calls:
+                    yield {"type": "status", "text": _friendly_status(tname), "tool": tname}
+                    yield {"type": "tool_call", "tool": tname, "arguments": targs}
+                    result = _execute_tool_guarded(tname, targs, user, seen_calls, known_set_ids)
+                    tool_outputs.append((tname, result))
+                    yield {"type": "tool_result", "tool": tname, "summary": _summarize_tool_result(tname, result)}
+                    result_blocks.append(
+                        f"Tool `{tname}` result:\n```json\n{json.dumps(result, ensure_ascii=False, default=str)[:per_tool_cap]}\n```"
+                    )
                 working_msgs.append({"role": "assistant", "content": full_content})
                 working_msgs.append({
                     "role": "user",
-                    "content": f"Tool `{tname}` result:\n```json\n{json.dumps(result, ensure_ascii=False, default=str)[:24000]}\n```\nNow continue answering the user.",
+                    "content": "\n\n".join(result_blocks) + "\n\nNow continue answering the user.",
                 })
                 continue
 
@@ -767,12 +895,13 @@ def _run_with_provider(
         return
 
     yield {"type": "status", "text": "Finalizing answer..."}
+    handoff_msgs = list(working_msgs) + [{"role": "user", "content": _STEP_LIMIT_HANDOFF_PROMPT}]
     if use_streaming:
         final_yielded = False
         try:
             stream = client.chat.completions.create(
                 model=model,
-                messages=working_msgs,
+                messages=handoff_msgs,
                 temperature=0.0,
                 max_tokens=2048,
                 stream=True,
@@ -789,7 +918,7 @@ def _run_with_provider(
     if not use_streaming:
         resp = client.chat.completions.create(
             model=model,
-            messages=working_msgs,
+            messages=handoff_msgs,
             temperature=0.0,
             max_tokens=2048,
             stream=False,
