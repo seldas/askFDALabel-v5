@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from typing import Any, Dict, Generator, List, Optional, Tuple
 
@@ -522,6 +523,13 @@ def _run_gemini_loop(
     yield {"type": "done", "provider": "gemini", "model": model, "grounded": len(tool_outputs) > 0}
 
 
+def _env_bool(name: str, default: bool = True) -> bool:
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return default
+    return raw.strip().lower() in ("true", "1", "yes", "on")
+
+
 def _is_compat_fallback_error(exc: Exception) -> bool:
     """Returns True when an OpenAI-compatible gateway rejects tools or streaming."""
     status = getattr(exc, "status_code", None)
@@ -552,8 +560,12 @@ def _run_with_provider(
     seen_calls: set = set()
     known_set_ids = _seed_known_set_ids(messages, prior_focus)
     working_msgs = list(messages)
-    use_native_tools = bool(openai_tools)
-    use_streaming = True
+    if provider == "elsa":
+        use_native_tools = bool(openai_tools) and _env_bool("ELSA_SUPPORTS_TOOLS", True)
+        use_streaming = _env_bool("ELSA_SUPPORTS_STREAM", True)
+    else:
+        use_native_tools = bool(openai_tools)
+        use_streaming = True
     json_tools_injected = False
 
     def _inject_json_tools_prompt() -> None:
@@ -577,6 +589,9 @@ def _run_with_provider(
             + f'\n\nAvailable tools (respond with ```json {{"tool": "name", "arguments": {{...}}}}``` to call one):\n{tool_desc}',
         }
         json_tools_injected = True
+
+    if not use_native_tools and openai_tools:
+        _inject_json_tools_prompt()
 
     for step in range(MAX_TOOL_STEPS):
         yield {
