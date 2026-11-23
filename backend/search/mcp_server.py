@@ -87,7 +87,7 @@ def _handle_single_message(msg: Any, user: Any) -> Tuple[Optional[Dict[str, Any]
         t0 = time.monotonic()
         output = DEFAULT_REGISTRY.call(tool_name, tool_args, user)
         elapsed_ms = int((time.monotonic() - t0) * 1000)
-        is_error = isinstance(output, dict) and "error" in output and len(output) == 1
+        is_error = isinstance(output, dict) and bool(output.get("error"))
         logger.info(
             "MCP tools/call user=%s tool=%s is_error=%s elapsed_ms=%d",
             getattr(user, "username", getattr(user, "id", "?")),
