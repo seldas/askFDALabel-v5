@@ -147,6 +147,33 @@ a { color: var(--fdl-blue-700); }
   margin-left: 0.1rem;
 }
 
+.header-chip--copilot {
+  gap: 0.45rem;
+  border-color: rgba(125, 211, 252, 0.72);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.22), rgba(37, 99, 235, 0.24));
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.header-chip--copilot:hover {
+  border-color: #93c5fd;
+  background: var(--fdl-blue-600);
+  box-shadow: 0 0 0 1px rgba(147, 197, 253, 0.35);
+}
+
+.header-copilot-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.34rem;
+  border-radius: 2px;
+  background: #38bdf8;
+  color: #08203e;
+  font-family: var(--fdl-font-mono);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  line-height: 1.1;
+}
+
 .caret { margin-left: 0.25rem; font-size: 0.65rem; }
 .header-muted { color: #b8c8d7; font-size: 0.78rem; }
 

@@ -269,13 +269,14 @@ export default function Header({
               href={searchTool.href(GLOBAL_CTX)}
               target="_blank"
               rel="noopener noreferrer"
-              className="dropdown-trigger header-chip"
-              style={{ textDecoration: 'none', gap: '6px' }}
+              className="dropdown-trigger header-chip header-chip--copilot"
+              style={{ textDecoration: 'none' }}
               onClick={handleNavClick}
               title={searchTool.blurb}
             >
               <ToolIcon id={searchTool.iconId} size={16} />
               <span style={{ fontWeight: 800 }}>Label Copilot</span>
+              <span className="header-copilot-badge">NEW</span>
             </a>
           );
         })()}
