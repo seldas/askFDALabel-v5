@@ -87,6 +87,9 @@ def create_app(config_class=Config):
         seed_feature_gate_rows()
         check_meddra_data()
 
+        from database.schema_check import check_schema_drift
+        check_schema_drift(db)
+
     return app
 
 def ensure_user_pk():
