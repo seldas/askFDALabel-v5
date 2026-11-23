@@ -1,0 +1,27 @@
+fdalabel-v3-backend  | INFO:httpx:HTTP Request: POST https://elsa-dev.preprod.fda.gov/Monolith/api/model/openai/chat/completions "HTTP/1.1 200 "
+fdalabel-v3-backend  | INFO:httpx:HTTP Request: POST https://elsa-dev.preprod.fda.gov/Monolith/api/model/openai/chat/completions "HTTP/1.1 200 "
+fdalabel-v3-backend  | INFO:httpx:HTTP Request: POST https://elsa-dev.preprod.fda.gov/Monolith/api/model/openai/chat/completions "HTTP/1.1 200 "
+fdalabel-v3-backend  | INFO:httpx:HTTP Request: POST https://elsa-dev.preprod.fda.gov/Monolith/api/model/openai/chat/completions "HTTP/1.1 200 "
+fdalabel-v3-backend  | INFO:httpx:HTTP Request: POST https://elsa-dev.preprod.fda.gov/Monolith/api/model/openai/chat/completions "HTTP/1.1 200 "
+fdalabel-v3-backend  | INFO:httpx:HTTP Request: POST https://elsa-dev.preprod.fda.gov/Monolith/api/model/openai/chat/completions "HTTP/1.1 200 "
+fdalabel-v3-backend  | INFO:httpx:HTTP Request: POST https://elsa-dev.preprod.fda.gov/Monolith/api/model/openai/chat/completions "HTTP/1.1 200 "
+fdalabel-v3-backend  | INFO:httpx:HTTP Request: POST https://elsa-dev.preprod.fda.gov/Monolith/api/model/openai/chat/completions "HTTP/1.1 200 "
+fdalabel-v3-backend  | INFO:httpx:HTTP Request: POST https://elsa-dev.preprod.fda.gov/Monolith/api/model/openai/chat/completions "HTTP/1.1 200 "
+fdalabel-v3-backend  | INFO:httpx:HTTP Request: POST https://elsa-dev.preprod.fda.gov/Monolith/api/model/openai/chat/completions "HTTP/1.1 200 "
+fdalabel-v3-backend  | INFO:httpx:HTTP Request: POST https://elsa-dev.preprod.fda.gov/Monolith/api/model/openai/chat/completions "HTTP/1.1 200 "
+fdalabel-v3-backend  | INFO:httpx:HTTP Request: POST https://elsa-dev.preprod.fda.gov/Monolith/api/model/openai/chat/completions "HTTP/1.1 200 "
+
+Checked 5 sources
+Searched drug labels
+— No matching data found
+Searched drug labels
+— No matching data found
+Searched drug labels
+— No matching data found
+Searched drug labels
+— No matching data found
+Searched drug labels
+— No matching data found
+I couldn't retrieve Ozempic's label, so I can't confirm its Boxed Warning or dosing section text, and I'm not going to supply them from memory. The label search service is returning errors for every query right now.
+
+Please try again in a few minutes. Once the search works, I can pull the Boxed Warning and Dosage and Administration sections and cite the revised date. In the meantime, you can check the current Ozempic prescribing information directly on DailyMed or Drugs@FDA.
