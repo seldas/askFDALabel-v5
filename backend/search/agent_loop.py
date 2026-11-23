@@ -522,6 +522,18 @@ def _run_gemini_loop(
     yield {"type": "done", "provider": "gemini", "model": model, "grounded": len(tool_outputs) > 0}
 
 
+def _is_compat_fallback_error(exc: Exception) -> bool:
+    """Returns True when an OpenAI-compatible gateway rejects tools or streaming."""
+    status = getattr(exc, "status_code", None)
+    if status in (400, 422, 500, 502):
+        return True
+    err_l = str(exc).lower()
+    return any(
+        k in err_l
+        for k in ("tool", "function", "unsupported", "stream", "internal server error", "400", "422", "500", "502")
+    )
+
+
 def _run_with_provider(
     provider: str,
     user: Any,
@@ -541,6 +553,30 @@ def _run_with_provider(
     known_set_ids = _seed_known_set_ids(messages, prior_focus)
     working_msgs = list(messages)
     use_native_tools = bool(openai_tools)
+    use_streaming = True
+    json_tools_injected = False
+
+    def _inject_json_tools_prompt() -> None:
+        nonlocal json_tools_injected
+        if json_tools_injected or not openai_tools:
+            return
+        tool_desc = json.dumps(
+            [
+                {
+                    "name": t["function"]["name"],
+                    "description": t["function"]["description"],
+                    "parameters": t["function"]["parameters"],
+                }
+                for t in openai_tools
+            ],
+            ensure_ascii=False,
+        )
+        working_msgs[0] = {
+            "role": "system",
+            "content": messages[0]["content"]
+            + f'\n\nAvailable tools (respond with ```json {{"tool": "name", "arguments": {{...}}}}``` to call one):\n{tool_desc}',
+        }
+        json_tools_injected = True
 
     for step in range(MAX_TOOL_STEPS):
         yield {
@@ -548,78 +584,96 @@ def _run_with_provider(
             "text": "Thinking..." if step == 0 else "Synthesizing results...",
         }
 
-        req_kwargs: Dict[str, Any] = {
-            "model": model,
-            "messages": working_msgs,
-            "temperature": 0.0,
-            "max_tokens": 2048,
-            "stream": True,
-        }
-        if use_native_tools:
-            req_kwargs["tools"] = openai_tools
-            req_kwargs["tool_choice"] = "auto"
-
-        try:
-            stream = client.chat.completions.create(**req_kwargs)
-        except Exception as exc:
-            err_l = str(exc).lower()
-            if use_native_tools and any(k in err_l for k in ("tool", "function", "unsupported", "400")):
-                logger.warning("Provider %s rejected native tools (%s); retrying with JSON tool prompt.", provider, exc)
-                use_native_tools = False
-                tool_desc = json.dumps(
-                    [
-                        {
-                            "name": t["function"]["name"],
-                            "description": t["function"]["description"],
-                            "parameters": t["function"]["parameters"],
-                        }
-                        for t in openai_tools
-                    ],
-                    ensure_ascii=False,
-                )
-                working_msgs[0] = {
-                    "role": "system",
-                    "content": messages[0]["content"]
-                    + f'\n\nAvailable tools (respond with ```json {{"tool": "name", "arguments": {{...}}}}``` to call one):\n{tool_desc}',
-                }
-                continue
-            raise
-
         full_content = ""
         preamble_buf = ""
         flushed = False
         tc_acc: Dict[int, Dict[str, str]] = {}
 
-        for chunk in stream:
-            if not getattr(chunk, "choices", None):
-                continue
-            delta = chunk.choices[0].delta
+        while True:
+            req_kwargs: Dict[str, Any] = {
+                "model": model,
+                "messages": working_msgs,
+                "temperature": 0.0,
+                "max_tokens": 2048,
+                "stream": use_streaming,
+            }
+            if use_native_tools:
+                req_kwargs["tools"] = openai_tools
+                req_kwargs["tool_choice"] = "auto"
 
-            d_tcs = getattr(delta, "tool_calls", None)
-            if d_tcs:
-                for tc in d_tcs:
-                    idx = getattr(tc, "index", 0) or 0
-                    entry = tc_acc.setdefault(idx, {"id": "", "name": "", "arguments": ""})
-                    if getattr(tc, "id", None):
-                        entry["id"] = tc.id
-                    fn = getattr(tc, "function", None)
-                    if fn:
-                        if getattr(fn, "name", None):
-                            entry["name"] += fn.name
-                        if getattr(fn, "arguments", None):
-                            entry["arguments"] += fn.arguments
+            full_content = ""
+            preamble_buf = ""
+            flushed = False
+            tc_acc = {}
 
-            d_content = getattr(delta, "content", None)
-            if d_content:
-                full_content += d_content
-                if use_native_tools and not tc_acc:
-                    preamble_buf += d_content
-                    if flushed:
-                        yield {"type": "token", "text": d_content}
-                    elif len(preamble_buf) >= _PREAMBLE_BUFFER_CHARS:
-                        flushed = True
-                        yield {"type": "token", "text": preamble_buf}
-                        preamble_buf = ""
+            try:
+                if use_streaming:
+                    stream = client.chat.completions.create(**req_kwargs)
+                    for chunk in stream:
+                        if not getattr(chunk, "choices", None):
+                            continue
+                        delta = chunk.choices[0].delta
+
+                        d_tcs = getattr(delta, "tool_calls", None)
+                        if d_tcs:
+                            for tc in d_tcs:
+                                idx = getattr(tc, "index", 0) or 0
+                                entry = tc_acc.setdefault(idx, {"id": "", "name": "", "arguments": ""})
+                                if getattr(tc, "id", None):
+                                    entry["id"] = tc.id
+                                fn = getattr(tc, "function", None)
+                                if fn:
+                                    if getattr(fn, "name", None):
+                                        entry["name"] += fn.name
+                                    if getattr(fn, "arguments", None):
+                                        entry["arguments"] += fn.arguments
+
+                        d_content = getattr(delta, "content", None)
+                        if d_content:
+                            full_content += d_content
+                            if use_native_tools and not tc_acc:
+                                preamble_buf += d_content
+                                if flushed:
+                                    yield {"type": "token", "text": d_content}
+                                elif len(preamble_buf) >= _PREAMBLE_BUFFER_CHARS:
+                                    flushed = True
+                                    yield {"type": "token", "text": preamble_buf}
+                                    preamble_buf = ""
+                else:
+                    resp = client.chat.completions.create(**req_kwargs)
+                    if getattr(resp, "choices", None):
+                        msg = resp.choices[0].message
+                        full_content = getattr(msg, "content", None) or ""
+                        m_tcs = getattr(msg, "tool_calls", None)
+                        if m_tcs:
+                            for idx, tc in enumerate(m_tcs):
+                                fn = getattr(tc, "function", None)
+                                tc_acc[idx] = {
+                                    "id": getattr(tc, "id", None) or "",
+                                    "name": getattr(fn, "name", "") if fn else "",
+                                    "arguments": getattr(fn, "arguments", "") if fn else "",
+                                }
+                break
+            except Exception as exc:
+                if not flushed and _is_compat_fallback_error(exc):
+                    if use_native_tools:
+                        logger.warning(
+                            "Provider %s rejected native tools (%s); retrying with JSON tool prompt.",
+                            provider,
+                            exc,
+                        )
+                        use_native_tools = False
+                        _inject_json_tools_prompt()
+                        continue
+                    if use_streaming:
+                        logger.warning(
+                            "Provider %s failed in streaming mode (%s); retrying with stream=False.",
+                            provider,
+                            exc,
+                        )
+                        use_streaming = False
+                        continue
+                raise
 
         est_in = sum(len(str(m.get("content") or "")) for m in working_msgs) // 4
         _record_usage(user, model, est_in, len(full_content) // 4)
@@ -698,16 +752,37 @@ def _run_with_provider(
         return
 
     yield {"type": "status", "text": "Finalizing answer..."}
-    stream = client.chat.completions.create(
-        model=model,
-        messages=working_msgs,
-        temperature=0.0,
-        max_tokens=2048,
-        stream=True,
-    )
-    for chunk in stream:
-        if getattr(chunk, "choices", None) and getattr(chunk.choices[0].delta, "content", None):
-            yield {"type": "token", "text": chunk.choices[0].delta.content}
+    if use_streaming:
+        final_yielded = False
+        try:
+            stream = client.chat.completions.create(
+                model=model,
+                messages=working_msgs,
+                temperature=0.0,
+                max_tokens=2048,
+                stream=True,
+            )
+            for chunk in stream:
+                if getattr(chunk, "choices", None) and getattr(chunk.choices[0].delta, "content", None):
+                    final_yielded = True
+                    yield {"type": "token", "text": chunk.choices[0].delta.content}
+        except Exception as exc:
+            if not final_yielded and _is_compat_fallback_error(exc):
+                use_streaming = False
+            else:
+                raise
+    if not use_streaming:
+        resp = client.chat.completions.create(
+            model=model,
+            messages=working_msgs,
+            temperature=0.0,
+            max_tokens=2048,
+            stream=False,
+        )
+        if getattr(resp, "choices", None):
+            text = getattr(resp.choices[0].message, "content", None) or ""
+            if text:
+                yield {"type": "token", "text": text}
 
     focus = _extract_focus(tool_outputs, prior_focus)
     if focus:
