@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from flask import Blueprint, request, jsonify
 from flask_login import login_user, login_required, logout_user, current_user
 from database import db, User, ROLE_USER, utc_now
@@ -119,6 +120,14 @@ def session():
                 'is_authenticated': False,
                 'is_internal': is_internal,
             })
+        now = utc_now()
+        if not current_user.last_login or (now - current_user.last_login) >= timedelta(minutes=15):
+            try:
+                current_user.last_login = now
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                logger.warning(f"Failed to update last_login for user {current_user.id}: {e}")
         effective_provider, default_provider = resolve_provider(current_user)
         effective_config = connection_config(effective_provider, current_user)
         preference = normalize_provider(current_user.ai_provider)
