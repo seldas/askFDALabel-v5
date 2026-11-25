@@ -67,6 +67,7 @@ export default function Header({
   const [activeDropdown, setActiveDropdown] = useState<DropdownKey | 'tasks'>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
   const [selectedLogs, setSelectedLogs] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
@@ -639,6 +640,18 @@ export default function Header({
                   <span><strong>User Guide &amp; Wiki</strong><small>FAQs, guidance, and workflows</small></span>
                   <span aria-hidden="true">↗</span>
                 </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsWhatsNewOpen(true);
+                    setActiveDropdown(null);
+                  }}
+                  className="about-link"
+                  style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  <span>What&apos;s New</span>
+                  <span aria-hidden="true">→</span>
+                </button>
                 <a
                   href="https://www.fda.gov/ScienceResearch/BioinformaticsTools/ucm289739.htm"
                   target="_blank"
@@ -731,6 +744,88 @@ export default function Header({
             >
               {selectedLogs || 'No logs available.'}
             </pre>
+          </div>
+        </div>
+      )}
+
+      {/* What's New Modal */}
+      {isWhatsNewOpen && (
+        <div
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(7, 31, 61, 0.58)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem' }}
+          onClick={() => setIsWhatsNewOpen(false)}
+        >
+          <div
+            style={{
+              background: 'var(--fdl-paper, #ffffff)',
+              borderRadius: 'var(--fdl-radius-sm, 2px)',
+              border: '1px solid var(--fdl-line, #b8c8d7)',
+              borderTop: '3px solid var(--fdl-navy-800, #12375b)',
+              boxShadow: '0 16px 36px rgba(7, 31, 61, 0.24)',
+              padding: '20px 24px',
+              width: '100%',
+              maxWidth: '560px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--fdl-line-soft, #d7e0e7)', paddingBottom: '10px' }}>
+              <h3 style={{ margin: 0, color: 'var(--fdl-navy-950, #071f3d)', fontSize: '1.08rem', fontWeight: 800 }}>
+                What&apos;s New in AskFDALabel V3
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsWhatsNewOpen(false)}
+                style={{
+                  background: 'var(--fdl-paper, #ffffff)',
+                  border: '1px solid var(--fdl-line, #b8c8d7)',
+                  borderRadius: 'var(--fdl-radius-sm, 2px)',
+                  padding: '4px 10px',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  color: 'var(--fdl-ink-soft, #273843)'
+                }}
+              >
+                CLOSE
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', color: 'var(--fdl-ink, #132332)', fontSize: '0.88rem', lineHeight: 1.55 }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
+                  <strong style={{ color: 'var(--fdl-navy-950, #071f3d)', fontSize: '0.94rem' }}>Label Copilot</strong>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--fdl-ink-soft, #273843)', fontWeight: 600 }}>Nov 2026</span>
+                </div>
+                <p style={{ margin: 0, color: 'var(--fdl-ink-soft, #273843)' }}>
+                  AI-native MCP assistant in the top bar supporting label search (EPC/MedDRA), Orange Book lookup, label comparison, DrugTox links, and external client access via <code style={{ fontSize: '0.8rem' }}>/api/mcp</code>.
+                </p>
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
+                  <strong style={{ color: 'var(--fdl-navy-950, #071f3d)', fontSize: '0.94rem' }}>Query Builder</strong>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--fdl-ink-soft, #273843)', fontWeight: 600 }}>Aug – Nov 2026</span>
+                </div>
+                <p style={{ margin: 0, color: 'var(--fdl-ink-soft, #273843)' }}>
+                  FDALabel-style homepage with an AI <em>&ldquo;Describe...&rdquo;</em> translator, MedDRA/market/RLD criteria, Oracle &amp; Local DB switching, faceted sidebar filters, and unified export.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--fdl-line-soft, #d7e0e7)', paddingTop: '12px', fontSize: '0.83rem', color: 'var(--fdl-ink-soft, #273843)' }}>
+              For detailed workflows and usage guides, visit the{' '}
+              <Link
+                href="/wiki"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setIsWhatsNewOpen(false)}
+                style={{ color: 'var(--fdl-blue-700, #0759a5)', fontWeight: 700, textDecoration: 'none' }}
+              >
+                User Guide &amp; Wiki →
+              </Link>
+            </div>
           </div>
         </div>
       )}
