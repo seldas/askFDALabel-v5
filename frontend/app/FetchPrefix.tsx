@@ -72,19 +72,21 @@ const rewriteAnchorHref = (href: string) => {
   return prefixString(href);
 };
 
-const rewriteAnchors = () => {
-  if (!document.body) return;
+const rewriteAnchorElement = (anchor: HTMLAnchorElement) => {
+  const href = anchor.getAttribute("href");
+  if (!href || !shouldHandleHref(href)) return;
+  const rewritten = rewriteAnchorHref(href);
+  if (rewritten !== href) {
+    anchor.setAttribute("href", rewritten);
+  }
+};
 
-  document.body
-    .querySelectorAll<HTMLAnchorElement>("a[href]")
-    .forEach((anchor) => {
-      const href = anchor.getAttribute("href");
-      if (!href || !shouldHandleHref(href)) return;
-      const rewritten = rewriteAnchorHref(href);
-      if (rewritten !== href) {
-        anchor.setAttribute("href", rewritten);
-      }
-    });
+const rewriteAnchors = (root: ParentNode | null = document.body) => {
+  if (!root) return;
+  if (root instanceof HTMLAnchorElement) {
+    rewriteAnchorElement(root);
+  }
+  root.querySelectorAll<HTMLAnchorElement>("a[href]").forEach(rewriteAnchorElement);
 };
 
 const shouldRewriteAsset = (value: string) => {
@@ -111,34 +113,40 @@ const rewriteSrcSet = (value: string) =>
     .filter(Boolean)
     .join(", ");
 
-const rewriteMediaSources = () => {
-  if (!document.body) return;
-  const selector = "img, video, audio, source";
-  document.body.querySelectorAll<HTMLImageElement | HTMLVideoElement | HTMLAudioElement | HTMLSourceElement>(selector).forEach((element) => {
-    if (element.hasAttribute("src")) {
-      const src = element.getAttribute("src") || "";
-      const rewritten = rewriteAssetValue(src);
-      if (rewritten !== src) {
-        element.setAttribute("src", rewritten);
-      }
-    }
+const MEDIA_SELECTOR = "img, video, audio, source";
 
-    if (element.hasAttribute("srcset")) {
-      const srcset = element.getAttribute("srcset") || "";
-      const rewritten = rewriteSrcSet(srcset);
-      if (rewritten !== srcset) {
-        element.setAttribute("srcset", rewritten);
-      }
+const rewriteMediaElement = (element: Element) => {
+  if (element.hasAttribute("src")) {
+    const src = element.getAttribute("src") || "";
+    const rewritten = rewriteAssetValue(src);
+    if (rewritten !== src) {
+      element.setAttribute("src", rewritten);
     }
+  }
 
-    if (element instanceof HTMLImageElement && element.hasAttribute("data-src")) {
-      const dataSrc = element.getAttribute("data-src") || "";
-      const rewritten = rewriteAssetValue(dataSrc);
-      if (rewritten !== dataSrc) {
-        element.setAttribute("data-src", rewritten);
-      }
+  if (element.hasAttribute("srcset")) {
+    const srcset = element.getAttribute("srcset") || "";
+    const rewritten = rewriteSrcSet(srcset);
+    if (rewritten !== srcset) {
+      element.setAttribute("srcset", rewritten);
     }
-  });
+  }
+
+  if (element instanceof HTMLImageElement && element.hasAttribute("data-src")) {
+    const dataSrc = element.getAttribute("data-src") || "";
+    const rewritten = rewriteAssetValue(dataSrc);
+    if (rewritten !== dataSrc) {
+      element.setAttribute("data-src", rewritten);
+    }
+  }
+};
+
+const rewriteMediaSources = (root: ParentNode | null = document.body) => {
+  if (!root) return;
+  if (root instanceof Element && root.matches(MEDIA_SELECTOR)) {
+    rewriteMediaElement(root);
+  }
+  root.querySelectorAll(MEDIA_SELECTOR).forEach(rewriteMediaElement);
 };
 
 const rewriteInput = (input: RequestInfo | URL) => {
@@ -173,15 +181,40 @@ const FetchPrefix = () => {
     };
     window.fetch = overrideFetch;
 
-    const refresh = () => {
-      rewriteAnchors();
-      rewriteMediaSources();
+    const rewriteRoot = (root: ParentNode | null) => {
+      rewriteAnchors(root);
+      rewriteMediaSources(root);
     };
 
-    refresh();
+    rewriteRoot(document.body);
+
+    const pendingRoots = new Set<Element>();
+    let rafId: number | null = null;
+
+    const flushPending = () => {
+      rafId = null;
+      pendingRoots.forEach((node) => {
+        if (node.isConnected) {
+          rewriteRoot(node);
+        }
+      });
+      pendingRoots.clear();
+    };
+
     const observer =
       typeof MutationObserver !== "undefined"
-        ? new MutationObserver(refresh)
+        ? new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+              mutation.addedNodes.forEach((node) => {
+                if (node instanceof Element) {
+                  pendingRoots.add(node);
+                }
+              });
+            }
+            if (pendingRoots.size > 0 && rafId === null) {
+              rafId = window.requestAnimationFrame(flushPending);
+            }
+          })
         : null;
     if (observer && document.body) {
       observer.observe(document.body, { childList: true, subtree: true });
@@ -201,6 +234,10 @@ const FetchPrefix = () => {
 
     return () => {
       window.fetch = originalFetch;
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
+      pendingRoots.clear();
       if (observer) {
         observer.disconnect();
       }

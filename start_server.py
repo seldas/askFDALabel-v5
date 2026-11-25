@@ -525,6 +525,10 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
         if efficient:
             backend_env["GUNICORN_WORKERS"] = 1
             backend_env["GUNICORN_THREADS"] = 2
+            if "DB_POOL_SIZE" not in env_vars:
+                backend_env["DB_POOL_SIZE"] = 3
+            if "DB_MAX_OVERFLOW" not in env_vars:
+                backend_env["DB_MAX_OVERFLOW"] = 5
         else:
             backend_env["GUNICORN_WORKERS"] = 4
             backend_env["GUNICORN_THREADS"] = 8
@@ -591,18 +595,23 @@ def generate_compose_dict(mode, efficient, local_db, rapid=False, include_nginx=
         celery_volumes.append("./backend/database/scripts:/app/database/scripts")
 
     concurrency = 1 if efficient else 4
+    celery_env = {
+        "FLASK_ENV": "production",
+        "DATABASE_URL": "${DATABASE_URL:-postgresql://${PG_USERNAME:-afd_user}:${PG_PASSWORD:-afd_password}@${PG_HOST:-db}:${PG_PORT:-5432}/${PG_DATABASE:-fdalabel-v3}}",
+        "CELERY_BROKER_URL": "redis://redis:6379/0",
+        "CELERY_RESULT_BACKEND": "redis://redis:6379/0",
+    }
+    if "DB_POOL_SIZE" not in env_vars:
+        celery_env["DB_POOL_SIZE"] = 2
+    if "DB_MAX_OVERFLOW" not in env_vars:
+        celery_env["DB_MAX_OVERFLOW"] = 3 if efficient else 4
     celery_service = {
         "image": "fdalabel-v3-backend:latest",
         "container_name": "fdalabel-v3-celery",
         "command": ["sh", "-c", f"celery -A celery_app.celery worker --loglevel=info --concurrency={concurrency}"],
         "depends_on": ["redis"],
         "env_file": ["./.env"],
-        "environment": {
-            "FLASK_ENV": "production",
-            "DATABASE_URL": "${DATABASE_URL:-postgresql://${PG_USERNAME:-afd_user}:${PG_PASSWORD:-afd_password}@${PG_HOST:-db}:${PG_PORT:-5432}/${PG_DATABASE:-fdalabel-v3}}",
-            "CELERY_BROKER_URL": "redis://redis:6379/0",
-            "CELERY_RESULT_BACKEND": "redis://redis:6379/0"
-        },
+        "environment": celery_env,
         "volumes": celery_volumes,
         "restart": "always"
     }

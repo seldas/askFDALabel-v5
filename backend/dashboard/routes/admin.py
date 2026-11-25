@@ -445,6 +445,19 @@ def _apply_token_filters(query, model_cls, start_dt, end_dt, model_filter, user_
     return query
 
 
+def _build_display_map(user_ids):
+    """Fetch display_name for the given user IDs without N+1 SSO identity queries."""
+    ids = {uid for uid in user_ids if uid is not None}
+    if not ids:
+        return {}
+    users = (
+        User.query.options(db.selectinload(User.sso_identities))
+        .filter(User.id.in_(ids))
+        .all()
+    )
+    return {u.id: u.display_name for u in users}
+
+
 @admin_bp.route('/token_usage', methods=['GET'])
 @login_required
 @admin_required
@@ -475,7 +488,7 @@ def get_token_usage():
             .all()
         )
 
-        display_map = {u.id: u.display_name for u in User.query.all()}
+        display_map = _build_display_map(r.user_id for r in rows)
         user_usage = [
             {
                 'user_id': r.user_id,
@@ -594,7 +607,7 @@ def get_token_usage_summary():
                 .order_by(func.sum(TokenUsage.total_tokens).desc())
                 .all()
             )
-            display_map = {u.id: u.display_name for u in User.query.all()}
+            display_map = _build_display_map(r.user_id for r in user_rows)
             users_summary = [
                 {
                     'user_id': r.user_id,
@@ -662,7 +675,6 @@ def get_token_usage_logs():
         page = max(1, request.args.get('page', default=1, type=int))
         limit = max(1, min(request.args.get('limit', default=25, type=int), 100))
 
-        display_map = {u.id: u.display_name for u in User.query.all()}
         q = (
             db.session.query(TokenUsage, User.username)
             .outerjoin(User, TokenUsage.user_id == User.id)
@@ -676,6 +688,7 @@ def get_token_usage_logs():
             .limit(limit)
             .all()
         )
+        display_map = _build_display_map(tu.user_id for tu, _ in rows)
 
         return jsonify({
             'success': True,
