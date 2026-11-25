@@ -166,6 +166,27 @@ def get_random():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+def _serialize_orange_book(ob):
+    """Serialize an OrangeBook row for RLD/RS search responses."""
+    prefix = 'NDA' if ob.appl_type == 'N' else ('ANDA' if ob.appl_type == 'A' else '')
+    formatted_appl_no = f'{prefix}{ob.appl_no}' if prefix else ob.appl_no
+    return {
+        'formatted_appl_no': formatted_appl_no,
+        'ingredient': ob.ingredient,
+        'trade_name': ob.trade_name,
+        'df_route': ob.df_route,
+        'strength': ob.strength,
+        'applicant': ob.applicant,
+        'appl_no': ob.appl_no,
+        'product_no': ob.product_no,
+        'te_code': ob.te_code,
+        'approval_date': ob.approval_date,
+        'rld': ob.rld,
+        'rs': ob.rs,
+        'type': ob.type,
+    }
+
+
 @localquery_bp.route('/rld_search', methods=['GET'])
 def rld_search():
     """
@@ -198,28 +219,11 @@ def rld_search():
         if rs_only:
             query_obj = query_obj.filter(OrangeBook.rs == 'Yes')
         
-        obs = query_obj.all()
-        
-        results = []
-        for ob in obs:
-            prefix = 'NDA' if ob.appl_type == 'N' else ('ANDA' if ob.appl_type == 'A' else '')
-            formatted_appl_no = f'{prefix}{ob.appl_no}' if prefix else ob.appl_no
-            results.append({
-                'formatted_appl_no': formatted_appl_no,
-                'ingredient': ob.ingredient,
-                'trade_name': ob.trade_name,
-                'df_route': ob.df_route,
-                'strength': ob.strength,
-                'applicant': ob.applicant,
-                'appl_no': ob.appl_no,
-                'product_no': ob.product_no,
-                'te_code': ob.te_code,
-                'approval_date': ob.approval_date,
-                'rld': ob.rld,
-                'rs': ob.rs,
-                'type': ob.type
-            })
-            
+        limit = max(1, min(request.args.get('limit', default=500, type=int), 2000))
+        obs = query_obj.limit(limit).all()
+
+        results = [_serialize_orange_book(ob) for ob in obs]
+
         return jsonify({
             'results': results,
             'total': len(results)
@@ -230,43 +234,25 @@ def rld_search():
 @localquery_bp.route('/rld_random', methods=['GET'])
 def rld_random():
     """
-    Returns 5 random records from the Orange Book.
+    Returns 5 random records from the Orange Book without full-table random sort.
     """
+    import random
     from database.models import OrangeBook
-    from sqlalchemy.sql.expression import func
 
     try:
         rld_only = request.args.get('rld_only', 'false').lower() == 'true'
         rs_only = request.args.get('rs_only', 'false').lower() == 'true'
-        
+
         query_obj = OrangeBook.query
         if rld_only:
             query_obj = query_obj.filter(OrangeBook.rld == 'Yes')
         if rs_only:
             query_obj = query_obj.filter(OrangeBook.rs == 'Yes')
-            
-        obs = query_obj.order_by(func.random()).limit(5).all()
-        
-        results = []
-        for ob in obs:
-            prefix = 'NDA' if ob.appl_type == 'N' else ('ANDA' if ob.appl_type == 'A' else '')
-            formatted_appl_no = f'{prefix}{ob.appl_no}' if prefix else ob.appl_no
-            results.append({
-                'formatted_appl_no': formatted_appl_no,
-                'ingredient': ob.ingredient,
-                'trade_name': ob.trade_name,
-                'df_route': ob.df_route,
-                'strength': ob.strength,
-                'applicant': ob.applicant,
-                'appl_no': ob.appl_no,
-                'product_no': ob.product_no,
-                'te_code': ob.te_code,
-                'approval_date': ob.approval_date,
-                'rld': ob.rld,
-                'rs': ob.rs,
-                'type': ob.type
-            })
-            
+
+        candidates = query_obj.limit(200).all()
+        obs = random.sample(candidates, min(5, len(candidates)))
+        results = [_serialize_orange_book(ob) for ob in obs]
+
         return jsonify({
             'results': results,
             'total': len(results)

@@ -724,7 +724,13 @@ def get_user_token_usage_details(user_id):
         return jsonify({'success': False, 'error': 'Unauthorized'}), 403
     from database.models import TokenUsage
     try:
-        usages = TokenUsage.query.filter_by(user_id=user_id).order_by(TokenUsage.created_at.desc()).all()
+        limit = max(1, min(request.args.get('limit', default=100, type=int), 500))
+        usages = (
+            TokenUsage.query.filter_by(user_id=user_id)
+            .order_by(TokenUsage.created_at.desc())
+            .limit(limit)
+            .all()
+        )
         return jsonify({
             'success': True,
             'details': [{

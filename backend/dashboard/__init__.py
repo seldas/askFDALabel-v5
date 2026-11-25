@@ -344,37 +344,56 @@ def seed_examine_prompts():
 def migrate_projects():
     """Ensure all users have a 'Favorite' Project and move orphaned items there."""
     try:
-        users = User.query.all()
-        for user in users:
-            # 1. Rename old "Default Project" or "Not Grouped" if exists
-            old_default = Project.query.filter(
-                (Project.owner_id == user.id) & 
-                ((Project.title == "Default Project") | (Project.title == "Not Grouped"))
-            ).first()
-            
-            if old_default:
-                old_default.title = "Favorite"
-                if old_default.display_order is None:
-                    old_default.display_order = 0
-            
-            # 2. Check/Create "Favorite" project
-            default_proj = Project.query.filter_by(owner_id=user.id, title="Favorite").first()
-            if not default_proj:
-                default_proj = Project(title="Favorite", description="My favorite drug labels", owner_id=user.id, display_order=0)
-                db.session.add(default_proj)
-                db.session.commit() # Commit to get ID
-            
-            # Move orphaned Favorites
-            orphaned_favs = Favorite.query.filter_by(user_id=user.id, project_id=None).all()
+        favorite_owners = {
+            row[0]
+            for row in db.session.query(Project.owner_id).filter(Project.title == "Favorite").all()
+        }
+
+        # 1. Rename old "Default Project" or "Not Grouped" if user doesn't already have "Favorite"
+        old_defaults = Project.query.filter(
+            Project.title.in_(["Default Project", "Not Grouped"])
+        ).all()
+        renamed = False
+        for proj in old_defaults:
+            if proj.owner_id not in favorite_owners:
+                proj.title = "Favorite"
+                if proj.display_order is None:
+                    proj.display_order = 0
+                favorite_owners.add(proj.owner_id)
+                renamed = True
+
+        # 2. Batch-create "Favorite" project for any users still missing one
+        if favorite_owners:
+            missing_user_ids = [
+                row[0] for row in db.session.query(User.id).filter(~User.id.in_(favorite_owners)).all()
+            ]
+        else:
+            missing_user_ids = [row[0] for row in db.session.query(User.id).all()]
+
+        for uid in missing_user_ids:
+            db.session.add(Project(title="Favorite", description="My favorite drug labels", owner_id=uid, display_order=0))
+
+        if renamed or missing_user_ids:
+            db.session.flush()
+
+        # 3. Batch-assign any orphaned Favorites and Comparisons to the user's "Favorite" project
+        orphaned_favs = Favorite.query.filter(Favorite.project_id.is_(None)).all()
+        orphaned_comps = FavoriteComparison.query.filter(FavoriteComparison.project_id.is_(None)).all()
+        if orphaned_favs or orphaned_comps:
+            fav_proj_map = dict(
+                db.session.query(Project.owner_id, Project.id)
+                .filter(Project.title == "Favorite")
+                .all()
+            )
             for fav in orphaned_favs:
-                fav.project_id = default_proj.id
-                
-            # Move orphaned Comparisons
-            orphaned_comps = FavoriteComparison.query.filter_by(user_id=user.id, project_id=None).all()
+                if fav.user_id in fav_proj_map:
+                    fav.project_id = fav_proj_map[fav.user_id]
             for comp in orphaned_comps:
-                comp.project_id = default_proj.id
-        
-        db.session.commit()
+                if comp.user_id in fav_proj_map:
+                    comp.project_id = fav_proj_map[comp.user_id]
+
+        if renamed or missing_user_ids or orphaned_favs or orphaned_comps:
+            db.session.commit()
     except Exception as e:
         print(f"Migration error: {e}")
         db.session.rollback()

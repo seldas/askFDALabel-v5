@@ -1429,6 +1429,7 @@ def get_user_query_history():
         return jsonify({'history': []}), 200
 
     sort_order = request.args.get('sort', 'desc').lower()
+    limit = max(1, min(request.args.get('limit', default=100, type=int), 500))
     query = UserQueryHistory.query.filter_by(user_id=user_obj.id)
     
     if sort_order == 'asc':
@@ -1436,7 +1437,7 @@ def get_user_query_history():
     else:
         query = query.order_by(UserQueryHistory.timestamp.desc())
         
-    records = query.all()
+    records = query.limit(limit).all()
     res = []
     for r in records:
         q_json = None
