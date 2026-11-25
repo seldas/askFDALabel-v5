@@ -1083,7 +1083,7 @@ function ResultsPage() {
                   Save Query Results as Task
                 </h3>
                 <span style={{ fontSize: '0.78rem', color: 'var(--fdl-muted, #5e6e7c)', fontWeight: 600 }}>
-                  Organize query set into My Dashboard tasks
+                  Organize query set into My Collections tasks
                 </span>
               </div>
             </div>

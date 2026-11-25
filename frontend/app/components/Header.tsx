@@ -564,7 +564,7 @@ export default function Header({
                   <div className="account-actions">
                     <div className="dropdown-section-label">WORKSPACE</div>
                     <Link href="/dashboard" className="dropdown-item dropdown-item--secondary-action" onClick={() => setActiveDropdown(null)}>
-                      My Dashboard
+                      My Collections
                     </Link>
                     {/* Query history and preferences are per-user state on a
                         row every anonymous visitor shares, so both are closed

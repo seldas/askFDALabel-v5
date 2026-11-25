@@ -226,17 +226,17 @@ const CONTENT: WikiArticle[] = [
   {
     id: 'saved-work', path: 'guides', group: 'Dashboard',
     title: 'Dashboard overview', summary: 'Return to saved review collections and their labeling.',
-    tags: ['Dashboard', 'Task', 'Project', 'saved labeling'], action: { href: '/dashboard', label: 'Open My Dashboard' },
+    tags: ['Dashboard', 'Task', 'Project', 'saved labeling'], action: { href: '/dashboard', label: 'Open My Collections' },
     related: ['project-guide', 'saved-labels', 'read-labeling'],
     sections: [
-      { heading: 'Find your work', steps: ['Open My Dashboard from the account menu.', 'Search or filter the task list, then open a task.', 'Choose its labeling list to reopen a document. Saved comparisons appear in a separate tab.'] },
+      { heading: 'Find your work', steps: ['Open My Collections from the account menu.', 'Search or filter the task list, then open a task.', 'Choose its labeling list to reopen a document. Saved comparisons appear in a separate tab.'] },
       { heading: 'Names in the interface', paragraphs: ['Dashboard calls a saved review project a Task. The Projects action in a labeling workspace adds that labeling to a collection. Use a personal account for saved work.'] },
     ],
   },
   {
     id: 'project-guide', path: 'guides', group: 'Dashboard',
     title: 'Create and manage a task', summary: 'Create a collection for a review question.',
-    tags: ['project', 'Create Task', 'New Task', 'delete', 'tags'], action: { href: '/dashboard', label: 'Open My Dashboard' },
+    tags: ['project', 'Create Task', 'New Task', 'delete', 'tags'], action: { href: '/dashboard', label: 'Open My Collections' },
     related: ['saved-work', 'saved-labels'],
     sections: [
       { heading: 'Create', steps: ['Open Create Task on Dashboard and choose New Task.', 'Enter a name that identifies the review question.', 'Create an empty task, or use the optional file-import controls to populate it.'] },
@@ -246,7 +246,7 @@ const CONTENT: WikiArticle[] = [
   {
     id: 'saved-labels', path: 'guides', group: 'Dashboard',
     title: 'Add, remove, and reopen labeling', summary: 'Maintain the documents in a saved review collection.',
-    tags: ['Projects', 'Add to Task', 'Remove from Task', 'saved labels'], action: { href: '/dashboard', label: 'Open My Dashboard' },
+    tags: ['Projects', 'Add to Task', 'Remove from Task', 'saved labels'], action: { href: '/dashboard', label: 'Open My Collections' },
     related: ['saved-work', 'project-guide', 'versions', 'highlights-guide'],
     sections: [
       { heading: 'Add', steps: ['From a labeling workspace, open Projects and choose the target collection.', 'From search results, select labeling records and use the available add-to-task action.', 'Open the collection on Dashboard to confirm its contents.'] },

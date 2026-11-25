@@ -208,7 +208,7 @@ export default function QueryHistoryPage() {
         {/* Breadcrumb & Navigation */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.75rem' }}>
           <Link href="/dashboard" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>
-            My Dashboard
+            My Collections
           </Link>
           <span>/</span>
           <span style={{ fontWeight: 700, color: '#1e293b' }}>Search & Query History</span>

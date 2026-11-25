@@ -186,11 +186,12 @@ export default function LabelAnnotations({
   // Fetch all annotations for current label
   const fetchAnnotations = useCallback(async () => {
     if (!setId) return;
-    const activeProjectId = typeof window !== 'undefined' ? localStorage.getItem('activeProjectId') : null;
-    const qs = activeProjectId ? `?project_id=${activeProjectId}` : '';
+    // Legacy project-scoped filtering is unused; annotations are user-scoped.
+    // const activeProjectId = typeof window !== 'undefined' ? localStorage.getItem('activeProjectId') : null;
+    // const qs = activeProjectId ? `?project_id=${activeProjectId}` : '';
 
     try {
-      const res = await fetch(`/api/dashboard/annotations/get/${setId}${qs}`);
+      const res = await fetch(`/api/dashboard/annotations/get/${setId}`);
       const data = await res.json();
       if (data.annotations && Array.isArray(data.annotations)) {
         data.annotations.forEach((ann: AnnotationData) => renderAnnotation(ann));
@@ -331,14 +332,15 @@ export default function LabelAnnotations({
       return;
     }
 
-    const activeProjectId = typeof window !== 'undefined' ? localStorage.getItem('activeProjectId') : null;
+    // Legacy project-scoped filtering is unused; save annotations as user-global (project_id: null).
+    // const activeProjectId = typeof window !== 'undefined' ? localStorage.getItem('activeProjectId') : null;
 
     try {
       const res = await fetch('/api/dashboard/annotations/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          project_id: activeProjectId || null,
+          project_id: null,
           set_id: setId,
           section_id: sectionId,
           start_offset: offsets.start,

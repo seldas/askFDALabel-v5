@@ -350,7 +350,7 @@ const PLATFORM_TOOLS: ToolDef[] = [
   },
   {
     id: 'dashboard',
-    name: 'My Dashboard',
+    name: 'My Collections',
     blurb: 'Organize labels and saved comparisons into tasks.',
     iconId: 'bars',
     kind: 'embedded',
