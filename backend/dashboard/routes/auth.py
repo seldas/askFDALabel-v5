@@ -171,6 +171,10 @@ def session():
             'ai_settings': current_user.ai_settings if current_user.is_admin else None,
             'is_internal': is_internal,
             'api_key': getattr(current_user, 'api_key', None),
+            'api_key_created_at': current_user.api_key_created_at.isoformat() + 'Z' if getattr(current_user, 'api_key_created_at', None) else None,
+            'api_key_last_used': current_user.api_key_last_used.isoformat() + 'Z' if getattr(current_user, 'api_key_last_used', None) else None,
+            'created_at': current_user.created_at.isoformat() + 'Z' if getattr(current_user, 'created_at', None) else None,
+            'last_login': current_user.last_login.isoformat() + 'Z' if getattr(current_user, 'last_login', None) else None,
             'gemini_model': '' if is_internal else os.environ.get('GEMINI_MODEL', 'Gemini'),
             'gemini_fallback_model': '' if is_internal else os.environ.get('GEMINI_FALLBACK_MODEL', ''),
             'env_elsa_url': os.getenv("ELSA_API_URL", ""),
@@ -202,7 +206,9 @@ def get_api_key():
         return jsonify({'error': 'API key generation is not available for guest accounts.'}), 403
     return jsonify({
         'success': True,
-        'api_key': getattr(current_user, 'api_key', None)
+        'api_key': getattr(current_user, 'api_key', None),
+        'api_key_created_at': current_user.api_key_created_at.isoformat() + 'Z' if getattr(current_user, 'api_key_created_at', None) else None,
+        'api_key_last_used': current_user.api_key_last_used.isoformat() + 'Z' if getattr(current_user, 'api_key_last_used', None) else None,
     })
 
 
@@ -218,6 +224,8 @@ def generate_api_key():
     return jsonify({
         'success': True,
         'api_key': key,
+        'api_key_created_at': current_user.api_key_created_at.isoformat() + 'Z' if getattr(current_user, 'api_key_created_at', None) else None,
+        'api_key_last_used': current_user.api_key_last_used.isoformat() + 'Z' if getattr(current_user, 'api_key_last_used', None) else None,
         'message': 'New API key generated successfully.'
     })
 
@@ -234,6 +242,8 @@ def ensure_api_key():
         return jsonify({
             'success': True,
             'api_key': existing,
+            'api_key_created_at': current_user.api_key_created_at.isoformat() + 'Z' if getattr(current_user, 'api_key_created_at', None) else None,
+            'api_key_last_used': current_user.api_key_last_used.isoformat() + 'Z' if getattr(current_user, 'api_key_last_used', None) else None,
             'created': False,
         })
 
@@ -242,6 +252,8 @@ def ensure_api_key():
     return jsonify({
         'success': True,
         'api_key': key,
+        'api_key_created_at': current_user.api_key_created_at.isoformat() + 'Z' if getattr(current_user, 'api_key_created_at', None) else None,
+        'api_key_last_used': current_user.api_key_last_used.isoformat() + 'Z' if getattr(current_user, 'api_key_last_used', None) else None,
         'created': True,
     })
 

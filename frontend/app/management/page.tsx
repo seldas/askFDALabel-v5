@@ -7,6 +7,7 @@ import Header from '../components/Header';
 import './management.css';
 import AiPreferences from './AiPreferences';
 import { TokenUsagePanel } from './TokenUsagePanel';
+import { UserOverviewPanel } from './UserOverviewPanel';
 import { useRouter } from 'next/navigation';
 
 interface User {
@@ -40,7 +41,7 @@ interface AdminApiKey {
 }
 
 export default function ManagementPage() {
-  const { session, loading: sessionLoading, updateAiProvider, refreshSession } = useUser();
+  const { session, loading: sessionLoading, updateAiProvider, refreshSession, openAuthModal } = useUser();
   const router = useRouter();
 
   const [users, setUsers] = useState<User[]>([]);
@@ -97,22 +98,26 @@ export default function ManagementPage() {
   const [userModelError, setUserModelError] = useState<string | null>(null);
 
   // Modals state
-  const [activeTab, setActiveTab] = useState<string>('users');
+  const [activeTab, setActiveTab] = useState<string>('overview');
   const [initialTabSet, setInitialTabSet] = useState(false);
+  const [overviewFocusSection, setOverviewFocusSection] = useState<string | null>(null);
 
   useEffect(() => {
     if (session && !initialTabSet) {
       const requestedTab = typeof window === 'undefined'
         ? null
         : new URLSearchParams(window.location.search).get('tab');
-      if (requestedTab === 'ai' && !session.is_guest) {
-        setActiveTab('ai');
-      } else if (session.username?.toLowerCase() === 'guest') {
+      if (session.username?.toLowerCase() === 'guest') {
         setActiveTab('tokens');
       } else if (session.is_admin) {
-        setActiveTab(requestedTab || 'ai');
+        if (requestedTab === 'ai' || requestedTab === 'apikey') {
+          setActiveTab('overview');
+        } else {
+          setActiveTab(requestedTab || 'users');
+        }
       } else {
-        setActiveTab(requestedTab === 'tokens' ? 'tokens' : requestedTab === 'users' ? 'users' : 'ai');
+        setActiveTab('overview');
+        if (requestedTab) setOverviewFocusSection(requestedTab);
       }
       setInitialTabSet(true);
     }
@@ -120,6 +125,8 @@ export default function ManagementPage() {
 
   // API Key state
   const [apiKey, setApiKey] = useState<string | null>(null);
+  const [apiKeyCreatedAt, setApiKeyCreatedAt] = useState<string | null>(null);
+  const [apiKeyLastUsed, setApiKeyLastUsed] = useState<string | null>(null);
   const [loadingApiKey, setLoadingApiKey] = useState(false);
   const [generatingKey, setGeneratingKey] = useState(false);
   const [revokingKey, setRevokingKey] = useState(false);
@@ -133,6 +140,8 @@ export default function ManagementPage() {
       const data = await res.json();
       if (data.success) {
         setApiKey(data.api_key || null);
+        setApiKeyCreatedAt(data.api_key_created_at || null);
+        setApiKeyLastUsed(data.api_key_last_used || null);
       }
     } catch (e) {
       console.error('Failed to fetch API key', e);
@@ -145,7 +154,9 @@ export default function ManagementPage() {
       if (activeTab === 'apikey') setShowKey(false);
       if (session.api_key !== undefined) {
         setApiKey(session.api_key);
-      } else if (activeTab === 'apikey') {
+        setApiKeyCreatedAt(session.api_key_created_at || null);
+        setApiKeyLastUsed(session.api_key_last_used || null);
+      } else if (activeTab === 'apikey' || activeTab === 'overview') {
         fetchApiKey();
       }
     }
@@ -164,6 +175,8 @@ export default function ManagementPage() {
       const data = await res.json();
       if (data.success) {
         setApiKey(data.api_key);
+        setApiKeyCreatedAt(data.api_key_created_at || null);
+        setApiKeyLastUsed(data.api_key_last_used || null);
         setShowKey(false);
         if (typeof refreshSession === 'function') {
           refreshSession();
@@ -190,6 +203,8 @@ export default function ManagementPage() {
       const data = await res.json();
       if (data.success) {
         setApiKey(null);
+        setApiKeyCreatedAt(null);
+        setApiKeyLastUsed(null);
         if (typeof refreshSession === 'function') {
           refreshSession();
         }
@@ -1143,50 +1158,31 @@ export default function ManagementPage() {
           {session?.is_admin ? 'System Management' : 'Settings & Preferences'}
         </h1>
 
-        <div className="management-workstation">
+        <div className={`management-workstation${session?.is_admin ? '' : ' management-workstation--single'}`}>
 
-          {/* SIDEBAR NAVIGATION */}
+          {/* SIDEBAR NAVIGATION (Admin only; regular users use unified Overview) */}
+          {session?.is_admin && (
           <nav className="management-nav" aria-label="System management sections">
-            {!session?.is_guest && (
-              <button
-                className={`sidebar-tab ${activeTab === 'ai' ? 'active' : ''}`}
-                aria-current={activeTab === 'ai' ? 'page' : undefined}
-                onClick={() => setActiveTab('ai')}
-                disabled={session?.username?.toLowerCase() === 'guest'}
-                style={{ opacity: session?.username?.toLowerCase() === 'guest' ? 0.5 : 1, cursor: session?.username?.toLowerCase() === 'guest' ? 'not-allowed' : 'pointer' }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                </svg>
-                LLM Settings
-              </button>
-            )}
             <button
-              className={`sidebar-tab ${activeTab === 'users' ? 'active' : ''}`}
-                aria-current={activeTab === 'users' ? 'page' : undefined}
-              onClick={() => setActiveTab('users')}
-              disabled={session?.username?.toLowerCase() === 'guest'}
-              style={{ opacity: session?.username?.toLowerCase() === 'guest' ? 0.5 : 1, cursor: session?.username?.toLowerCase() === 'guest' ? 'not-allowed' : 'pointer' }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-              {session?.is_admin ? 'User Management' : 'My Account'}
-            </button>
-            <button
-              className={`sidebar-tab ${activeTab === 'apikey' ? 'active' : ''}`}
-                aria-current={activeTab === 'apikey' ? 'page' : undefined}
-              onClick={() => setActiveTab('apikey')}
-              disabled={session?.username?.toLowerCase() === 'guest'}
-              style={{ opacity: session?.username?.toLowerCase() === 'guest' ? 0.5 : 1, cursor: session?.username?.toLowerCase() === 'guest' ? 'not-allowed' : 'pointer' }}
+              className={`sidebar-tab ${activeTab === 'overview' ? 'active' : ''}`}
+              aria-current={activeTab === 'overview' ? 'page' : undefined}
+              onClick={() => setActiveTab('overview')}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 2l-2 2m-1.5 1.5L16 7l-1.5-1.5L13 7l-1.5-1.5L10 7l-1.5-1.5L7 7l-1.5-1.5L4 7l-2-2"></path>
-                <circle cx="7.5" cy="15.5" r="5.5"></circle>
-                <path d="m11.5 11.5 8.5-8.5"></path>
-                <path d="m16 4 4 4"></path>
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
               </svg>
-              API Key
+              Overview
+            </button>
+            <button
+              className={`sidebar-tab ${activeTab === 'users' ? 'active' : ''}`}
+              aria-current={activeTab === 'users' ? 'page' : undefined}
+              onClick={() => setActiveTab('users')}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              User Management
             </button>
             <button
               className={`sidebar-tab ${activeTab === 'tokens' ? 'active' : ''}`}
@@ -1227,10 +1223,27 @@ export default function ManagementPage() {
               </button>
             )}
           </nav>
+          )}
 
           {/* MAIN CONTENT AREA */}
           <div className="management-content">
 
+            {activeTab === 'overview' && session && !session.is_guest && (
+              <UserOverviewPanel
+                session={session}
+                apiKey={apiKey}
+                apiKeyCreatedAt={apiKeyCreatedAt}
+                apiKeyLastUsed={apiKeyLastUsed}
+                loadingApiKey={loadingApiKey}
+                generatingKey={generatingKey}
+                revokingKey={revokingKey}
+                onGenerateApiKey={handleGenerateApiKey}
+                onRevokeApiKey={handleRevokeApiKey}
+                onOpenChangePassword={() => openAuthModal('change_password')}
+                formatUserDate={formatUserDate}
+                focusSection={overviewFocusSection}
+              />
+            )}
 
             {activeTab === 'ai' && !session?.is_guest && <AiPreferences />}
 

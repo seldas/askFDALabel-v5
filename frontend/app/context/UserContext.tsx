@@ -41,6 +41,10 @@ export interface UserSession {
   openai_base_url?: string;
   openai_model_name?: string;
   is_internal?: boolean;
+  api_key_created_at?: string | null;
+  api_key_last_used?: string | null;
+  created_at?: string | null;
+  last_login?: string | null;
   gemini_model?: string;
   gemini_fallback_model?: string;
   ai_settings?: string;
